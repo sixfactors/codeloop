@@ -1,0 +1,45 @@
+# Codeloop Configuration
+# Generic starter — minimal assumptions, works with any project.
+# Customize scopes, quality_checks, and diff_scan for your stack.
+
+project:
+  name: "my-project"
+
+# Scopes map file paths to knowledge sections.
+# /commit uses scopes to load only relevant gotchas and patterns.
+scopes:
+  all:
+    paths: ["**/*"]
+    gotcha_sections: []
+    pattern_sections: []
+
+# Quality checks run during /commit Phase 1.
+# Add build/lint/typecheck commands for your stack.
+quality_checks: {}
+  # all:
+  #   - name: "Lint"
+  #     command: "npm run lint 2>&1 | tail -20"
+
+# Diff scan rules check the actual diff for violations.
+# Each match is reported at the specified severity.
+diff_scan: []
+  # - pattern: "console\\.log"
+  #   files: "*.ts,*.js"
+  #   exclude: "*.test.*"
+  #   severity: CRITICAL
+  #   message: "console.log in production code"
+  # - pattern: "TODO"
+  #   files: "*"
+  #   severity: WARNING
+  #   message: "TODO comment found"
+
+# Conventional commit types allowed.
+commit:
+  types: [feat, fix, refactor, docs, test, chore, perf]
+  format: "type(scope): message"
+
+# Codeloop behavior settings.
+codeloop:
+  critical_frequency: 3      # Gotchas at this freq or higher → CRITICAL in review
+  promote_frequency: 10       # Suggest promoting to rules.md at this freq
+  max_knowledge_lines: 200    # Warn when knowledge files exceed this

@@ -1,0 +1,50 @@
+# Codeloop Configuration
+# Python starter
+
+project:
+  name: "my-project"
+
+scopes:
+  backend:
+    paths: ["src/**", "app/**", "lib/**"]
+    gotcha_sections: ["Backend", "Database", "API"]
+    pattern_sections: ["Backend", "API"]
+  tests:
+    paths: ["tests/**", "**/*_test.py", "**/test_*.py"]
+    gotcha_sections: ["Testing"]
+    pattern_sections: ["Testing"]
+  config:
+    paths: [".github/**", "Dockerfile*", "docker-compose*", "pyproject.toml", "setup.py"]
+    gotcha_sections: ["CI", "Config"]
+    pattern_sections: ["CI"]
+
+quality_checks:
+  backend:
+    - name: "Type check"
+      command: "mypy src/ 2>&1 | tail -20"
+    - name: "Lint"
+      command: "ruff check src/ 2>&1 | tail -20"
+
+diff_scan:
+  - pattern: "print\\("
+    files: "*.py"
+    exclude: "test_*,*_test.py,conftest.py"
+    severity: WARNING
+    message: "print() in production code — use logging"
+  - pattern: "import pdb"
+    files: "*.py"
+    severity: CRITICAL
+    message: "Debugger import left in code"
+  - pattern: "\\.env"
+    files: "*"
+    severity: CRITICAL
+    message: ".env file should not be committed"
+
+commit:
+  types: [feat, fix, refactor, docs, test, chore, perf]
+  format: "type(scope): message"
+
+codeloop:
+  critical_frequency: 3
+  promote_frequency: 10
+  max_knowledge_lines: 200
