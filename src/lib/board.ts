@@ -49,6 +49,7 @@ export function nextId(board: Board): string {
 export interface AddTaskInput {
   title: string;
   description?: string;
+  status?: Task['status'];
   labels?: string[];
   steps?: TaskStep[];
   acceptanceCriteria?: string[];
@@ -60,7 +61,7 @@ export function addTask(board: Board, input: AddTaskInput): Board {
     id: nextId(board),
     title: input.title,
     description: input.description,
-    status: 'backlog',
+    status: input.status ?? 'backlog',
     labels: input.labels ?? [],
     steps: input.steps ? [...input.steps] : [],
     commits: [],

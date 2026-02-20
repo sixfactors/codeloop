@@ -180,7 +180,9 @@ EOF
 ### 3.4 Board sync
 
 If `.codeloop/board.json` exists:
-- Find the current active task on the board (first `in_progress` or `review` task)
+- Read the board JSON
+- Find the active task: first task with status `in_progress`, then `review`, then `planned` (in that priority order)
+- If no task found, warn: "Board sync skipped — no active task found in board.json" (non-blocking, commit still succeeds)
 - Append the new commit SHA to the task's `commits` array
 - Write the updated board back to `.codeloop/board.json`
 

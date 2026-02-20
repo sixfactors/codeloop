@@ -69,6 +69,11 @@ describe('board', () => {
       expect(board.tasks[0].status).toBe('backlog');
     });
 
+    it('accepts explicit initial status', () => {
+      const board = addTask(createBoard(), { title: 'Planned task', status: 'planned' });
+      expect(board.tasks[0].status).toBe('planned');
+    });
+
     it('sets createdAt and updatedAt', () => {
       const before = new Date().toISOString();
       const board = addTask(createBoard(), { title: 'Test' });
