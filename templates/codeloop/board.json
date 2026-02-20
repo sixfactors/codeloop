@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "columns": ["backlog", "planned", "in_progress", "review", "done"],
+  "tasks": []
+}

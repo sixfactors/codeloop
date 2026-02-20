@@ -38,3 +38,12 @@ Minimal code, minimal impact. Touch only what's necessary. The right amount of c
 ## 8. No Laziness
 
 Root causes only. Don't patch symptoms. Don't skip hard problems. Don't leave broken things behind.
+
+## 9. TDD Default
+
+Write acceptance criteria first. Define tests before code. Follow RED → GREEN → REFACTOR:
+1. **RED** — Write failing tests that define what "done" looks like
+2. **GREEN** — Write the minimum code to make tests pass
+3. **REFACTOR** — Clean up while tests stay green
+
+Not every change needs full TDD, but any non-trivial feature or bug fix benefits from defining expected behavior before implementation.

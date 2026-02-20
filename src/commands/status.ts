@@ -7,6 +7,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { parseVersion, compareVersions } from '../lib/version.js';
 import { parse as parseYaml } from 'yaml';
+import { loadBoard } from '../lib/board.js';
+import { getServeStatus } from './serve.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -174,6 +176,33 @@ export const statusCommand = new Command('status')
       for (const entry of gotchas.highFreqEntries) {
         console.log(chalk.yellow(`      - ${entry}`));
       }
+    }
+
+    // Board stats
+    const board = loadBoard(projectDir);
+    if (board.tasks.length > 0) {
+      console.log();
+      console.log(chalk.bold('  Board'));
+      const byStatus: Record<string, number> = {};
+      for (const task of board.tasks) {
+        byStatus[task.status] = (byStatus[task.status] || 0) + 1;
+      }
+      const statusStr = Object.entries(byStatus)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(', ');
+      console.log(`    ${board.tasks.length} tasks (${statusStr})`);
+    } else if (existsSync(join(projectDir, '.codeloop', 'board.json'))) {
+      console.log();
+      console.log(chalk.bold('  Board'));
+      console.log(chalk.dim('    No tasks yet'));
+    }
+
+    // Serve status
+    const serveStatus = getServeStatus(projectDir);
+    if (serveStatus.running) {
+      console.log(chalk.green(`    Server: running (PID ${serveStatus.pid})`));
+    } else if (existsSync(join(projectDir, '.codeloop', 'board.json'))) {
+      console.log(chalk.dim('    Server: not running'));
     }
 
     // Config validation

@@ -3,7 +3,7 @@ description: Track task progress — read/update tasks/todo.md
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
-<!-- codeloop-version: 0.1.0 -->
+<!-- codeloop-version: 0.2.0 -->
 
 # /manage
 
@@ -32,7 +32,13 @@ Track progress on the current task. Read and update `tasks/todo.md`.
 
 1. Read `tasks/todo.md`
 2. Change step N from `- [ ]` to `- [x]`
-3. If all steps complete, show completion summary
+3. **Board sync** — if `.codeloop/board.json` exists:
+   - Find the matching task on the board (by title match or first `in_progress`/`planned` task)
+   - Update the corresponding step's `done` field to `true`
+   - If this is the first step being marked done, set task status to `in_progress`
+   - If all steps are now complete, set task status to `review`
+   - Write the updated board back to `.codeloop/board.json`
+4. If all steps complete, show completion summary
 
 ### Add Step (`add <step>`)
 

@@ -4,7 +4,7 @@ argument-hint: [type] [scope] [message] OR [--wip]
 allowed-tools: Bash(git:*), Read, Edit, Write, Glob, Grep, AskUserQuestion
 ---
 
-<!-- codeloop-version: 0.1.0 -->
+<!-- codeloop-version: 0.2.0 -->
 
 # /commit
 
@@ -177,7 +177,14 @@ EOF
 )"
 ```
 
-### 3.4 Report result
+### 3.4 Board sync
+
+If `.codeloop/board.json` exists:
+- Find the current active task on the board (first `in_progress` or `review` task)
+- Append the new commit SHA to the task's `commits` array
+- Write the updated board back to `.codeloop/board.json`
+
+### 3.5 Report result
 
 ```
 ## Committed

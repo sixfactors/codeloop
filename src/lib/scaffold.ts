@@ -57,6 +57,7 @@ function getKnowledgeFiles(): ScaffoldFile[] {
     { source: 'templates/codeloop/gotchas.md', destination: '.codeloop/gotchas.md', overwrite: false },
     { source: 'templates/codeloop/patterns.md', destination: '.codeloop/patterns.md', overwrite: false },
     { source: 'templates/codeloop/principles.md', destination: '.codeloop/principles.md', overwrite: false },
+    { source: 'templates/codeloop/board.json', destination: '.codeloop/board.json', overwrite: false },
     { source: 'templates/tasks/todo.md', destination: 'tasks/todo.md', overwrite: false },
   ];
 }

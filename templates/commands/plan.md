@@ -3,7 +3,7 @@ description: Plan a task — write spec to tasks/todo.md, enter plan mode
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, EnterPlanMode
 ---
 
-<!-- codeloop-version: 0.1.0 -->
+<!-- codeloop-version: 0.2.0 -->
 
 # /plan
 
@@ -30,7 +30,7 @@ Enter plan mode and explore the codebase:
 1. Identify affected files and modules
 2. Check for existing patterns that should be followed
 3. Consider gotchas that apply to the planned changes
-4. Write the plan to `tasks/todo.md`:
+4. Write the plan to `tasks/todo.md` using test-first structure:
 
 ```markdown
 # Task: <title>
@@ -38,9 +38,19 @@ Enter plan mode and explore the codebase:
 ## Context
 <Why this task exists, what problem it solves>
 
+## Acceptance Criteria
+- <criterion 1 — what must be true when done>
+- <criterion 2>
+
+## Tests (RED)
+Define failing tests before writing implementation code:
+- <test case 1>
+- <test case 2>
+
 ## Plan
-- [ ] Step 1: <specific, actionable step>
-- [ ] Step 2: <specific, actionable step>
+- [ ] Step 1: Write tests for acceptance criteria (RED)
+- [ ] Step 2: Write minimum code to pass tests (GREEN)
+- [ ] Step 3: Refactor while tests stay green
 - [ ] ...
 
 ## Gotchas to Watch
@@ -50,7 +60,12 @@ Enter plan mode and explore the codebase:
 - `path/to/file.ts` — <what changes>
 ```
 
-5. Exit plan mode for user approval
+5. **Board sync** — if `.codeloop/board.json` exists, create a task on the board:
+   - Read `.codeloop/board.json`
+   - Add a new task with `status: "planned"`, title matching the plan title, and steps matching the plan checklist
+   - Write the updated board back to `.codeloop/board.json`
+
+6. Exit plan mode for user approval
 
 ## Phase 3: Execute
 
