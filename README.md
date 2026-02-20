@@ -1,8 +1,12 @@
 # codeloop
 
-Your AI coding agent makes the same mistake twice. You explain the fix. Next week, it makes it again. New session, clean slate, lesson lost.
+**Code agents that project manage themselves.**
 
-**codeloop** fixes this. It gives your project a memory that survives across sessions — and gets smarter every time you commit.
+Your AI agent plans the work, tracks its own tasks, and learns from every mistake — across sessions, across tools, without you babysitting it.
+
+![Codeloop Board](docs/board.png)
+
+codeloop gives your project a memory that survives across sessions — and a live dashboard where you watch the agent think.
 
 ## The Problem
 
