@@ -70,7 +70,7 @@ export const serveCommand = new Command('serve')
 
     // Foreground mode
     const uiDir = existsSync(UI_DIR) ? UI_DIR : undefined;
-    const app = createApp(projectDir, uiDir);
+    const { app, broadcast } = createApp(projectDir, uiDir);
 
     const { serve } = await import('@hono/node-server');
     serve({ fetch: app.fetch, port }, () => {
@@ -88,15 +88,14 @@ export const serveCommand = new Command('serve')
       }
     });
 
-    // Watch board.json for external changes and broadcast
+    // Watch board.json for external changes (skill writes) and push via SSE
     const { watch } = await import('fs');
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     try {
       watch(boardPath, () => {
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          // Broadcast happens via REST API mutations
-          // External changes (skill writes) trigger SSE push here
+          broadcast();
         }, 100);
       });
     } catch {

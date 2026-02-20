@@ -7,13 +7,13 @@ import { createApp } from '../server.js';
 
 describe('server', () => {
   let tmpDir: string;
-  let app: ReturnType<typeof createApp>;
+  let app: ReturnType<typeof createApp>['app'];
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'codeloop-server-'));
     // Seed with an empty board
     saveBoard(tmpDir, createBoard());
-    app = createApp(tmpDir);
+    ({ app } = createApp(tmpDir));
   });
 
   afterEach(() => {

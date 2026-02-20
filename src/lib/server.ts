@@ -1,9 +1,8 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { cors } from 'hono/cors';
-import { watch, type FSWatcher, existsSync, readFileSync } from 'fs';
-import { join, dirname, extname } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, readFileSync } from 'fs';
+import { join, extname } from 'path';
 import {
   loadBoard,
   saveBoard,
@@ -41,6 +40,7 @@ export function createApp(projectDir: string, uiDir?: string) {
       send(board);
     }
   }
+
 
   // GET /api/board — full board
   app.get('/api/board', (c) => {
@@ -150,44 +150,5 @@ export function createApp(projectDir: string, uiDir?: string) {
     });
   }
 
-  return app;
-}
-
-export interface ServeOptions {
-  port: number;
-  projectDir: string;
-}
-
-export function startServer(options: ServeOptions): { close: () => void; watcher: FSWatcher | null } {
-  const { port, projectDir } = options;
-  const app = createApp(projectDir);
-
-  // Import dynamically to avoid issues in test environment
-  const { serve } = require('@hono/node-server');
-  const server = serve({ fetch: app.fetch, port });
-
-  // Watch board.json for external changes
-  let watcher: FSWatcher | null = null;
-  const boardPath = join(projectDir, '.codeloop', 'board.json');
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    watcher = watch(boardPath, () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        // Board changed externally — broadcast to SSE clients
-        // The broadcast is handled by the API itself when it saves
-      }, 100);
-    });
-  } catch {
-    // File doesn't exist yet — that's fine
-  }
-
-  return {
-    close: () => {
-      server.close();
-      watcher?.close();
-    },
-    watcher,
-  };
+  return { app, broadcast };
 }
