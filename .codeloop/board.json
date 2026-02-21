@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "columns": [
+    "backlog",
+    "planned",
+    "in_progress",
+    "review",
+    "done"
+  ],
+  "tasks": [
+    {
+      "id": "t-001",
+      "title": "Set up authentication flow",
+      "description": "Implement Firebase auth with JWT tokens for the API layer",
+      "status": "done",
+      "labels": [
+        "feat",
+        "backend"
+      ],
+      "steps": [
+        {
+          "text": "Add Firebase SDK",
+          "done": true
+        },
+        {
+          "text": "Create auth middleware",
+          "done": true
+        },
+        {
+          "text": "Write integration tests",
+          "done": true
+        }
+      ],
+      "commits": [
+        "a1b2c3d",
+        "e4f5g6h"
+      ],
+      "createdAt": "2026-02-20T10:00:00Z",
+      "updatedAt": "2026-02-20T12:30:00Z"
+    },
+    {
+      "id": "t-002",
+      "title": "Build board CRUD library",
+      "description": "Immutable data model for the visual kanban board",
+      "status": "review",
+      "labels": [
+        "feat",
+        "backend"
+      ],
+      "steps": [
+        {
+          "text": "Define Board/Task interfaces",
+          "done": true
+        },
+        {
+          "text": "Implement CRUD functions",
+          "done": true
+        },
+        {
+          "text": "Write tests (TDD)",
+          "done": true
+        },
+        {
+          "text": "Code review",
+          "done": false
+        }
+      ],
+      "commits": [
+        "f7a8b9c"
+      ],
+      "createdAt": "2026-02-20T11:00:00Z",
+      "updatedAt": "2026-02-20T13:00:00Z"
+    },
+    {
+      "id": "t-003",
+      "title": "Implement Hono REST API",
+      "description": "Server with REST endpoints for board operations and SSE for live updates",
+      "status": "in_progress",
+      "labels": [
+        "feat",
+        "backend"
+      ],
+      "steps": [
+        {
+          "text": "GET /api/board endpoint",
+          "done": true
+        },
+        {
+          "text": "POST/PATCH/DELETE task endpoints",
+          "done": true
+        },
+        {
+          "text": "SSE event stream",
+          "done": false
+        },
+        {
+          "text": "Static file serving",
+          "done": false
+        },
+        {
+          "text": "Write server tests",
+          "done": false
+        }
+      ],
+      "commits": [
+        "d1e2f3a"
+      ],
+      "createdAt": "2026-02-20T12:00:00Z",
+      "updatedAt": "2026-02-20T14:00:00Z"
+    },
+    {
+      "id": "t-004",
+      "title": "Design kanban UI components",
+      "description": "Next.js static export with shadcn components, @dnd-kit drag-and-drop, dark theme",
+      "status": "planned",
+      "labels": [
+        "feat",
+        "frontend"
+      ],
+      "steps": [
+        {
+          "text": "Create board layout with 5 columns",
+          "done": false
+        },
+        {
+          "text": "Build task card component",
+          "done": false
+        },
+        {
+          "text": "Add drag-and-drop with @dnd-kit",
+          "done": false
+        },
+        {
+          "text": "Task detail slide-over panel",
+          "done": false
+        },
+        {
+          "text": "SSE hook for live updates",
+          "done": false
+        }
+      ],
+      "commits": [],
+      "createdAt": "2026-02-20T13:00:00Z",
+      "updatedAt": "2026-02-20T13:00:00Z"
+    },
+    {
+      "id": "t-005",
+      "title": "Add TDD planning to /plan skill",
+      "status": "backlog",
+      "labels": [
+        "docs"
+      ],
+      "steps": [],
+      "commits": [],
+      "createdAt": "2026-02-20T14:00:00Z",
+      "updatedAt": "2026-02-20T14:00:00Z"
+    },
+    {
+      "id": "t-006",
+      "title": "Background mode + process management",
+      "status": "backlog",
+      "labels": [
+        "feat",
+        "backend"
+      ],
+      "steps": [
+        {
+          "text": "Implement --bg flag with detached process",
+          "done": false
+        },
+        {
+          "text": "PID file management",
+          "done": false
+        },
+        {
+          "text": "Implement --stop flag",
+          "done": false
+        }
+      ],
+      "commits": [],
+      "createdAt": "2026-02-20T14:30:00Z",
+      "updatedAt": "2026-02-20T14:30:00Z"
+    },
+    {
+      "id": "t-007",
+      "title": "Write E2E browser tests",
+      "status": "in_progress",
+      "labels": [
+        "test",
+        "frontend"
+      ],
+      "steps": [
+        {
+          "text": "Setup Playwright",
+          "done": true
+        },
+        {
+          "text": "Test board rendering",
+          "done": false
+        },
+        {
+          "text": "Test drag-and-drop",
+          "done": false
+        }
+      ],
+      "commits": [],
+      "createdAt": "2026-02-20T19:12:06.937Z",
+      "updatedAt": "2026-02-20T19:12:19.572Z"
+    },
+    {
+      "id": "t-008",
+      "title": "Prove it works live",
+      "status": "done",
+      "labels": [
+        "demo"
+      ],
+      "steps": [
+        {
+          "text": "Create via API",
+          "done": true
+        },
+        {
+          "text": "See it appear in browser",
+          "done": true
+        }
+      ],
+      "commits": [],
+      "createdAt": "2026-02-20T19:18:51.978Z",
+      "updatedAt": "2026-02-20T19:19:03.598Z"
+    }
+  ]
+}

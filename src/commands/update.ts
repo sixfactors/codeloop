@@ -17,28 +17,17 @@ interface SkillLocation {
   installedPaths: string[];  // Check all possible tool locations
 }
 
-const SKILLS: SkillLocation[] = [
-  {
-    name: 'plan',
-    templatePath: 'templates/commands/plan.md',
-    installedPaths: ['.claude/commands/plan.md', '.cursor/commands/plan.md', '.agents/skills/plan/SKILL.md'],
-  },
-  {
-    name: 'manage',
-    templatePath: 'templates/commands/manage.md',
-    installedPaths: ['.claude/commands/manage.md', '.cursor/commands/manage.md', '.agents/skills/manage/SKILL.md'],
-  },
-  {
-    name: 'commit',
-    templatePath: 'templates/commands/commit.md',
-    installedPaths: ['.claude/commands/commit.md', '.cursor/commands/commit.md', '.agents/skills/commit/SKILL.md'],
-  },
-  {
-    name: 'reflect',
-    templatePath: 'templates/commands/reflect.md',
-    installedPaths: ['.claude/commands/reflect.md', '.cursor/commands/reflect.md', '.agents/skills/reflect/SKILL.md'],
-  },
-];
+const SKILL_NAMES = ['design', 'plan', 'manage', 'test', 'commit', 'qa', 'deploy', 'debug', 'reflect', 'ship'];
+
+const SKILLS: SkillLocation[] = SKILL_NAMES.map(name => ({
+  name,
+  templatePath: `templates/commands/${name}.md`,
+  installedPaths: [
+    `.claude/commands/${name}.md`,
+    `.cursor/commands/${name}.md`,
+    `.agents/skills/${name}/SKILL.md`,
+  ],
+}));
 
 export const updateCommand = new Command('update')
   .description('Update codeloop skills to latest version')

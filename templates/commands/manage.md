@@ -1,6 +1,6 @@
 ---
 description: Track task progress — read/update tasks/todo.md
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
 <!-- codeloop-version: 0.2.0 -->

@@ -46,9 +46,48 @@ diff_scan:
     severity: WARNING
     message: "Explicit 'any' type — consider a specific type"
 
+# Testing — used by /test and /qa
+test:
+  command: "npm test"
+  coverage_threshold: 80
+  integrity_checks: true
+
+# Deployment — used by /deploy and /ship
+# Uncomment and fill in your deploy commands:
+# deploy:
+#   staging:
+#     command: "make deploy-staging"    # or "vercel --env preview"
+#     verify: "curl -sf https://staging.example.com/health"
+#   production:
+#     command: "make deploy-prod"       # or "vercel --prod"
+#     verify: "curl -sf https://example.com/health"
+#     requires: staging
+
+# Debugging — used by /debug
+# Uncomment and fill in your log/health commands:
+# debug:
+#   logs: "fly logs --app myapp"       # or "vercel logs"
+#   health: "curl -sf https://example.com/health"
+
 commit:
   types: [feat, fix, refactor, docs, test, chore, perf]
   format: "type(scope): message"
+
+# Watch mode — used by `codeloop watch`
+watch:
+  enabled: true
+  idle_timeout: 300
+  signals:
+    file_change: true
+    git_commit: true
+    test_result: true
+    build_status: true
+    idle: true
+  ignore:
+    - node_modules
+    - dist
+    - .git
+    - "*.log"
 
 codeloop:
   critical_frequency: 3

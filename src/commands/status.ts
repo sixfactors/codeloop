@@ -53,7 +53,7 @@ function parseFrequencies(content: string): { distribution: Record<string, numbe
 }
 
 function getSkillStatuses(projectDir: string): SkillStatus[] {
-  const skills = ['plan', 'manage', 'commit', 'reflect'];
+  const skills = ['design', 'plan', 'manage', 'test', 'commit', 'qa', 'deploy', 'debug', 'reflect', 'ship'];
   const toolPaths: { tool: string; pathFn: (name: string) => string }[] = [
     { tool: 'claude', pathFn: (n) => `.claude/commands/${n}.md` },
     { tool: 'cursor', pathFn: (n) => `.cursor/commands/${n}.md` },
@@ -92,7 +92,26 @@ function getKnowledgeStats(projectDir: string, filename: string): KnowledgeStats
   return { file: filename, exists: true, entries, freqDistribution: distribution, highFreqEntries: highFreq };
 }
 
-function validateConfig(projectDir: string): string[] {
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'project', 'scopes', 'quality_checks', 'diff_scan', 'test', 'deploy',
+  'debug', 'commit', 'codeloop', 'watch',
+]);
+
+const COMMON_TYPOS: Record<string, string> = {
+  'quality_check': 'quality_checks',
+  'qualityChecks': 'quality_checks',
+  'qualitychecks': 'quality_checks',
+  'diff_scans': 'diff_scan',
+  'diffScan': 'diff_scan',
+  'scope': 'scopes',
+  'deployment': 'deploy',
+  'debugging': 'debug',
+  'testing': 'test',
+  'commits': 'commit',
+  'watching': 'watch',
+};
+
+export function validateConfig(projectDir: string): string[] {
   const configPath = join(projectDir, '.codeloop/config.yaml');
   const issues: string[] = [];
 
@@ -101,21 +120,81 @@ function validateConfig(projectDir: string): string[] {
     return issues;
   }
 
+  let config: any;
   try {
     const content = readFileSync(configPath, 'utf-8');
-    const config = parseYaml(content);
-
-    if (!config.project?.name) {
-      issues.push('project.name is not set');
-    }
-    if (!config.scopes || Object.keys(config.scopes).length === 0) {
-      issues.push('No scopes defined — /commit review will skip scope-based rubric loading');
-    }
-    if (!config.quality_checks || Object.keys(config.quality_checks).length === 0) {
-      issues.push('No quality_checks defined — /commit will skip build/type checks');
-    }
+    config = parseYaml(content);
   } catch {
     issues.push('config.yaml has invalid YAML syntax');
+    return issues;
+  }
+
+  if (!config || typeof config !== 'object') {
+    issues.push('config.yaml is empty or not an object');
+    return issues;
+  }
+
+  // Check for typos in top-level keys
+  for (const key of Object.keys(config)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      const suggestion = COMMON_TYPOS[key];
+      if (suggestion) {
+        issues.push(`Unknown key "${key}" — did you mean "${suggestion}"?`);
+      } else {
+        issues.push(`Unknown top-level key "${key}"`);
+      }
+    }
+  }
+
+  // project.name
+  if (!config.project?.name) {
+    issues.push('project.name is not set');
+  }
+
+  // scopes
+  if (!config.scopes || Object.keys(config.scopes).length === 0) {
+    issues.push('No scopes defined — /commit review will load all knowledge (not scoped)');
+  } else {
+    for (const [name, scope] of Object.entries(config.scopes) as [string, any][]) {
+      if (!scope.paths || !Array.isArray(scope.paths) || scope.paths.length === 0) {
+        issues.push(`Scope "${name}" has no paths — it will never match any files`);
+      }
+    }
+  }
+
+  // quality_checks
+  if (!config.quality_checks || Object.keys(config.quality_checks).length === 0) {
+    issues.push('No quality_checks defined — /commit will skip build/type checks');
+  } else {
+    for (const [scope, checks] of Object.entries(config.quality_checks) as [string, any][]) {
+      if (Array.isArray(checks)) {
+        for (const check of checks) {
+          if (!check.name) {
+            issues.push(`quality_checks.${scope} has a check without a name`);
+          }
+          if (!check.command) {
+            issues.push(`quality_checks.${scope}.${check.name || '?'} has no command`);
+          }
+        }
+      }
+    }
+  }
+
+  // deploy: check for empty strings
+  if (config.deploy) {
+    for (const env of ['staging', 'production'] as const) {
+      const envConfig = config.deploy[env];
+      if (envConfig) {
+        if (envConfig.command === '') {
+          issues.push(`deploy.${env}.command is empty — /deploy will skip it. Remove or fill in.`);
+        }
+      }
+    }
+  }
+
+  // test
+  if (config.test && config.test.command === '') {
+    issues.push('test.command is empty — /test will try to auto-detect');
   }
 
   return issues;

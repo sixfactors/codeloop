@@ -19,9 +19,10 @@ Plan before building. Write specs to `tasks/todo.md`, get approval, then execute
 ## Phase 1: Understand
 
 1. Read the task description (from argument or ask the user)
-2. Read `.codeloop/config.yaml` for project context (scopes, conventions)
-3. Read `.codeloop/gotchas.md` — scan for relevant gotchas that could affect the plan
-4. Read `.codeloop/patterns.md` — check for established patterns to follow
+2. Check for an existing design spec in `tasks/design-*.md` — if one exists for this task, use it as the starting point (goals, approach, files to change, risks)
+3. Read `.codeloop/config.yaml` for project context (scopes, conventions)
+4. Read `.codeloop/gotchas.md` — scan for relevant gotchas that could affect the plan
+5. Read `.codeloop/patterns.md` — check for established patterns to follow
 
 ## Phase 2: Plan
 

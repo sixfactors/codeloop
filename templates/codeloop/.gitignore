@@ -1,0 +1,5 @@
+# Runtime files — do not commit
+.serve.pid
+.watch.pid
+watch.log
+test-history.json

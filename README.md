@@ -1,43 +1,43 @@
 # codeloop
 
-**Code agents that project manage themselves.**
+**The full dev lifecycle for AI coding agents.**
 
-Your AI agent plans the work, tracks its own tasks, and learns from every mistake — across sessions, across tools, without you babysitting it.
+Your AI agent plans the work, tests it, reviews its own commits, deploys to staging, debugs production, and learns from every mistake — across sessions, across tools, without you babysitting it.
 
 ![Codeloop Board](https://codeloop.sixfactors.ai/board.png)
-
-codeloop gives your project a memory that survives across sessions — and a live dashboard where you watch the agent think.
 
 ## The Problem
 
 AI coding tools (Claude Code, Cursor, Codex) are stateless. Every session starts from zero. You've explained that `doc.save()` has race conditions six times. You've caught `console.log` in production code on every PR. The agent never learns, because it can't remember.
 
-Your team's hard-won knowledge — the gotchas, the patterns, the "don't do that, here's why" — lives in people's heads. Not where the AI can use it.
+Worse — the agent can write code, but it can't test, deploy, or debug. You're still the glue between "code complete" and "live in production." That's where most of the time goes.
 
-## The Loop
+## The Pipeline
 
-codeloop creates a closed feedback loop between you and your AI agent:
+codeloop gives your project ten slash commands that cover the full development lifecycle:
 
 ```
-Plan → Build → Commit → Reflect
-  ↑                         |
-  └─────────────────────────┘
-      lessons feed back in
+/design → /plan → /manage → /test → /commit → /qa → /deploy → /debug → /reflect → /ship
 ```
 
-Four slash commands. That's the entire interface.
+| Command | What it does |
+|---------|-------------|
+| `/design` | Analyze the codebase, generate a lightweight architectural spec |
+| `/plan` | Write a task plan with acceptance criteria, enter plan mode |
+| `/manage` | Track steps, check off progress, manage the task board |
+| `/test` | Run your test suite, parse results, track coverage over time |
+| `/commit` | Three-phase commit: review diff against learned rubrics → reflect on session → commit |
+| `/qa` | Quality gate: static analysis + tests + coverage threshold + integrity checks |
+| `/deploy` | Deploy to staging or production with verification gates |
+| `/debug` | Search production logs, check health, cross-reference with recent commits |
+| `/reflect` | Deep session review: scan all work, propose lessons to save |
+| `/ship` | Close the loop: QA → staging → production → verify → done |
 
-**`/plan`** reads your project's known gotchas before you start. "Last time we touched auth, we forgot to scope queries by workspace." The agent plans around landmines it hasn't personally stepped on yet.
-
-**`/commit`** does a three-phase commit: first it **reviews** your diff against learned rubrics (not just lint rules — *your team's actual mistakes*), then it **reflects** on what happened this session ("we discovered that collection names are inconsistent — save this?"), then it commits. One command, three layers of quality.
-
-**`/reflect`** is the deep version. End of a long session, multiple commits, hard-fought bugs. It scans everything that happened and proposes lessons to save. You pick what matters. It writes to your knowledge base.
-
-**`/manage`** tracks the plan. Check off steps, add new ones, get a summary of where things stand.
+Each command reads your project's config and knowledge files. No runtime, no server — just markdown and YAML that the LLM reads directly.
 
 ## How Knowledge Compounds
 
-Here's where it gets interesting. Every gotcha has a frequency counter:
+Every gotcha has a frequency counter:
 
 ```
 Session 1: You discover that boolean query params need Transform decorators.
@@ -56,7 +56,7 @@ Session 20: [freq:10+]
 
 **Frequency = severity.** The more something bites you, the harder the system fights to prevent it. No configuration needed — it emerges from use.
 
-The review isn't one-size-fits-all either. Changed a backend file? It loads backend gotchas. Frontend only? It skips database warnings entirely. Scopes in your config file control what's relevant:
+The review is scoped too. Changed a backend file? It loads backend gotchas. Frontend only? It skips database warnings. Scopes in your config control what's relevant:
 
 ```yaml
 scopes:
@@ -68,10 +68,10 @@ scopes:
     gotcha_sections: ["Frontend", "React"]
 ```
 
-## What Gets Created
+## Quick Start
 
 ```bash
-npm install -g codeloop
+npm install -g @sixfactors-ai/codeloop
 cd your-project
 codeloop init
 ```
@@ -80,43 +80,45 @@ It asks which AI tools you use, detects your tech stack, and scaffolds:
 
 ```
 .codeloop/
-  config.yaml       ← Scopes, quality checks, diff scan rules
-  rules.md          ← Non-negotiable rules (always CRITICAL)
+  config.yaml       ← Scopes, quality checks, deploy/test/debug config
+  rules.md          ← Non-negotiable rules (always CRITICAL in review)
   gotchas.md        ← Discovered gotchas with frequency tracking
   patterns.md       ← Proven patterns with confidence levels
-  principles.md     ← Operating principles for the AI agent
+  principles.md     ← How you want the AI to operate
 
-.claude/commands/   ← Slash commands (Claude Code)
-.cursor/commands/   ← Slash commands (Cursor)
-.agents/skills/     ← Skills (Codex)
+.claude/commands/   ← 10 slash commands (Claude Code)
+.cursor/commands/   ← 10 slash commands (Cursor)
+.agents/skills/     ← 10 skills (Codex)
 
 tasks/todo.md       ← Current task plan
 ```
 
-The knowledge base (`.codeloop/`) is shared across all tools. Doesn't matter if you use Claude Code on Monday and Cursor on Tuesday — same gotchas, same patterns, same rules.
+The knowledge base (`.codeloop/`) is shared across all tools. Doesn't matter if you use Claude Code on Monday and Cursor on Tuesday — same gotchas, same rules.
 
 ## The Config
 
-`.codeloop/config.yaml` is the brain. The AI reads it directly — no runtime, no server, just a YAML file the LLM parses.
+`.codeloop/config.yaml` controls everything. The AI reads it directly.
 
 ```yaml
 project:
   name: "my-api"
 
+# Map file paths to knowledge sections
 scopes:
   backend:
     paths: ["src/**"]
     gotcha_sections: ["Backend", "Database", "API"]
-    pattern_sections: ["Backend", "Error Handling"]
   tests:
-    paths: ["**/*.test.*", "**/*.spec.*"]
+    paths: ["**/*.test.*"]
     gotcha_sections: ["Testing"]
 
+# Build/lint checks run during /commit and /qa
 quality_checks:
   backend:
     - name: "Typecheck"
       command: "npx tsc --noEmit 2>&1 | tail -20"
 
+# Patterns banned in diffs
 diff_scan:
   - pattern: "console\\.log"
     files: "*.ts,*.js"
@@ -124,27 +126,42 @@ diff_scan:
     severity: CRITICAL
     message: "console.log in production code"
 
+# Test runner config (used by /test and /qa)
+test:
+  command: "npm test"
+  coverage_threshold: 80
+  integrity_checks: true
+
+# Deployment gates (used by /deploy and /ship)
+deploy:
+  staging:
+    command: "make deploy-staging"
+    verify: "curl -sf https://staging.example.com/health"
+  production:
+    command: "make deploy-prod"
+    verify: "curl -sf https://example.com/health"
+    requires: staging
+
+# Production debugging (used by /debug)
+debug:
+  logs: "fly logs --app myapp"
+  health: "curl -sf https://example.com/health"
+
+# Frequency thresholds
 codeloop:
   critical_frequency: 3
   promote_frequency: 10
 ```
 
-**Scopes** connect file paths to knowledge sections — so `/commit` only loads relevant rubrics.
-
-**Quality checks** run build/lint/type commands and report failures as CRITICAL.
-
-**Diff scan** searches the actual diff for patterns you've banned (debug statements, .env files, explicit `any` types).
-
 ## The Commit Flow
 
-When you type `/commit`, this happens:
+When you type `/commit`:
 
 ```
 Phase 1: Review
-  ├─ Map changed files → scopes (from config.yaml)
-  ├─ Load gotchas for those scopes (freq ≥ 3 = CRITICAL, 1-2 = WARNING)
-  ├─ Load patterns (HIGH confidence = expected, deviation = WARNING)
-  ├─ Load rules (always CRITICAL)
+  ├─ Map changed files → scopes
+  ├─ Load gotchas (freq ≥ 3 = CRITICAL, 1-2 = WARNING)
+  ├─ Load patterns (HIGH confidence = expected)
   ├─ Run quality checks for active scopes
   ├─ Scan diff for violations
   └─ Verdict: CLEAN / WARNINGS / BLOCKED
@@ -152,7 +169,7 @@ Phase 1: Review
 Phase 2: Reflect (lightweight)
   ├─ Scan session for new gotchas or patterns
   ├─ Propose saves (you pick what to keep)
-  └─ Write to .codeloop/gotchas.md or patterns.md
+  └─ Write to gotchas.md or patterns.md
 
 Phase 3: Commit
   ├─ Stage files
@@ -160,11 +177,49 @@ Phase 3: Commit
   └─ Create commit
 ```
 
-If the review finds CRITICAL issues, it blocks. You can fix them, override, or abort. No silent failures.
+If the review finds CRITICAL issues, it blocks. You can fix them, override, or abort.
+
+## The Deployment Pipeline
+
+`/qa` → `/deploy staging` → `/deploy prod` forms a gate chain:
+
+```
+/qa passes           → sets env:local-pass    → unlocks staging
+/deploy staging      → sets env:staging-pass  → unlocks production
+/deploy prod         → sets env:prod-pass     → task is done
+```
+
+`/ship` runs the full chain in one command. If any gate fails, it stops and creates a regression task on the board.
+
+## Watch Mode
+
+Monitor your project in the background:
+
+```bash
+codeloop watch                # Start watching
+codeloop watch --with-serve   # Watch + board server (live UI)
+```
+
+Watch detects file changes, git commits, test results, and build errors. Events are logged to `.codeloop/watch.log` and pushed to the board UI via SSE when the server is running.
+
+## Skill Registry
+
+Install community skills or share your own:
+
+```bash
+codeloop search "deploy"              # Find skills
+codeloop install review-checklist     # Install from registry
+codeloop install github:user/repo     # Install from GitHub
+codeloop install ./local-skill        # Install from local path
+codeloop list                         # Show installed skills
+codeloop remove review-checklist      # Uninstall
+```
+
+Every installed skill gets security-validated (no `exec()`, no credential access, no pipe-to-shell) and locked with integrity hashes in `.codeloop/skills.lock`.
 
 ## Works With Everything
 
-codeloop auto-detects your stack and your tools:
+codeloop auto-detects your stack and tools:
 
 | Stack | Detected by | Starter config |
 |-------|-------------|----------------|
@@ -173,41 +228,48 @@ codeloop auto-detects your stack and your tools:
 | Go | `go.mod` | go vet, go build, fmt.Print detection |
 | Generic | Fallback | Minimal — you configure |
 
-| Tool | Commands go to | Format |
-|------|---------------|--------|
-| Claude Code | `.claude/commands/` | Markdown + frontmatter |
-| Cursor | `.cursor/commands/` | Markdown + frontmatter |
-| Codex | `.agents/skills/` | SKILL.md with YAML frontmatter |
+| Tool | Commands installed to | Compatibility |
+|------|---------------------|---------------|
+| Claude Code | `.claude/commands/` | Full (primary target) |
+| Cursor | `.cursor/commands/` | Knowledge + config (tool hints are Claude-specific) |
+| Codex | `.agents/skills/` | Knowledge + config (tool hints are Claude-specific) |
 
-## CLI
+**Note**: The `allowed-tools` frontmatter in skill files uses Claude Code tool names (Bash, Read, Edit, etc.). Cursor and Codex ignore this field — the skill instructions still work, but tool restrictions aren't enforced. The knowledge files (gotchas, patterns, rules) and config are fully portable across all tools.
+
+## CLI Reference
 
 ```bash
-codeloop init                        # Interactive setup
-codeloop init --tools claude,cursor  # Skip tool prompt
-codeloop init --starter python       # Force specific stack
+# Project setup
+codeloop init                         # Interactive setup
+codeloop init --tools claude,cursor   # Skip tool prompt
+codeloop init --starter python        # Force specific stack
+codeloop status                       # Knowledge stats, version check
+codeloop update                       # Update skills (never touches knowledge)
 
-codeloop status                      # Knowledge stats, version check
-codeloop update                      # Update skills (never touches knowledge)
-codeloop update --dry-run            # Preview what would change
+# Live monitoring
+codeloop watch                        # Background file + git monitor
+codeloop serve                        # Board UI server (http://localhost:4242)
+
+# Skill registry
+codeloop search <query>               # Search for skills
+codeloop install <name>               # Install a skill
+codeloop list                         # Show installed skills
+codeloop remove <name>                # Uninstall a skill
+codeloop publish                      # Publish your skill to the registry
+codeloop login                        # Authenticate with GitHub
 ```
-
-`init` never overwrites existing knowledge files. Your gotchas and patterns are sacred.
-
-`update` refreshes the slash commands to the latest version (version-tagged with `<!-- codeloop-version: X.Y.Z -->`). Knowledge files are never touched.
 
 ## The Knowledge Files
 
-These are the files that make your project smarter:
+**`rules.md`** — Non-negotiable. Always loaded as CRITICAL. Start with universal rules, add yours.
 
-**`rules.md`** — Non-negotiable. Always loaded as CRITICAL. Start with 4 universal rules, add yours.
-
-**`gotchas.md`** — Discovered through work. Each entry has `[freq:N]`. The system auto-promotes severity as frequency climbs. Organized by sections that match your scopes.
+**`gotchas.md`** — Discovered through work. Each entry has `[freq:N]`. Severity auto-scales with frequency. Organized by sections matching your scopes.
 
 **`patterns.md`** — What works well. HIGH-confidence patterns become expectations — deviations trigger warnings during review.
 
-**`principles.md`** — How you want the AI to operate. Plan first? Verify before done? Subagents for research? Write it here once, it applies everywhere.
+**`principles.md`** — How you want the AI to operate. Plan first? Verify before done? Write it here once, it applies everywhere.
 
-All of these are plain markdown. No lock-in, no proprietary format. If you stop using codeloop tomorrow, the knowledge stays in your repo as useful documentation.
+All plain markdown. No lock-in, no proprietary format. If you stop using codeloop tomorrow, the knowledge stays as useful documentation.
 
 ## License
 

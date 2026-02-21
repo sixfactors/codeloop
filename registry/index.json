@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-21T00:00:00Z",
+  "skills": [
+    {
+      "name": "design",
+      "version": "0.2.0",
+      "description": "Architecture before code — generate lightweight spec from codebase analysis",
+      "author": "sixfactors",
+      "tags": ["pipeline", "architecture", "planning"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "plan",
+      "version": "0.2.0",
+      "description": "Plan a task — write spec to tasks/todo.md, enter plan mode",
+      "author": "sixfactors",
+      "tags": ["pipeline", "planning", "tdd"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "manage",
+      "version": "0.2.0",
+      "description": "Track task progress — read/update tasks/todo.md",
+      "author": "sixfactors",
+      "tags": ["pipeline", "tasks", "tracking"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "test",
+      "version": "0.2.0",
+      "description": "Run tests, parse results, track coverage history",
+      "author": "sixfactors",
+      "tags": ["pipeline", "testing", "coverage"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "commit",
+      "version": "0.2.0",
+      "description": "Review + reflect + commit in one flow",
+      "author": "sixfactors",
+      "tags": ["pipeline", "git", "review"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "qa",
+      "version": "0.2.0",
+      "description": "Quality gate — run all checks before promoting a task",
+      "author": "sixfactors",
+      "tags": ["pipeline", "quality", "gate"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "deploy",
+      "version": "0.2.0",
+      "description": "Deploy to staging or production with verification gates",
+      "author": "sixfactors",
+      "tags": ["pipeline", "deploy", "staging", "production"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "debug",
+      "version": "0.2.0",
+      "description": "Investigate production issues — search logs, check health",
+      "author": "sixfactors",
+      "tags": ["pipeline", "debugging", "logs", "production"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "reflect",
+      "version": "0.1.0",
+      "description": "Session-end reflection — capture what you learned",
+      "author": "sixfactors",
+      "tags": ["pipeline", "reflection", "learning"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    },
+    {
+      "name": "ship",
+      "version": "0.2.0",
+      "description": "Close the loop — QA, deploy staging, deploy prod, verify, close task",
+      "author": "sixfactors",
+      "tags": ["pipeline", "deploy", "orchestration"],
+      "stack": "generic",
+      "tier": "trusted",
+      "source": "builtin"
+    }
+  ]
+}

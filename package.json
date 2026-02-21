@@ -1,6 +1,6 @@
 {
   "name": "@sixfactors-ai/codeloop",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Self-improving development workflow for AI coding agents",
   "type": "module",
   "bin": {
@@ -48,6 +48,7 @@
   "files": [
     "dist",
     "templates",
-    "starters"
+    "starters",
+    "registry"
   ]
 }

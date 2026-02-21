@@ -33,10 +33,47 @@ diff_scan: []
   #   severity: WARNING
   #   message: "TODO comment found"
 
+# Testing — used by /test and /qa
+# test:
+#   command: "npm test"           # or pytest, go test ./..., cargo test
+#   coverage_threshold: 80        # optional, for /qa gate
+#   integrity_checks: true        # scan for fake-pass patterns
+
+# Deployment — used by /deploy and /ship
+# deploy:
+#   staging:
+#     command: ""                  # your staging deploy command
+#     verify: ""                   # post-deploy smoke test
+#   production:
+#     command: ""                  # your production deploy command
+#     verify: ""                   # post-deploy smoke test
+#     requires: staging            # must pass staging first
+
+# Debugging — used by /debug
+# debug:
+#   logs: ""                       # command to tail production logs
+#   health: ""                     # health check URL or command
+
 # Conventional commit types allowed.
 commit:
   types: [feat, fix, refactor, docs, test, chore, perf]
   format: "type(scope): message"
+
+# Watch mode — used by `codeloop watch`
+# watch:
+#   enabled: true
+#   idle_timeout: 300            # seconds before idle signal
+#   signals:
+#     file_change: true
+#     git_commit: true
+#     test_result: true
+#     build_status: true
+#     idle: true
+#   ignore:
+#     - node_modules
+#     - dist
+#     - .git
+#     - "*.log"
 
 # Codeloop behavior settings.
 codeloop:
