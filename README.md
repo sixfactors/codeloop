@@ -4,7 +4,7 @@
 
 Your AI agent plans the work, tracks its own tasks, and learns from every mistake — across sessions, across tools, without you babysitting it.
 
-![Codeloop Board](docs/board.png)
+![Codeloop Board](https://codeloop.sixfactors.ai/board.png)
 
 codeloop gives your project a memory that survives across sessions — and a live dashboard where you watch the agent think.
 

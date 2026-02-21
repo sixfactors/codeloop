@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+
+  /* Brand accent — sixfactors coral */
+  --color-accent: #dc424a;
+  --color-accent-light: #e5636a;
+  --color-accent-dark: #c33039;
+  --color-accent-foreground: #ffffff;
+
+  /* Severity colors (unchanged between themes) */
+  --color-amber: #f59e0b;
+
+  /* Semantic tokens — dark values as defaults.
+     Tailwind v4 generates utilities (bg-background, text-foreground, etc.)
+     that resolve via var(--color-*). The .light class overrides these
+     at a higher cascade priority (unlayered > @layer theme). */
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-muted: #27272a;
+  --color-muted-foreground: #a1a1aa;
+  --color-card: #0f0f12;
+  --color-card-foreground: #fafafa;
+  --color-border: #27272a;
+  --color-input: #27272a;
+  --color-ring: #dc424a;
+  --color-surface-1: #111113;
+  --color-surface-2: #18181b;
+  --color-surface-3: #1f1f23;
+  --color-accent-glow: rgba(220, 66, 74, 0.15);
+}
+
+/* ── Light theme override ──
+   Unlayered CSS always wins over @layer theme in the cascade,
+   so these override the dark defaults when .light is on <html>. */
+.light {
+  --color-background: #ffffff;
+  --color-foreground: #0f0f12;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #52525b;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f0f12;
+  --color-border: #e4e4e7;
+  --color-input: #e4e4e7;
+  --color-ring: #dc424a;
+  --color-surface-1: #f9f9fb;
+  --color-surface-2: #f4f4f5;
+  --color-surface-3: #ebebee;
+  --color-accent-glow: rgba(220, 66, 74, 0.08);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Selection */
+::selection {
+  background: rgba(220, 66, 74, 0.3);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* Code blocks */
+pre code {
+  font-family: var(--font-mono);
+}
