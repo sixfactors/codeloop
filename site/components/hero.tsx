@@ -12,8 +12,8 @@ export function Hero() {
           <span className="text-accent">project manage themselves.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Your AI agent plans the work, tracks its own tasks, and learns from every mistake
-          — across sessions, across tools.
+          Your AI agent designs, plans, tests, deploys, and debugs — learning from every
+          mistake across sessions, across tools.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4">

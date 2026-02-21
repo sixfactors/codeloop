@@ -6,7 +6,7 @@ import { GitHubStars } from './github-stars';
 import { ThemeToggle } from './theme-toggle';
 
 const links = [
-  { label: 'Features', href: '#loop' },
+  { label: 'Pipeline', href: '#loop' },
   { label: 'How It Works', href: '#knowledge' },
   { label: 'Get Started', href: '#quickstart' },
 ];

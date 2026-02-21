@@ -1,33 +1,108 @@
-import { BookOpen, GitCommit, ListChecks, Lightbulb } from 'lucide-react';
+import {
+  Compass,
+  BookOpen,
+  ListChecks,
+  FlaskConical,
+  GitCommit,
+  ShieldCheck,
+  Rocket,
+  Bug,
+  Lightbulb,
+  PackageCheck,
+} from 'lucide-react';
 
-const steps = [
+const pipeline = [
   {
-    icon: BookOpen,
-    command: '/plan',
-    title: 'Plan with memory',
-    description:
-      'Reads your project\'s known gotchas before you start. "Last time we touched auth, we forgot to scope queries by workspace." The agent plans around landmines it hasn\'t personally stepped on yet.',
+    phase: 'Design',
+    color: 'text-blue-400',
+    bg: 'bg-blue-400/10',
+    border: 'border-blue-400/20',
+    skills: [
+      {
+        icon: Compass,
+        command: '/design',
+        title: 'Architecture first',
+        description: 'Analyze the codebase and generate a lightweight spec — goals, approach, files to change, risks.',
+      },
+      {
+        icon: BookOpen,
+        command: '/plan',
+        title: 'Plan with memory',
+        description: 'Reads known gotchas before you start. Writes a task plan with acceptance criteria. Enters plan mode for approval.',
+      },
+    ],
   },
   {
-    icon: ListChecks,
-    command: '/manage',
-    title: 'Track progress',
-    description:
-      'Checks off steps, adds new ones, updates the board. Your agent knows where things stand — without you asking.',
+    phase: 'Build',
+    color: 'text-green-400',
+    bg: 'bg-green-400/10',
+    border: 'border-green-400/20',
+    skills: [
+      {
+        icon: ListChecks,
+        command: '/manage',
+        title: 'Track progress',
+        description: 'Check off steps, add new ones, update the board. The agent knows where things stand.',
+      },
+      {
+        icon: FlaskConical,
+        command: '/test',
+        title: 'Run tests',
+        description: 'Auto-detects your test runner. Parses results, tracks coverage over time in test-history.json.',
+      },
+      {
+        icon: GitCommit,
+        command: '/commit',
+        title: 'Review & commit',
+        description: 'Three-phase: reviews diff against learned rubrics, reflects on the session, then commits. Blocks on CRITICAL findings.',
+      },
+    ],
   },
   {
-    icon: GitCommit,
-    command: '/commit',
-    title: 'Review & commit',
-    description:
-      'Three-phase commit: reviews your diff against learned rubrics, reflects on what happened this session, then commits. One command, three layers of quality.',
+    phase: 'Ship',
+    color: 'text-purple-400',
+    bg: 'bg-purple-400/10',
+    border: 'border-purple-400/20',
+    skills: [
+      {
+        icon: ShieldCheck,
+        command: '/qa',
+        title: 'Quality gate',
+        description: 'Runs all checks: static analysis, tests, coverage threshold, integrity scan. Sets env:local-pass to unlock deploy.',
+      },
+      {
+        icon: Rocket,
+        command: '/deploy',
+        title: 'Deploy with gates',
+        description: 'Staging then production. Each environment has a verify step. /deploy prod refuses without staging-pass.',
+      },
+      {
+        icon: Bug,
+        command: '/debug',
+        title: 'Investigate production',
+        description: 'Search logs, check health, cross-reference errors with recent commits. Creates regression tasks automatically.',
+      },
+    ],
   },
   {
-    icon: Lightbulb,
-    command: '/reflect',
-    title: 'Capture lessons',
-    description:
-      'Scans everything that happened and proposes lessons to save. You pick what matters. It writes to your knowledge base.',
+    phase: 'Learn',
+    color: 'text-amber-400',
+    bg: 'bg-amber-400/10',
+    border: 'border-amber-400/20',
+    skills: [
+      {
+        icon: Lightbulb,
+        command: '/reflect',
+        title: 'Capture lessons',
+        description: 'Deep session review. Scans all work and proposes lessons to save. Increments frequency on re-encountered gotchas.',
+      },
+      {
+        icon: PackageCheck,
+        command: '/ship',
+        title: 'Close the loop',
+        description: 'Orchestrates QA, staging, production, and verify in one command. On failure: stops and creates a regression task.',
+      },
+    ],
   },
 ];
 
@@ -36,48 +111,55 @@ export function Loop() {
     <section id="loop" className="py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">The Loop</h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            A closed feedback loop between you and your AI agent. Four commands. That&apos;s the
-            entire interface.
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">The Pipeline</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            Ten slash commands covering the full dev lifecycle. Design through production — with
+            learned knowledge at every step.
           </p>
         </div>
 
-        {/* Loop diagram */}
-        <div className="mx-auto mt-10 flex max-w-md items-center justify-center">
-          <div className="relative flex items-center gap-3 rounded-full border border-border/60 bg-surface-1 px-6 py-3">
-            {['Plan', 'Build', 'Commit', 'Reflect'].map((step, i) => (
-              <div key={step} className="flex items-center gap-3">
-                <span className="font-mono text-sm font-medium text-accent">{step}</span>
-                {i < 3 && <span className="text-muted-foreground">&rarr;</span>}
-              </div>
-            ))}
-            {/* Loop arrow */}
-            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-              &#8635; lessons feed back in
-            </span>
-          </div>
+        {/* Pipeline diagram */}
+        <div className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+          {['/design', '/plan', '/manage', '/test', '/commit', '/qa', '/deploy', '/debug', '/reflect', '/ship'].map((cmd, i) => (
+            <div key={cmd} className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-mono text-[11px] font-medium text-accent sm:text-xs">{cmd}</span>
+              {i < 9 && <span className="text-muted-foreground text-xs">&rarr;</span>}
+            </div>
+          ))}
         </div>
 
-        {/* Command cards */}
-        <div className="mt-16 grid gap-6 sm:grid-cols-2">
-          {steps.map((step) => (
-            <div
-              key={step.command}
-              className="group rounded-xl border border-border/50 bg-surface-1 p-6 transition-colors hover:border-accent/30"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <step.icon className="h-5 w-5" />
-                </div>
-                <code className="rounded bg-surface-2 px-2 py-0.5 font-mono text-sm text-accent">
-                  {step.command}
-                </code>
+        {/* Phase groups */}
+        <div className="mt-14 space-y-10">
+          {pipeline.map((phase) => (
+            <div key={phase.phase}>
+              <div className="mb-4 flex items-center gap-3">
+                <span className={`rounded-full ${phase.bg} ${phase.color} px-3 py-1 font-mono text-xs font-bold`}>
+                  {phase.phase}
+                </span>
+                <div className="h-px flex-1 bg-border/40" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {step.description}
-              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {phase.skills.map((skill) => (
+                  <div
+                    key={skill.command}
+                    className={`group rounded-xl border ${phase.border} bg-surface-1 p-5 transition-colors hover:border-accent/30`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${phase.bg} ${phase.color}`}>
+                        <skill.icon className="h-4 w-4" />
+                      </div>
+                      <code className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-accent">
+                        {skill.command}
+                      </code>
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold">{skill.title}</h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                      {skill.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

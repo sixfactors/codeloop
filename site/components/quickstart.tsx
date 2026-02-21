@@ -6,7 +6,7 @@ export function Quickstart() {
       <div className="mx-auto max-w-3xl px-6 text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Get started</h2>
         <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-          Install globally, init in your project, and start the board. That&apos;s it.
+          Install globally, init in your project, start the board. Knowledge seeded for your stack on day one.
         </p>
 
         {/* Terminal block */}
