@@ -94,7 +94,7 @@ function getKnowledgeStats(projectDir: string, filename: string): KnowledgeStats
 
 const KNOWN_TOP_LEVEL_KEYS = new Set([
   'project', 'scopes', 'quality_checks', 'diff_scan', 'test', 'deploy',
-  'debug', 'commit', 'codeloop', 'watch',
+  'debug', 'commit', 'codeloop', 'watch', 'gates', 'capacity', 'verify',
 ]);
 
 const COMMON_TYPOS: Record<string, string> = {

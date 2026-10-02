@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -79,10 +79,13 @@ describe('skill → board integration', () => {
   });
 
   describe('all templates', () => {
-    it('have version 0.2.0', () => {
-      for (const name of ['plan', 'manage', 'commit']) {
-        const content = readTemplate(name);
-        expect(content).toContain('codeloop-version: 0.2.0');
+    it('every command template carries the package version', () => {
+      const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
+      const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
+      const templates = readdirSync(join(root, 'templates/commands')).filter(f => f.endsWith('.md'));
+      expect(templates.length).toBeGreaterThanOrEqual(10);
+      for (const file of templates) {
+        expect(readFileSync(join(root, 'templates/commands', file), 'utf-8'), file).toContain(`codeloop-version: ${version}`);
       }
     });
   });

@@ -2,8 +2,10 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { createInterface } from 'readline';
 import { detectStack, type StackId } from '../lib/detect.js';
-import { scaffold, type ToolId } from '../lib/scaffold.js';
+import { installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
+import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
+import { defaultSkillDirs, ensureSkillsIndex, scanSkills } from '../lib/skills.js';
 
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -56,8 +58,31 @@ export const initCommand = new Command('init')
   .description('Initialize codeloop in the current project')
   .option('-s, --starter <name>', 'Use a specific starter (generic, node-typescript, python, go)')
   .option('-t, --tools <tools>', 'Comma-separated tools: claude,cursor,codex (skip prompt)')
-  .action(async (options: { starter?: string; tools?: string }) => {
+  .option('--hooks', 'Only install the commit-msg hook that adds the Feature: trailer')
+  .option('--ci <provider>', 'Only write CI workflows (github)')
+  .action(async (options: { starter?: string; tools?: string; hooks?: boolean; ci?: string }) => {
     const projectDir = process.cwd();
+
+    if (options.ci) {
+      if (options.ci !== 'github') {
+        console.log(chalk.red(`  unknown CI provider "${options.ci}" (github)`));
+        process.exit(1);
+      }
+      const ci = installCi(projectDir);
+      ci.created.forEach(f => console.log(chalk.green(`  + ${f}`)));
+      ci.skipped.forEach(f => console.log(chalk.yellow(`  ~ ${f} (already exists)`)));
+      if (!options.hooks) return;
+    }
+
+    if (options.hooks) {
+      const hook = installHooks(projectDir);
+      if (!hook.installed) {
+        console.log(chalk.red(`  commit-msg hook not installed: ${hook.reason}`));
+        process.exit(1);
+      }
+      console.log(chalk.green(`  + ${hook.path}`));
+      return;
+    }
 
     // Detect or use specified starter
     let stackId: StackId;
@@ -99,6 +124,12 @@ export const initCommand = new Command('init')
 
     const result = scaffold(projectDir, starterFile, tools);
 
+    // The shipped lanes name the skills just installed, so the index has to exist before lint or pack
+    // can pass. An existing index is left alone: adopt replaces it, it does not merge.
+    ensureSkillsIndex(projectDir, () => scanSkills(projectDir, defaultSkillDirs(projectDir)));
+    const indexed = loadSkillsIndex(projectDir)?.length ?? 0;
+    const lanes = loadLanes(projectDir).length;
+
     // Print created files
     if (result.created.length > 0) {
       console.log(chalk.green('  Created:'));
@@ -118,13 +149,11 @@ export const initCommand = new Command('init')
     console.log();
     console.log(chalk.bold('Done.'));
     console.log();
-    console.log('  Next steps:');
-    console.log(`    1. Edit ${chalk.cyan('.codeloop/config.yaml')} for your project`);
-    console.log(`    2. Add project-specific rules to ${chalk.cyan('.codeloop/rules.md')}`);
-    console.log(`    3. Use ${chalk.cyan('/plan')} to start your first task`);
-    console.log(`    4. Use ${chalk.cyan('/commit')} when ready to commit`);
+    console.log(`  ${lanes} lanes in ${chalk.cyan('.codeloop/lanes/')}, ${indexed} skills indexed in ${chalk.cyan(SKILLS_INDEX)}.`);
+    console.log(`  ${chalk.cyan('codeloop serve')} opens the board in a browser.`);
     console.log();
-    console.log(chalk.dim('  The loop gets smarter as you use it — gotchas and patterns'));
-    console.log(chalk.dim('  accumulate automatically through /commit and /reflect.'));
+    console.log('  Next, type:');
+    console.log(`    ${chalk.cyan('codeloop start "<your feature>"')}`);
+    console.log(`    ${chalk.cyan('codeloop inbox')}`);
     console.log();
   });

@@ -12,6 +12,23 @@ import { listCommand } from './commands/list.js';
 import { removeCommand } from './commands/remove.js';
 import { publishCommand } from './commands/publish.js';
 import { loginCommand } from './commands/login.js';
+import { laneCommand } from './commands/lane.js';
+import { approveCommand, cardCommand, nextCommand, rejectCommand, startCommand } from './commands/card.js';
+import { inboxCommand } from './commands/inbox.js';
+import { runCommand } from './commands/run.js';
+import { briefCommand } from './commands/brief.js';
+import { scheduleCommand } from './commands/schedule.js';
+import { adoptCommand } from './commands/adopt.js';
+import { checkCommand } from './commands/check.js';
+import { packCommand } from './commands/pack.js';
+import { specCommand, taskCommand } from './commands/spec.js';
+import { importCommand } from './commands/import.js';
+import { statsCommand, verifyCommand } from './commands/verify.js';
+import { learnCommand, wikiCommand } from './commands/wiki.js';
+import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
+import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
+import { mockCommand, mocksCommand } from './commands/mock.js';
+import { scanCommand } from './commands/scan.js';
 
 const program = new Command();
 
@@ -20,12 +37,49 @@ program
   .description('Self-improving development workflow for AI coding agents')
   .version('0.2.0');
 
+// With the cloud connected, every command first pushes pending writes and takes what changed there.
+program.hook('preAction', (_program, action) => {
+  let top = action;
+  while (top.parent && top.parent !== program) top = top.parent;
+  syncBeforeCommand(top.name());
+});
+
 // Project management
 program.addCommand(initCommand);
 program.addCommand(updateCommand);
 program.addCommand(statusCommand);
 program.addCommand(serveCommand);
 program.addCommand(watchCommand);
+
+// Lane engine
+program.addCommand(laneCommand);
+program.addCommand(cardCommand);
+program.addCommand(startCommand);
+program.addCommand(nextCommand);
+program.addCommand(approveCommand);
+program.addCommand(rejectCommand);
+program.addCommand(inboxCommand);
+program.addCommand(runCommand);
+program.addCommand(briefCommand);
+program.addCommand(scheduleCommand);
+program.addCommand(adoptCommand);
+program.addCommand(checkCommand);
+program.addCommand(packCommand);
+program.addCommand(specCommand);
+program.addCommand(mockCommand);
+program.addCommand(mocksCommand);
+program.addCommand(scanCommand);
+program.addCommand(taskCommand);
+program.addCommand(importCommand);
+program.addCommand(verifyCommand);
+program.addCommand(statsCommand);
+program.addCommand(wikiCommand);
+program.addCommand(learnCommand);
+program.addCommand(renderCommand);
+program.addCommand(mcpCommand);
+program.addCommand(gateCommand);
+program.addCommand(configCommand);
+program.addCommand(cloudCommand);
 
 // Skill registry
 program.addCommand(installCommand);

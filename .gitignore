@@ -4,3 +4,8 @@ dist/
 .DS_Store
 coverage/
 .next/
+.codeloop/skills.index.yaml
+.codeloop/.serve.pid
+.codeloop/cloud.json
+.codeloop/local.yaml
+.codeloop/state/sync.json

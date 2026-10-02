@@ -1,8 +1,9 @@
 import fse from 'fs-extra';
-import { join, dirname } from 'path';
+import { spawnSync } from 'child_process';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-const { copySync, ensureDirSync, existsSync, readFileSync, writeFileSync } = fse;
+const { copySync, ensureDirSync, existsSync, readdirSync, readFileSync, writeFileSync } = fse;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,8 +52,17 @@ function getCommandDestinations(tools: ToolId[]): ScaffoldFile[] {
   return files;
 }
 
+function getLaneFiles(): ScaffoldFile[] {
+  const dir = join(PACKAGE_ROOT, 'templates/lanes');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter(f => f.endsWith('.yaml'))
+    .map(f => ({ source: `templates/lanes/${f}`, destination: `.codeloop/lanes/${f}`, overwrite: false }));
+}
+
 function getKnowledgeFiles(): ScaffoldFile[] {
   return [
+    ...getLaneFiles(),
     { source: 'templates/codeloop/rules.md', destination: '.codeloop/rules.md', overwrite: false },
     { source: 'templates/codeloop/gotchas.md', destination: '.codeloop/gotchas.md', overwrite: false },
     { source: 'templates/codeloop/patterns.md', destination: '.codeloop/patterns.md', overwrite: false },
@@ -144,6 +154,38 @@ export function scaffold(projectDir: string, starterFile: string, tools: ToolId[
   }
 
   return result;
+}
+
+/** Copies the GitHub workflows from templates/ci. An existing workflow file is never overwritten. */
+export function installCi(projectDir: string): ScaffoldResult {
+  const result: ScaffoldResult = { created: [], skipped: [] };
+  const dir = join(PACKAGE_ROOT, 'templates/ci');
+  for (const file of readdirSync(dir).filter(f => f.endsWith('.yml'))) {
+    const destination = `.github/workflows/${file}`;
+    const dest = join(projectDir, destination);
+    if (existsSync(dest)) {
+      result.skipped.push(destination);
+      continue;
+    }
+    ensureDirSync(dirname(dest));
+    copySync(join(dir, file), dest);
+    result.created.push(destination);
+  }
+  return result;
+}
+
+/** Installs the commit-msg hook. An existing hook that is not ours is left alone. */
+export function installHooks(projectDir: string): { installed: boolean; path: string; reason?: string } {
+  const run = spawnSync('git', ['rev-parse', '--git-path', 'hooks'], { cwd: projectDir, encoding: 'utf-8' });
+  if (run.status !== 0) return { installed: false, path: '', reason: 'not a git repository' };
+  const path = join(resolve(projectDir, run.stdout.trim()), 'commit-msg');
+  const source = readFileSync(join(PACKAGE_ROOT, 'templates/hooks/commit-msg'), 'utf-8');
+  if (existsSync(path) && readFileSync(path, 'utf-8') !== source) {
+    return { installed: false, path, reason: 'a different commit-msg hook already exists' };
+  }
+  ensureDirSync(dirname(path));
+  writeFileSync(path, source, { mode: 0o755 });
+  return { installed: true, path };
 }
 
 export function getTemplateVersion(templatePath: string): string | null {
