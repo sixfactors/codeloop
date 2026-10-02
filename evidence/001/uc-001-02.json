@@ -1,0 +1,15 @@
+{
+  "id": "uc-001-02",
+  "accept": "US2",
+  "failure_mode": "two writers who read the same version both land, losing a write",
+  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "conflict-no-lost-write\n\nexit 0"
+    }
+  ]
+}

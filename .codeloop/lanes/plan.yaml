@@ -1,0 +1,24 @@
+id: plan
+version: 1
+metric: { name: shipped_cards_that_moved_their_metric, source: cards }
+trigger: { cron: "0 9 * * MON" }
+wip: 1
+retries: 3
+stages:
+  - id: gather
+    skill: reflect
+    output: plan/{id}/signals.md
+    done: { cmd: "codeloop check file plan/{id}/signals.md --has 'signals:'" }
+  - id: research
+    skill: design
+    output: plan/{id}/research.md
+    done: { cmd: "codeloop check file plan/{id}/research.md --has 'verdict:'" }
+  - id: rank
+    skill: plan
+    output: plan/{id}/ranked.md
+    done: { cmd: "codeloop check file plan/{id}/ranked.md --has 'rice:'" }
+  - id: story
+    skill: manage
+    output: plan/{id}/stories.md
+    done: { cmd: "codeloop check file plan/{id}/stories.md --has 'acceptance:'" }
+    gate: { name: backlog, approver: owner }

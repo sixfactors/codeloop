@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "cards": [
+    {
+      "id": "CL-001",
+      "title": "Lane engine with enforced gates",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "spec",
+      "retries": {},
+      "evidence": [
+        "specs/001/research.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-02T03:31:36.119Z",
+          "actor": "agent",
+          "human": false,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-02T03:31:36.197Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-02T03:31:36.604Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec"
+        }
+      ],
+      "createdAt": "2026-10-02T03:31:36.119Z",
+      "updatedAt": "2026-10-02T03:31:36.604Z",
+      "gate": "spec",
+      "awaiting": "owner"
+    }
+  ]
+}

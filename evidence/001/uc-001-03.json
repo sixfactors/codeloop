@@ -1,0 +1,15 @@
+{
+  "id": "uc-001-03",
+  "accept": "US3",
+  "failure_mode": "an agent approves its own gate",
+  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "agent-refused-owner-releases\n\nexit 0"
+    }
+  ]
+}

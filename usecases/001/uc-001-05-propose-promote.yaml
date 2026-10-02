@@ -1,0 +1,5 @@
+id: uc-001-05
+accept: US5
+failure_mode: "a lane changes without evidence, or with a red eval"
+layers:
+  cli: { run: "bash usecases/001/uc.sh us5", expect: { exit: 0, stdout: "proposal-cites-cards-promote-refused" } }

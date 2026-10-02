@@ -1,0 +1,467 @@
+
+== Setup, Sunday evening ==
+  ok   codeloop init installs the 8 shipped lanes; none is edited for this demo
+  ok   the agent is configured in local.yaml and codeloop reads it over config.yaml
+  ok   cloud connect uploads the board, config.yaml and the 8 lanes to the local Protobox
+  ok   cloud status: 10 documents, all in sync, and local.yaml is not one of them
+  cloud: ON, workspace <workspace-id> on localhost:4002, board page "codeloop demo 1790958998"
+  ok   the competitor gets a wiki page with its docs and changelog links
+  ok   the first scan only stores what the changelog says today
+
+== Sunday night: nobody is at the keyboard ==
+
+The schedule runs `codeloop run --agent` every 30 minutes. The triage lane is due at 20:00.
+      20:05  created c-001 in triage (trigger: cron 0 20 * * *)
+      20:05  c-001: agent fake ran capture
+      20:05  c-001: moved
+      20:35  c-001: agent fake ran classify
+      20:35  c-001: moved
+      21:05  c-001: agent fake ran dedupe
+      21:05  c-001: moved
+      21:35  c-001: agent fake ran file
+      21:35  c-001: waiting for you
+  ok   the triage card went through capture, classify, dedupe and file on four agent runs, and waits at its gate
+  ok   triage proposed one card per distinct issue: two cards from three issues, each naming its issue
+  ok   the duplicate issue was named, not proposed twice
+
+Monday 06:40: Rivalsoft publishes a release. The scan lane is due at 07:00.
+      07:05  created c-004 in scan (trigger: cron 0 7 * * MON)
+      07:05  c-004: done
+  ok   the scan card is done, with no agent: its stage is the scan command
+  ok   the scan proposed one card: what shipped, the new lines and the source
+  ok   scanning again proposes nothing new
+  ok   nothing started any proposal overnight: three proposals, none of them moved
+
+== Monday morning: the founder's ten minutes ==
+  $ codeloop inbox
+      1 shipped this week, 4 waiting on you, oldest today
+      
+      Waiting for you (4)
+        c-001  triage 2026-10-04: triage/file, gate proposals
+              read: triage/c-001/proposals.md   last check: passed
+              codeloop approve c-001   or   codeloop reject c-001 "<what to change>"
+        c-002  Dark theme for the dashboard: plan/proposed, gate proposal
+              proposed from issues/12; `codeloop card show c-002` has the detail
+              codeloop approve c-002   puts it in the plan lane   or   codeloop reject c-002 "<why not>"   drops it
+        c-003  Export invoices as CSV: plan/proposed, gate proposal
+              proposed from issues/15; `codeloop card show c-003` has the detail
+              codeloop approve c-003   puts it in the plan lane   or   codeloop reject c-003 "<why not>"   drops it
+        c-005  Rivalsoft shipped: Bulk CSV export: plan/proposed, gate proposal
+              proposed from http://127.0.0.1:51068/changelog; `codeloop card show c-005` has the detail
+              codeloop approve c-005   puts it in the plan lane   or   codeloop reject c-005 "<why not>"   drops it
+      Shipped (1)
+        c-004  scan  scan 2026-10-05
+      Numbers
+        analyze    active 0  waiting 0  done 0  human turns/card -  first pass -
+        build      active 0  waiting 0  done 0  human turns/card -  first pass -
+        deploy     active 0  waiting 0  done 0  human turns/card -  first pass -
+        learn      active 0  waiting 0  done 0  human turns/card -  first pass -
+        market     active 0  waiting 0  done 0  human turns/card -  first pass -
+        plan       active 0  waiting 3  done 0  human turns/card 0.0  first pass -
+        scan       active 0  waiting 0  done 1  human turns/card 0.0  first pass 100%
+        triage     active 0  waiting 1  done 0  human turns/card 0.0  first pass -
+  ok   the inbox has four things waiting: the triage batch and three proposals
+
+The founder passes the triage batch, promotes the competitor card and drops the dark theme.
+  $ codeloop approve c-001
+      c-001 gate proposals approved
+      c-001 done
+      Next: nothing left on this card. `codeloop inbox` shows what else is waiting.
+  $ codeloop approve c-005
+      c-005 promoted to plan/gather
+      Next: run the /reflect skill to write plan/c-005/signals.md, then `codeloop next c-005`.
+  $ codeloop reject c-002 "not this quarter"
+      c-002 dropped; note recorded
+  ok   the triage card is done
+  ok   the promoted card is in the plan lane's first stage and nothing has run on it yet
+  ok   the rejected proposal is dropped; the invoice one still waits
+
+The plan lane works the promoted card: gather, research, rank, story.
+      08:05  c-005: agent fake ran gather
+      08:05  c-005: moved
+      08:35  c-005: agent fake ran research
+      08:35  c-005: moved
+      09:05  skipped plan: lane plan already has 1 active cards (wip 1)
+      09:05  c-005: agent fake ran rank
+      09:05  c-005: moved
+      09:35  c-005: agent fake ran story
+      09:35  c-005: waiting for you
+  ok   plan stopped at the backlog gate with the story written
+  ok   the card was ranked
+  ok   plan's research stage put its Rivalsoft finding on the competitor page
+  ok   the weekly plan card (Monday 09:00) was held back: the lane works on one card at a time
+  $ codeloop approve c-005
+      c-005 gate backlog approved
+      c-005 done
+      Next: nothing left on this card. `codeloop inbox` shows what else is waiting.
+  ok   the plan card is done
+
+== Monday: one feature, from research to the spec gate ==
+
+The founder starts the build card. Agents take it through research, mock and spec.
+  $ codeloop start "Bulk CSV export" --as owner
+      created c-006 in build at stage research (specs/006-bulk-csv-export/)
+      Next: run the /design skill to write specs/006-bulk-csv-export/research.md, then `codeloop next c-006`.
+  ok   the research check refuses the empty template
+      10:35  created c-007 in plan (trigger: cron 0 9 * * MON)
+      10:35  c-006: agent fake ran research
+      10:35  c-007: agent fake ran gather
+      10:35  c-006: moved
+      10:35  c-007: moved
+      11:05  c-006: agent fake ran mock
+      11:05  c-007: agent fake ran research
+      11:05  c-006: moved
+      11:05  c-007: moved
+      11:35  c-006: agent fake ran spec
+      11:35  c-007: agent fake ran rank
+      11:35  c-006: waiting for you
+      11:35  c-007: moved
+      12:05  c-007: agent fake ran story
+      12:05  c-007: waiting for you
+  ok   the build card went research, mock, spec on three agent runs and stopped at the spec gate
+  ok   research cites three sources and a verdict
+  ok   the build card's Rivalsoft finding joined the plan card's on the competitor page
+  ok   the mock is built from the shared template and draws both screens the spec names
+  ok   the mock gallery lists it
+  ok   the weekly plan card started once the lane was free, and waits at its backlog gate
+  $ codeloop inbox
+      3 shipped this week, 3 waiting on you, oldest today
+      
+      Waiting for you (3)
+        c-003  Export invoices as CSV: plan/proposed, gate proposal
+              proposed from issues/15; `codeloop card show c-003` has the detail
+              codeloop approve c-003   puts it in the plan lane   or   codeloop reject c-003 "<why not>"   drops it
+        c-006  Bulk CSV export: build/spec, gate spec
+              read: specs/006-bulk-csv-export/tasks.md   last check: passed
+              mock: docs/mocks/exportly/exports/c-006.html
+              codeloop approve c-006   or   codeloop reject c-006 "<what to change>"
+        c-007  plan 2026-10-05: plan/story, gate backlog
+              read: plan/c-007/stories.md   last check: passed
+              codeloop approve c-007   or   codeloop reject c-007 "<what to change>"
+      Shipped (3)
+        c-001  triage  triage 2026-10-04
+        c-004  scan  scan 2026-10-05
+        c-005  plan  Rivalsoft shipped: Bulk CSV export
+      Numbers
+        analyze    active 0  waiting 0  done 0  human turns/card -  first pass -
+        build      active 0  waiting 1  done 0  human turns/card 2.0  first pass -
+        deploy     active 0  waiting 0  done 0  human turns/card -  first pass -
+        learn      active 0  waiting 0  done 0  human turns/card -  first pass -
+        market     active 0  waiting 0  done 0  human turns/card -  first pass -
+        plan       active 0  waiting 2  done 1  human turns/card 0.8  first pass 100%
+        scan       active 0  waiting 0  done 1  human turns/card 0.0  first pass 100%
+        triage     active 0  waiting 0  done 1  human turns/card 1.0  first pass 100%
+  ok   the inbox shows the spec to read and the mock path beside it
+  ok   an agent cannot approve the gate
+  $ codeloop approve c-006
+      c-006 gate spec approved
+      c-006 moved to build
+      Next: run the /test skill, then `codeloop next c-006`.
+  $ codeloop approve c-007
+      c-007 gate backlog approved
+      c-007 done
+      Next: nothing left on this card. `codeloop inbox` shows what else is waiting.
+
+== Monday afternoon: build, verify, review ==
+  ok   before the agent builds, the product's test fails
+      13:05  c-006: agent fake ran build
+      13:05  c-006: moved
+      13:35  c-006: agent fake ran verify
+      13:35  c-006: waiting for you
+  ok   the agent built it and verify passed; the card waits at the local gate
+  ok   the evidence says pass and names the use case
+  $ sed -n 1,12p evidence/006/verify.md
+      # Verify c-006
+      
+      result: pass
+      sha: e4fcafedc23dc67e42694af96e22a76248582eb8
+      env: local
+      
+      | Use case | Accepts | Layers |
+      |---|---|---|
+      | uc-1 | US1 | cli pass |
+  $ codeloop approve c-006
+      c-006 gate local approved
+      c-006 moved to review
+      Next: run the /commit skill to write evidence/006/review.md, then `codeloop next c-006`.
+      14:35  c-006: agent fake ran review
+      14:35  c-006: waiting for you
+  ok   the review is written and the card waits for a reviewer, not the owner
+  ok   the owner cannot pass the reviewer's gate
+  $ codeloop approve c-006 --as reviewer
+  ok   the reviewer approves and the card moves to staging
+
+== Monday, later: release. Public steps wait before they act ==
+
+The merge is tagged v0.1.0, which starts a card in the deploy lane.
+      15:35  created c-008 in deploy (trigger: git.tag v0.1.0)
+      15:35  c-006: agent fake ran staging
+      15:35  c-008: agent fake ran staging
+      15:35  c-006: waiting for you
+      15:35  c-008: moved
+      16:05  c-008: agent fake ran verify
+      16:05  c-008: waiting for you
+  ok   deploy did staging and verify, then stopped on entering prod
+  ok   nothing was released: the prod step has not run and no agent was started for it
+  ok   the build card's own live stage waits the same way
+  ok   its prod evidence does not exist either
+  $ codeloop approve c-008
+      c-008 gate prod approved
+      Next: run the /ship skill to write deploy/c-008/prod.md, then `codeloop next c-008`.
+      17:05  c-008: agent fake ran prod
+      17:05  c-008: moved
+      17:35  c-008: agent fake ran smoke
+      17:35  c-008: done
+  ok   after the approval the agent released and smoke-tested; the deploy card is done
+  ok   the release evidence exists now
+  $ codeloop approve c-006
+      c-006 gate prod approved
+      Next: run the /ship skill to write evidence/006/prod.md, then `codeloop next c-006`.
+      18:35  c-006: agent fake ran live
+      18:35  c-006: done
+      19:05  c-009: agent fake ran brief
+      19:05  c-009: moved
+      19:35  c-009: agent fake ran draft
+      19:35  c-009: waiting for you
+      20:05  created c-010 in triage (trigger: cron 0 20 * * *)
+      20:05  c-010: agent fake ran capture
+      20:05  c-010: moved
+      20:35  c-010: agent fake ran classify
+      20:35  c-010: moved
+      21:05  c-010: agent fake ran dedupe
+      21:05  c-010: moved
+      21:35  c-010: agent fake ran file
+      21:35  c-010: waiting for you
+  ok   the build card is done
+  ok   a market card started by itself when it finished; nobody typed a command
+  ok   the agent wrote the brief and the launch post; the post waits at the copy gate
+
+== Tuesday: the launch post is rejected once, redone, approved, published ==
+  $ cat marketing/c-009/blog.md
+      Export is here.
+      claim: any list, exported in one click
+  $ codeloop reject c-009 "No number behind the claim: cite the measured export time."
+      c-009 rejected at draft; note recorded
+      Next: redo with the /design skill to write marketing/c-009/blog.md, then `codeloop next c-009`.
+      08:00  c-009: agent fake ran draft
+      08:00  c-009: waiting for you
+  ok   the next run gave the stage back to the agent with the note, and the post waits again
+  ok   the redone post has what the note asked for
+  $ cat marketing/c-009/blog.md
+      Export is here.
+      claim: any list, exported in one click
+      proof: 214 rows exported in 0.4 seconds in our test run
+  ok   Monday night's triage found the same issues and proposed nothing twice, not even the dropped one
+  $ codeloop approve c-009
+      c-009 gate copy approved
+      c-009 is waiting for you at publish (gate publish, owner approves)
+      Next: publish is a public step and has not run. `codeloop approve c-009` to let it run, or `codeloop reject c-009 "<what to change>"`.
+  ok   publishing is a public step: the card entered it and waits before anything is posted
+  ok   nothing is published yet
+  $ codeloop approve c-009
+      c-009 gate publish approved
+      Next: run the /ship skill to write marketing/c-009/published.md, then `codeloop next c-009`.
+  $ codeloop approve c-010
+      c-010 gate proposals approved
+      c-010 done
+      Next: nothing left on this card. `codeloop inbox` shows what else is waiting.
+      09:00  c-009: agent fake ran publish
+      09:00  c-009: moved
+      09:30  c-009: agent fake ran measure
+      09:30  c-009: done
+  ok   published, measured, done
+  ok   the published URL is recorded
+
+== Friday: the weekly growth review ==
+      09:05  created c-011 in analyze (trigger: cron 0 9 * * FRI)
+      09:05  created c-012 in triage (trigger: cron 0 20 * * *)
+      09:05  c-011: agent fake ran pull
+      09:05  c-012: agent fake ran capture
+      09:05  c-011: moved
+      09:05  c-012: moved
+      09:35  c-011: agent fake ran compare
+      09:35  c-012: agent fake ran classify
+      09:35  c-011: moved
+      09:35  c-012: moved
+      10:05  c-011: agent fake ran judge
+      10:05  c-012: agent fake ran dedupe
+      10:05  c-011: waiting for you
+      10:05  c-012: moved
+      10:35  c-012: agent fake ran file
+      10:35  c-012: waiting for you
+  ok   analyze pulled the numbers and compared them, and waits for the founder's verdicts
+  $ codeloop approve c-011
+      c-011 gate verdicts approved
+      c-011 moved to findings
+      Next: run the /reflect skill to write growth/c-011/findings.md, then `codeloop next c-011`.
+      11:35  c-011: agent fake ran findings
+      11:35  c-011: done
+      12:05  c-013: agent fake ran gather
+      12:05  c-013: moved
+      12:35  c-013: agent fake ran research
+      12:35  c-013: moved
+      13:05  c-013: agent fake ran rank
+      13:05  c-013: moved
+      13:35  c-013: agent fake ran story
+      13:35  c-013: waiting for you
+  ok   analyze is done
+  ok   it wrote its findings
+  ok   the findings opened exactly one plan card, linked to the analyze card that produced them
+  ok   the plan lane has already taken it to the backlog gate
+
+== Friday afternoon: the same gate is rejected again, so the lane changes ==
+  $ codeloop start "October changelog post" --lane market --as owner
+      created c-014 in market at stage brief
+      Next: run the /plan skill to write marketing/c-014/brief.md, then `codeloop next c-014`.
+      14:35  c-014: agent fake ran brief
+      14:35  c-014: moved
+      15:05  c-014: agent fake ran draft
+      15:05  c-014: waiting for you
+  ok   the second post waits at the copy gate
+  ok   its first draft has no number either: Tuesday's lesson was only in a rejection note
+  $ codeloop reject c-014 "Lead with the customer, not the feature."
+      c-014 rejected at draft; note recorded
+      Next: redo with the /design skill to write marketing/c-014/blog.md, then `codeloop next c-014`.
+  ok   one more rejection is not enough for a proposal
+      16:05  c-014: agent fake ran draft
+      16:05  c-014: waiting for you
+  ok   the redo leads with the customer
+  $ codeloop reject c-014 "No number behind the claim, again."
+      c-014 rejected at draft; note recorded
+      Next: redo with the /design skill to write marketing/c-014/blog.md, then `codeloop next c-014`.
+
+Three rejections at market/draft on lane version 1. codeloop proposes a change to the lane.
+  $ codeloop lane propose
+        proposed .codeloop/proposals/market-draft-1
+  ok   the proposal cites both cards and all three notes, and carries them into the stage as notes
+
+The founder also tightens the check, and says how the new check can fail.
+  ok   the proposal now requires a proof line in the post
+  ok   promote is refused before the eval
+  $ codeloop lane eval market-draft-1
+        ok   draft / claim-without-proof: expected fail, got fail
+        ok   draft / claim-with-proof: expected pass, got pass
+        ok   replay c-009 / draft
+        eval green for market-draft-1
+  ok   eval is green: the new check fails its broken fixture, passes its good one, and Tuesday's published post still passes
+  ok   an agent cannot promote a lane change
+  $ codeloop lane promote market-draft-1
+  ok   the owner promotes it
+  ok   the market lane is at version 2 and version 1 is kept
+  ok   the promoted lane was pushed to the cloud page; the proposal's edits never were
+      17:05  c-014: agent fake ran draft
+      17:05  c-014: waiting for you
+  ok   the agent's next brief carried the lane's notes, and the post now passes the stricter check
+  $ codeloop approve c-014
+      c-014 gate copy approved
+      c-014 is waiting for you at publish (gate publish, owner approves)
+      Next: publish is a public step and has not run. `codeloop approve c-014` to let it run, or `codeloop reject c-014 "<what to change>"`.
+  ok   the second post is approved and waits before publishing; it is left for Monday
+
+== Friday, end of the week ==
+  $ codeloop inbox
+      9 shipped this week, 4 waiting on you, oldest 4 days
+      
+      Waiting for you (4)
+        c-003  Export invoices as CSV: plan/proposed, gate proposal
+              proposed from issues/15; `codeloop card show c-003` has the detail
+              codeloop approve c-003   puts it in the plan lane   or   codeloop reject c-003 "<why not>"   drops it
+        c-012  triage 2026-10-08: triage/file, gate proposals
+              read: triage/c-012/proposals.md   last check: passed
+              codeloop approve c-012   or   codeloop reject c-012 "<what to change>"
+        c-013  analyze 2026-10-09: plan/story, gate backlog
+              read: plan/c-013/stories.md   last check: passed
+              codeloop approve c-013   or   codeloop reject c-013 "<what to change>"
+        c-014  October changelog post: market/publish, gate publish
+              read: marketing/c-014/published.md   last check: not run yet (public step, approve first)
+              codeloop approve c-014   or   codeloop reject c-014 "<what to change>"
+      Shipped (9)
+        c-001  triage  triage 2026-10-04
+        c-004  scan  scan 2026-10-05
+        c-005  plan  Rivalsoft shipped: Bulk CSV export
+        c-006  build  Bulk CSV export
+        c-007  plan  plan 2026-10-05
+        c-008  deploy  deploy v0.1.0
+        c-009  market  Bulk CSV export
+        c-010  triage  triage 2026-10-05
+        c-011  analyze  analyze 2026-10-09
+      Numbers
+        analyze    active 0  waiting 0  done 1  human turns/card 1.0  first pass 100%
+        build      active 0  waiting 0  done 1  human turns/card 6.0  first pass 100%
+        deploy     active 0  waiting 0  done 1  human turns/card 1.0  first pass 100%
+        learn      active 0  waiting 0  done 0  human turns/card -  first pass -
+        market     active 0  waiting 1  done 1  human turns/card 3.5  first pass 0%
+        plan       active 0  waiting 2  done 2  human turns/card 0.8  first pass 100%
+        scan       active 0  waiting 0  done 1  human turns/card 0.0  first pass 100%
+        triage     active 0  waiting 1  done 2  human turns/card 0.7  first pass 100%
+  ok   four things wait: the second post's publish step, Thursday night's triage batch, the new plan card and the invoice proposal
+  $ codeloop stats
+      all cards
+        cards 14, done 9
+        human turns per card   1.5
+        unattended span        13.42h
+        cycle time             6.48h
+        rework (rejects/approvals) 0.23
+        stuck rate             0%
+        first pass at triage/proposals 100%
+        first pass at plan/backlog     100%
+        first pass at build/spec       100%
+        first pass at build/local      100%
+        first pass at build/pr         100%
+        first pass at build/prod       100%
+        first pass at deploy/prod      100%
+        first pass at market/copy      0%
+        first pass at market/publish   100%
+        first pass at analyze/verdicts 100%
+  $ codeloop stats --lane market --compare v1 v2
+      market v1
+        cards 2, done 1
+        human turns per card   3.5
+        unattended span        13.42h
+        cycle time             14.92h
+        rework (rejects/approvals) 1
+        stuck rate             0%
+        first pass at market/copy      0%
+        first pass at market/publish   100%
+      market v2
+        cards 0, done 0
+        human turns per card   -
+        unattended span        -
+        cycle time             -
+        rework (rejects/approvals) -
+        stuck rate             -
+  $ codeloop cloud status
+        workspace: demo http://localhost:4002/api/mcp/<workspace-id>
+        board page "codeloop demo 1790958998": revision 192 (last seen here: 192)
+        local cards.json: version 191, 14 cards
+        in sync: yes   wiki pages: 1
+        in-sync      cards.json
+        in-sync      config.yaml
+        in-sync      lanes/analyze.yaml
+        in-sync      lanes/build.yaml
+        in-sync      lanes/deploy.yaml
+        in-sync      lanes/learn.yaml
+        in-sync      lanes/market.yaml
+        in-sync      lanes/plan.yaml
+        in-sync      lanes/scan.yaml
+        in-sync      lanes/triage.yaml
+        in-sync      wiki/competitors/rivalsoft.md
+  ok   every document is in sync with the cloud and nothing is pending
+
+SUMMARY
+  cloud: on (local Protobox, workspace <workspace-id>)
+  cards: 14 (9 done)
+    analyze done 1
+    build   done 1
+    deploy  done 1
+    market  done 1, publish (waiting: publish) 1
+    plan    dropped 1, proposed (waiting: proposal) 1, done 2, story (waiting: backlog) 1
+    scan    done 1
+    triage  done 2, file (waiting: proposals) 1
+  human approvals: 15 (13 gates, 1 proposal promoted, 1 lane change)
+  human rejections: 4
+  agent runs: 49
+  lane versions: analyze v1, build v1, deploy v1, learn v1, market v2, plan v1, scan v1, triage v1
+  ok   the approvals and rejections on the cards are exactly the ones the founder typed
+
+DEMO PASS: 75 checks passed, 0 failed

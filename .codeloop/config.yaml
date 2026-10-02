@@ -1,0 +1,4 @@
+gates:
+  mode: all
+capacity:
+  gates_per_day: 8
