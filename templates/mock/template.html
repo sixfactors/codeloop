@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-mock-template: 1 -->
+<title>{{id}} {{title}}</title>
+<style>
+/* codeloop-tokens:start */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --radius: 0.5rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --line: 0.0625rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+/* codeloop-tokens:end */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; background: var(--bg); color: var(--text); }
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: 72rem; margin: 0 auto; padding: var(--space-4); }
+.bar { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: baseline; padding-bottom: var(--space-3); border-bottom: var(--line) solid var(--border); }
+.bar h1 { margin: 0; font-size: 1.25rem; }
+.bar .meta, .muted { color: var(--muted); }
+.screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-4); align-items: start; }
+section[data-screen] { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+section[data-screen] > h2 { margin: 0; font-size: 1rem; }
+.frame { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field input, .field select { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius); }
+.button { font: inherit; padding: var(--space-2) var(--space-3); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius); }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.badge { padding: 0 var(--space-2); border: var(--line) solid var(--border); border-radius: var(--radius); font-size: 0.875rem; }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.danger { color: var(--danger); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: var(--space-2); text-align: left; border-bottom: var(--line) solid var(--border); }
+.note { margin: 0; padding-left: var(--space-3); border-left: var(--line) solid var(--border); color: var(--muted); font-size: 0.875rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="bar">
+    <h1>{{title}}</h1>
+    <span class="meta">{{id}} · {{project}} · {{topic}}</span>
+  </header>
+  <main class="screens">
+    <!--
+      One <section data-screen="name"> per screen named under `screens:` in the spec.
+      Draw the screen inside its .frame with the classes above. Notes about a screen go in
+      <p class="note"> below the frame, outside it. Colours come only from the tokens: var(--accent), never a literal.
+    -->
+  </main>
+</div>
+</body>
+</html>

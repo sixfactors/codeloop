@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Board, Task, TaskStatus } from '@/lib/types';
+import { API_BASE, writeHeaders } from '@/lib/api';
 
-const API_BASE = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.host}`
-  : '';
 
 export function useBoard() {
   const [board, setBoard] = useState<Board | null>(null);
@@ -60,7 +58,7 @@ export function useBoard() {
   const moveTask = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     const res = await fetch(`${API_BASE}/api/tasks/${taskId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: writeHeaders(),
       body: JSON.stringify({ status: newStatus }),
     });
     if (res.ok) {

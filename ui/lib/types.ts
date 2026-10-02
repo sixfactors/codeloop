@@ -39,3 +39,45 @@ export const COLUMN_COLORS: Record<string, string> = {
   review: 'bg-review',
   done: 'bg-done',
 };
+
+export interface CardEvent {
+  at: string;
+  actor: string;
+  human: boolean;
+  action: string;
+  stage?: string;
+  note?: string;
+}
+
+export interface LaneCard {
+  id: string;
+  title: string;
+  lane: string;
+  laneVersion: number;
+  stage: string;
+  spec?: string;
+  /** Where the board serves the card's mock, when it has one. */
+  mock?: string;
+  gate?: string;
+  awaiting?: string;
+  retries: Record<string, number>;
+  evidence: string[];
+  events: CardEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LaneStage {
+  id: string;
+  skill?: string;
+  output?: string;
+  gate?: { name: string; approver: string; outward?: boolean };
+}
+
+export interface CardsPayload {
+  version: number;
+  owner: boolean;
+  cards: LaneCard[];
+  lanes: { id: string; version: number; stages: LaneStage[] }[];
+  inbox: { summary: string; needs_you: { id: string; read?: string; last_check: string }[] };
+}

@@ -3,3 +3,9 @@
 .watch.pid
 watch.log
 test-history.json
+cloud.json
+local.yaml
+state/sync.json
+state/briefs/
+state/agent-runs/
+state/run.log

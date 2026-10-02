@@ -1,0 +1,25 @@
+id: market
+version: 1
+metric: { name: signups_from_launch, source: analytics, target: "+10%" }
+trigger: { on: lane.done, lane: build }
+wip: 2
+retries: 3
+stages:
+  - id: brief
+    skill: plan
+    output: marketing/{id}/brief.md
+    done: { cmd: "codeloop check file marketing/{id}/brief.md --has 'audience:' 'claim:' 'metric:'" }
+  - id: draft
+    skill: design
+    output: marketing/{id}/blog.md
+    done: { cmd: "codeloop check file marketing/{id}/blog.md --has 'claim:'" }
+    gate: { name: copy, approver: owner }
+  - id: publish
+    skill: ship
+    output: marketing/{id}/published.md
+    done: { cmd: "codeloop check file marketing/{id}/published.md --has 'url:'" }
+    gate: { name: publish, approver: owner, outward: true }
+  - id: measure
+    skill: reflect
+    output: marketing/{id}/result.md
+    done: { cmd: "codeloop check file marketing/{id}/result.md --has 'verdict:'" }
