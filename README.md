@@ -4,7 +4,7 @@
 
 Your AI agent plans the work, tests it, reviews its own commits, deploys to staging, debugs production, and learns from every mistake — across sessions, across tools, without you babysitting it.
 
-![Codeloop Board](https://codeloop.sixfactors.ai/board.png)
+![Codeloop Board](https://codeloop.protobox.ai/board.png)
 
 ## The Problem
 
@@ -71,7 +71,7 @@ scopes:
 ## Quick Start
 
 ```bash
-npm install -g @sixfactors-ai/codeloop
+npm install -g @protoboxai/codeloop
 cd your-project
 codeloop init
 ```

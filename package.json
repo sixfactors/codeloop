@@ -1,7 +1,15 @@
 {
-  "name": "@sixfactors-ai/codeloop",
-  "version": "0.2.0",
+  "name": "@protoboxai/codeloop",
+  "version": "0.3.0",
   "description": "Self-improving development workflow for AI coding agents",
+  "homepage": "https://codeloop.protobox.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sixfactors/codeloop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sixfactors/codeloop/issues"
+  },
   "type": "module",
   "bin": {
     "codeloop": "./dist/index.js"

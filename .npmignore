@@ -2,3 +2,5 @@ src/
 tsconfig.json
 .gitignore
 .DS_Store
+dist/**/__tests__/**
+dist/**/*.map

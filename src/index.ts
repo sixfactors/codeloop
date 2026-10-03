@@ -35,7 +35,7 @@ const program = new Command();
 program
   .name('codeloop')
   .description('Self-improving development workflow for AI coding agents')
-  .version('0.2.0');
+  .version('0.3.0');
 
 // With the cloud connected, every command first pushes pending writes and takes what changed there.
 program.hook('preAction', (_program, action) => {

@@ -16,7 +16,7 @@ jobs:
       - run: npm ci
       - run: npm run build --if-present
       - run: npm test
-      - run: npx --yes @sixfactors-ai/codeloop lane lint
+      - run: npx --yes @protoboxai/codeloop lane lint
       - name: Every commit carries a Feature trailer
         run: |
           missing=0

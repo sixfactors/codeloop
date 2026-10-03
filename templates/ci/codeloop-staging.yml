@@ -19,7 +19,7 @@ jobs:
       - name: Deploy to staging
         id: deploy
         run: |
-          cmd=$(npx --yes @sixfactors-ai/codeloop config get deploy.staging.command)
+          cmd=$(npx --yes @protoboxai/codeloop config get deploy.staging.command)
           if [ -z "$cmd" ]; then
             echo "deploy.staging.command is not set; nothing to deploy"
             exit 0
@@ -30,5 +30,5 @@ jobs:
         if: steps.deploy.outputs.deployed == 'true'
         run: |
           for id in $(git log --format='%(trailers:key=Feature,valueonly)' "${{ github.event.before }}..${{ github.sha }}" | sort -u); do
-            npx --yes @sixfactors-ai/codeloop verify "$id" --env staging --no-record
+            npx --yes @protoboxai/codeloop verify "$id" --env staging --no-record
           done

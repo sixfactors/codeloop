@@ -18,8 +18,8 @@ jobs:
       - run: npm run build --if-present
       - name: Deploy to production
         run: |
-          cmd=$(npx --yes @sixfactors-ai/codeloop config get deploy.production.command)
-          [ -n "$cmd" ] || cmd=$(npx --yes @sixfactors-ai/codeloop config get deploy.prod.command)
+          cmd=$(npx --yes @protoboxai/codeloop config get deploy.production.command)
+          [ -n "$cmd" ] || cmd=$(npx --yes @protoboxai/codeloop config get deploy.prod.command)
           if [ -z "$cmd" ]; then
             echo "deploy.production.command is not set; nothing to deploy"
             exit 0
