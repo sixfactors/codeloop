@@ -5,7 +5,7 @@ import { Check, Copy, Terminal } from 'lucide-react';
 
 export function CopyInstall() {
   const [copied, setCopied] = useState(false);
-  const command = 'npm install -g @sixfactors-ai/codeloop';
+  const command = 'npm install -g @protoboxai/codeloop';
 
   const copy = async () => {
     await navigator.clipboard.writeText(command);

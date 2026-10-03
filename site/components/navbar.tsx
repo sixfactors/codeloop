@@ -6,9 +6,10 @@ import { GitHubStars } from './github-stars';
 import { ThemeToggle } from './theme-toggle';
 
 const links = [
-  { label: 'Pipeline', href: '#loop' },
-  { label: 'How It Works', href: '#knowledge' },
-  { label: 'Get Started', href: '#quickstart' },
+  { label: 'Lanes', href: '#loop' },
+  { label: 'Board', href: '#board' },
+  { label: 'Quickstart', href: '#quickstart' },
+  { label: 'GitHub', href: 'https://github.com/sixfactors/codeloop', external: true },
 ];
 
 export function Navbar() {
@@ -27,6 +28,8 @@ export function Navbar() {
             <a
               key={l.href}
               href={l.href}
+              target={l.external ? '_blank' : undefined}
+              rel={l.external ? 'noopener noreferrer' : undefined}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {l.label}
@@ -62,6 +65,8 @@ export function Navbar() {
             <a
               key={l.href}
               href={l.href}
+              target={l.external ? '_blank' : undefined}
+              rel={l.external ? 'noopener noreferrer' : undefined}
               onClick={() => setOpen(false)}
               className="block py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >

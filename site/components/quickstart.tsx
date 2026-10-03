@@ -1,12 +1,25 @@
 import { CopyInstall } from './copy-install';
 
+const steps = [
+  { cmd: 'npm install -g', arg: '@protoboxai/codeloop' },
+  { cmd: 'codeloop', arg: 'init' },
+  { cmd: 'codeloop', arg: 'start "Add CSV export"' },
+  { cmd: 'codeloop', arg: 'next' },
+  { cmd: 'codeloop', arg: 'inbox' },
+  { cmd: 'codeloop', arg: 'run --agent claude' },
+];
+
 export function Quickstart() {
   return (
     <section id="quickstart" className="py-20 md:py-28">
       <div className="mx-auto max-w-3xl px-6 text-center">
-        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Get started</h2>
+        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Quickstart</h2>
         <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-          Install globally, init in your project, start the board. Knowledge seeded for your stack on day one.
+          <code className="font-mono text-sm">codeloop init</code> installs the eight lane files
+          and the skills they name. <code className="font-mono text-sm">start</code> opens a card
+          in the build lane. <code className="font-mono text-sm">next</code> runs the current
+          stage&apos;s check. <code className="font-mono text-sm">run --agent</code> lets a headless
+          agent do the stages. Open source, in active development.
         </p>
 
         {/* Terminal block */}
@@ -18,22 +31,12 @@ export function Quickstart() {
             <span className="ml-2 text-xs text-muted-foreground">terminal</span>
           </div>
           <div className="p-5 font-mono text-sm leading-7">
-            <div>
-              <span className="text-muted-foreground">$</span>{' '}
-              <span className="text-accent">npm install -g</span> @sixfactors-ai/codeloop
-            </div>
-            <div>
-              <span className="text-muted-foreground">$</span>{' '}
-              <span className="text-muted-foreground">cd</span> your-project
-            </div>
-            <div>
-              <span className="text-muted-foreground">$</span>{' '}
-              <span className="text-accent">codeloop</span> init
-            </div>
-            <div>
-              <span className="text-muted-foreground">$</span>{' '}
-              <span className="text-accent">codeloop</span> serve
-            </div>
+            {steps.map((s) => (
+              <div key={s.cmd + s.arg}>
+                <span className="text-muted-foreground">$</span>{' '}
+                <span className="text-accent">{s.cmd}</span> {s.arg}
+              </div>
+            ))}
           </div>
         </div>
 

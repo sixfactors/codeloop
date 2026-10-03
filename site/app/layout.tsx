@@ -1,16 +1,21 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+const title = 'codeloop — run your product’s work as lanes';
+const description =
+  'Lanes are YAML files that list the stages of a job, the skill for each, a check that decides done, and the gates a person approves. Agents do the stages in Claude Code, Cursor or Codex. You approve at the gates. Open source, MIT.';
+
 export const metadata: Metadata = {
-  title: 'codeloop — Code agents that project manage themselves',
-  description:
-    'Your AI agent plans the work, tracks its own tasks, and learns from every mistake — across sessions, across tools.',
+  metadataBase: new URL('https://codeloop.protobox.ai'),
+  title,
+  description,
+  alternates: { canonical: 'https://codeloop.protobox.ai' },
   openGraph: {
-    title: 'codeloop — Code agents that project manage themselves',
-    description:
-      'Your AI agent plans the work, tracks its own tasks, and learns from every mistake — across sessions, across tools.',
+    title,
+    description,
     type: 'website',
-    url: 'https://codeloop.sixfactors.ai',
+    url: 'https://codeloop.protobox.ai',
+    siteName: 'codeloop',
   },
 };
 

@@ -8,21 +8,23 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-4xl px-6 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-          Code agents that{' '}
-          <span className="text-accent">project manage themselves.</span>
+          Run your product&apos;s work as lanes.{' '}
+          <span className="text-accent">Agents do the stages. You approve the gates.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Your AI agent designs, plans, tests, deploys, and debugs — learning from every
-          mistake across sessions, across tools.
+          A lane is a YAML file: the stages of a job, the skill for each, a check command that
+          decides &ldquo;done&rdquo;, and the gates a person approves. Seven lanes ship, from
+          triage to the launch post. A headless coding agent works each stage in Claude Code,
+          Cursor or Codex; the engine checks it and stops at every gate.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4">
           <CopyInstall />
           <a
-            href="#loop"
+            href="#board"
             className="text-sm text-muted-foreground transition-colors hover:text-accent"
           >
-            See how it works &darr;
+            See a week &darr;
           </a>
         </div>
       </div>
@@ -32,7 +34,7 @@ export function Hero() {
         <div className="rounded-xl border border-border/50 bg-surface-1 p-2 shadow-2xl shadow-accent/5">
           <img
             src="/board.png"
-            alt="Codeloop board — live task tracking for AI agents"
+            alt="codeloop serve: the board in a browser, one column per stage"
             className="w-full rounded-lg"
           />
         </div>
