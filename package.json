@@ -12,7 +12,7 @@
   },
   "type": "module",
   "bin": {
-    "codeloop": "./dist/index.js"
+    "codeloop": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
