@@ -12,6 +12,14 @@
     "resolveJsonModule": true,
     "sourceMap": true
   },
-  "include": ["src", "src/**/*.test.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "src/**/*.test.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/**/*.test.ts",
+    "src/**/__tests__/**"
+  ]
 }
