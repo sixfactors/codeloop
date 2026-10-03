@@ -1,44 +1,43 @@
 import type { Metadata } from 'next';
+import { Azeret_Mono, Ubuntu } from 'next/font/google';
 import './globals.css';
 
-const title = 'codeloop — run your product’s work as lanes';
+const ubuntu = Ubuntu({
+  variable: '--font-ubuntu',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+});
+
+const azeretMono = Azeret_Mono({
+  variable: '--font-azeret-mono',
+  subsets: ['latin'],
+  weight: ['400', '500'],
+});
+
+const title = 'codeloop - your product moves forward every day';
 const description =
-  'Lanes are YAML files that list the stages of a job, the skill for each, a check that decides done, and the gates a person approves. Agents do the stages in Claude Code, Cursor or Codex. You approve at the gates. Open source, MIT.';
+  'Agents do the stages of each job. You approve at the gates. Open source, MIT. Works in Claude Code, Cursor and Codex.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codeloop.protobox.ai'),
   title,
   description,
   alternates: { canonical: 'https://codeloop.protobox.ai' },
-  openGraph: {
-    title,
-    description,
-    type: 'website',
-    url: 'https://codeloop.protobox.ai',
-    siteName: 'codeloop',
-  },
+  openGraph: { title, description, type: 'website', url: 'https://codeloop.protobox.ai', siteName: 'codeloop' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className={`${ubuntu.variable} ${azeretMono.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-        {/* Prevent flash: apply saved theme before paint */}
+        {/* Apply the saved theme before first paint so the page does not flash light then dark. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('codeloop-theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}}catch(e){}})()`,
+            __html: `(function(){try{if(localStorage.getItem('codeloop-theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}
         />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
-        {children}
-      </body>
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">{children}</body>
     </html>
   );
 }
