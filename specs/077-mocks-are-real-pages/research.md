@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-077 research: Mocks are real pages
 
 ## What exists
 

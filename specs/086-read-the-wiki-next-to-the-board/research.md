@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-086 research: Read the wiki next to the board
 
 ## What exists
 

@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-062 research: The board follows git
 
 ## What exists
 

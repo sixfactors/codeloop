@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-064 research: Get pinged when a card needs me
 
 ## What exists
 

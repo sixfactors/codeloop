@@ -1,4 +1,4 @@
-# {{id}} spec: {{title}}
+# c-083 spec: Bring my Spec Kit or BMAD work with me
 
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a <persona>, I can <what>, so that <pain relieved>.

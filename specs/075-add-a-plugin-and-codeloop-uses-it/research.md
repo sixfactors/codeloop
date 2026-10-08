@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-075 research: Add a plugin and codeloop uses it
 
 ## What exists
 

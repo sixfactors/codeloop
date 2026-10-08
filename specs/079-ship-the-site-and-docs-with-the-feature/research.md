@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-079 research: Ship the site and docs with the feature
 
 ## What exists
 

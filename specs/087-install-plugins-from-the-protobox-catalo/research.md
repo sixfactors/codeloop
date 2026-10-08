@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-087 research: Install plugins from the Protobox catalog
 
 ## What exists
 

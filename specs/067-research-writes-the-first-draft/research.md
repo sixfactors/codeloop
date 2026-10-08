@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-067 research: Research writes the first draft
 
 ## What exists
 

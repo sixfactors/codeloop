@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-061 research: Cards are picked by value
 
 ## What exists
 

@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-084 research: Install codeloop the way any skill installs
 
 ## What exists
 

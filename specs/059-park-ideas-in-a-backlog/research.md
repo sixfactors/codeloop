@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-059 research: Park ideas in a backlog
 
 ## What exists
 

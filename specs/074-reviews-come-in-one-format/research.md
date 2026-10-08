@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-074 research: Reviews come in one format
 
 ## What exists
 

@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-063 research: Answer the agent's questions from my inbox
 
 ## What exists
 

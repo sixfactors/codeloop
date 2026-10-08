@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-088 research: Sign in to the hosted board
 
 ## What exists
 

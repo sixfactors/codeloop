@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-058 research: Small fixes skip the ceremony
 
 ## What exists
 

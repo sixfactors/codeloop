@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-066 research: The agent thinks before it builds
 
 ## What exists
 

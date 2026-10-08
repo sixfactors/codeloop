@@ -1,4 +1,4 @@
-# {{id}} spec: {{title}}
+# c-075 spec: Add a plugin and codeloop uses it
 
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a <persona>, I can <what>, so that <pain relieved>.

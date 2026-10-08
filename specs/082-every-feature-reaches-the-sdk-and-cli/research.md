@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-082 research: Every feature reaches the SDK and CLI
 
 ## What exists
 

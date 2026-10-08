@@ -1,4 +1,4 @@
-# {{id}} spec: {{title}}
+# c-060 spec: Split a card that is too big
 
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a <persona>, I can <what>, so that <pain relieved>.

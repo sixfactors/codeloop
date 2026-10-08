@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-085 research: The README describes the product that ships
 
 ## What exists
 

@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-069 research: Rules that enforce themselves
 
 ## What exists
 

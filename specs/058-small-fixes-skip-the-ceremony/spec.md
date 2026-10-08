@@ -1,4 +1,4 @@
-# {{id}} spec: {{title}}
+# c-058 spec: Small fixes skip the ceremony
 
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a <persona>, I can <what>, so that <pain relieved>.
@@ -15,6 +15,8 @@ acceptance:
 
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
 screens:
+- board-with-size
+- card-drawer-size
 
 ## Not building
 

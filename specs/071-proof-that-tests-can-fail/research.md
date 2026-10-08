@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-071 research: Proof that tests can fail
 
 ## What exists
 

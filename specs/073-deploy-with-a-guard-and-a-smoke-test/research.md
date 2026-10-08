@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-073 research: Deploy with a guard and a smoke test
 
 ## What exists
 

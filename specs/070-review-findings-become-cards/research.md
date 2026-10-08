@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-070 research: Review findings become cards
 
 ## What exists
 

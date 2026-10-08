@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-065 research: Know what each card cost
 
 ## What exists
 

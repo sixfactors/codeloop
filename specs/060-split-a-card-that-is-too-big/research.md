@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-060 research: Split a card that is too big
 
 ## What exists
 

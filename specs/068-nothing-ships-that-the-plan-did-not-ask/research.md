@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-068 research: Nothing ships that the plan did not ask for
 
 ## What exists
 

@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-083 research: Bring my Spec Kit or BMAD work with me
 
 ## What exists
 

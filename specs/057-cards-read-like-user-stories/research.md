@@ -1,4 +1,4 @@
-# {{id}} research: {{title}}
+# c-057 research: Cards read like user stories
 
 ## What exists
 

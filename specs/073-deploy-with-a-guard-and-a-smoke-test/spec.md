@@ -1,4 +1,4 @@
-# {{id}} spec: {{title}}
+# c-073 spec: Deploy with a guard and a smoke test
 
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a <persona>, I can <what>, so that <pain relieved>.

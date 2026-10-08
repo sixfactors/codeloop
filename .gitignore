@@ -9,3 +9,5 @@ coverage/
 .codeloop/cloud.json
 .codeloop/local.yaml
 .codeloop/state/sync.json
+.next-home/
+workspace/out/
