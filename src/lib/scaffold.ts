@@ -2,6 +2,8 @@ import fse from 'fs-extra';
 import { spawnSync } from 'child_process';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { parse as parseYaml } from 'yaml';
+import type { ProjectDetection } from './detect.js';
 
 const { copySync, ensureDirSync, existsSync, readdirSync, readFileSync, writeFileSync } = fse;
 
@@ -68,16 +70,16 @@ function getKnowledgeFiles(): ScaffoldFile[] {
     { source: 'templates/codeloop/patterns.md', destination: '.codeloop/patterns.md', overwrite: false },
     { source: 'templates/codeloop/principles.md', destination: '.codeloop/principles.md', overwrite: false },
     { source: 'templates/codeloop/board.json', destination: '.codeloop/board.json', overwrite: false },
-    { source: 'templates/codeloop/.gitignore', destination: '.codeloop/.gitignore', overwrite: false },
-    { source: 'templates/tasks/todo.md', destination: 'tasks/todo.md', overwrite: false },
+    { source: 'templates/codeloop/gitignore', destination: '.codeloop/.gitignore', overwrite: false },
   ];
 }
 
-export function scaffold(projectDir: string, starterFile: string, tools: ToolId[]): ScaffoldResult {
+/** `commandsFor`: the tools whose command folders may be written; default all of `tools`. */
+export function scaffold(projectDir: string, starterFile: string, tools: ToolId[], opts: { commandsFor?: ToolId[] } = {}): ScaffoldResult {
   const result: ScaffoldResult = { created: [], skipped: [] };
 
   // 1. Copy command files to tool-specific directories
-  const commandFiles = getCommandDestinations(tools);
+  const commandFiles = getCommandDestinations(opts.commandsFor ?? tools);
   for (const file of commandFiles) {
     const destPath = join(projectDir, file.destination);
     const srcPath = join(PACKAGE_ROOT, file.source);
@@ -204,4 +206,45 @@ export function getInstalledVersion(projectDir: string, filePath: string): strin
   const content = readFileSync(fullPath, 'utf-8');
   const match = content.match(/<!--\s*codeloop-version:\s*([\d.]+)\s*-->/);
   return match ? match[1] : null;
+}
+
+/** Writes the detected checks and test command into files `init` just made; an existing file is left alone. */
+export function applyDetection(projectDir: string, detection: ProjectDetection, created: string[]): string[] {
+  const changed: string[] = [];
+  const config = join(projectDir, '.codeloop/config.yaml');
+  if (created.includes('.codeloop/config.yaml') && detection.qualityChecks.length && existsSync(config)) {
+    const text = readFileSync(config, 'utf-8');
+    const scopes = Object.keys((parseYaml(text)?.scopes as Record<string, unknown>) ?? {});
+    const block = [
+      '# Detected by `codeloop init` from package.json.',
+      'quality_checks:',
+      ...(scopes.length ? scopes : ['all']).flatMap(scope => [`  ${scope}:`, ...detection.qualityChecks.flatMap(c => [`    - name: ${JSON.stringify(c.name)}`, `      command: ${JSON.stringify(c.command)}`])]),
+      '',
+    ].join('\n');
+    writeFileSync(config, replaceTopLevelKey(text, 'quality_checks', block));
+    changed.push('.codeloop/config.yaml');
+  }
+  const lane = join(projectDir, '.codeloop/lanes/build.yaml');
+  if (created.includes('.codeloop/lanes/build.yaml') && detection.testCommand && detection.testCommand !== 'npm test' && existsSync(lane)) {
+    const text = readFileSync(lane, 'utf-8');
+    const next = text.replace('--all-done && npm test"', `--all-done && ${detection.testCommand}"`);
+    if (next !== text) {
+      writeFileSync(lane, next);
+      changed.push('.codeloop/lanes/build.yaml');
+    }
+  }
+  return changed;
+}
+
+// A YAML file with comments is edited as text: the key's block, up to the next top-level key, is
+// swapped so the rest of the starter's comments survive.
+function replaceTopLevelKey(text: string, key: string, block: string): string {
+  const lines = text.split('\n');
+  const start = lines.findIndex(l => l.startsWith(`${key}:`));
+  if (start < 0) return `${text.trimEnd()}\n\n${block}`;
+  let end = start + 1;
+  while (end < lines.length && !/^[A-Za-z_]/.test(lines[end])) end++;
+  // A comment block that leads the next key stays with it.
+  while (end > start + 1 && /^\s*#/.test(lines[end - 1])) end--;
+  return [...lines.slice(0, start), ...block.split('\n'), ...lines.slice(end)].join('\n');
 }

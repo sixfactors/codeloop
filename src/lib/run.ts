@@ -39,6 +39,21 @@ export interface RunResult {
   advanced: { id: string; outcome: Outcome | 'refused'; note?: string; next?: string }[];
   /** Only on a run with an agent: one entry per card an agent was started for, or would have been. */
   agents?: AgentStep[];
+  /** Every lane with a trigger, and what this run did about it. */
+  lanes: LaneDue[];
+}
+
+export interface LaneDue {
+  lane: string;
+  trigger: string;
+  status: 'created' | 'not due' | 'skipped' | 'manual';
+  note?: string;
+}
+
+/** `--lane` or `--card`: only that lane's cards (and trigger), or only that card and no triggers. */
+export interface RunFilter {
+  lane?: string;
+  card?: string;
 }
 
 export interface AgentStep {
@@ -52,12 +67,12 @@ export interface AgentStep {
   log?: string;
 }
 
-export function runDue(projectDir: string, now: Date = clock()): RunResult {
+export function runDue(projectDir: string, now: Date = clock(), filter: RunFilter = {}): RunResult {
   const file = join(projectDir, LAST_RUN);
   // Two schedulers started together must not both see the same slot as new.
-  const result = withLock(file, () => startDue(projectDir, file, now));
+  const result = withLock(file, () => startDue(projectDir, file, now, filter));
 
-  for (const { id } of active(projectDir)) {
+  for (const { id } of active(projectDir, filter)) {
     try {
       result.advanced.push({ id, outcome: advanceCard(projectDir, id, { now, unattended: true }).outcome });
     } catch (e) {
@@ -69,7 +84,12 @@ export function runDue(projectDir: string, now: Date = clock()): RunResult {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const active = (projectDir: string) => readCards(projectDir).cards.filter(c => inLane(c) && !c.gate);
+function active(projectDir: string, filter: RunFilter = {}): Card[] {
+  const { cards } = readCards(projectDir);
+  if (filter.lane && !loadLanes(projectDir).some(l => l.id === filter.lane)) throw new RefusalError(`lane "${filter.lane}" not found`);
+  const only = filter.card ? findCard(cards, filter.card).id : undefined;
+  return cards.filter(c => inLane(c) && !c.gate && (!filter.lane || c.lane === filter.lane) && (!only || c.id === only));
+}
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 // An agent-start with no agent-run after it, younger than the timeout: another run is in the middle of this stage.
@@ -91,7 +111,7 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
 }
 
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
-async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date): Promise<(AgentStep & { busy?: boolean }) | null> {
+async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string): Promise<(AgentStep & { busy?: boolean }) | null> {
   const card = findCard(readCards(projectDir).cards, id);
   const lane = loadLane(projectDir, card.lane);
   const stage: Stage | undefined = lane.stages.find(s => s.id === card.stage);
@@ -99,10 +119,10 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   const step = { id, stage: stage.id, agent: agent.name };
   if (awaitsApproval(card, stage)) return { ...step, started: false, reason: `${stage.id} is a public step that has not been approved` };
   if (running(card, agent, now)) return { ...step, started: false, busy: true, reason: `agent ${agent.name} is still running on ${stage.id} from an earlier run` };
-  // A rejection asks for the work to be done again, so the agent is started with the note even
-  // though the check that passed before the gate still passes. Once per rejection.
-  const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'agent-start')).at(-1);
-  if (asked?.action !== 'reject' && runCheck(projectDir, card, stage)?.passed) return null;
+  // A rejection, or a return from the next stage's entry gate, asks for the work to be done again,
+  // so the agent is started with the note even though the check still passes. Once per note.
+  const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'returned' || e.action === 'agent-start')).at(-1);
+  if (asked?.action !== 'reject' && asked?.action !== 'returned' && runCheck(projectDir, card, stage)?.passed) return null;
 
   let log = '';
   try {
@@ -111,7 +131,7 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
       const reason = limit(projectDir, cards, current, lane, agent, now);
       if (reason) throw new RefusalError(reason);
       const n = current.events.filter(e => e.action === 'agent-start' && e.stage === stage.id).length + 1;
-      log = `${AGENT_RUNS_DIR}/${id}-${safeName(stage.id, 'stage id')}-${n}.log`;
+      log = logFile ?? `${AGENT_RUNS_DIR}/${id}-${safeName(stage.id, 'stage id')}-${n}.log`;
       return { action: 'agent-start', agent: agent.name, log };
     }, now);
   } catch (e) {
@@ -128,42 +148,68 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   return { ...step, started: true, exit: run.exit, durationMs: run.durationMs, log };
 }
 
-/** `runDue`, with an agent started first on each card whose stage check does not pass yet. One stage per card. */
-export async function runDueWithAgent(projectDir: string, agent: AgentConfig, now: Date = clock()): Promise<RunResult> {
-  const file = join(projectDir, LAST_RUN);
-  const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now)), agents: [] };
+/** One card's turn in a run: the agent first when its check does not pass, then one advance. */
+export interface CardTurn {
+  agent?: AgentStep;
+  advanced: RunResult['advanced'][number];
+  /** The check's output from the advance, when one ran. */
+  output?: string;
+  outcome?: Outcome;
+  /** An earlier run's agent is still on this stage; nothing was checked or moved. */
+  busy?: boolean;
+}
 
-  for (const { id, stage } of active(projectDir)) {
-    try {
-      const step = await agentStep(projectDir, id, agent, now);
-      if (step) {
-        const { busy, ...entry } = step;
-        result.agents!.push(entry);
-        if (busy) continue;
+export async function workCard(projectDir: string, id: string, stage: string, agent: AgentConfig | null, now: Date, logFile?: string): Promise<CardTurn> {
+  const turn: CardTurn = { advanced: { id, outcome: 'refused' } };
+  try {
+    const step = agent ? await agentStep(projectDir, id, agent, now, logFile) : null;
+    if (step) {
+      const { busy, ...entry } = step;
+      turn.agent = entry;
+      if (busy) {
+        turn.busy = true;
+        turn.advanced = { id, outcome: 'refused', note: entry.reason };
+        return turn;
       }
-      const card = findCard(readCards(projectDir).cards, id);
-      if (card.stage !== stage || card.gate) {
-        result.advanced.push({ id, outcome: 'refused', note: 'the card was moved while the agent ran; nothing more this run' });
-        continue;
-      }
-      // What an agent just did is a new attempt even when it left the output as it was, so it is
-      // judged and counted. Without that a failing agent would be started again on every run.
-      const advance = advanceCard(projectDir, id, { now: new Date(now.getTime() + (step?.durationMs ?? 0)), unattended: !step?.started });
-      const failed = step?.started && (advance.outcome === 'failed' || advance.outcome === 'stuck');
-      result.advanced.push({ id, outcome: advance.outcome, ...(failed ? { next: nextHint(projectDir, advance.card, advance.outcome === 'failed' ? advance.output ?? '' : undefined) } : {}) });
-    } catch (e) {
-      if (!(e instanceof RefusalError)) throw e;
-      result.advanced.push({ id, outcome: 'refused', note: e.message });
     }
+    const card = findCard(readCards(projectDir).cards, id);
+    if (card.stage !== stage || card.gate) {
+      turn.advanced = { id, outcome: 'refused', note: 'the card was moved while the agent ran; nothing more this run' };
+      return turn;
+    }
+    // What an agent just did is a new attempt even when it left the output as it was, so it is
+    // judged and counted. Without that a failing agent would be started again on every run.
+    const advance = advanceCard(projectDir, id, { now: new Date(now.getTime() + (step?.durationMs ?? 0)), unattended: !!agent && !step?.started });
+    const failed = step?.started && (advance.outcome === 'failed' || advance.outcome === 'stuck');
+    turn.output = advance.output;
+    turn.outcome = advance.outcome;
+    turn.advanced = { id, outcome: advance.outcome, ...(failed ? { next: nextHint(projectDir, advance.card, advance.outcome === 'failed' ? advance.output ?? '' : undefined) } : {}) };
+  } catch (e) {
+    if (!(e instanceof RefusalError)) throw e;
+    turn.advanced = { id, outcome: 'refused', note: e.message };
+  }
+  return turn;
+}
+
+/** `runDue`, with an agent started first on each card whose stage check does not pass yet. One stage per card. */
+export async function runDueWithAgent(projectDir: string, agent: AgentConfig, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
+  const file = join(projectDir, LAST_RUN);
+  const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
+
+  for (const { id, stage } of active(projectDir, filter)) {
+    const turn = await workCard(projectDir, id, stage, agent, now);
+    if (turn.agent) result.agents!.push(turn.agent);
+    if (turn.busy) continue;
+    result.advanced.push(turn.advanced);
   }
   return result;
 }
 
 /** What a run would do, for `--dry-run`. Nothing is started, checked or written. */
-export function planRun(projectDir: string, agent: AgentConfig | null, now: Date = clock()): string[] {
+export function planRun(projectDir: string, agent: AgentConfig | null, now: Date = clock(), filter: RunFilter = {}): string[] {
   const { cards } = readCards(projectDir);
   let planned = 0;
-  return cards.filter(c => inLane(c) && !c.gate).map(card => {
+  return active(projectDir, filter).map(card => {
     const lane = loadLane(projectDir, card.lane);
     const stage = lane.stages.find(s => s.id === card.stage);
     if (!agent || !stage?.done?.cmd) return `${card.id}: would run the ${card.stage} check and move the card if it passes`;
@@ -178,55 +224,76 @@ export function planRun(projectDir: string, agent: AgentConfig | null, now: Date
   });
 }
 
-function startDue(projectDir: string, file: string, now: Date): RunResult {
+function startDue(projectDir: string, file: string, now: Date, filter: RunFilter = {}): RunResult {
+  const result: RunResult = { created: [], skipped: [], advanced: [], lanes: [] };
+  // A run on one card starts nothing: the triggers stay for the next full run.
+  if (filter.card) return result;
   const last: LastRun | null = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
   const after = last ? new Date(last.at) : new Date(now.getTime() - FIRST_RUN_LOOKBACK_MS);
   const slots = { ...(last?.slots ?? {}) };
   const seen = { ...(last?.git ?? {}) };
-  const result: RunResult = { created: [], skipped: [], advanced: [] };
+  const lanes = loadLanes(projectDir).filter(l => !filter.lane || l.id === filter.lane);
+  const note = (lane: Lane, status: LaneDue['status'], trigger: string, text?: string) => result.lanes.push({ lane: lane.id, trigger, status, ...(text ? { note: text } : {}) });
 
-  for (const lane of loadLanes(projectDir)) {
+  for (const lane of lanes) {
     const args = GIT_VALUE[lane.trigger?.on ?? ''];
     if (!args) continue;
+    const trigger = lane.trigger!.on!;
     const value = git(projectDir, args);
     // The last value is recorded per lane, so the same HEAD or tag starts one card however often this runs.
-    if (!value || seen[lane.id] === value) continue;
+    if (!value || seen[lane.id] === value) {
+      note(lane, 'not due', trigger, value ? `${trigger === 'git.commit' ? value.slice(0, 7) : value} already started a card` : `no ${trigger === 'git.commit' ? 'commit' : 'tag'} yet`);
+      continue;
+    }
     try {
-      const label = lane.trigger!.on === 'git.commit' ? value.slice(0, 7) : value;
-      const card = createCard(projectDir, { lane: lane.id, title: `${lane.id} ${label}`, now, note: `${lane.trigger!.on} ${value}` });
-      result.created.push({ lane: lane.id, id: card.id, slot: value, trigger: `${lane.trigger!.on} ${label}` });
+      const label = trigger === 'git.commit' ? value.slice(0, 7) : value;
+      const card = createCard(projectDir, { lane: lane.id, title: `${lane.id} ${label}`, now, note: `${trigger} ${value}` });
+      result.created.push({ lane: lane.id, id: card.id, slot: value, trigger: `${trigger} ${label}` });
+      note(lane, 'created', trigger, card.id);
       seen[lane.id] = value;
     } catch (e) {
       if (!(e instanceof RefusalError)) throw e;
       result.skipped.push({ lane: lane.id, reason: e.message });
+      note(lane, 'skipped', trigger, e.message);
     }
   }
 
-  for (const lane of loadLanes(projectDir)) {
-    if (!lane.trigger?.cron) continue;
+  for (const lane of lanes) {
+    if (!lane.trigger?.cron) {
+      if (!lane.trigger?.on) note(lane, 'manual', lane.trigger?.manual ? 'manual' : 'none');
+      continue;
+    }
+    const trigger = `cron ${lane.trigger.cron}`;
     // One lane's unreadable schedule is that lane's problem; the others still run.
     let due: Date | null;
     try {
       due = lastDueSlot(lane.trigger.cron, after, now);
     } catch (e) {
       result.skipped.push({ lane: lane.id, reason: (e as Error).message });
+      note(lane, 'skipped', trigger, (e as Error).message);
       continue;
     }
     const slot = due?.toISOString();
     // The slot is recorded per lane, so a re-run inside the same window cannot create a second card.
-    if (!slot || slots[lane.id] === slot) continue;
+    if (!slot || slots[lane.id] === slot) {
+      note(lane, 'not due', trigger, slot ? `slot ${slot} already started a card` : `no slot since ${after.toISOString()}`);
+      continue;
+    }
     try {
-      const card = createCard(projectDir, { lane: lane.id, title: `${lane.id} ${localDate(due!)}`, now, note: `cron ${lane.trigger.cron}` });
-      result.created.push({ lane: lane.id, id: card.id, slot, trigger: `cron ${lane.trigger.cron}` });
+      const card = createCard(projectDir, { lane: lane.id, title: `${lane.id} ${localDate(due!)}`, now, note: trigger });
+      result.created.push({ lane: lane.id, id: card.id, slot, trigger });
+      note(lane, 'created', trigger, card.id);
       slots[lane.id] = slot;
     } catch (e) {
       if (!(e instanceof RefusalError)) throw e;
       result.skipped.push({ lane: lane.id, reason: e.message });
+      note(lane, 'skipped', trigger, e.message);
     }
   }
 
-  // A refused slot must be found again next run, so the window start only moves when nothing was skipped.
-  const at = result.skipped.length ? after.toISOString() : now.toISOString();
+  // A refused slot must be found again next run, so the window start only moves when nothing was
+  // skipped. A run on one lane leaves it too: the other lanes' slots in the window are not spent.
+  const at = result.skipped.length || filter.lane ? after.toISOString() : now.toISOString();
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify({ at, slots, git: seen }, null, 2) + '\n');
   return result;

@@ -14,15 +14,29 @@
   "bin": {
     "codeloop": "dist/index.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
+      "default": "./dist/sdk/index.js"
+    },
+    "./sdk/local": {
+      "types": "./dist/sdk/local.d.ts",
+      "default": "./dist/sdk/local.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc",
     "build:ui": "cd ui && npm run build",
-    "build:all": "tsc && cd ui && npm run build",
+    "build:all": "tsc && cd ui && npm run build && node scripts/build-workspace.mjs",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build:all"
+    "prepublishOnly": "npm run build:all",
+    "build:workspace": "node scripts/build-workspace.mjs",
+    "bench": "node scripts/bench.mjs"
   },
   "keywords": [
     "claude-code",
@@ -42,8 +56,17 @@
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
     "hono": "^4.12.0",
+    "minisearch": "^7.2.0",
     "yaml": "^2.5.0",
     "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "next": ">=15"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

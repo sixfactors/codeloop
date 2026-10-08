@@ -11,6 +11,8 @@ interface RunOptions {
   json?: boolean;
   agent?: string | boolean;
   dryRun?: boolean;
+  lane?: string;
+  card?: string;
 }
 
 export const runCommand = new Command('run')
@@ -18,6 +20,8 @@ export const runCommand = new Command('run')
   .option('--due', 'Run what is due (the default; kept so older scripts still work)')
   .option('--agent [name]', 'First start a headless agent on each stage whose check does not pass yet (an entry under agents: in config.yaml)')
   .option('--no-agent', 'Only check and advance, even when config.yaml has run.agent: true')
+  .option('--lane <id>', "Only this lane: its trigger and its cards; the other lanes' due slots are kept for the next full run")
+  .option('--card <id>', 'Only this card; no lane trigger fires')
   .option('--dry-run', 'Print what would run; start nothing and change nothing')
   .option('--now <iso>', 'Treat this as the current time')
   .option('--json', 'JSON output')
@@ -27,19 +31,25 @@ export const runCommand = new Command('run')
     if (Number.isNaN(now.getTime())) throw new RefusalError(`--now "${opts.now}" is not a date`);
     const wanted = opts.agent ?? loadAgents(projectDir).runByDefault;
     const agent = wanted ? resolveAgent(projectDir, wanted === true ? undefined : wanted) : null;
+    if (opts.lane && opts.card) throw new RefusalError('--lane and --card do not combine; name one');
+    const filter = { lane: opts.lane, card: opts.card };
     if (opts.dryRun) {
-      const plan = planRun(projectDir, agent, now);
+      const plan = planRun(projectDir, agent, now, filter);
       plan.forEach(l => console.log(`  ${l}`));
       console.log(`  dry run: nothing was started (${plan.length} ${plan.length === 1 ? 'card' : 'cards'} not waiting for you)`);
       return;
     }
-    const result = agent ? await runDueWithAgent(projectDir, agent, now) : runDue(projectDir, now);
+    const result = agent ? await runDueWithAgent(projectDir, agent, now, filter) : runDue(projectDir, now, filter);
     if (opts.json) {
       console.log(JSON.stringify(result, null, 2));
       return;
     }
     result.created.forEach(c => console.log(`  created ${c.id} in ${c.lane} (trigger: ${c.trigger})`));
     result.skipped.forEach(s => console.log(`  skipped ${s.lane}: ${s.reason}`));
+    for (const l of result.lanes) {
+      if (l.status === 'created') continue;
+      console.log(`  lane ${l.lane} ${l.status === 'manual' ? 'has no trigger' : `${l.status} (${l.trigger}${l.note ? `: ${l.note}` : ''})`}`);
+    }
     result.agents?.forEach(a => console.log(a.started
       ? `  ${a.id}: agent ${a.agent} ran ${a.stage} (${a.exit === 0 ? 'exit 0' : a.exit === null ? 'killed' : `exit ${a.exit}`}, ${Math.round(a.durationMs! / 1000)}s, ${a.log})`
       : `  ${a.id}: agent ${a.agent} not started: ${a.reason}`));

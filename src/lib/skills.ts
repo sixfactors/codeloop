@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
-import { basename, dirname, join, relative, resolve } from 'path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path';
 import { parse as parseYaml, stringify } from 'yaml';
-import { SKILLS_INDEX, type Lane, type SkillEntry } from './lane.js';
+import { loadSkillsIndex, SKILLS_INDEX, type Lane, type SkillEntry } from './lane.js';
 import { withLock } from './lock.js';
 
 export function defaultSkillDirs(projectDir: string): string[] {
@@ -69,6 +69,50 @@ export function scanSkills(projectDir: string, dirs: string[]): SkillEntry[] {
 export function writeSkillsIndex(projectDir: string, entries: SkillEntry[]): void {
   const file = join(projectDir, SKILLS_INDEX);
   withLock(file, () => writeFileSync(file, stringify(entries)));
+}
+
+export interface AdoptResult {
+  entries: SkillEntry[];
+  indexed: number;
+  added: number;
+  updated: number;
+  removed: number;
+  duplicates: { name: string; sources: string[] }[];
+}
+
+const same = (a: SkillEntry, b: SkillEntry) => a.name === b.name && a.kind === b.kind && a.description === b.description;
+
+/**
+ * Lays the scanned entries over the index, keyed by source file. An entry whose file is gone is
+ * dropped; with `replace` everything not scanned is dropped too. Without an index this is a write.
+ */
+export function mergeSkillsIndex(projectDir: string, scanned: SkillEntry[], opts: { replace?: boolean } = {}): AdoptResult {
+  const existing = loadSkillsIndex(projectDir) ?? [];
+  const bySource = new Map(existing.map(e => [e.source, e]));
+  const fresh = new Map(scanned.map(e => [e.source, e]));
+  let added = 0;
+  let updated = 0;
+  let removed = 0;
+  const kept: SkillEntry[] = [];
+  for (const [source, entry] of bySource) {
+    const now = fresh.get(source);
+    if (now) {
+      if (!same(now, entry)) updated++;
+      kept.push(now);
+      fresh.delete(source);
+      continue;
+    }
+    const file = isAbsolute(source) ? source : join(projectDir, source);
+    if (opts.replace || !existsSync(file)) removed++;
+    else kept.push(entry);
+  }
+  for (const entry of fresh.values()) {
+    kept.push(entry);
+    added++;
+  }
+  const entries = kept.sort((a, b) => a.source.localeCompare(b.source));
+  writeSkillsIndex(projectDir, entries);
+  return { entries, indexed: entries.length, added, updated, removed, duplicates: duplicateSkills(entries) };
 }
 
 /** Writes the index only when there is none: an existing one may hold entries from `adopt --from`. */

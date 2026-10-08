@@ -134,6 +134,7 @@ describe('cron', () => {
 describe('a missing lane', () => {
   it('does not strand a finishing card when on_done names a lane that does not exist', () => {
     lane('build', 'on_done: { start: marketing }\nstages:\n  - { id: ship, done: { cmd: "true" } }\n');
+    write('.codeloop/config.yaml', 'lanes:\n  auto_start: true\n');
     createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
 
     const result = advanceCard(dir, 'c-1');

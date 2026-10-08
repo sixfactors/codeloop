@@ -1,12 +1,12 @@
 import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
-import { advanceCard, approveCard, createCard, type AdvanceResult, type Role } from './engine.js';
+import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
 
 const usesSpec = (lane: Lane) => lane.stages.some(s => `${s.output ?? ''} ${s.done?.cmd ?? ''}`.includes('{spec}') || s.done?.cmd?.includes('codeloop spec check'));
 
 /** Creates the card and, for a lane whose stages work in a spec folder, the folder too. */
-export function startCard(projectDir: string, input: { lane: string; title: string; id?: string; role?: Role }): Card {
+export function startCard(projectDir: string, input: { lane: string; title: string; id?: string; role?: Role; fields?: CardFields }): Card {
   const card = createCard(projectDir, input);
   if (!usesSpec(loadLane(projectDir, card.lane))) return card;
   newSpec(projectDir, card.id, input.role);
@@ -36,16 +36,29 @@ function currentStage(projectDir: string, card: Card): Stage | undefined {
 }
 
 /** What whoever runs the current stage needs: the skill, where output goes, the check, and prior feedback. */
+export interface StageFeedback {
+  /** `rejected`: this stage's own gate, after its check passed. `returned`: the next stage's entry gate, before it ran. */
+  kind: 'rejected' | 'returned';
+  from?: string;
+  note: string;
+}
+
 export function stageBrief(projectDir: string, card: Card) {
   const stage = currentStage(projectDir, card);
   if (!stage) return null;
+  const feedback: StageFeedback[] = card.events
+    .filter(e => (e.action === 'reject' || e.action === 'returned') && e.stage === stage.id)
+    .map(e => (e.action === 'reject' ? { kind: 'rejected', note: e.note ?? '' } : { kind: 'returned', from: /^from (\S+): /.exec(e.note ?? '')?.[1], note: (e.note ?? '').replace(/^from \S+: /, '') }));
   return {
     skill: stage.skill,
     role: stage.role,
     output: stage.output && substitute(stage.output, card),
     done: stage.done?.cmd ? substitute(stage.done.cmd, card, { shell: true }) : stage.done?.event && `event ${stage.done.event}`,
     notes: stage.notes ?? [],
-    rejections: card.events.filter(e => e.action === 'reject' && e.stage === stage.id).map(e => e.note),
+    // A rejection at this stage's own gate asks for a redo; a return is a rejection at the next
+    // stage's entry gate, which judged this stage's work before that stage ran.
+    rejections: feedback.map(f => f.note),
+    feedback,
   };
 }
 
@@ -85,7 +98,9 @@ export function describeAdvance(projectDir: string, result: AdvanceResult): { li
       lines.push(`${card.id} moved to ${card.stage}`);
       break;
     case 'done':
-      lines.push(`${card.id} done`, ...result.started.map(s => `started ${s.id} in ${s.lane}`));
+      lines.push(`${card.id} done`, ...result.started.map(s => `started ${s.id} in ${s.lane} because ${result.because[s.id]}`));
+      // A card finishes once, so the last such event is this finish's.
+      for (const e of card.events.filter(e => e.action === 'on_done-skipped').slice(-1)) lines.push(`on_done: ${e.note}; set lanes.auto_start: true in .codeloop/config.yaml to start it`);
       break;
     case 'parked':
       lines.push(`${card.id} is waiting for you at ${card.stage} (gate ${card.gate}, ${card.awaiting} approves)`);

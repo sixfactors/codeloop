@@ -8,9 +8,10 @@ mockCommand
   .command('new <card>')
   .description('Create docs/mocks/<project>/<topic>/<card-id>.html from templates/mock/template.html')
   .requiredOption('--topic <topic>', 'Folder the mock is filed under, e.g. exports')
-  .action(guard((card: string, opts: { topic: string }) => {
-    const { path, created } = newMock(process.cwd(), card, opts.topic);
-    console.log(created ? `  created ${path}` : `  ${path} already exists; left as it is`);
+  .option('--from <card-id|latest|none>', 'The mock to build on: a card id, the newest in this topic, or none for the bare template', 'latest')
+  .action(guard((card: string, opts: { topic: string; from: string }) => {
+    const { path, created, from } = newMock(process.cwd(), card, opts.topic, opts.from);
+    console.log(created ? `  created ${path}${from ? ` from ${from}` : ''}` : `  ${path} already exists; left as it is`);
     console.log(`Next: draw one <section data-screen="..."> per screen named in the spec, then \`codeloop check mock ${card}\`.`);
   }));
 

@@ -36,7 +36,7 @@ afterEach(() => {
 describe('cards API', () => {
   it('serves cards, lanes and the inbox summary when there is no board.json', async () => {
     expect(existsSync(join(dir, '.codeloop/board.json'))).toBe(false);
-    const res = await createApp(dir).app.request('/api/cards');
+    const res = await createApp(dir).app.request('/api/cards?include=inbox');
 
     expect(res.status).toBe(200);
     const body = await res.json();

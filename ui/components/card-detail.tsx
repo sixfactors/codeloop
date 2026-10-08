@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import type { LaneCard } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { LaneCard, CardQuestion } from '@/lib/types';
+import { CardBadges } from './lane-card';
 
 interface CardDetailProps {
   card: LaneCard;
@@ -9,10 +10,91 @@ interface CardDetailProps {
   read?: string;
   lastCheck?: string;
   onDecide: (action: 'approve' | 'reject', note?: string) => Promise<string | null>;
+  onQuestions?: (id: string) => Promise<CardQuestion[]>;
+  onAnswer?: (id: string, n: number, body: { text: string } | { accept: true }) => Promise<string | null>;
   onClose: () => void;
 }
 
-export function CardDetail({ card, owner, read, lastCheck, onDecide, onClose }: CardDetailProps) {
+function Questions({ card, load, answer }: {
+  card: LaneCard;
+  load: (id: string) => Promise<CardQuestion[]>;
+  answer: (id: string, n: number, body: { text: string } | { accept: true }) => Promise<string | null>;
+}) {
+  const [items, setItems] = useState<CardQuestion[] | null>(null);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(() => load(card.id).then(setItems), [card.id, load]);
+  useEffect(() => { refresh(); }, [refresh, card.updatedAt]);
+
+  const send = async (n: number, body: { text: string } | { accept: true }) => {
+    setBusy(n);
+    setError(null);
+    const err = await answer(card.id, n, body);
+    setBusy(null);
+    if (err) { setError(err); return; }
+    setDrafts(d => ({ ...d, [n]: '' }));
+    refresh();
+  };
+
+  if (!items || items.length === 0) return null;
+  const open = items.filter(q => !q.answer).length;
+
+  return (
+    <div>
+      <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+        Questions ({open} open of {items.length})
+      </h3>
+      <ol className="space-y-3">
+        {items.map(q => (
+          <li key={q.n} className="bg-background border border-border rounded-lg p-3">
+            <p className="text-sm text-foreground"><span className="text-muted font-mono mr-1">{q.n}.</span>{q.question}</p>
+            {q.answer ? (
+              <p className="mt-2 text-sm text-foreground/80">
+                <span className="text-[10px] uppercase tracking-wider text-done mr-1">answered</span>{q.answer}
+              </p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {q.recommended && (
+                  <p className="text-xs text-muted">Recommended: <span className="text-foreground/80">{q.recommended}</span></p>
+                )}
+                <textarea
+                  value={drafts[q.n] ?? ''}
+                  onChange={e => setDrafts(d => ({ ...d, [q.n]: e.target.value }))}
+                  placeholder="Your answer"
+                  rows={2}
+                  className="w-full text-sm bg-card border border-border rounded-lg p-2 text-foreground"
+                />
+                <div className="flex gap-2">
+                  {q.recommended && (
+                    <button
+                      disabled={busy === q.n}
+                      onClick={() => send(q.n, { accept: true })}
+                      className="text-xs px-3 py-1.5 rounded-md bg-accent hover:bg-accent-hover text-foreground font-medium disabled:opacity-50"
+                    >
+                      Accept
+                    </button>
+                  )}
+                  <button
+                    disabled={busy === q.n || !(drafts[q.n] ?? '').trim()}
+                    onClick={() => send(q.n, { text: (drafts[q.n] ?? '').trim() })}
+                    className="text-xs px-3 py-1.5 rounded-md bg-border text-foreground/80 font-medium disabled:opacity-50"
+                  >
+                    Answer
+                  </button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+    </div>
+  );
+}
+
+export function CardDetail({ card, owner, read, lastCheck, onDecide, onQuestions, onAnswer, onClose }: CardDetailProps) {
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +135,7 @@ export function CardDetail({ card, owner, read, lastCheck, onDecide, onClose }: 
               )}
             </div>
             <h2 className="text-lg font-semibold text-foreground">{card.title}</h2>
+            <CardBadges card={card} />
           </div>
           <button
             onClick={onClose}
@@ -68,7 +151,9 @@ export function CardDetail({ card, owner, read, lastCheck, onDecide, onClose }: 
           {/* Decision */}
           {card.gate && (
             <div>
-              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Waiting for you</h3>
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                {card.stage === 'proposed' ? 'Proposal' : 'Waiting for you'}
+              </h3>
               <p className="text-sm text-foreground/80">
                 {read ? <>Read <span className="font-mono text-accent/80">{read}</span>. </> : null}
                 Last check: {lastCheck ?? 'unknown'}.
@@ -88,14 +173,14 @@ export function CardDetail({ card, owner, read, lastCheck, onDecide, onClose }: 
                       onClick={() => decide('approve')}
                       className="text-xs px-3 py-1.5 rounded-md bg-accent hover:bg-accent-hover text-foreground font-medium"
                     >
-                      Approve
+                      {card.stage === 'proposed' ? 'Promote' : 'Approve'}
                     </button>
                     <button
                       disabled={busy}
                       onClick={() => decide('reject')}
                       className="text-xs px-3 py-1.5 rounded-md bg-border text-foreground/70 font-medium"
                     >
-                      Reject
+                      {card.stage === 'proposed' ? 'Drop' : 'Reject'}
                     </button>
                   </div>
                 </div>
@@ -108,6 +193,50 @@ export function CardDetail({ card, owner, read, lastCheck, onDecide, onClose }: 
               {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
             </div>
           )}
+
+          {/* Story */}
+          {(card.story?.as || card.story?.can || card.story?.so || card.description) && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Story</h3>
+              {card.story && (card.story.as || card.story.can || card.story.so) ? (
+                <dl className="text-sm text-foreground/90 space-y-1">
+                  {[['As a', card.story.as], ['I can', card.story.can], ['so that', card.story.so]].map(([label, text]) => text ? (
+                    <div key={label} className="flex gap-2">
+                      <dt className="text-muted w-14 shrink-0">{label}</dt>
+                      <dd>{text}</dd>
+                    </div>
+                  ) : null)}
+                </dl>
+              ) : (
+                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{card.description}</p>
+              )}
+            </div>
+          )}
+
+          {/* Shape: bet, epic, feature, metric, size */}
+          {(card.bet || card.epic || card.feature || card.metric || card.persona || card.size || card.points !== undefined) && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Shape</h3>
+              <dl className="text-sm text-foreground/90 space-y-1">
+                {([
+                  ['Bet', card.bet],
+                  ['Epic', card.epic],
+                  ['Feature', card.feature],
+                  ['Persona', card.persona],
+                  ['Metric', card.metric],
+                  ['Size', card.points !== undefined ? `${card.points} pt${card.size ? ` · ${card.size}` : ''}` : card.size],
+                ] as [string, string | undefined][]).map(([label, text]) => text ? (
+                  <div key={label} className="flex gap-2">
+                    <dt className="text-muted w-14 shrink-0">{label}</dt>
+                    <dd className={label === 'Epic' ? 'font-mono text-accent/80' : ''}>{text}</dd>
+                  </div>
+                ) : null)}
+              </dl>
+            </div>
+          )}
+
+          {/* Questions */}
+          {onQuestions && onAnswer && <Questions card={card} load={onQuestions} answer={onAnswer} />}
 
           {/* Spec */}
           {card.spec && (

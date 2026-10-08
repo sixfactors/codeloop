@@ -62,7 +62,7 @@ describe('no agent configured', () => {
     lane('build', TWO_STAGES);
     createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
     expect(loadAgents(dir).agents).toEqual({});
-    expect(runDue(dir)).toEqual({ created: [], skipped: [], advanced: [{ id: 'c-001', outcome: 'failed' }] });
+    expect(runDue(dir)).toEqual({ created: [], skipped: [], advanced: [{ id: 'c-001', outcome: 'failed' }], lanes: [{ lane: 'build', trigger: 'none', status: 'manual' }] });
     expect(existsSync(join(dir, '.codeloop/state/briefs'))).toBe(false);
     expect(() => resolveAgent(dir)).toThrow(/no agent is configured/);
     const cli = spawnSync('node', [CLI, 'run', '--agent'], { cwd: dir, encoding: 'utf-8' });
@@ -200,11 +200,19 @@ describe('run --agent', () => {
     expect(card('c-001')).toMatchObject({ stage: 'publish', gate: 'publish' });
     expect((await run()).agents).toEqual([]);
 
-    // A rejection clears the gate and leaves the step unapproved.
+    // A rejection at the entry gate judges the stage before it: the card goes back to draft with
+    // the note, and the next run gives draft to the agent again although its check still passes.
     rejectCard(dir, 'c-001', 'owner', 'not this week');
+    expect(card('c-001').stage).toBe('draft');
+    expect(card('c-001').gate).toBeUndefined();
+    expect(buildBrief(dir, card('c-001'))).toContain('Latest return from publish: not this week');
     const result = await run();
-    expect(result.agents).toEqual([{ id: 'c-001', stage: 'publish', agent: 'fake', started: false, reason: 'publish is a public step that has not been approved' }]);
-    expect(card('c-001').gate).toBe('publish');
+    expect(result.agents).toEqual([expect.objectContaining({ id: 'c-001', stage: 'draft', agent: 'fake', started: true })]);
+    expect(existsSync(join(dir, 'agent-ran'))).toBe(true);
+    // The unchanged draft passes its gate again on the approval it already holds and parks on entry to publish.
+    expect(card('c-001')).toMatchObject({ stage: 'publish', gate: 'publish' });
+    rmSync(join(dir, 'agent-ran'));
+    expect((await run()).agents).toEqual([]);
     expect(existsSync(join(dir, 'agent-ran'))).toBe(false);
 
     approveCard(dir, 'c-001', 'owner');

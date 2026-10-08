@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { CardsPayload } from '@/lib/types';
+import type { CardsPayload, CardQuestion } from '@/lib/types';
 import { API_BASE, writeHeaders } from '@/lib/api';
 
 
@@ -34,7 +34,7 @@ export function useCards() {
   }, []);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/cards`)
+    fetch(`${API_BASE}/api/cards?include=inbox`)
       .then(r => r.json())
       .then(payload => setData(payload))
       .catch(() => {});
@@ -59,5 +59,36 @@ export function useCards() {
     return null;
   }, []);
 
-  return { data, connected, decide };
+  // Empty when the server has no questions route yet, so the drawer shows nothing instead of an error.
+  const questions = useCallback(async (id: string): Promise<CardQuestion[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/api/cards/${encodeURIComponent(id)}/questions`);
+      // A missing route falls through to the SPA's index.html with a 200, so the type has to be checked too.
+      if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) return [];
+      const body = await res.json();
+      return Array.isArray(body) ? body : Array.isArray(body?.questions) ? body.questions : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // Returns an error message, or null when the answer was recorded.
+  const answer = useCallback(async (id: string, n: number, body: { text: string } | { accept: true }): Promise<string | null> => {
+    try {
+      const res = await fetch(`${API_BASE}/api/cards/${encodeURIComponent(id)}/questions/${n}/answer`, {
+        method: 'POST',
+        headers: writeHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return err.error ?? `Request failed (${res.status})`;
+      }
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Request failed';
+    }
+  }, []);
+
+  return { data, connected, decide, questions, answer };
 }

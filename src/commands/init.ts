@@ -1,8 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createInterface } from 'readline';
-import { detectStack, type StackId } from '../lib/detect.js';
-import { installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
+import { existsSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { detectProject, detectStack, type StackId } from '../lib/detect.js';
+import { applyDetection, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
 import { defaultSkillDirs, ensureSkillsIndex, scanSkills } from '../lib/skills.js';
@@ -60,7 +62,8 @@ export const initCommand = new Command('init')
   .option('-t, --tools <tools>', 'Comma-separated tools: claude,cursor,codex (skip prompt)')
   .option('--hooks', 'Only install the commit-msg hook that adds the Feature: trailer')
   .option('--ci <provider>', 'Only write CI workflows (github)')
-  .action(async (options: { starter?: string; tools?: string; hooks?: boolean; ci?: string }) => {
+  .option('-y, --yes', 'Write into an existing .claude/commands/ without asking')
+  .action(async (options: { starter?: string; tools?: string; hooks?: boolean; ci?: string; yes?: boolean }) => {
     const projectDir = process.cwd();
 
     if (options.ci) {
@@ -117,12 +120,32 @@ export const initCommand = new Command('init')
 
     const starterFile = `${stackId}.yaml`;
 
+    // package.json says which checks and test command the lanes should run; --starter still picks the config.
+    const detection = detectProject(projectDir);
+    if (detection.frameworks.length || Object.keys(detection.scripts).length) {
+      console.log(chalk.dim(`  Detected ${[...detection.frameworks, ...Object.keys(detection.scripts).map(k => `scripts.${k}`)].join(', ')} in package.json (${detection.packageManager})`));
+    }
+
+    // Somebody's own commands live there already; writing next to them is asked for, or taken from --yes.
+    const commandsDir = join(projectDir, '.claude/commands');
+    let commandsFor = tools;
+    if (tools.includes('claude') && existsSync(commandsDir) && readdirSync(commandsDir).length > 0 && !options.yes) {
+      const answer = process.stdin.isTTY ? await prompt(`  .claude/commands/ already has files. Write codeloop's commands beside them? [y/N] `) : '';
+      if (!/^y(es)?$/i.test(answer)) {
+        commandsFor = tools.filter(t => t !== 'claude');
+        console.log(chalk.yellow(`  ~ .claude/commands/ left alone (pass --yes to write into it)`));
+      }
+    }
+
     console.log();
     console.log(chalk.bold('Initializing codeloop...'));
     console.log(chalk.dim(`  Tools: ${tools.join(', ')} | Stack: ${stackDesc}`));
     console.log();
 
-    const result = scaffold(projectDir, starterFile, tools);
+    const result = scaffold(projectDir, starterFile, tools, { commandsFor });
+    const applied = applyDetection(projectDir, detection, result.created);
+    if (applied.includes('.codeloop/config.yaml')) console.log(chalk.dim(`  quality_checks from package.json: ${detection.qualityChecks.map(c => `${c.name} (${c.command})`).join(', ')}`));
+    if (applied.includes('.codeloop/lanes/build.yaml')) console.log(chalk.dim(`  build lane test command: ${detection.testCommand}`));
 
     // The shipped lanes name the skills just installed, so the index has to exist before lint or pack
     // can pass. An existing index is left alone: adopt replaces it, it does not merge.

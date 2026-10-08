@@ -26,12 +26,7 @@ function stale(lock: string): boolean {
   }
 }
 
-/**
- * Runs `fn` while holding `<path>.lock`, created exclusively so only one process can hold it.
- * Everything that reads a file, decides, and writes it back goes through here; without it two
- * processes can both pass the check and the later rename silently discards the earlier write.
- */
-export function withLock<T>(path: string, fn: () => T): T {
+function acquire(path: string): () => void {
   const lock = `${path}.lock`;
   mkdirSync(dirname(lock), { recursive: true });
   const deadline = Date.now() + WAIT_MS;
@@ -51,9 +46,29 @@ export function withLock<T>(path: string, fn: () => T): T {
       sleep(wait + Math.floor(Math.random() * wait));
     }
   }
+  return () => rmSync(lock, { force: true });
+}
+
+/**
+ * Runs `fn` while holding `<path>.lock`, created exclusively so only one process can hold it.
+ * Everything that reads a file, decides, and writes it back goes through here; without it two
+ * processes can both pass the check and the later rename silently discards the earlier write.
+ */
+export function withLock<T>(path: string, fn: () => T): T {
+  const release = acquire(path);
   try {
     return fn();
   } finally {
-    rmSync(lock, { force: true });
+    release();
+  }
+}
+
+/** `withLock` for work that awaits: the lock is held until the promise settles, not until `fn` returns. */
+export async function withLockAsync<T>(path: string, fn: () => Promise<T>): Promise<T> {
+  const release = acquire(path);
+  try {
+    return await fn();
+  } finally {
+    release();
   }
 }

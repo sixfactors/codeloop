@@ -175,6 +175,7 @@ describe('stats', () => {
     const lanes = [{ id: 'market', version: 1, metric: { name: 'm', source: 's' }, retries: 3, stages: [{ id: 'draft', gate: { name: 'copy', approver: 'owner' as const } }] }];
 
     expect(computeStats(cards, lanes)).toEqual({
+      metrics: [{ lane: 'market', name: 'm', source: 's', value: null }],
       cards: 2,
       done: 1,
       human_turns_per_card: 2,

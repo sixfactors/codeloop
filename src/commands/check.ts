@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
-import { RefusalError } from '../lib/cards.js';
+import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { checkMock } from '../lib/mock.js';
+import { checkStory } from '../lib/story.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { blockingGotchas } from '../lib/wiki.js';
 
@@ -73,3 +74,8 @@ checkCommand
   .command('mock <card>')
   .description("Exit 1 unless the card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names")
   .action((card: string) => failing(() => checkMock(process.cwd(), card))());
+
+checkCommand
+  .command('story <card>')
+  .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
+  .action((card: string) => failing(() => checkStory(process.cwd(), findCard(readCards(process.cwd()).cards, card)))());

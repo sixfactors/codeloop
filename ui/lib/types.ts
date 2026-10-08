@@ -60,6 +60,18 @@ export interface LaneCard {
   mock?: string;
   gate?: string;
   awaiting?: string;
+  description?: string;
+  /** Story fields and sizing arrive once the server derives them; every one is optional. */
+  story?: { as?: string; can?: string; so?: string };
+  persona?: string;
+  size?: 'S' | 'M' | 'L';
+  points?: number;
+  bet?: string;
+  /** Id of the epic card this one belongs to. */
+  epic?: string;
+  feature?: string;
+  metric?: string;
+  openQuestions?: number;
   retries: Record<string, number>;
   evidence: string[];
   events: CardEvent[];
@@ -80,4 +92,11 @@ export interface CardsPayload {
   cards: LaneCard[];
   lanes: { id: string; version: number; stages: LaneStage[] }[];
   inbox: { summary: string; needs_you: { id: string; read?: string; last_check: string }[] };
+}
+
+export interface CardQuestion {
+  n: number;
+  question: string;
+  recommended?: string;
+  answer?: string;
 }

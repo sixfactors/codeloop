@@ -6,7 +6,7 @@ import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
-import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card, type CardEvent } from './cards.js';
+import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
@@ -16,13 +16,18 @@ export type Role = 'owner' | 'reviewer' | 'agent';
 export interface EngineConfig {
   gatesMode: 'all' | 'trusted';
   gatesPerDay?: number;
+  /** `lanes.auto_start: true`: a lane's `on_done.start` makes the follow-on card. Off, the line is only announced. */
+  autoStart: boolean;
 }
+
+export type CardFields = StoryFields & CardExtras;
 
 export function loadEngineConfig(projectDir: string): EngineConfig {
   const raw = loadConfig(projectDir);
   return {
     gatesMode: raw.gates?.mode === 'trusted' ? 'trusted' : 'all',
     gatesPerDay: raw.capacity?.gates_per_day,
+    autoStart: raw.lanes?.auto_start === true,
   };
 }
 
@@ -49,6 +54,8 @@ export interface AdvanceResult {
   outcome: Outcome;
   output?: string;
   started: Card[];
+  /** Per started card: `build.on_done` or `market.trigger lane.done`, whichever made it. */
+  because: Record<string, string>;
 }
 
 interface Clock {
@@ -147,7 +154,7 @@ function replace(cards: Card[], card: Card): Card[] {
   return cards.map(c => (c.id === card.id ? card : c));
 }
 
-function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date, actor: Role | 'engine', note?: string): Card {
+function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date, actor: Role | 'engine', note?: string, fields: CardFields = {}): Card {
   if (lane.stages.length === 0) throw new RefusalError(`lane ${lane.id} has no stages`);
   // The id is substituted into shell commands and used in folder names, so its shape is fixed.
   if (!CARD_ID.test(id)) throw new RefusalError(`card id "${id}" must be letters, a dash and digits, like c-001 or CL-12`);
@@ -160,6 +167,7 @@ function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date
     // Two prefixes with one number would otherwise share specs/001, usecases/001 and evidence/001.
     ...(shared ? { key: id.toLowerCase() } : {}),
     title,
+    ...fields,
     lane: lane.id,
     laneVersion: lane.version,
     stage: lane.stages[0].id,
@@ -254,7 +262,7 @@ export const waitingOnOwner = (cards: Card[]) => cards.filter(c => c.gate && c.s
  */
 export function proposeCard(
   projectDir: string,
-  input: { lane: string; title: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine' } & Clock,
+  input: { lane: string; title: string; id?: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine'; fields?: CardFields } & Clock,
 ): { card: Card; created: boolean } {
   const lane = loadLane(projectDir, input.lane);
   if (lane.stages.length === 0) throw new RefusalError(`lane ${lane.id} has no stages`);
@@ -264,9 +272,13 @@ export function proposeCard(
     const known = input.dedupe ? file.cards.find(c => c.dedupe === input.dedupe) : undefined;
     if (known) return { card: known, created: false };
     const at = now.toISOString();
+    const id = input.id ?? nextCardId(file.cards);
+    if (!CARD_ID.test(id)) throw new RefusalError(`card id "${id}" must be letters, a dash and digits, like c-001 or CL-12`);
+    if (file.cards.some(c => c.id === id)) throw new RefusalError(`card "${id}" already exists`);
     const card: Card = {
-      id: nextCardId(file.cards),
+      id,
       title: input.title,
+      ...input.fields,
       lane: lane.id,
       laneVersion: lane.version,
       stage: PROPOSED,
@@ -293,7 +305,7 @@ export function proposeCard(
 
 export function createCard(
   projectDir: string,
-  input: { lane: string; title: string; id?: string; role?: Role; note?: string } & Clock,
+  input: { lane: string; title: string; id?: string; role?: Role; note?: string; fields?: CardFields } & Clock,
 ): Card {
   const lane = loadLane(projectDir, input.lane);
   const file = readCards(projectDir);
@@ -308,7 +320,7 @@ export function createCard(
     throw new RefusalError(`lane ${lane.id} already has ${active} active cards (wip ${lane.wip})`);
   }
 
-  const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note);
+  const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note, input.fields);
   writeCards(projectDir, file, [...file.cards, card]);
   return card;
 }
@@ -331,7 +343,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   if (awaitsApproval(card, stage)) {
     park(card, stage, now, 'before the stage runs');
     writeCards(projectDir, file, replace(file.cards, card));
-    return { card, outcome: 'parked', started: [] };
+    return { card, outcome: 'parked', started: [], because: {} };
   }
 
   const check = runCheck(projectDir, card, stage);
@@ -358,7 +370,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       const stageOutput = stage.output ? join(projectDir, substitute(stage.output, card)) : null;
       const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? output;
       const fingerprint = createHash('sha1').update(work).digest('hex');
-      if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [] };
+      if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
       card.failures = { ...before.failures, [stage.id]: fingerprint };
       const failures = (card.retries[stage.id] ?? 0) + 1;
       card.retries[stage.id] = failures;
@@ -370,7 +382,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
         card.events.push(event(now, 'engine', 'stuck', stage.id, output));
       }
       writeCards(projectDir, file, replace(file.cards, card));
-      return { card, outcome: stuck ? 'stuck' : 'failed', output, started: [] };
+      return { card, outcome: stuck ? 'stuck' : 'failed', output, started: [], because: {} };
     }
   } else if (stage.done?.event) {
     if (opts.event !== stage.done.event) throw new RefusalError(`card ${id} stage ${stage.id} is waiting for event "${stage.done.event}"`);
@@ -382,7 +394,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   if (given?.fingerprint && given.fingerprint !== stageFingerprint(projectDir, card, stage)) {
     park(card, stage, now, 'the output or the check changed since it was approved');
     writeCards(projectDir, file, replace(file.cards, card));
-    return { card, outcome: 'parked', output, started: [] };
+    return { card, outcome: 'parked', output, started: [], because: {} };
   }
 
   if (stage.gate && !given) {
@@ -391,7 +403,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     } else {
       park(card, stage, now, 'after the check passed');
       writeCards(projectDir, file, replace(file.cards, card));
-      return { card, outcome: 'parked', output, started: [] };
+      return { card, outcome: 'parked', output, started: [], because: {} };
     }
   }
 
@@ -404,20 +416,27 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
 
   let cards = replace(file.cards, card);
   const started: Card[] = [];
+  const because: Record<string, string> = {};
   if (!next) {
-    // on_done.start here and `trigger: { on: lane.done, lane }` there mean the same thing; a Set
-    // keeps a lane that declares both from getting two cards.
-    const targets = new Set<string>(lane.on_done?.start ? [lane.on_done.start] : []);
+    // on_done.start here and `trigger: { on: lane.done, lane }` there mean the same thing; a Map
+    // keeps a lane that declares both from getting two cards. on_done is opt-in (lanes.auto_start);
+    // without it the line is announced on the finished card and nothing starts.
+    const targets = new Map<string, string>();
+    if (lane.on_done?.start) {
+      if (loadEngineConfig(projectDir).autoStart) targets.set(lane.on_done.start, `${lane.id}.on_done`);
+      else card.events.push(event(now, 'engine', 'on_done-skipped', stage.id, `would start ${lane.on_done.start} (lanes.auto_start is off)`));
+    }
     for (const other of loadLanes(projectDir)) {
-      if (other.trigger?.on === 'lane.done' && other.trigger.lane === lane.id) targets.add(other.id);
+      if (other.trigger?.on === 'lane.done' && other.trigger.lane === lane.id && !targets.has(other.id)) targets.set(other.id, `${other.id}.trigger lane.done`);
     }
     // Not subject to wip or capacity: refusing here would drop the follow-on for a finished card.
-    for (const target of targets) {
+    for (const [target, reason] of targets) {
       // A follow-on that cannot start (its lane file is missing or names no stages) is recorded
       // on the finished card. It must not undo the finish.
       try {
-        const follow = newCard(cards, loadLane(projectDir, target), card.title, nextCardId(cards), now, 'engine', `started by ${card.id} finishing lane ${lane.id}`);
+        const follow = newCard(cards, loadLane(projectDir, target), card.title, nextCardId(cards), now, 'engine', `started by ${card.id} finishing lane ${lane.id} (${reason})`);
         started.push(follow);
+        because[follow.id] = reason;
         cards = [...cards, follow];
       } catch (e) {
         if (!(e instanceof RefusalError)) throw e;
@@ -426,7 +445,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     }
   }
   writeCards(projectDir, file, cards);
-  return { card, outcome: !next ? 'done' : card.gate ? 'parked' : 'moved', output, started };
+  return { card, outcome: !next ? 'done' : card.gate ? 'parked' : 'moved', output, started, because };
 }
 
 export function approveCard(projectDir: string, ref: string, role: Role, opts: { note?: string } & Clock = {}): Card {
@@ -470,6 +489,22 @@ export function rejectCard(projectDir: string, ref: string, role: Role, note: st
   const now = opts.now ?? clock();
   const { gate: _gate, awaiting: _awaiting, ...rest } = before;
   const card: Card = { ...rest, ...(before.stage === PROPOSED ? { stage: DROPPED } : {}), events: [...before.events, event(now, role, 'reject', before.stage, note.trim())], updatedAt: now.toISOString() };
+  // A gate asked on entry judges the stage before it: nothing of this stage has run, so the card
+  // goes back to that stage with the note. A gate asked after the check keeps the card for a redo.
+  const previous = returnTarget(projectDir, before);
+  if (previous) {
+    card.stage = previous;
+    card.events.push(event(now, 'engine', 'returned', previous, `from ${before.stage}: ${note.trim()}`));
+  }
   writeCards(projectDir, file, replace(file.cards, card));
   return card;
+}
+
+/** The stage a rejection at an entry gate sends the card back to; undefined when it stays where it is. */
+export function returnTarget(projectDir: string, card: Card): string | undefined {
+  if (!card.gate || card.stage === PROPOSED || card.gate === 'stuck') return undefined;
+  const lane = loadLane(projectDir, card.lane);
+  const at = lane.stages.findIndex(s => s.id === card.stage);
+  if (at < 1 || !awaitsApproval(card, lane.stages[at])) return undefined;
+  return lane.stages[at - 1].id;
 }

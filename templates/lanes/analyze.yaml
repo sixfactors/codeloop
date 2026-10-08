@@ -22,4 +22,6 @@ stages:
     skill: reflect
     output: growth/{id}/findings.md
     done: { cmd: "codeloop check file growth/{id}/findings.md --has 'findings:'" }
-on_done: { start: plan }
+# on_done starts the next lane's card when one here finishes. It is off until config.yaml has
+# `lanes: { auto_start: true }`; until then a finished card only announces what it would start.
+# on_done: { start: plan }

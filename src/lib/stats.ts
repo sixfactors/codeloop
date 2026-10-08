@@ -1,7 +1,17 @@
 import { DONE, PROPOSED, type Card } from './cards.js';
 import type { Lane } from './lane.js';
 
+/** A lane's `metric:` line computed from the cards when its name is one the engine can derive; `value` null is no-data. */
+export interface LaneMetric {
+  lane: string;
+  name: string;
+  source: string;
+  target?: string;
+  value: number | null;
+}
+
 export interface Stats {
+  metrics: LaneMetric[];
   cards: number;
   done: number;
   human_turns_per_card: number | null;
@@ -20,6 +30,34 @@ const ratio = (n: number, d: number) => (d ? n / d : null);
 function unattended(card: Card): number {
   const marks = [card.createdAt, ...card.events.filter(e => e.human).map(e => e.at), card.events.at(-1)?.at ?? card.createdAt].map(ms);
   return Math.max(...marks.slice(1).map((t, i) => t - marks[i]), 0);
+}
+
+const DAY = 24 * HOUR;
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+const rejected = (c: Card) => c.events.some(e => e.action === 'reject' && e.stage !== PROPOSED);
+
+/** The names `metric:` may use with `source: cards`; anything else is no-data. */
+export const CARD_METRICS: Record<string, (cards: Card[]) => number | null> = {
+  done: cards => cards.filter(c => c.stage === DONE).length,
+  done_cards: cards => cards.filter(c => c.stage === DONE).length,
+  cards_done: cards => cards.filter(c => c.stage === DONE).length,
+  done_without_reject: cards => cards.filter(c => c.stage === DONE && !rejected(c)).length,
+  first_pass_done: cards => cards.filter(c => c.stage === DONE && !rejected(c)).length,
+  cycle_time_hours: cards => mean(cards.filter(c => c.stage === DONE).map(c => (ms(c.updatedAt) - ms(c.createdAt)) / HOUR)),
+  cycle_time_days: cards => mean(cards.filter(c => c.stage === DONE).map(c => (ms(c.updatedAt) - ms(c.createdAt)) / DAY)),
+  proposals_accepted_ratio: cards => {
+    const promoted = cards.filter(c => c.events.some(e => e.action === 'promote')).length;
+    const dropped = cards.filter(c => c.stage === 'dropped').length;
+    return ratio(promoted, promoted + dropped);
+  },
+};
+
+export function laneMetrics(cards: Card[], lanes: Lane[]): LaneMetric[] {
+  return lanes.filter(l => l.metric?.name).map(lane => {
+    const derive = lane.metric.source === 'cards' ? CARD_METRICS[lane.metric.name] : undefined;
+    const value = derive ? derive(cards.filter(c => c.lane === lane.id)) : null;
+    return { lane: lane.id, name: lane.metric.name, source: lane.metric.source, ...(lane.metric.target ? { target: lane.metric.target } : {}), value: value === null ? null : Math.round(value * 1000) / 1000 };
+  });
 }
 
 export function computeStats(cards: Card[], lanes: Lane[]): Stats {
@@ -45,6 +83,7 @@ export function computeStats(cards: Card[], lanes: Lane[]): Stats {
   }
 
   return {
+    metrics: laneMetrics(cards, lanes),
     cards: cards.length,
     done: done.length,
     human_turns_per_card: ratio(events.filter(e => e.human).length, cards.length),

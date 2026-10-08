@@ -42,4 +42,6 @@ stages:
     output: evidence/{nnn}/prod.md
     done: { cmd: "codeloop check file evidence/{nnn}/prod.md --has 'result: pass'" }
     gate: { name: prod, approver: owner, outward: true }
-on_done: { start: market }
+# on_done starts the next lane's card when one here finishes. It is off until config.yaml has
+# `lanes: { auto_start: true }`; until then a finished card only announces what it would start.
+# on_done: { start: market }

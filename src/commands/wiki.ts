@@ -1,10 +1,14 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { addCompetitor, listCompetitors } from '../lib/competitors.js';
-import { capture, inject, learn, lintWiki, listPages, type Kind, type Page } from '../lib/wiki.js';
+import { capture, learn, type Kind } from '../lib/wiki.js';
+import { type WikiEntry } from '../sdk/index.js';
+import { createLocalClient } from '../sdk/local.js';
 import { guard } from './guard.js';
 
-const row = (p: Page) => `  ${p.severity === 'critical' ? chalk.red('critical') : 'warning '} freq ${String(p.freq).padEnd(3)} ${p.title}  ${chalk.dim(p.path)}`;
+const client = () => createLocalClient(process.cwd());
+
+const row = (p: WikiEntry) => `  ${p.severity === 'critical' ? chalk.red('critical') : 'warning '} freq ${String(p.freq).padEnd(3)} ${p.title}  ${chalk.dim(p.path)}`;
 
 export const wikiCommand = new Command('wiki').description('Gotchas, decisions and concepts that agents read before a stage and write after it');
 
@@ -25,8 +29,8 @@ wikiCommand
   .description('Print the pages whose scope matches the given files')
   .requiredOption('--files <path...>', 'Changed or soon-to-change files')
   .option('--json', 'JSON output')
-  .action(guard((opts: { files: string[]; json?: boolean }) => {
-    const pages = inject(process.cwd(), opts.files);
+  .action(guard(async (opts: { files: string[]; json?: boolean }) => {
+    const pages = await client().wiki.inject(opts.files);
     if (opts.json) {
       console.log(JSON.stringify(pages, null, 2));
       return;
@@ -38,8 +42,8 @@ wikiCommand
 wikiCommand
   .command('list')
   .description('List pages')
-  .action(guard(() => {
-    const pages = listPages(process.cwd());
+  .action(guard(async () => {
+    const pages = await client().wiki.entries();
     if (pages.length === 0) console.log('  no wiki pages');
     pages.forEach(p => console.log(row(p)));
   }));
@@ -47,8 +51,8 @@ wikiCommand
 wikiCommand
   .command('lint')
   .description('Report broken links (exit 1), stale pages and duplicate titles')
-  .action(guard(() => {
-    const { broken, stale, duplicates } = lintWiki(process.cwd());
+  .action(guard(async () => {
+    const { broken, stale, duplicates } = await client().wiki.lint();
     broken.forEach(b => console.error(chalk.red(`  broken: ${b}`)));
     stale.forEach(s => console.log(chalk.yellow(`  stale: ${s}`)));
     duplicates.forEach(d => console.log(chalk.yellow(`  duplicate: ${d}`)));

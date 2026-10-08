@@ -111,7 +111,16 @@ export function buildBrief(projectDir: string, card: Card): string {
   if (stage.notes.length || stage.rejections.length || failed?.note) {
     lines.push('## Feedback on this stage', '');
     for (const note of stage.notes) lines.push(`- Stage note: ${note}`);
-    stage.rejections.forEach((note, i) => lines.push(`- ${i === stage.rejections.length - 1 ? 'Latest rejection' : 'Earlier rejection'}: ${note}`));
+    const latest = stage.feedback.at(-1);
+    if (latest) {
+      lines.push(latest.kind === 'rejected'
+        ? "This stage's gate was rejected after its check passed: redo the stage so the check passes again and the gate is asked again."
+        : `The entry gate of ${latest.from ?? 'the next stage'} was rejected before that stage ran: the card came back here, so redo this stage.`);
+    }
+    stage.feedback.forEach((f, i) => {
+      const when = i === stage.feedback.length - 1 ? 'Latest' : 'Earlier';
+      lines.push(f.kind === 'rejected' ? `- ${when} rejection: ${f.note}` : `- ${when} return from ${f.from ?? 'the next stage'}: ${f.note}`);
+    });
     if (failed?.note) lines.push('', `The check last failed${failed.action === 'stuck' ? ' and the card was marked stuck' : ''} with:`, '', ...failed.note.split('\n').map(l => `    ${l}`));
     lines.push('');
   }
@@ -166,7 +175,8 @@ function keepTail(file: string): void {
 /** Runs the agent command in the project with `{brief}` filled in. Output goes to `logFile`. */
 export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string): Promise<AgentRun> {
   mkdirSync(dirname(logFile), { recursive: true });
-  const out = openSync(logFile, 'w');
+  // Appended, not truncated: a run started from the API writes the check's output ahead of the agent's.
+  const out = openSync(logFile, 'a');
   const started = Date.now();
   return new Promise(done => {
     let timedOut = false;

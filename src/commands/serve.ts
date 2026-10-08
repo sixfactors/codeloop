@@ -2,10 +2,11 @@ import { Command } from 'commander';
 import { randomBytes } from 'crypto';
 import chalk from 'chalk';
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../lib/server.js';
-import { loadBoard } from '../lib/board.js';
+import { getIndex } from '../lib/index/index.js';
+import { findWorkspaceBuild, loadNext, splitListener, staticChunks } from '../lib/next-server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,8 +23,9 @@ export const serveCommand = new Command('serve')
   .option('--stop', 'Stop background server')
   .option('--open', 'Open browser after starting')
   .option('--owner', 'Allow Approve and Reject from the board, for whoever has the URL with its token')
+  .option('--ui <dir>', 'Serve this static build instead of the workspace app (or set CODELOOP_UI_DIR)')
   .option('--host <host>', 'Address to listen on. Anything but the default exposes the board to the network', '127.0.0.1')
-  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean; owner?: boolean; host: string }) => {
+  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean; owner?: boolean; host: string; ui?: string }) => {
     const projectDir = process.cwd();
     const port = parseInt(options.port, 10);
 
@@ -47,6 +49,7 @@ export const serveCommand = new Command('serve')
     }
 
     const token = process.env.CODELOOP_SERVE_TOKEN ?? randomBytes(24).toString('hex');
+    const wantedUiEnv = options.ui ?? process.env.CODELOOP_UI_DIR;
     const loopback = ['127.0.0.1', 'localhost', '::1'].includes(options.host);
     const url = `http://${loopback ? '127.0.0.1' : options.host}:${port}/?token=${token}`;
     const stateDir = join(projectDir, '.codeloop');
@@ -62,7 +65,7 @@ export const serveCommand = new Command('serve')
         detached: true,
         stdio: 'ignore',
         // The child cannot print its token to this terminal, so the parent chooses it.
-        env: { ...process.env, CODELOOP_SERVE_TOKEN: token },
+        env: { ...process.env, CODELOOP_SERVE_TOKEN: token, ...(wantedUiEnv ? { CODELOOP_UI_DIR: wantedUiEnv } : {}) },
       });
       child.unref();
 
@@ -75,17 +78,35 @@ export const serveCommand = new Command('serve')
       return;
     }
 
-    // Foreground mode
-    const uiDir = existsSync(UI_DIR) ? UI_DIR : undefined;
-    const { app, broadcast, broadcastCards } = createApp(projectDir, uiDir, { owner: options.owner, token, anyHost: !loopback });
+    // Foreground mode. The workspace app runs as a Next server inside this process when a build
+    // is present and `next` can be loaded; `--ui` or a missing build serves a static folder instead.
+    const wantedUi = options.ui ?? process.env.CODELOOP_UI_DIR;
+    const workspaceBuild = wantedUi ? undefined : findWorkspaceBuild(PACKAGE_ROOT);
+    const uiDir = wantedUi ? resolve(projectDir, wantedUi) : existsSync(UI_DIR) ? UI_DIR : undefined;
+    if (wantedUi && !existsSync(join(uiDir!, 'index.html'))) {
+      console.error(chalk.red(`  no index.html under ${uiDir}; build the UI first`));
+      process.exit(2);
+    }
+    // Server components in the workspace read the API at this address; same process, same port.
+    process.env.CODELOOP_PORT = String(port);
+    process.env.CODELOOP_API_INTERNAL = `http://127.0.0.1:${port}`;
+    // The index starts building before Next loads; the two do not wait on each other.
+    const index = getIndex(projectDir);
+    const pages = workspaceBuild ? await loadNext(workspaceBuild, { hostname: options.host, port }) : undefined;
+    const { app } = createApp(projectDir, pages ? undefined : uiDir, { owner: options.owner, token, anyHost: !loopback });
 
-    const { serve } = await import('@hono/node-server');
-    serve({ fetch: app.fetch, port, hostname: options.host }, () => {
+    void index.ready.then(() => console.log(chalk.dim(`  Index built in ${index.buildMs} ms`)));
+    const { createServer } = await import('http');
+    const { getRequestListener } = await import('@hono/node-server');
+    const api = getRequestListener(app.fetch);
+    const server = createServer(pages ? splitListener(api, pages, { anyHost: !loopback, chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined }) : api);
+    server.listen(port, options.host, () => {
       console.log();
       console.log(chalk.bold(`  Codeloop board: ${chalk.cyan(url)}`));
       console.log(chalk.dim('  The token in that URL is needed for every change. Anyone who has the URL can make them.'));
       if (!loopback) console.log(chalk.yellow(`  Listening on ${options.host}: the board is reachable from the network.`));
       console.log(chalk.dim(options.owner ? '  Approve and Reject are enabled (--owner)' : '  Read-only for cards; add --owner to approve from the board'));
+      console.log(chalk.dim(pages ? `  Workspace app: ${workspaceBuild}` : uiDir ? `  Static board: ${uiDir}` : '  API only: no workspace build or static board found'));
       console.log(chalk.dim('  Press Ctrl+C to stop'));
       console.log();
 
@@ -97,21 +118,8 @@ export const serveCommand = new Command('serve')
         });
       }
     });
-
-    // Watch the folder, not the files: cards.json is replaced by rename on every write, and
-    // board.json may not exist yet. Lane edits change what the Cards view draws too.
-    const { watch } = await import('fs');
-    const timers: Record<string, ReturnType<typeof setTimeout>> = {};
-    const later = (key: string, run: () => void) => {
-      clearTimeout(timers[key]);
-      timers[key] = setTimeout(run, 100);
-    };
-    watch(stateDir, (_event, name) => {
-      if (name === 'board.json') later('board', broadcast);
-      if (name === 'cards.json') later('cards', broadcastCards);
-    });
-    const lanesDir = join(stateDir, 'lanes');
-    if (existsSync(lanesDir)) watch(lanesDir, () => later('cards', broadcastCards));
+    // The index follows the store's own watcher (cards, lanes, wiki, specs, evidence, mocks), so
+    // nothing here watches files.
   });
 
 export function getServeStatus(projectDir: string): { running: boolean; pid?: number; port?: number } {

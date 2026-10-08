@@ -76,10 +76,20 @@ export function readAcceptance(projectDir: string, dir: string): string[] {
   return read(projectDir, dir, 'spec.md').split('\n').map(l => ACCEPTANCE.exec(l)?.[1]).filter((id): id is string => !!id);
 }
 
+/** `size:` as written in spec.md, with any trailing comment dropped; undefined on the untouched template. */
+function specSize(projectDir: string, dir: string): string | undefined {
+  const line = read(projectDir, dir, 'spec.md').split('\n').find(l => /^size:/.test(l));
+  const value = line?.replace(/^size:/, '').replace(/<!--.*$/, '').trim();
+  return value && /^[SML]$/.test(value) ? value : undefined;
+}
+
 export function checkSpec(projectDir: string, dir: string): string[] {
   const acceptance = readAcceptance(projectDir, dir);
   const { tasks, malformed } = readTasks(projectDir, dir);
   const errors: string[] = [];
+  // An L is three days or more: the standard says split it before it passes the spec gate.
+  const card = readCards(projectDir).cards.find(c => c.spec === dir);
+  if (card?.size === 'L' || specSize(projectDir, dir) === 'L') errors.push(`${card?.id ?? dir} is size L: split it into S or M children with \`epic: ${card?.id ?? '<parent>'}\` before the spec gate`);
   if (acceptance.length === 0) errors.push(`${dir}/spec.md has no acceptance lines (\`- US1 Given ...\`)`);
   if (acceptance.length > MAX_ACCEPTANCE) errors.push(`${acceptance.length} acceptance lines, the limit is ${MAX_ACCEPTANCE}: split the card`);
   for (const line of malformed) errors.push(`untagged task (needs a T-number and one of [${LAYERS.join('|')}]): ${line}`);

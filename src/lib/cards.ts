@@ -21,7 +21,32 @@ export interface CardEvent {
   log?: string;
 }
 
-export interface Card {
+export type Size = 'S' | 'M' | 'L';
+
+/** The story standard's fields (docs/story-standard.md). Every one is optional: older cards carry none. */
+export interface StoryFields {
+  story?: { as: string; can: string; so: string };
+  /** Same as story.as; kept flat so the board can filter on it. */
+  persona?: string;
+  size?: Size;
+  points?: number;
+  initiative?: string;
+  epic?: string;
+  feature?: string;
+  metric?: string;
+  /** Weeks; replaces the feature's effort in this card's RICE score. */
+  effort?: number;
+}
+
+/** Fields a card carries besides the story standard's. */
+export interface CardExtras {
+  /** The tracker key a ticket-style title started with (`ACME-412: …`) or `--ticket` named. */
+  ticket?: string;
+  /** The card this one was split from (`card split`); siblings share its feature. */
+  split_from?: string;
+}
+
+export interface Card extends StoryFields, CardExtras {
   id: string;
   title: string;
   lane: string;
