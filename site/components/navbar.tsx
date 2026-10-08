@@ -5,8 +5,8 @@ import { Menu, X } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 
 const links = [
-  { label: 'Plan', href: '#plan' },
-  { label: 'See a week', href: '#week' },
+  { label: 'Docs', href: '/docs' },
+  { label: 'Compare', href: '/docs/compare' },
   { label: 'GitHub', href: 'https://github.com/sixfactors/codeloop', external: true },
 ];
 
@@ -19,7 +19,7 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border bg-background/85 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-        <a href="#" className="font-mono text-lg font-medium tracking-tight">
+        <a href="/" className="font-mono text-lg font-medium tracking-tight">
           codeloop
         </a>
 
@@ -36,7 +36,7 @@ export function Navbar() {
             </a>
           ))}
           <ThemeToggle />
-          <a href="#install" className={installButton}>
+          <a href="/docs/start/install" className={installButton}>
             Install
           </a>
         </div>
@@ -63,7 +63,7 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
-          <a href="#install" onClick={() => setOpen(false)} className={`mt-2 inline-block ${installButton}`}>
+          <a href="/docs/start/install" onClick={() => setOpen(false)} className={`mt-2 inline-block ${installButton}`}>
             Install
           </a>
         </div>

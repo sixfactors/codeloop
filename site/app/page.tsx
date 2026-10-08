@@ -1,26 +1,34 @@
 import { Navbar } from '@/components/navbar';
-import { Hero } from '@/components/hero';
-import { Problem } from '@/components/problem';
-import { Guide } from '@/components/guide';
-import { Plan } from '@/components/plan';
-import { CallToAction } from '@/components/call-to-action';
-import { Failure } from '@/components/failure';
-import { Success } from '@/components/success';
+import { HeroSplit } from '@/components/sections/hero-split';
+import { RealityToday } from '@/components/sections/reality-today';
+import { SolutionOverview } from '@/components/sections/solution-overview';
+import { FeaturesGrid } from '@/components/sections/features-grid';
+import { WhoFor } from '@/components/sections/who-for';
+import { ProofStrip } from '@/components/sections/proof-strip';
+import { QuoteBanner } from '@/components/sections/quote-banner';
+import { FaqSection } from '@/components/sections/faq-section';
+import { PageTail } from '@/components/sections/page-tail';
 import { Footer } from '@/components/footer';
 
-// StoryBrand 7, one component per beat, in order.
+// StoryBrand order: character (hero), problem, guide (loop, features, who it is for), proof,
+// call to action. Sections are copies of chanl-site/src/components/sections with strings inlined.
 export default function Home() {
   return (
     <>
       <Navbar />
       <main>
-        <Hero />
-        <Problem />
-        <Guide />
-        <Plan />
-        <CallToAction />
-        <Failure />
-        <Success />
+        <HeroSplit />
+        <RealityToday />
+        <SolutionOverview />
+        <FeaturesGrid />
+        <WhoFor />
+        <ProofStrip />
+        <QuoteBanner
+          quote="My /api-contract text appeared verbatim in a stage brief after a 12-line lane file."
+          source="Adoption diary, 2026-10-08"
+        />
+        <FaqSection />
+        <PageTail />
       </main>
       <Footer />
     </>
