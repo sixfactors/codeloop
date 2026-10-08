@@ -49,8 +49,10 @@ stages:
     output: evidence/{nnn}/prod.md
     done: { cmd: "codeloop check file evidence/{nnn}/prod.md --has 'result: pass'" }
     gate: { name: prod, approver: owner, outward: true }
-on_done: { start: market }
+# on_done: { start: market }
 ```
+
+The shipped file ends with `on_done` commented out, as above — it is an opt-in second way to start the next lane's card, behind `lanes: { auto_start: true }` in `config.yaml`. `market`'s own `trigger: { on: lane.done, lane: build }` is what actually starts a market card when a build card finishes by default; see the `trigger` row below.
 
 ## The keys
 
@@ -63,7 +65,7 @@ on_done: { start: market }
 | `wip` | How many cards the lane works at once. The run loop skips a lane that is full and says so. |
 | `retries` | Failed checks allowed on one stage before the card parks as stuck. |
 | `stages` | The list, in order. |
-| `on_done` | A lane to start a card in when a card here finishes. The same thing as the other lane's `trigger: lane.done`. |
+| `on_done` | A lane to start a card in when a card here finishes. Off by default — a done card only announces what it would start — until `.codeloop/config.yaml` has `lanes: { auto_start: true }`. The other lane's own `trigger: { on: lane.done }` is a separate mechanism and fires either way; most downstream lanes rely on that instead. |
 
 ## A stage
 

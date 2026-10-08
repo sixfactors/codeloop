@@ -108,6 +108,10 @@ A lesson into a rule. Metric `repeat_gotcha_rate`. Trigger manual. WIP 2, retrie
 | bump | reflect | `learn/{id}/bump.md` | `codeloop check file learn/{id}/bump.md --has 'freq:'` | |
 | promote | reflect | `learn/{id}/promote.md` | `codeloop check file learn/{id}/promote.md --has 'rule:'` | rule, owner, after |
 
+## What `stats` can compute
+
+`codeloop stats` prints `metric <name>: <value|no-data>` per lane. A value only comes back for `source: cards` and a name the engine knows how to derive from the cards themselves: `done`, `done_cards`, `cards_done`, `done_without_reject`, `first_pass_done`, `cycle_time_hours`, `cycle_time_days`, `proposals_accepted_ratio`. Of the eight shipped lanes, that is build's `cycle_time_days` and triage's `proposals_accepted_ratio` — the rest (deploy, plan, scan's card-sourced names, and analyze's, market's and learn's analytics/knowledge-sourced ones) print `no-data` until something outside the card log feeds the number in.
+
 ## The skills the lanes name
 
 `codeloop init` writes these ten, one file each under the host's commands folder, and every stage above names one.

@@ -20,6 +20,7 @@ description: The keys in .codeloop/config.yaml that codeloop 0.3.0 reads, and th
 | `agents.<name>.timeout_minutes` | 20 | The agent and its children are killed after this. |
 | `agents.<name>.max_runs_per_day` | 20 | Starts of this agent across the project in any 24 hours. |
 | `run.agent` | false | `true` makes plain `codeloop run` start agents. `--no-agent` turns it off for one run. |
+| `lanes.auto_start` | false | A finishing lane's own `on_done: { start }` actually starts the next card. Off, a done card only announces what it would start. A downstream lane's own `trigger: { on: lane.done }` is a separate mechanism and fires either way. |
 | `gates.mode` | `all` | `trusted` auto-approves gates that come after a check. Outward gates still park on entry. |
 | `capacity.gates_per_day` | unset | `start` and `card new` are refused while this many cards are waiting on you. Proposals do not count. |
 | `deploy.<env>.command` | unset | The CI workflows run it for staging and production. |

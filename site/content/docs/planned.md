@@ -63,10 +63,10 @@ The cloud copy on Protobox becomes a board a team opens, with authenticated owne
 
 A lane stage that asks the owner one question at a time and writes the answer into the spec section it changes. `codeloop ask` and `codeloop answer` ship today, and the inbox and the board show the questions with a recommended answer; no shipped lane has a stage that uses them.
 
-## A ticket field on the card
+## An importer for Linear, Jira or GitHub
 
-`ticket:` on a card holds the Linear, Jira or GitHub issue it came from, and an importer reads those trackers the way `import speckit` reads a Spec Kit folder. Today the link goes in `--source` and a ticket-style title needs `--force`; [You already have a project](/docs/start/already-have-a-project) shows both.
+A ticket id now lives on the card (`ticket:`, shipped — see below). What is still planned is an importer that reads a Linear, Jira or GitHub tracker directly, the way `import speckit` reads a Spec Kit folder. Today the id comes in one card at a time, from a `"ACME-412: "` title prefix or `--ticket`.
 
 ## Shipped since this page was first written
 
-No longer planned: story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call. They are on `main` and not yet in the npm package; the README lists what the next publish carries.
+No longer planned: story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call; a `ticket:` field on the card, set from a ticket-style title prefix or `--ticket` and printed by `card show`. They are on `main` and not yet in the npm package; the README lists what the next publish carries.

@@ -58,43 +58,45 @@ There is no flag to skip one of the ten commands. Delete what you do not want af
 
 ## Tickets from Linear, Jira or GitHub
 
-A card title has to say what the user can now do, so a ticket-style title is refused:
+A ticket-style prefix on the title is read as the ticket id, not refused — `codeloop card show` then prints `ticket ACME-412`:
 
 ```sh
-codeloop start "ACME-412: add CSV export endpoint to /invoices" --size S
+codeloop start "ACME-412: add CSV export" \
+  --persona dev --can "download every invoice as one CSV" --so "I stop exporting by hand" --size S
 ```
 
 ```text
-refused: title carries ":", "/": name what the user can now do, not the mechanism (--force overrides)
+created c-001 in build at stage research for ACME-412 (specs/001-add-csv-export/)
+Next: run the /design skill to write specs/001-add-csv-export/research.md, then `codeloop next c-001`.
 ```
 
-Two ways in. `--force` keeps the ticket title as it is, and the card carries it everywhere, including the spec folder name:
-
 ```sh
-codeloop start "ACME-412: add CSV export endpoint to /invoices" \
-  --persona dev --can "download every invoice as one CSV" --so "I stop exporting by hand" --size S --force
+codeloop card show c-001
 ```
 
 ```text
-created c-001 in build at stage research (specs/001-acme-412-add-csv-export-endpoint-to-invo/)
-Next: run the /design skill to write specs/001-acme-412-add-csv-export-endpoint-to-invo/research.md, then `codeloop next c-001`.
+  c-001  build    research  add CSV export
+  As a dev, I can download every invoice as one CSV, so that I stop exporting by hand.
+  ticket ACME-412 · size S
+  skill:  design
+  output: specs/001-add-csv-export/research.md
+  check:  codeloop check research c-001 --min-sources 3
 ```
 
-Or retitle by what the user gets and keep the ticket link on the card with `--source`. For an idea that nobody should start yet, `card propose` puts it in the inbox instead of a lane:
+The ticket id is stripped from the title and the spec folder name; `add CSV export` is what shows everywhere else. The refusal is still there for a mechanism in the title itself — `/`, a path, a function name — `--force` overrides that one. When the title already says what the user gets and the ticket id lives elsewhere (the tracker's own slug, say, not a prefix you want to keep), pass `--ticket`:
 
 ```sh
-codeloop card propose build "Rate-limit the invoices API" \
+codeloop card propose build "Rate-limit the invoices API" --ticket ACME-413 \
   --persona dev --can "call the invoices API without a spike taking it down" \
-  --so "one client cannot block the rest" --size S \
-  --source "https://linear.app/acme/issue/ACME-413"
+  --so "one client cannot block the rest" --size S
 ```
 
 ```text
-proposed c-003 for build: Rate-limit the invoices API
-Next: `codeloop approve c-003` puts it in the build lane, or `codeloop reject c-003 "<why not>"` drops it.
+proposed c-002 for build: Rate-limit the invoices API
+Next: `codeloop approve c-002` puts it in the build lane, or `codeloop reject c-002 "<why not>"` drops it.
 ```
 
-The inbox then shows `proposed from https://linear.app/acme/issue/ACME-413` under the card. There is no Linear, Jira or GitHub Issues importer; `codeloop import` reads Spec Kit and BMAD folders only. A `ticket:` field on the card is <span class="planned">planned</span>; today the link lives in `--source` and the id in the title.
+`--ticket` works on `start` and `card propose` alike, and wins over a prefix parsed from the title if both are given. There is still no Linear, Jira or GitHub Issues importer; `codeloop import` reads Spec Kit and BMAD folders only. `--source` still takes a URL for a link `inbox` shows under the card, independent of `ticket:`.
 
 ## Your own slash commands in a lane
 
