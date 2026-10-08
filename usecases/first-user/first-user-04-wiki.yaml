@@ -1,0 +1,5 @@
+id: first-user-04-wiki
+accept: US4
+failure_mode: "the packaged board has no wiki, New page does not write a file under .codeloop/wiki, or search does not index what was just written"
+layers:
+  cli: { run: "bash scripts/first-user.sh --only wiki", expect: { exit: 0, stdout: "FIRST-USER PASS wiki" } }

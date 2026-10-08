@@ -1,0 +1,5 @@
+id: first-user-01-install
+accept: US1
+failure_mode: "the package installs only because this checkout is on PATH or in node_modules, or the tarball is missing dist/, so a stranger's `npm install -g` gets a broken codeloop"
+layers:
+  cli: { run: "bash scripts/first-user.sh --only install", expect: { exit: 0, stdout: "FIRST-USER PASS install" } }

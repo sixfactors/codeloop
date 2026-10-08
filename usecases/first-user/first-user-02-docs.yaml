@@ -1,0 +1,5 @@
+id: first-user-02-docs
+accept: US2
+failure_mode: "a Start page names a command that no longer exists or shows output the CLI no longer prints, so the quickstart stops working while the site still says it does"
+layers:
+  cli: { run: "bash scripts/first-user.sh --only docs", expect: { exit: 0, stdout: "FIRST-USER PASS docs" } }

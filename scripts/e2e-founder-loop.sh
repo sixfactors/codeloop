@@ -46,6 +46,9 @@ cards_in() { codeloop card list --json | node -e "const d=JSON.parse(require('fs
 # --- init installs the shipped lanes -------------------------------------------------------
 expect 0 "init runs" codeloop init --tools claude --starter generic
 expect 0 "init installed the 8 shipped lanes" test "$(lane_count)" = 8
+expect 0 "the shipped build lane has on_done commented out" sh -c "grep -q '^# on_done: { start: market }' .codeloop/lanes/build.yaml"
+# on_done is opt-in; the e2e lanes below rely on it.
+printf 'lanes:\n  auto_start: true\n' >> .codeloop/config.yaml
 
 # --- a fresh repo is usable straight after init --------------------------------------------
 expect 0 "init wrote the skills index" test -s .codeloop/skills.index.yaml
@@ -53,7 +56,8 @@ expect 0 "init ends by saying what to type next" sh -c "codeloop init --tools cl
 expect 0 "lane lint passes on the shipped lanes right after init" codeloop lane lint
 expect 0 "pack build works right after init" codeloop pack build --out dist/fresh-pack.json
 json "no packed skill has an empty description" "d.skills.length>=10 && d.skills.every(s=>s.description)" cat dist/fresh-pack.json
-expect 2 "lane lint refuses skills that are not in an (empty) index" sh -c 'mkdir -p empty && codeloop adopt --from empty && codeloop lane lint'
+expect 2 "lane lint refuses skills that are not in an (empty) index" sh -c 'mkdir -p empty && codeloop adopt --from empty --replace && codeloop lane lint'
+expect 0 "adopt without --replace merges: an empty dir removes nothing" sh -c 'codeloop adopt > /dev/null && codeloop adopt --from empty | grep -q "0 added, 0 updated, 0 removed" && codeloop lane lint'
 expect 0 "adopt with the default dirs restores the index" sh -c 'codeloop adopt > /dev/null && codeloop lane lint'
 
 # --- swap in small deterministic lanes ----------------------------------------------------
@@ -139,7 +143,7 @@ expect 1 "task check fails while tasks are open" codeloop task check 001 --all-d
 expect 2 "advance refused while tasks are open" codeloop card advance c-001
 expect 0 "task done ticks both tasks" sh -c "codeloop task done 001 T001 && codeloop task done 001 T002"
 expect 0 "task check passes with all tasks done" codeloop task check 001 --all-done
-expect 0 "advance finishes the build card" codeloop card advance c-001
+expect 0 "advance finishes the build card and says what it started and why" sh -c "codeloop card advance c-001 | grep -q '^started c-002 in market because build.on_done'"
 json "build card is done" "d.stage==='done'" codeloop card show c-001 --json
 
 # --- check file does not pass on an empty file -----------------------------------------------
@@ -300,7 +304,10 @@ layers:
 YAML
 expect 4 "verify --mutate refuses a use case that passes without the feature" codeloop verify 001 --mutate
 expect 0 "mutate left no worktree behind" test "$(git worktree list | wc -l | tr -d ' ')" = 1
-json "stats counts human turns from card events" "d.cards>=2 && d.human_turns_per_card>0 && d.first_pass_rate_by_gate['market/copy']===0" codeloop stats --json
+json "stats counts human turns from card events and derives each lane's metric" "d.cards>=2 && d.human_turns_per_card>0 && d.first_pass_rate_by_gate['market/copy']===0 && d.metrics.find(m=>m.lane==='build').name==='cycle_time_days' && d.metrics.find(m=>m.lane==='build').value>=0 && d.metrics.find(m=>m.lane==='market').value===null" codeloop stats --json
+expect 0 "stats prints a metric per lane, no-data when it cannot derive it" sh -c "codeloop stats > stats.out && grep -q 'metric cycle_time_days: [0-9]' stats.out && grep -q 'metric signups_from_launch: no-data' stats.out"
+expect 0 "run --card advances one card and fires no trigger; run --lane runs only that lane" bash -c "$(declare -f cards_in); codeloop start 'Run filter card' --lane market --id c-700 > /dev/null && codeloop run --card c-700 --now 2026-10-07T05:00:00 | grep -q 'c-700: failed' && test \"\$(cards_in nightly)\" = 1 && codeloop run --lane nightly --now 2026-10-08T03:31:00 | tee run-lane.out | grep -q 'created .* in nightly' && ! grep -q 'c-700' run-lane.out"
+json "run --lane left the other lanes' slots: a full run still starts the release card for HEAD" "d.lanes.some(l=>l.lane==='nightly' && l.status==='not due') && d.lanes.some(l=>l.lane==='build' && l.status==='manual')" codeloop run --json --now 2026-10-08T03:40:00
 json "stats --compare splits by lane version" "d.v1.cards>=1 && d.v2.cards===0" codeloop stats --lane market --compare v1 v2 --json
 
 # --- wiki: capture, inject, critical gotchas block until acknowledged ------------------------
@@ -367,12 +374,13 @@ OW_TOKEN=$(grep -o 'token=[a-f0-9]*' serve-owner.log | head -1 | cut -d= -f2)
 expect 0 "serve prints a URL with a token and listens on 127.0.0.1" sh -c "test -n '$OW_TOKEN' && grep -q 'http://127.0.0.1:$OW/?token=' serve-owner.log"
 # as <token> <origin> <content-type> <wanted status> <url> [method] [body]
 as() { TOKEN="$1" ORIGIN="$2" CTYPE="$3" http "${@:4}"; }
-expect 0 "the board page loads" bash -c "$(declare -f http); http 200 http://127.0.0.1:$RO/ | grep -q 'Codeloop Board'"
+expect 0 "the board page loads" bash -c "$(declare -f http); http 200 http://127.0.0.1:$RO/ | grep -Eq 'Codeloop (Board|workspace)'"
 json "/api/cards returns cards, lanes and the inbox summary" "d.cards.some(c=>c.id==='c-001') && d.lanes.some(l=>l.id==='market') && /waiting on you/.test(d.inbox.summary)" http 200 "http://127.0.0.1:$RO/api/cards"
-codeloop start "Board approval" --lane market --id c-900 > /dev/null
+codeloop start "ACME-7: Board approval" --lane market --id c-900 > /dev/null
 mkdir -p marketing/c-900 && echo "audience: founders" > marketing/c-900/brief.md && echo "claim: x" > marketing/c-900/blog.md
 codeloop next c-900 > /dev/null && codeloop next c-900 > /dev/null
-json "the card is waiting for you at the copy gate" "d.gate==='copy'" codeloop card show c-900 --json
+json "the card is waiting for you at the copy gate, with the ticket split off its title" "d.gate==='copy' && d.ticket==='ACME-7' && d.title==='Board approval'" codeloop card show c-900 --json
+json "the API serves the ticket" "d.card.ticket==='ACME-7'" http 200 "http://127.0.0.1:$OW/api/cards/c-900"
 expect 0 "approve from a board without --owner is refused with 403" as "$RO_TOKEN" "" "" 403 "http://127.0.0.1:$RO/api/cards/c-900/approve" POST '{}'
 expect 0 "owner board: a POST with no token is refused with 403" as "" "" "" 403 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
 expect 0 "owner board: a POST from another origin is refused with 403, token or not" as "$OW_TOKEN" "https://evil.example" "" 403 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
@@ -382,6 +390,19 @@ json "the refused approve changed nothing" "d.gate==='copy'" codeloop card show 
 expect 0 "reject from the owner board needs a note" as "$OW_TOKEN" "" "" 400 "http://127.0.0.1:$OW/api/cards/c-900/reject" POST '{}'
 expect 0 "approve from the owner board, with the token, goes through the engine" as "$OW_TOKEN" "" "" 200 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
 json "the approved card moved on to the public step" "d.stage==='publish' && d.gate==='publish' && d.events.some(e=>e.action==='approve' && e.actor==='owner')" codeloop card show c-900 --json
+expect 0 "rejecting the entry gate from the board sends the card back to draft" as "$OW_TOKEN" "" "" 200 "http://127.0.0.1:$OW/api/cards/c-900/reject" POST '{"note":"not this week"}'
+json "the returned card is at draft with the note as a return in its brief" "d.stage==='draft' && !d.gate && d.brief.feedback[0].kind==='returned' && d.brief.feedback[0].from==='publish'" codeloop card show c-900 --json
+expect 0 "the brief tells the agent the card came back from publish" sh -c "codeloop brief c-900 | grep -q 'Latest return from publish: not this week'"
+json "GET output serves the stage file by the lane's path" "d.path==='marketing/c-900/blog.md' && d.text==='claim: x\\n'" http 200 "http://127.0.0.1:$OW/api/cards/c-900/output"
+expect 0 "PUT output writes the stage file" as "$OW_TOKEN" "" "" 200 "http://127.0.0.1:$OW/api/cards/c-900/output" PUT '{"text":"claim: one click\n"}'
+expect 0 "the file on disk is what was PUT" grep -q 'claim: one click' marketing/c-900/blog.md
+expect 0 "POST run answers 202 with the run id" bash -c "$(declare -f http as); as '$OW_TOKEN' '' '' 202 http://127.0.0.1:$OW/api/cards/c-900/run POST '{}' | grep -q '\"runId\":\"c-900-draft-1\"'"
+sleep 1
+json "GET run shows the finished run and its log" "d.status==='done' && d.outcome==='parked' && d.exit===0 && d.log.includes('check: codeloop check file marketing/c-900/blog.md')" http 200 "http://127.0.0.1:$OW/api/runs/c-900-draft-1"
+expect 0 "the run stream replays the log and ends" bash -c "$(declare -f http); http 200 http://127.0.0.1:$OW/api/runs/c-900-draft-1/stream | grep -q 'event: end'"
+json "the run parked the card at the copy gate again: its output changed after the approval" "d.stage==='draft' && d.gate==='copy' && d.events.at(-1).note.includes('changed since it was approved')" codeloop card show c-900 --json
+json "POST split makes siblings marked split_from" "d.cards.length===1 && d.cards[0].split_from==='c-900' && d.cards[0].lane==='market'" as "$OW_TOKEN" "" "" 201 "http://127.0.0.1:$OW/api/cards/c-900/split" POST '{"titles":["Board approval reminder"]}'
+json "GET setup status says the project is set up" "d.initialised===true && d.lanes===4 && d.skillsIndexed>0 && d.agentsConfigured===0" http 200 "http://127.0.0.1:$OW/api/setup/status"
 
 # --- pack ----------------------------------------------------------------------------------
 lane_skills=$(grep -h 'skill:' .codeloop/lanes/*.yaml | sed 's/.*skill: *//' | sort -u | wc -l | tr -d ' ')
@@ -452,6 +473,8 @@ json "the card got from research to done on three agent runs and one approval" "
 codeloop start "Second export" > /dev/null
 expect 0 "a failing agent leaves the card where it is and the Next line names its log" sh -c "codeloop run --agent broken | tee run4.out | grep -q 'c-002: failed' && grep -q 'Next: .*Agent broken exited 7; its output is in $RUNS/c-002-research-1.log' run4.out && grep -q 'cannot reach the model' $RUNS/c-002-research-1.log"
 json "the failed agent run counted as a retry" "d.stage==='research' && d.retries.research===1" codeloop card show c-002 --json
+expect 0 "card run with a named agent does the stage and waits for it" sh -c "codeloop card run c-002 --agent fake | grep -q '^done: moved'"
+json "card run left its record beside the agent logs" "d.stage==='spec' && d.events.some(e=>e.action==='agent-run' && e.log==='$RUNS/c-002-research-1.log')" codeloop card show c-002 --json
 printf '#!/bin/sh\nif [ "$1" = "-l" ]; then cat "%s/crontab.txt" 2>/dev/null; else cat > "%s/crontab.txt"; fi\n' "$WORK" "$WORK" > "$WORK/bin/fake-crontab"
 chmod +x "$WORK/bin/fake-crontab"
 export CODELOOP_CRONTAB="$WORK/bin/fake-crontab"
