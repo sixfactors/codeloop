@@ -4,7 +4,7 @@ argument-hint: [type] [scope] [message] OR [--wip]
 allowed-tools: Bash(git:*), Read, Edit, Write, Glob, Grep, AskUserQuestion
 ---
 
-<!-- codeloop-version: 0.4.0 -->
+<!-- codeloop-version: 0.4.1 -->
 
 # /commit
 
