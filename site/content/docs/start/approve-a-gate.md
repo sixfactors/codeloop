@@ -17,7 +17,7 @@ codeloop reject c-001 "Name the file after the quarter, not the date" --as owner
 
 ```text
 c-001 rejected at spec; note recorded
-Next: redo with the /plan skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
+Next: redo with the /spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
 ```
 
 After the redo, `codeloop next c-001` runs the check again and the card parks at the same gate.
@@ -31,7 +31,7 @@ codeloop approve c-001 --as owner
 ```text
 c-001 gate spec approved
 c-001 moved to build
-Next: run the /test skill, then `codeloop next c-001`.
+Next: run the /api skill, then `codeloop next c-001`.
 ```
 
 An approval is an event on the card with the gate name, the role and the time. `approve` then advances the card once, so you do not need a separate `next`.
@@ -55,7 +55,7 @@ codeloop gate check c-001 --require spec
 ```
 
 ```text
-  gate spec approved by owner at 2026-10-07T20:03:25.797Z
+  gate spec approved by owner at 2026-10-09T20:36:58.759Z
   warning: this approval is a local event. Local roles are not authenticated, so it shows that someone ran the approve command, not who.
 ```
 

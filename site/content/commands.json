@@ -1,6 +1,6 @@
 {
-  "version": "0.3.0",
-  "generatedAt": "2026-10-08T18:01:00.242Z",
+  "version": "0.4.0",
+  "generatedAt": "2026-10-09T16:43:56.207Z",
   "commands": [
     {
       "name": "init",

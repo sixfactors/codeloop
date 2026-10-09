@@ -21,7 +21,7 @@ Waiting for you (1)
 Shipped (0)
 Numbers
   analyze    active 0  waiting 0  done 0  human turns/card -  first pass -
-  build      active 0  waiting 1  done 0  human turns/card 0.0  first pass -
+  build      active 0  waiting 1  done 0  human turns/card 3.0  first pass -
   deploy     active 0  waiting 0  done 0  human turns/card -  first pass -
   learn      active 0  waiting 0  done 0  human turns/card -  first pass -
   market     active 0  waiting 0  done 0  human turns/card -  first pass -
@@ -35,6 +35,8 @@ Numbers
 The first line is the summary: shipped this week, waiting on you, and how old the oldest wait is.
 
 **Waiting for you** lists every card parked at a gate, oldest first. Each entry says the lane and stage, the gate name, the file to read, whether the last check passed, and the two commands you can type. When a card has a mock, its path is on the next line. When the gate is before a public step, the entry says the check has not run yet and approving is what lets it run.
+
+**Questions for you** appears when an agent has asked something on a card and the card waits for the answer. Each entry names the card, how many questions are open, the first one, and the two forms of `codeloop answer`. [Your first card](/docs/start/first-card) shows the three answers that gave the build row its 3.0 human turns.
 
 **Shipped** lists the cards that reached the end of their lane this week.
 

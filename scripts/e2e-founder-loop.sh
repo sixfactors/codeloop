@@ -129,6 +129,8 @@ printf -- '- [ ] T001 [US1] [api] Export endpoint in src/export.ts\n- [ ] T002 [
 expect 2 "advance past spec refused with an untagged task" codeloop card advance c-001
 expect 0 "spec check names the untagged line" sh -c "codeloop spec check 001 2>&1 | grep -q 'untagged task.*T002'"
 sed -i.bak 's/T002 \[US1\] Wire/T002 [US1] [ui] Wire/' $S/tasks.md && rm $S/tasks.md.bak
+expect 0 "spec check still refuses the template Story, size, metric and done_when lines" sh -c "codeloop spec check 001 2>&1 | grep -q 'size: must be S, M or L'"
+perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' $S/spec.md
 expect 0 "spec check passes once every task is tagged" codeloop spec check 001
 expect 0 "task list --layer ui shows only the ui task" sh -c "codeloop task list 001 --layer ui | grep -q T002 && ! codeloop task list 001 --layer ui | grep -q T001"
 expect 0 "advance parks the card on the spec gate" codeloop card advance c-001
@@ -356,7 +358,7 @@ expect 0 "init --ci github writes the three workflows" sh -c "codeloop init --ci
 expect 0 "the prod workflow waits on the production environment" grep -q 'environment: production' .github/workflows/codeloop-prod.yml
 mcp() { (printf '%s\n' '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"e2e","version":"0"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' "$1"; sleep 1) | codeloop mcp; }
 json_lines() { node -e "const l=require('fs').readFileSync(0,'utf8').trim().split('\n').map(x=>JSON.parse(x)); const d=l.find(m=>m.id===1); if(!($1)){console.error(JSON.stringify(d));process.exit(1)}"; }
-expect 0 "mcp tools/list returns the nine tools over stdio" bash -c "$(declare -f mcp json_lines); mcp '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | json_lines 'd.result.tools.length===9 && d.result.tools.some(t=>t.name===\"get_card\")'"
+expect 0 "mcp tools/list returns the tools over stdio" bash -c "$(declare -f mcp json_lines); mcp '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | json_lines 'd.result.tools.length>=14 && d.result.tools.some(t=>t.name===\"get_card\") && d.result.tools.some(t=>t.name===\"brief\")'"
 expect 0 "mcp get_card returns the card" bash -c "$(declare -f mcp json_lines); mcp '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"get_card\",\"arguments\":{\"id\":\"c-001\"}}}' | json_lines 'JSON.parse(d.result.content[0].text).id===\"c-001\"'"
 
 # --- board: cards on the web, approve only with --owner ------------------------------------
@@ -444,7 +446,8 @@ card=$(field Card); stage=$(field Stage); out=$(field Output)
 echo "fake agent: $card $stage, role $CODELOOP_ROLE"
 case "$stage" in
   research) echo "verdict: build it" >> "$out" ;;
-  spec) printf -- '- [ ] T001 [US1] [api] Export endpoint in src/export.ts\n' >> "$out" ;;
+  spec) printf -- '- [ ] T001 [US1] [api] Export endpoint in src/export.ts\n' >> "$out"
+        perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' "$(dirname "$out")/spec.md" ;;
   ship) codeloop task done "$card" T001; codeloop approve "$card" --as owner 2>&1; echo "approve from inside the agent: exit $?" ;;
 esac
 SH
@@ -497,7 +500,12 @@ expect 2 "next refuses the research stage with two sources" codeloop next 1
 printf -- '- source: http://127.0.0.1:1/forum — users ask for a column picker\n| acme | Export button in the toolbar | https://acme.test/docs/export |\n' >> $R/research.md
 expect 0 "check research passes offline with a verdict and three sources" codeloop check research 1
 expect 1 "check research --online fails on a source that does not answer" codeloop check research 1 --online
-expect 0 "next moves research to the mock stage" sh -c "codeloop next 1 | grep -q 'c-001 moved to mock'"
+expect 0 "next moves research to the interview stage" sh -c "codeloop next 1 | grep -q 'c-001 moved to interview'"
+expect 1 "check questions --min 3 fails with no questions asked" codeloop check questions 1 --min 3
+expect 0 "the agent asks three questions with a recommended answer each" sh -c "codeloop ask 1 'Which formats?' --recommended 'CSV only' --as agent && codeloop ask 1 'Which lists?' --recommended 'Invoices first' --as agent && codeloop ask 1 'Row limit?' --recommended 'None' --as agent"
+expect 2 "next refuses the interview stage while a question has no answer" codeloop next 1
+expect 0 "the owner accepts the three recommended answers" sh -c "codeloop answer 1 1 --accept && codeloop answer 1 2 --accept && codeloop answer 1 3 --accept"
+expect 0 "next moves interview to the mock stage" sh -c "codeloop next 1 | grep -q 'c-001 moved to mock'"
 expect 0 "the acme row was appended to the competitor page" grep -q '^- c-001 Add CSV export: Export button in the toolbar' .codeloop/wiki/competitors/acme.md
 json "the card records which competitor page gained findings" "d.events.some(e=>e.action==='findings' && e.note==='.codeloop/wiki/competitors/acme.md')" codeloop card show 1 --json
 expect 2 "the mock stage refuses while the spec names no screens" codeloop next 1
@@ -515,6 +523,7 @@ cp "$WORK/mock.good" $M
 expect 0 "check mock passes once the screen is drawn from the tokens" codeloop check mock 1
 expect 0 "next moves mock to spec" sh -c "codeloop next 1 | grep -q 'c-001 moved to spec'"
 printf -- '- [ ] T001 [US1] [ui] Export dialog in src/export.tsx\n' >> $R/tasks.md
+perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' $R/spec.md
 expect 0 "the card waits at the spec gate" sh -c "codeloop next 1 | grep -q 'waiting for you at spec'"
 expect 0 "inbox shows the mock path with the spec gate" sh -c "codeloop inbox | grep -q '        mock: $M'"
 expect 0 "mocks index writes the gallery" sh -c "codeloop mocks index | grep -q 'docs/mocks/index.html: 1 mock' && grep -q 'href=\"my-project/exports/c-001.html\"' docs/mocks/index.html"

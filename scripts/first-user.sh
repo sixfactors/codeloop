@@ -133,7 +133,7 @@ finish() {
 # Steps the pages ask the reader to do in prose, between two code blocks.
 before() { # before <page> <nn>
   case "$1/$2" in
-    first-card/05)
+    first-card/07)
       # "Fill in the story fields, one acceptance line and two tagged tasks" with `screens: none`.
       local spec; spec=$(ls -d "$PROJECT"/specs/001-*/ | head -1)
       perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./; s/^screens:.*/screens: none/' "$spec/spec.md"
@@ -166,6 +166,10 @@ SPEC2=$(ls -d "$PROJECT"/specs/002-*/ | head -1)
 printf -- '- source: https://example.com/a — one\n- source: https://example.com/b — two\n- source: https://example.com/c — three\n\nverdict: build\n' >> "$SPEC2/research.md"
 perl -pi -e 's/^Story: .*/Story: As a founder, I can email an invoice to a customer, so that I stop attaching PDFs by hand./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given an invoice, when I send it, then the customer gets an email./; s/^screens:.*/screens: none/' "$SPEC2/spec.md"
 printf -- '- [ ] T001 [US1] [api] Send the invoice email\n' >> "$SPEC2/tasks.md"
+codeloop next c-002 > /dev/null 2>&1
+# The interview stage: three questions with a recommended answer each, accepted by the owner.
+for q in "Which mail provider?" "Attach the PDF or link to it?" "Who is the sender?"; do codeloop ask c-002 "$q" --recommended "Take the default" --as agent > /dev/null 2>&1; done
+codeloop answer c-002 1 --accept > /dev/null 2>&1; codeloop answer c-002 2 --accept > /dev/null 2>&1; codeloop answer c-002 3 --accept > /dev/null 2>&1
 codeloop next c-002 > /dev/null 2>&1; codeloop next c-002 > /dev/null 2>&1; codeloop next c-002 > "$WORK/c2-next.out" 2>&1
 expect 0 "a second card made like the docs card is parked at the spec gate" sh -c "codeloop card show c-002 --json | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!(d.stage==='spec'&&d.gate==='spec')){console.log(JSON.stringify(d));process.exit(1)}\""
 

@@ -23,7 +23,7 @@ cd your-project
 codeloop init --tools claude
 ```
 
-Output from codeloop 0.3.0 in an empty repo:
+Output from codeloop 0.4.0 in an empty repo:
 
 ```text
   No specific stack detected, using generic config
@@ -42,6 +42,45 @@ Initializing codeloop...
     + .claude/commands/debug.md
     + .claude/commands/reflect.md
     + .claude/commands/ship.md
+    + .claude/skills/api/SKILL.md
+    + .claude/skills/api/checklist.md
+    + .claude/skills/api/template.md
+    + .claude/skills/interview/SKILL.md
+    + .claude/skills/interview/checklist.md
+    + .claude/skills/interview/template.md
+    + .claude/skills/mock/SKILL.md
+    + .claude/skills/mock/checklist.md
+    + .claude/skills/mock/template.md
+    + .claude/skills/release/SKILL.md
+    + .claude/skills/release/checklist.md
+    + .claude/skills/release/template.md
+    + .claude/skills/research/SKILL.md
+    + .claude/skills/research/checklist.md
+    + .claude/skills/research/template.md
+    + .claude/skills/review/SKILL.md
+    + .claude/skills/review/checklist.md
+    + .claude/skills/review/template.md
+    + .claude/skills/sdk/SKILL.md
+    + .claude/skills/sdk/checklist.md
+    + .claude/skills/sdk/template.md
+    + .claude/skills/spec/SKILL.md
+    + .claude/skills/spec/checklist.md
+    + .claude/skills/spec/template.md
+    + .claude/skills/system-design/SKILL.md
+    + .claude/skills/system-design/checklist.md
+    + .claude/skills/system-design/template.md
+    + .claude/skills/test-design/SKILL.md
+    + .claude/skills/test-design/checklist.md
+    + .claude/skills/test-design/template.md
+    + .claude/skills/ui/SKILL.md
+    + .claude/skills/ui/checklist.md
+    + .claude/skills/ui/template.md
+    + .claude/skills/verify/SKILL.md
+    + .claude/skills/verify/checklist.md
+    + .claude/skills/verify/template.md
+    + .claude/skills/workflow/SKILL.md
+    + .claude/skills/workflow/checklist.md
+    + .claude/skills/workflow/template.md
     + .codeloop/lanes/analyze.yaml
     + .codeloop/lanes/build.yaml
     + .codeloop/lanes/deploy.yaml
@@ -60,7 +99,7 @@ Initializing codeloop...
 
 Done.
 
-  8 lanes in .codeloop/lanes/, 47 skills indexed in .codeloop/skills.index.yaml.
+  8 lanes in .codeloop/lanes/, 60 skills indexed in .codeloop/skills.index.yaml.
   codeloop serve opens the board in a browser.
 
   Next, type:
@@ -76,7 +115,8 @@ Done.
 | `.codeloop/config.yaml` | Project name, scopes, quality checks, agents, deploy commands. | No |
 | `.codeloop/rules.md`, `gotchas.md`, `patterns.md`, `principles.md` | Knowledge the agents read and the learn loop writes. | No |
 | `.codeloop/board.json` | The board the web UI reads. | No |
-| `.claude/commands/*.md` | Ten skills: design, plan, manage, test, commit, qa, deploy, debug, reflect, ship. Each lane stage names one. | Yes, when the version changes |
+| `.claude/commands/*.md` | Ten commands: design, plan, manage, test, commit, qa, deploy, debug, reflect, ship. The cron lanes name them. | Yes, when the version changes |
+| `.claude/skills/<name>/` | Thirteen stage skills, each a `SKILL.md` with its procedure, a `template.md` and a `checklist.md`: research, interview, mock, spec, api, sdk, ui, test-design, verify, review, release, system-design, workflow. The build lane names one per stage. | Yes, when the version changes |
 | `.codeloop/skills.index.yaml` | Index of the skills and commands that exist in the repo, so lanes can name them. Gitignored. | Rebuilt |
 
 The `init` flags:
@@ -87,7 +127,7 @@ The `init` flags:
 | `--tools <tools>` | `claude,cursor,codex`, comma separated, to skip the prompt. |
 | `--hooks` | Only install the commit-msg hook that adds the `Feature: <card-id>` trailer. |
 | `--ci github` | Only write the GitHub workflows. |
-| `--yes` | Write the ten commands into a `.claude/commands/` that already has files in it. Without it the folder is left alone. [You already have a project](/docs/start/already-have-a-project) shows both. |
+| `--yes` | Write the commands and skills into a `.claude/commands/` that already has files in it. Without it the folder is left alone. [You already have a project](/docs/start/already-have-a-project) shows both. |
 
 ## Check it took
 
@@ -97,7 +137,7 @@ codeloop lane list
 
 ```text
   analyze    v1  pull → compare → judge → findings  cron 0 9 * * FRI
-  build      v1  research → mock → spec → build → verify → review → staging → live  manual
+  build      v1  research → interview → mock → spec → build → verify → review → staging → live  manual
   deploy     v1  staging → verify → prod → smoke  on git.tag
   learn      v1  capture → bump → promote  manual
   market     v1  brief → draft → publish → measure  on lane.done (build)

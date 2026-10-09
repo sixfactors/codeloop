@@ -1,6 +1,6 @@
 ---
 title: Your first card
-description: Start a card in the build lane, let the check fail, pass it, and reach the first gate.
+description: Start a card in the build lane, let the check fail, pass it, answer the interview, and reach the first gate.
 ---
 
 ## Start a card
@@ -17,7 +17,7 @@ codeloop start "Export invoices as CSV" \
 
 ```text
 created c-001 in build at stage research (specs/001-export-invoices-as-csv/)
-Next: run the /design skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
+Next: run the /research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
 ```
 
 Every command ends with a `Next:` line. It names the skill to run, the file to write and the command that moves the card on.
@@ -36,13 +36,13 @@ codeloop card show c-001
   c-001  build    research  Export invoices as CSV
   As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant.
   size S
-  skill:  design
+  skill:  research
   output: specs/001-export-invoices-as-csv/research.md
   check:  codeloop check research c-001 --min-sources 3
 
-  2026-10-07T20:02:52.942Z  agent    create research
-  2026-10-07T20:02:52.947Z  agent    spec research: specs/001-export-invoices-as-csv
-Next: run the /design skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
+  2026-10-09T20:36:54.098Z  agent    create research
+  2026-10-09T20:36:54.101Z  agent    spec research: specs/001-export-invoices-as-csv
+Next: run the /research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
 ```
 
 The card knows its stage, the skill for that stage, the file the stage must produce and the command that judges it. Every action on a card is appended to its event list.
@@ -59,14 +59,14 @@ codeloop next c-001
 specs/001-export-invoices-as-csv/research.md has no line starting with "verdict:"
 specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
 c-001 failed the research check (1 so far)
-Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`). The /design skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
+Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`). The /research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
 ```
 
 The failure is counted. After the lane's `retries` (three in every shipped lane) the card parks as stuck and shows up in the inbox for you.
 
 ## Do the stage
 
-In a host session, run the `/design` skill. Or hand the whole thing to an agent with `codeloop run --agent`; [Cloud and hosting](/docs/concepts/cloud-and-hosting) covers that. For a first run, write the research file by hand: three `- source:` lines and a `verdict:` line satisfy the check.
+In a host session, run the `/research` skill. Or hand the whole thing to an agent with `codeloop run --agent`; [Cloud and hosting](/docs/concepts/cloud-and-hosting) covers that. For a first run, write the research file by hand: three `- source:` lines and a `verdict:` line satisfy the check.
 
 ```sh
 cat >> specs/001-export-invoices-as-csv/research.md <<'EOF'
@@ -80,9 +80,53 @@ codeloop next c-001
 ```
 
 ```text
-c-001 moved to mock
-Next: run the /design skill, then `codeloop next c-001`.
+c-001 moved to interview
+Next: run the /interview skill to write specs/001-export-invoices-as-csv/interview.md, then `codeloop next c-001`.
 ```
+
+## Answer the interview
+
+The interview stage is where the agent asks before it builds. Its check wants at least three questions on the card, each with an answer. The `/interview` skill writes the questions; by hand, a markdown file of `## Q<n>` blocks does the same, and `ask --file` puts them on the card. A `recommended:` line under each question is the answer the agent would take if you had none.
+
+```sh
+cat > specs/001-export-invoices-as-csv/questions.md <<'EOF'
+## Q1 Which invoices go in the file: all of them, or one quarter at a time?
+recommended: One quarter at a time; the accountant works per quarter.
+
+## Q2 Which columns does the accountant need?
+recommended: Number, date, customer, net, tax, gross, status.
+
+## Q3 Where does the file appear?
+recommended: A download from the invoices list; no email, no scheduled export.
+EOF
+codeloop ask c-001 --file specs/001-export-invoices-as-csv/questions.md
+```
+
+```text
+  Q1 Which invoices go in the file: all of them, or one quarter at a time?  (recommended: One quarter at a time; the accountant works per quarter.)
+  Q2 Which columns does the accountant need?  (recommended: Number, date, customer, net, tax, gross, status.)
+  Q3 Where does the file appear?  (recommended: A download from the invoices list; no email, no scheduled export.)
+Next: the owner answers with `codeloop answer c-001 <n> "<text>"` or `--accept`; the questions are in specs/001-export-invoices-as-csv/interview.md.
+```
+
+Open questions show in the inbox under "Questions for you". Answer each one by number, with your own text or by accepting the recommendation. Then `next` runs the check and moves the card.
+
+```sh
+codeloop answer c-001 1 --accept
+codeloop answer c-001 2 "Number, date, customer, gross, status"
+codeloop answer c-001 3 --accept
+codeloop next c-001
+```
+
+```text
+  Q1 answered: One quarter at a time; the accountant works per quarter.
+  Q2 answered: Number, date, customer, gross, status
+  Q3 answered: A download from the invoices list; no email, no scheduled export.
+c-001 moved to mock
+Next: run the /mock skill, then `codeloop next c-001`.
+```
+
+The answers live in `interview.md` next to the research, and the spec stage's brief carries them, so the agent that writes the spec reads what you decided.
 
 ## Skip the mock, write the spec
 
@@ -93,6 +137,8 @@ A card with nothing to draw writes `screens: none` in its `spec.md` and the mock
 - [ ] T002 [US1] [test] Add test/export.test.ts covering ten rows
 ```
 
+`spec check` refuses the template as shipped: the `Story:` line needs all three parts, `size:` must be one of S, M or L, `metric:` names the one number this card moves, `done_when:` is a command or a screen, and every acceptance line reads given, when, then. [The story standard](/docs/reference/story-standard) lists what it enforces.
+
 ```sh
 codeloop next c-001
 codeloop next c-001
@@ -100,7 +146,7 @@ codeloop next c-001
 
 ```text
 c-001 moved to spec
-Next: run the /plan skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
+Next: run the /spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
 c-001 is waiting for you at spec (gate spec, owner approves)
 Next: read specs/001-export-invoices-as-csv/tasks.md, then `codeloop approve c-001`, or `codeloop reject c-001 "<what to change>"`.
 ```
@@ -109,13 +155,14 @@ Next: read specs/001-export-invoices-as-csv/tasks.md, then `codeloop approve c-0
 
 ## What the engine did
 
-Three commands moved the card. Each move was a check command exiting 0, recorded as an event:
+Four commands moved the card. Each move was a check command exiting 0, recorded as an event:
 
 ```text
-  2026-10-07T20:02:53.330Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
-  2026-10-07T20:03:14.870Z  engine   advance research: to mock
-  2026-10-07T20:03:15.275Z  engine   advance mock: to spec
-  2026-10-07T20:03:15.717Z  engine   park spec: gate spec (after the check passed)
+  2026-10-09T20:36:54.358Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
+  2026-10-09T20:36:54.817Z  engine   advance research: to interview
+  2026-10-09T20:36:56.400Z  engine   advance interview: to mock
+  2026-10-09T20:36:56.865Z  engine   advance mock: to spec
+  2026-10-09T20:36:57.317Z  engine   park spec: gate spec (after the check passed)
 ```
 
 No prompt decided any of it. [Stages and checks](/docs/concepts/stages-and-checks) explains why that matters.
