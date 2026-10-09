@@ -531,3 +531,14 @@ export async function deletePage(index: ProjectIndex, store: Store, id: string):
 
 export { ConflictError, RefusalError, DONE, resolveRole };
 export type { Band, CardChain };
+
+// --- wiki outline: the read the Setup screen and `wiki init --from-repo --dry-run` share --------
+import { outlineSummary as wikiOutlineSummary, writeOutline as writeWikiOutlineLib, type OutlineSummary as WikiOutlineSummary, type WriteOutlineResult as WikiOutlineWriteResult } from './wiki-outline.js';
+export const wikiOutline = (projectDir: string): WikiOutlineSummary[] => wikiOutlineSummary(projectDir);
+/** `wiki init --from-repo --write`: no server route yet, so this is called from the local transport only. */
+export const writeWikiOutline = (projectDir: string, opts: { force?: boolean } = {}): WikiOutlineWriteResult => writeWikiOutlineLib(projectDir, opts);
+export type { WikiOutlineSummary, WikiOutlineWriteResult };
+
+// --- skill eval: `codeloop skill eval`, replaying a skill's fixtures against a headless agent ---
+export { listSkillNames, loadSkillDef, runSkillEval } from './skill-eval.js';
+export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from './skill-eval.js';

@@ -45,10 +45,15 @@ import type {
   RunView,
   ScoredRecord,
   SetupStatus,
+  SkillDef,
+  SkillEvalOptions,
+  SkillEvalReport,
   SplitResult,
   StageOutput,
   Stats,
   WikiEntry,
+  WikiOutlineSummary,
+  WikiOutlineWriteResult,
   WikiPage,
 } from './types.js';
 
@@ -103,6 +108,12 @@ export interface Transport {
   detectSetup(): Promise<ProjectDetection>;
   adoptSkills(opts?: { from?: string[]; replace?: boolean }): Promise<AdoptCounts>;
   setupStatus(): Promise<SetupStatus>;
+  /** Every skill name under the skills dir (default `templates/skills`). Local only. */
+  skillsList(opts?: { skillsDir?: string }): Promise<string[]>;
+  /** A skill's parsed `SKILL.md`. Local only. */
+  skillShow(name: string, opts?: { skillsDir?: string }): Promise<SkillDef>;
+  /** Replays a skill's fixtures in a throwaway project: the agent on the stage, the stage's check, then a graded run against the checklist. Local only. */
+  skillEval(name: string, opts?: SkillEvalOptions): Promise<SkillEvalReport>;
   /** Fills the story fields of proposals whose description was written as a story. Local only. */
   migrateStories(): Promise<string[]>;
   /** Sets `feature:` and its initiative on the cards a mapping file names. Local only. */
@@ -135,6 +146,10 @@ export interface Transport {
   wikiEntries(): Promise<WikiEntry[]>;
   wikiInject(files: string[]): Promise<WikiEntry[]>;
   wikiLint(): Promise<{ broken: string[]; stale: string[]; duplicates: string[] }>;
+  /** The outline `wiki init --from-repo` would write: page paths, titles, fact/assumption counts, whether each already exists. Local only. */
+  wikiOutline(): Promise<WikiOutlineSummary[]>;
+  /** Writes the outline's pages; skips any that already exist unless `force`. Local only. */
+  writeWikiOutline(opts?: { force?: boolean }): Promise<WikiOutlineWriteResult>;
   close(): Promise<void>;
 }
 
@@ -190,6 +205,13 @@ export class CodeloopClient {
     status: () => this.transport.setupStatus(),
   };
 
+  /** Skills under `templates/skills/` (or `opts.skillsDir`), and `codeloop skill eval` over their fixtures. */
+  readonly skills = {
+    list: (opts?: { skillsDir?: string }) => this.transport.skillsList(opts),
+    show: (name: string, opts?: { skillsDir?: string }) => this.transport.skillShow(name, opts),
+    eval: (name: string, opts?: SkillEvalOptions) => this.transport.skillEval(name, opts),
+  };
+
   readonly questions = {
     list: (ref: string) => this.transport.questions(ref),
     ask: (ref: string, items: AskInput[], opts?: RoleOption) => this.transport.ask(ref, items, opts),
@@ -242,6 +264,10 @@ export class CodeloopClient {
     entries: () => this.transport.wikiEntries(),
     inject: (files: string[]) => this.transport.wikiInject(files),
     lint: () => this.transport.wikiLint(),
+    /** What `wiki init --from-repo --dry-run` prints; the Setup screen's preview before `--write`. */
+    outline: () => this.transport.wikiOutline(),
+    /** `wiki init --from-repo --write`: seeds the pages the outline listed. */
+    writeOutline: (opts?: { force?: boolean }) => this.transport.writeWikiOutline(opts),
   };
 
   artifacts = () => this.transport.artifacts();

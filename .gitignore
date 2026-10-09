@@ -11,3 +11,4 @@ coverage/
 .codeloop/state/sync.json
 .next-home/
 workspace/out/
+.codeloop/state/

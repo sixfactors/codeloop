@@ -339,6 +339,12 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
   app.get('/api/wiki/entries', handled(async c => c.json({ entries: services.wikiEntries(projectDir) })));
   app.get('/api/wiki/inject', handled(async c => c.json({ entries: services.wikiInject(projectDir, query(c).getAll('file')) })));
   app.get('/api/wiki/lint', handled(async c => c.json(services.wikiLint(projectDir))));
+  // The outline a repo scan would seed (dry run) and the write that seeds it, for the Setup screen.
+  app.get('/api/wiki/outline', handled(async c => c.json(services.wikiOutline(projectDir))));
+  app.post('/api/wiki/outline', handled(async c => {
+    const body = await c.req.json<{ force?: boolean }>().catch(() => ({}) as { force?: boolean });
+    return c.json(services.writeWikiOutline(projectDir, { force: !!body.force }));
+  }));
 
   // A new card or a proposal, made the way `codeloop card new` and `card propose` make one: the
   // story check runs first, so a technical title is refused with the same message the CLI prints.

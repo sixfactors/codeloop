@@ -1,0 +1,174 @@
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the Protobox palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }

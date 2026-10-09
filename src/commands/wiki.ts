@@ -4,7 +4,7 @@ import { addCompetitor, listCompetitors } from '../lib/competitors.js';
 import { capture, learn, type Kind } from '../lib/wiki.js';
 import { type WikiEntry } from '../sdk/index.js';
 import { createLocalClient } from '../sdk/local.js';
-import { guard } from './guard.js';
+import { guard, refuse } from './guard.js';
 
 const client = () => createLocalClient(process.cwd());
 
@@ -15,13 +15,18 @@ export const wikiCommand = new Command('wiki').description('Gotchas, decisions a
 wikiCommand
   .command('capture')
   .description('Write a page; capturing an existing title raises its frequency')
-  .requiredOption('--title <title>', 'Page title')
+  .option('--title <title>', 'Page title (required unless --quiet)')
   .option('--scope <glob...>', 'File globs the page applies to', [])
   .option('--body <text>', 'Page body', '')
   .option('--kind <kind>', 'gotcha | decision | concept', 'gotcha')
   .option('--card <id>', 'Card this came from')
-  .action(guard((opts: { title: string; scope: string[]; body: string; kind: Kind; card?: string }) => {
-    console.log(row(capture(process.cwd(), opts)));
+  .option('--quiet', 'Used by the Claude Code Stop hook: exit 0 silently when no --title was given, instead of refusing', false)
+  .action(guard((opts: { title?: string; scope: string[]; body: string; kind: Kind; card?: string; quiet?: boolean }) => {
+    if (!opts.title) {
+      if (opts.quiet) return;
+      throw refuse('--title is required (pass --quiet to no-op without one)');
+    }
+    console.log(row(capture(process.cwd(), { ...opts, title: opts.title })));
   }));
 
 wikiCommand
@@ -58,6 +63,40 @@ wikiCommand
     duplicates.forEach(d => console.log(chalk.yellow(`  duplicate: ${d}`)));
     if (broken.length) process.exit(1);
     console.log(`  wiki ok${stale.length + duplicates.length ? ` (${stale.length} stale, ${duplicates.length} duplicate)` : ''}`);
+  }));
+
+wikiCommand
+  .command('init')
+  .description('Seed the wiki from the repo\'s own files instead of writing an empty tree')
+  .option('--from-repo', 'Scan README, docs, package manifests, Makefile/scripts, CI, deploy config, routes, schemas, git log and TODOs', false)
+  .option('--write', 'Write the pages (default is a dry run)', false)
+  .option('--dry-run', 'Print the outline without writing anything (the default)', false)
+  .option('--force', 'Overwrite pages that already exist', false)
+  .option('--json', 'JSON output')
+  .action(guard(async (opts: { fromRepo?: boolean; write?: boolean; force?: boolean; json?: boolean }) => {
+    if (!opts.fromRepo) {
+      console.log('  nothing to do without --from-repo');
+      return;
+    }
+    if (opts.write) {
+      const result = await client().wiki.writeOutline({ force: opts.force });
+      if (opts.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      result.written.forEach(p => console.log(`  ${chalk.green('written')}  ${p}`));
+      result.skipped.forEach(p => console.log(`  ${chalk.yellow('skipped')}  ${p}  (exists; pass --force to overwrite)`));
+      console.log(`  ${result.written.length} written, ${result.skipped.length} skipped, ${result.assumptions} assumption line(s)`);
+      return;
+    }
+    const summary = await client().wiki.outline();
+    if (opts.json) {
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+    summary.forEach(p => console.log(`  ${p.exists ? chalk.yellow('exists') : chalk.green('new   ')}  ${p.path.padEnd(40)} facts ${String(p.facts).padEnd(3)} assumptions ${p.assumptions}`));
+    const assumptions = summary.reduce((n, p) => n + p.assumptions, 0);
+    console.log(`  ${summary.length} pages, ${assumptions} assumption line(s) total (dry run; pass --write to create)`);
   }));
 
 const competitorCommand = wikiCommand.command('competitor').description('One wiki page per competitor: links at the top, findings from each research stage below');

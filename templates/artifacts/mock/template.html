@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: mock 1 -->
+<!-- codeloop artifact lineage: {{lineage}} -->
+<!-- codeloop-artifact
+id: {{id}}
+kind: mock
+title: {{title}}
+screens: []
+components: []
+states: [loading, ready, empty, error]
+-->
+<title>{{id}} {{title}}</title>
+<style>
+/* codeloop-artifact-base-css */
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>{{title}}</h1>
+    <p class="meta">{{id}} · {{project}} · {{topic}} · mock</p>
+    <p class="scope">One-sentence scope: what this mock covers and who uses it. Delete this line and write the real one.</p>
+    <div class="legend">
+      <!-- One chip per grouping the frames below are tagged with, e.g. <span class="chip">V1 Foundation</span>. Delete if the mock has only one grouping. -->
+    </div>
+  </header>
+
+  <section class="changestrip">
+    <h2>What changed</h2>
+    <ul>
+      <!-- One <li> per change vs the prior version in this lineage. Stated as product fact, not narration: "X is now Y, replacing Z." Delete this section for a mock with no lineage. -->
+    </ul>
+  </section>
+
+  <main class="frame-grid">
+    <!--
+      One <section class="screen-group" data-screen="<name>"> per screen named under `screens:`
+      above (a section, not a div, sections never nest inside a screen-group, which is what lets
+      `codeloop check artifact` find each one's full extent). Inside it: a .state-tabs row naming
+      every state in `states:` above, then one .frame per state (loading skeleton -> ready ->
+      empty -> error), each wrapped in .chrome so it reads as the product, each followed by a
+      sibling .caption (a `div`, never nested inside the frame). Copy drawn inside a .frame is
+      product copy only, every judgement call goes in the caption.
+
+      <section class="screen-group" data-screen="example-screen">
+        <h3>Example screen</h3>
+        <p class="scope">One sentence: what this screen is for.</p>
+        <div class="state-tabs">
+          <span class="tab current">ready</span><span class="tab">loading</span><span class="tab">empty</span><span class="tab">error</span>
+        </div>
+        <div class="frame" data-state="ready">
+          <div class="chrome">
+            <div class="topbar"><span class="dots"><span></span><span></span><span></span></span><span class="crumb">app / example-screen</span></div>
+            <nav class="side"><span class="item active">Example</span><span class="item">Other</span></nav>
+            <div class="main">
+              <div class="header"><h2>Example screen</h2><div class="actions"><button class="button">Primary action</button></div></div>
+              <div class="card">Real product copy goes here.</div>
+            </div>
+          </div>
+        </div>
+        <div class="caption">
+          <h4>mock-example-screen · ready <span class="badge accent">new screen</span></h4>
+          <p>Rationale: why this screen looks the way it does, one sentence.</p>
+          <p class="api">GET /api/example -> { ... }</p>
+        </div>
+      </section>
+    -->
+  </main>
+
+  <section class="contract">
+    <h3>Component map</h3>
+    <table class="component-map">
+      <tr><th>Component</th><th>Registry block / primitive</th><th>Net-new</th></tr>
+      <!-- One row per component named under `components:` above. -->
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>State matrix</h3>
+    <table class="state-matrix">
+      <tr><th>Component</th><th>Loading</th><th>Ready</th><th>Empty</th><th>Error</th></tr>
+      <!-- One row per data-bearing component named under `components:` above. A missing state cell
+           fails codeloop check artifact; leave a cell <td class="gap">n/a, why</td> only when
+           genuinely not applicable. -->
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Design contract</h3>
+    <p>Spacing/radius tokens drawn with: space-1..6 (4/8/12/16/24/32), radius-card, radius-pill, radius-sheet, see <code>templates/artifacts/base.css</code>.</p>
+    <p>Presentation per surface: name which surfaces are push, sheet or dialog, and why.</p>
+    <p>Problem surfaces: for every frame with an error state, name the container it uses (inline card, toast, banner, dialog, full-screen state).</p>
+  </section>
+</div>
+</body>
+</html>

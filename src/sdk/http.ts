@@ -178,6 +178,15 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     detectSetup: () => post('/api/setup/detect', {}),
     adoptSkills: (opts = {}) => post('/api/setup/adopt', opts),
     setupStatus: () => json(`/api/setup/status?t=${Date.now()}`),
+    skillsList: async () => {
+      throw new ApiError(501, 'skill eval reads templates/skills/ and fixtures/skills/ from disk; use the local transport');
+    },
+    skillShow: async () => {
+      throw new ApiError(501, 'skill eval reads templates/skills/ from disk; use the local transport');
+    },
+    skillEval: async () => {
+      throw new ApiError(501, 'skill eval starts a headless agent against the local filesystem; use the local transport');
+    },
     migrateStories: async () => {
       throw new ApiError(501, 'migrate-stories runs against the project files; use the local transport');
     },
@@ -222,6 +231,12 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     wikiEntries: () => json<{ entries: Awaited<ReturnType<Transport['wikiEntries']>> }>('/api/wiki/entries').then(b => b.entries),
     wikiInject: files => json<{ entries: Awaited<ReturnType<Transport['wikiInject']>> }>(`/api/wiki/inject?${files.map(f => `file=${encodeURIComponent(f)}`).join('&')}`).then(b => b.entries),
     wikiLint: () => json('/api/wiki/lint'),
+    wikiOutline: async () => {
+      throw new ApiError(501, 'wiki-outline scans the project files; use the local transport');
+    },
+    writeWikiOutline: async () => {
+      throw new ApiError(501, 'wiki-outline writes the project files; use the local transport');
+    },
     close: async () => {
       etags.clear();
     },

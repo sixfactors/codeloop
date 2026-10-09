@@ -84,6 +84,9 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
       return counts;
     },
     setupStatus: async () => services.setupStatus(projectDir),
+    skillsList: async (opts = {}) => services.listSkillNames(projectDir, opts.skillsDir),
+    skillShow: async (name, opts = {}) => services.loadSkillDef(projectDir, name, opts.skillsDir),
+    skillEval: async (name, opts = {}) => services.runSkillEval(projectDir, name, opts),
     migrateStories: async () => services.migrateStoryFields(projectDir),
     migrateFeatures: async mappingFile => services.migrateFeatureFields(projectDir, mappingFile),
     questions: async ref => services.questions(projectDir, ref).questions,
@@ -117,6 +120,8 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     wikiEntries: async () => services.wikiEntries(projectDir),
     wikiInject: async files => services.wikiInject(projectDir, files),
     wikiLint: async () => services.wikiLint(projectDir),
+    wikiOutline: async () => services.wikiOutline(projectDir),
+    writeWikiOutline: async (opts = {}) => services.writeWikiOutline(projectDir, opts),
     close: async () => {
       if (index) await closeIndex(projectDir);
       if (store && !options.store) await store.close();

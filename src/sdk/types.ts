@@ -32,6 +32,8 @@ export type {
   ProposalInput,
   ScoredRecord,
   WikiEntry,
+  WikiOutlineSummary,
+  WikiOutlineWriteResult,
   RunRecord,
   RunView,
   StageOutput,
@@ -39,6 +41,7 @@ export type {
   ProjectDetection,
   AdoptResult,
 } from '../lib/services.js';
+export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from '../lib/skill-eval.js';
 
 /** The counts `POST /api/setup/adopt` answers with; the entries themselves stay in the index file. */
 export type AdoptCounts = Omit<AdoptResult, 'entries'>;
