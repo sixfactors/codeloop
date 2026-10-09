@@ -141,7 +141,7 @@ describe('shipped lanes', () => {
   it('lint clean and pack against only the skills init installs; a skill with no description gets one', () => {
     scaffold(dir, 'generic.yaml', ['claude']);
     write('.claude/commands/design.md', '# Design\n\nNo frontmatter, so no description.\n');
-    const index = scanSkills(dir, [join(dir, '.claude/commands')]);
+    const index = scanSkills(dir, [join(dir, '.claude/commands'), join(dir, '.claude/skills')]);
     writeSkillsIndex(dir, index);
 
     expect(loadLanes(dir)).toHaveLength(8);

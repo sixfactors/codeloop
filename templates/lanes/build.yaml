@@ -6,39 +6,48 @@ wip: 2
 retries: 3
 stages:
   - id: research
-    skill: design
+    skill: research
     output: "{spec}/research.md"
     done: { cmd: "codeloop check research {id} --min-sources 3" }
+  # The agent asks before it designs: up to five questions with a recommended answer each, answered
+  # from the inbox or the board. The stage waits until every question has an answer.
+  - id: interview
+    skill: interview
+    output: "{spec}/interview.md"
+    done: { cmd: "codeloop check questions {id} --min 3" }
   # Optional per card: a card with nothing to draw writes `screens: none` in its spec and passes without a mock.
   - id: mock
-    skill: design
+    skill: mock
     done: { cmd: "codeloop check mock {id}" }
     notes:
-      - "Name each screen under `screens:` in the card's spec.md, run `codeloop mock new <card> --topic <topic>`, and draw one <section data-screen> per screen in the file it creates."
+      - "Name each screen under `screens:` in the card's spec.md, run `codeloop mock new <card> --topic <topic>`, and draw one frame per screen state in the file it creates."
   - id: spec
-    skill: plan
+    skill: spec
     output: "{spec}/tasks.md"
     done: { cmd: "codeloop spec check {id}" }
     gate: { name: spec, approver: owner }
   - id: build
-    skill: test
+    skill: api
     done: { cmd: "codeloop task check {id} --all-done && npm test" }
+    notes:
+      - "Work the tasks in layer order: [api] with the api skill, [sdk] with the sdk skill, [ui] with the ui skill. Tick each task line as it is done."
   - id: verify
-    skill: qa
+    skill: verify
     output: evidence/{nnn}/verify.md
     done: { cmd: "codeloop verify {id}" }
     gate: { name: local, approver: owner }
+  # Review is a triage: every finding gets a verdict (fix now, defer, unnecessary) and evidence; deferred findings become proposals.
   - id: review
-    skill: commit
+    skill: review
     output: evidence/{nnn}/review.md
     done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'" }
     gate: { name: pr, approver: reviewer }
   - id: staging
-    skill: deploy
+    skill: release
     output: evidence/{nnn}/staging.md
     done: { cmd: "codeloop check file evidence/{nnn}/staging.md --has 'result: pass'" }
   - id: live
-    skill: ship
+    skill: release
     output: evidence/{nnn}/prod.md
     done: { cmd: "codeloop check file evidence/{nnn}/prod.md --has 'result: pass'" }
     gate: { name: prod, approver: owner, outward: true }

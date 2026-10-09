@@ -120,13 +120,16 @@ The plan lane ranks cards by RICE and by which funnel stage is leaking. Do not b
 - `spec check` fails on a malformed story or acceptance block, a missing size, metric or `exists:` verdict, or an unsplit L.
 - `check story <id>` runs all of it on demand and in the spec gate.
 
-## What 0.3.0 enforces
+## What 0.4.0 enforces
 
 | Rule | Enforced by |
 |---|---|
 | Title says what the user can do, with none of the banned characters | `start`, `card new`, `card propose`, `check story` |
 | Story has all three parts and a known persona; size is S, M or L; points are 1, 2, 3, 5 or 8 | `start`, `card new`, `card propose`, `check story` |
-| One to five acceptance lines, every task layer-tagged, every acceptance line has a task | `spec check` |
+| `spec.md` has a filled `Story:` line, `size:` S, M or L, a `metric:` that is not a placeholder, and a `done_when:` that is a command or a screen | `spec check` |
+| One to five acceptance lines, each reading given, when, then; every task layer-tagged; every acceptance line has a task | `spec check` |
+| An L card cannot pass the spec gate unsplit | `spec check`; split it with `codeloop card split <id> <titles...>` |
 | A `verdict:` line and enough `- source:` lines in research | `check research` |
+| At least three questions on the card, each answered, before the interview stage passes | `check questions` |
 
-The `exists:` verdict, the `metric:` line and the L-must-split rule are in the templates and the standard; `spec check` does not read them in 0.3.0. Splitting an L card with `codeloop card split` is <span class="planned">planned</span>; the spec template names it, and the CLI does not have it yet. Until then, split by hand with `codeloop start ... --epic <parent>`. `north_star:` in `config.yaml` is a convention the standard asks for; no command reads it.
+The `exists:` verdict is in the template and the standard; `spec check` does not read it in 0.4.0. `north_star:` in `config.yaml` is a convention the standard asks for; no command reads it.

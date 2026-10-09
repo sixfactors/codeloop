@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe('spec check', () => {
-  const spec = (n: number) => `acceptance:\n${Array.from({ length: n }, (_, i) => `- US${i + 1} Given a, when b, then c.`).join('\n')}\n`;
+  const spec = (n: number) => `Story: As a founder, I can do the thing, so that it is done.\nsize: S\nmetric: no-data\ndone_when: npm test exits 0\nacceptance:\n${Array.from({ length: n }, (_, i) => `- US${i + 1} Given a, when b, then c.`).join('\n')}\n`;
 
   it.each([
     ['an untagged task', spec(1), '- [ ] T001 [US1] [api] tagged\n- [ ] T002 [US1] no layer\n', /untagged task.*T002/],
@@ -58,7 +58,10 @@ describe('spec check', () => {
     const { dir: specDir } = newSpec(dir, 'c-7');
     expect(specDir).toBe('specs/007-add-csv-export');
     expect(readCards(dir).cards[0].spec).toBe(specDir);
-    expect(checkSpec(dir, specDir)).toEqual(['acceptance line US1 has no task']);
+    // The fresh template fails on every standard field it has not filled in, and on the missing task.
+    const errors = checkSpec(dir, specDir);
+    expect(errors).toContain('acceptance line US1 has no task');
+    expect(errors.filter(e => /Story line|size:|metric:|done_when:/.test(e))).toHaveLength(4);
   });
 });
 

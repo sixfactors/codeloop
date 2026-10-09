@@ -57,7 +57,10 @@ describe('story standard', () => {
   });
 
   it('refuses an L at the spec gate', () => {
-    write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^- US1 .*$/m, '- US1 Given a list, when I export, then a CSV downloads.'));
+    write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`)
+      .replace(/^- US1 .*$/m, '- US1 Given a list, when I export, then a CSV downloads.')
+      .replace(/^Story:.*$/m, 'Story: As a founder, I can export invoices, so that my accountant gets them.')
+      .replace(/^size:.*$/m, 'size: S').replace(/^metric:.*$/m, 'metric: no-data').replace(/^done_when:.*$/m, 'done_when: npm test exits 0'));
     write(`${SPEC}/tasks.md`, read(`${SPEC}/tasks.md`) + '\n- [ ] T001 [US1] [api] Export endpoint\n');
     expect(checkSpec(dir, SPEC)).toEqual([]);
     write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^size:.*$/m, 'size: L'));

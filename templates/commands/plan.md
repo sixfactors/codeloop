@@ -3,7 +3,7 @@ description: Plan a task — write spec to tasks/todo.md, enter plan mode
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, EnterPlanMode
 ---
 
-<!-- codeloop-version: 0.3.0 -->
+<!-- codeloop-version: 0.4.0 -->
 
 # /plan
 

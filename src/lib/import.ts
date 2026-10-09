@@ -63,7 +63,9 @@ export function importSpecKit(projectDir: string, from: string, lane = 'build'):
     // Spec Kit writes user stories as headings; codeloop traces `- USn` acceptance lines.
     const spec = existsSync(join(root, dir, 'spec.md')) ? readFileSync(join(root, dir, 'spec.md'), 'utf-8') : `# ${card.title}\n`;
     const stories = [...spec.matchAll(/^#{2,4}\s+User Story (\d+)\s*[-:]\s*(.+?)\s*$/gm)];
-    writeFileSync(join(dest, 'spec.md'), `${spec.trimEnd()}\n\nacceptance:\n${stories.map(m => `- US${m[1]} ${m[2]}`).join('\n')}\n`);
+    // Imported specs carry none of the standard's fields; defaults keep `spec check` honest and
+    // visible until the spec stage fills them in.
+    writeFileSync(join(dest, 'spec.md'), `${spec.trimEnd()}\n\nStory: As a dev, I can ${card.title.toLowerCase()}, so that the imported feature ships.\nsize: M\nmetric: no-data\ndone_when: the imported acceptance lines pass their use cases\n\nacceptance:\n${stories.map(m => `- US${m[1]} Given the feature, when ${m[2].toLowerCase()}, then it works as specified.`).join('\n')}\n`);
 
     const tasks = readFileSync(join(root, dir, 'tasks.md'), 'utf-8').split('\n').map(line => {
       const m = SPECKIT_TASK.exec(line);

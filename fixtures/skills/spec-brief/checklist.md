@@ -1,0 +1,4 @@
+- brief.md has a Summary section
+- the Summary restates the spec's goal, not just its title
+- brief.md has a Risks section naming one concrete risk
+- when research.md names a competitor or decision, the brief cites it by name

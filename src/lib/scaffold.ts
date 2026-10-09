@@ -54,6 +54,27 @@ function getCommandDestinations(tools: ToolId[]): ScaffoldFile[] {
   return files;
 }
 
+/**
+ * Skill folders under templates/skills/<name>/ (SKILL.md + template.md + checklist.md) go to each
+ * host's skills folder, so a lane stage can name the skill and the host can run it.
+ */
+function getSkillDestinations(tools: ToolId[]): ScaffoldFile[] {
+  const dir = join(PACKAGE_ROOT, 'templates/skills');
+  if (!existsSync(dir)) return [];
+  const files: ScaffoldFile[] = [];
+  for (const name of readdirSync(dir)) {
+    const folder = join(dir, name);
+    if (!existsSync(join(folder, 'SKILL.md'))) continue;
+    for (const file of readdirSync(folder)) {
+      const source = `templates/skills/${name}/${file}`;
+      if (tools.includes('claude')) files.push({ source, destination: `.claude/skills/${name}/${file}`, overwrite: false });
+      if (tools.includes('codex')) files.push({ source, destination: `.agents/skills/${name}/${file}`, overwrite: false });
+      if (tools.includes('cursor') && file === 'SKILL.md') files.push({ source, destination: `.cursor/commands/${name}.md`, overwrite: false });
+    }
+  }
+  return files;
+}
+
 function getLaneFiles(): ScaffoldFile[] {
   const dir = join(PACKAGE_ROOT, 'templates/lanes');
   if (!existsSync(dir)) return [];
@@ -79,7 +100,7 @@ export function scaffold(projectDir: string, starterFile: string, tools: ToolId[
   const result: ScaffoldResult = { created: [], skipped: [] };
 
   // 1. Copy command files to tool-specific directories
-  const commandFiles = getCommandDestinations(opts.commandsFor ?? tools);
+  const commandFiles = [...getCommandDestinations(opts.commandsFor ?? tools), ...getSkillDestinations(opts.commandsFor ?? tools)];
   for (const file of commandFiles) {
     const destPath = join(projectDir, file.destination);
     const srcPath = join(PACKAGE_ROOT, file.source);

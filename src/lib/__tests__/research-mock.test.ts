@@ -9,6 +9,7 @@ import { addCompetitor, appendFindings, listCompetitors } from '../competitors.j
 import { advanceCard } from '../engine.js';
 import { startCard } from '../flow.js';
 import { buildInbox } from '../inbox.js';
+import { addQuestions, writeAnswer } from '../interview.js';
 import { lintLane, parseLane } from '../lane.js';
 import { checkMock, findMock, newMock, writeMocksIndex } from '../mock.js';
 import { checkOnline, checkResearch } from '../research.js';
@@ -93,7 +94,7 @@ describe('competitor pages', () => {
     expect(buildBrief(dir, card())).toContain('Changelog: https://acme.test/changelog');
 
     append(`${SPEC}/research.md`, `${SOURCES.join('\n')}\nverdict: build\n`);
-    expect(advanceCard(dir, 'c-001').card.stage).toBe('mock');
+    expect(advanceCard(dir, 'c-001').card.stage).toBe('interview');
     expect(buildBrief(dir, card())).not.toContain('## Competitors');
   });
 
@@ -164,10 +165,11 @@ describe('mocks', () => {
     expect(checkMock(dir, 'c-001')).toEqual([]);
   });
 
-  it('the shipped build lane has the mock stage between research and spec and passes lint', () => {
+  it('the shipped build lane runs research, interview and mock before the spec gate and passes lint', () => {
     const lane = parseLane(read('.codeloop/lanes/build.yaml'));
-    expect(lane.stages.map(s => s.id).slice(0, 3)).toEqual(['research', 'mock', 'spec']);
-    expect(lane.stages[1]).toMatchObject({ skill: 'design', done: { cmd: 'codeloop check mock {id}' } });
+    expect(lane.stages.map(s => s.id).slice(0, 4)).toEqual(['research', 'interview', 'mock', 'spec']);
+    expect(lane.stages[1]).toMatchObject({ skill: 'interview', done: { cmd: 'codeloop check questions {id} --min 3' } });
+    expect(lane.stages[2]).toMatchObject({ skill: 'mock', done: { cmd: 'codeloop check mock {id}' } });
     expect(lintLane(lane)).toEqual([]);
   });
 
@@ -206,10 +208,18 @@ describe('mocks', () => {
   it('inbox shows the mock path on the card waiting at the spec gate', () => {
     append(`${SPEC}/research.md`, `${SOURCES.join('\n')}\nverdict: build\n`);
     advanceCard(dir, 'c-001');
+    // The interview stage waits until every question has an answer.
+    addQuestions(dir, 'c-001', [1, 2, 3].map(n => ({ question: `Q${n}?`, recommended: 'yes' })));
+    for (const n of [1, 2, 3]) writeAnswer(dir, 'c-001', n, { accept: true }, 'owner');
+    expect(advanceCard(dir, 'c-001').card.stage).toBe('mock');
     screens('- export-dialog\n');
     newMock(dir, 'c-001', 'exports');
     section('export-dialog');
     expect(advanceCard(dir, 'c-001').card.stage).toBe('spec');
+    // The template's placeholder lines are replaced, not appended to: the check reads the first match.
+    write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`)
+      .replace(/^Story:.*$/m, 'Story: As a founder, I can export invoices, so that my accountant gets them.')
+      .replace(/^size:.*$/m, 'size: S').replace(/^metric:.*$/m, 'metric: no-data').replace(/^done_when:.*$/m, 'done_when: npm test exits 0'));
     append(`${SPEC}/tasks.md`, '- [ ] T001 [US1] [ui] Export dialog\n');
     expect(advanceCard(dir, 'c-001').outcome).toBe('parked');
     expect(buildInbox(dir).needs_you).toMatchObject([{ id: 'c-001', gate: 'spec', read: `${SPEC}/tasks.md`, mock: MOCK }]);

@@ -1,8 +1,10 @@
 import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
 import { findCard, readCards, RefusalError } from '../lib/cards.js';
-import { checkMock } from '../lib/mock.js';
+import { checkMock, findMock } from '../lib/mock.js';
+import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.js';
 import { checkStory } from '../lib/story.js';
+import { readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { blockingGotchas } from '../lib/wiki.js';
 
@@ -76,6 +78,37 @@ checkCommand
   .action((card: string) => failing(() => checkMock(process.cwd(), card))());
 
 checkCommand
+  .command('artifact <card>')
+  .description("Exit 1 unless the card's artifact (mock, system-design or workflow) meets its kind's anatomy: tokens, dark mode, no raw colour, valid mermaid, and every frame/layer/flow/actor the frontmatter names")
+  .option('--kind <kind>', 'mock | system-design | workflow — auto-detected from whichever artifact exists for the card when omitted')
+  .action((card: string, opts: { kind?: string }) =>
+    failing(() => {
+      const kind = opts.kind as ArtifactKind | undefined;
+      // The mock kind still lives under docs/mocks via the original template/checker (`check mock`
+      // is the same check under a different name); system-design and workflow live under
+      // docs/artifacts via the newer, shared artifact engine.
+      if (kind === 'mock') return checkMock(process.cwd(), card);
+      if (kind) return checkArtifact(process.cwd(), card, kind);
+      if (findMock(process.cwd(), card)) return checkMock(process.cwd(), card);
+      if (findArtifact(process.cwd(), card)) return checkArtifact(process.cwd(), card);
+      return [`no artifact for ${card} under docs/mocks or docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
+    })(),
+  );
+
+checkCommand
   .command('story <card>')
   .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
   .action((card: string) => failing(() => checkStory(process.cwd(), findCard(readCards(process.cwd()).cards, card)))());
+
+checkCommand
+  .command('questions <card>')
+  .description("Exit 1 unless the card's interview has at least --min questions and every one of them has an answer")
+  .option('--min <n>', 'Questions the interview must hold', '1')
+  .action((card: string, options: { min: string }) => failing(() => {
+    const found = findCard(readCards(process.cwd()).cards, card);
+    const questions = readQuestions(process.cwd(), found);
+    const errors: string[] = [];
+    if (questions.length < Number(options.min)) errors.push(`${found.id} has ${questions.length} question(s); the stage needs ${options.min}. Run the interview skill, then \`codeloop ask ${found.id} --file <questions.md>\``);
+    for (const q of questions) if (!q.answer) errors.push(`${found.id} Q${q.n} has no answer: \`codeloop answer ${found.id} ${q.n} --accept\` or give one`);
+    return errors;
+  })());

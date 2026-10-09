@@ -90,6 +90,21 @@ export function checkSpec(projectDir: string, dir: string): string[] {
   // An L is three days or more: the standard says split it before it passes the spec gate.
   const card = readCards(projectDir).cards.find(c => c.spec === dir);
   if (card?.size === 'L' || specSize(projectDir, dir) === 'L') errors.push(`${card?.id ?? dir} is size L: split it into S or M children with \`epic: ${card?.id ?? '<parent>'}\` before the spec gate`);
+  // The story standard's shape, each as its own named failure so an agent can fix the one line.
+  const spec = read(projectDir, dir, 'spec.md');
+  const field = (name: string) => spec.split('\n').find(l => l.startsWith(`${name}:`))?.slice(name.length + 1).replace(/<!--.*?-->/g, '').trim();
+  const storyLine = spec.split('\n').find(l => /^Story:/.test(l)) ?? '';
+  if (!/As an? .+, I (can|get|want) .+, so that .+/.test(storyLine) || /<persona>|<what>|<pain relieved>/.test(storyLine)) errors.push(`${dir}/spec.md Story line must read "As a <persona>, I can <what>, so that <outcome>" with every part filled in`);
+  const size = field('size');
+  if (!size || !/^[SML]$/.test(size)) errors.push(`${dir}/spec.md size: must be S, M or L (found "${size ?? ''}")`);
+  const metric = field('metric');
+  if (!metric || /^<.*>$/.test(metric)) errors.push(`${dir}/spec.md metric: names the one stage metric this card moves (or no-data)`);
+  const doneWhen = field('done_when');
+  if (!doneWhen || /^<.*>$/.test(doneWhen) || /all stories complete/i.test(doneWhen)) errors.push(`${dir}/spec.md done_when: must be a command that exits 0 or a screen a person opens`);
+  for (const line of spec.split('\n')) {
+    const m = ACCEPTANCE.exec(line);
+    if (m && !/Given .+, when .+, then .+/i.test(line)) errors.push(`acceptance line ${m[1]} must read "Given <state>, when <action>, then <result>"`);
+  }
   if (acceptance.length === 0) errors.push(`${dir}/spec.md has no acceptance lines (\`- US1 Given ...\`)`);
   if (acceptance.length > MAX_ACCEPTANCE) errors.push(`${acceptance.length} acceptance lines, the limit is ${MAX_ACCEPTANCE}: split the card`);
   for (const line of malformed) errors.push(`untagged task (needs a T-number and one of [${LAYERS.join('|')}]): ${line}`);
