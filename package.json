@@ -29,7 +29,7 @@
   "scripts": {
     "build": "tsc",
     "build:ui": "cd ui && npm run build",
-    "build:all": "tsc && cd ui && npm run build && node scripts/build-workspace.mjs",
+    "build:all": "tsc && npm --prefix ui run build && node scripts/build-workspace.mjs",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
