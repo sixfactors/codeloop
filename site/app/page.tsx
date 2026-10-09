@@ -5,7 +5,6 @@ import { SolutionOverview } from '@/components/sections/solution-overview';
 import { FeaturesGrid } from '@/components/sections/features-grid';
 import { WhoFor } from '@/components/sections/who-for';
 import { ProofStrip } from '@/components/sections/proof-strip';
-import { QuoteBanner } from '@/components/sections/quote-banner';
 import { FaqSection } from '@/components/sections/faq-section';
 import { PageTail } from '@/components/sections/page-tail';
 import { Footer } from '@/components/footer';
@@ -23,10 +22,6 @@ export default function Home() {
         <FeaturesGrid />
         <WhoFor />
         <ProofStrip />
-        <QuoteBanner
-          quote="My /api-contract text appeared verbatim in a stage brief after a 12-line lane file."
-          source="Adoption diary, 2026-10-08"
-        />
         <FaqSection />
         <PageTail />
       </main>

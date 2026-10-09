@@ -1,6 +1,6 @@
 ---
 title: Stages and checks
-description: A stage is done when a command exits 0. Not when a model says so.
+description: A stage is done when its check command exits 0. The engine runs the command; the agent's own report is not read.
 ---
 
 ## The check is a command

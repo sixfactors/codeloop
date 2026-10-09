@@ -2,7 +2,7 @@
 
 A lane engine with a board, for AI coding agents.
 
-A lane is a YAML file in your repo listing stages. Each stage names the skill an agent runs, the file it must write, and a command that decides whether the stage is done. A card is one story that moves through a lane. Where you want to decide, a stage carries a gate: the card stops, appears in your inbox and on the board, and moves only when you approve. An agent process cannot approve a gate; the engine refuses it. The build lane that ships with it goes research, mock, spec, build, verify, review, staging, live, with gates at spec, local, pr and prod. Other lanes cover deploy, launch copy, weekly planning, triage, competitor scan and a growth review. Everything is files in your repo: `.codeloop/`, `specs/`, `usecases/`, `evidence/`. Docs: <https://codeloop.protobox.ai/docs>.
+A lane is a YAML file in your repo listing stages. Each stage names the skill an agent runs, the file it must write, and a command that decides whether the stage is done. A card is one story that moves through a lane. Where you want to decide, a stage carries a gate: the card stops, appears in your inbox and on the board, and moves only when you approve. An agent process cannot approve a gate; the engine refuses it. The build lane that ships with it goes research, interview, mock, spec, build, verify, review, staging, live, with gates at spec, local, pr and prod. Other lanes cover deploy, launch copy, weekly planning, triage, competitor scan and a growth review. Everything is files in your repo: `.codeloop/`, `specs/`, `usecases/`, `evidence/`. Docs: <https://codeloop.protobox.ai/docs>.
 
 ## Run it
 
@@ -15,7 +15,7 @@ codeloop init --tools claude
 codeloop serve --owner --open
 ```
 
-`init` writes `.codeloop/` (eight lanes, config, knowledge files, the board store) and ten skill files under `.claude/commands/`. A `.claude/commands/` folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New card button or from the terminal:
+`init` writes `.codeloop/` (eight lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and thirteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New card button or from the terminal:
 
 ```sh
 codeloop start "Download every invoice as one CSV" \
@@ -24,7 +24,7 @@ codeloop start "Download every invoice as one CSV" \
 
 ```text
 created c-002 in build at stage research (specs/002-download-every-invoice-as-one-csv/)
-Next: run the /design skill to write specs/002-download-every-invoice-as-one-csv/research.md, then `codeloop next c-002`.
+Next: run the /research skill to write specs/002-download-every-invoice-as-one-csv/research.md, then `codeloop next c-002`.
 ```
 
 Every command ends with a `Next:` line naming the skill, the file and the command that moves the card. Already have a repo with CI, tickets and your own slash commands? Read [You already have a project](https://codeloop.protobox.ai/docs/start/already-have-a-project).
@@ -60,20 +60,22 @@ codeloop approve c-002 --as owner
 ```text
 c-002 gate spec approved
 c-002 moved to build
-Next: run the /test skill, then `codeloop next c-002`.
+Next: run the /api skill, then `codeloop next c-002`.
 ```
 
 `--as` is only needed outside a terminal; a person at a terminal is the owner. A gate marked `outward` (live, prod, publish) stops before the stage runs, so nothing is released until you approve. Rejecting keeps the card in its stage and puts your note in the next brief.
 
 ## What is unreleased
 
-The npm package is 0.3.0 from 3 October 2026. It has lanes, cards, gates, `inbox` and the static board. Everything below is on `main`, unreleased, and planned for the next publish; until then it needs a clone or a tarball built from one:
+The npm package is 0.4.0, published from `main` before the work below landed; its `--version` still prints 0.3.0. Everything below is on `main` as 0.4.1 and goes out with the next publish; until then it needs a clone or a tarball built from one:
 
 - the workspace board with New card, the Inbox page, Initiatives and the card drawer
-- story fields on a card (`--persona`, `--can`, `--so`, `--size`) and the story check
-- `ask` and `answer`, and the questions band in the inbox
-- RICE on features, P1 to P4 bands, `feature`, `epic` and `initiative` commands
+- story fields on a card (`--persona`, `--can`, `--so`, `--size`), the story check and a strict `spec check`
+- `ask` and `answer`, the questions band in the inbox, and the interview stage in the build lane
+- RICE on features, P1 to P4 bands, `feature`, `epic`, `initiative` and `card split` commands
 - the SDK (`@protoboxai/codeloop/sdk`) the CLI and the board both call
+- thirteen stage skills, `skill eval`, `wiki init --from-repo`, `artifact new` (mock, system design, workflow)
+- `render` writing the agent protocol for Claude Code, Cursor, Copilot and AGENTS.md, and `init --hooks` with edit, commit and push guards
 
 ## Working on codeloop itself
 

@@ -9,7 +9,7 @@ The rows are from reading their documentation and issue trackers in October 2026
 
 ## The table
 
-| | Spec-first tools | Agile-persona tools | codeloop 0.3.0 |
+| | Spec-first tools | Agile-persona tools | codeloop 0.4.1 |
 |---|---|---|---|
 | Unit of work | A feature: one branch, one spec folder | A ticket in a list, with artifacts per initiative | A card with a story, in a lane. `.codeloop/cards.json` |
 | The flow | Constitution, specify, clarify, plan, tasks, implement | Clarify, plan, build and verify, learn; ceremony sized after a look at the code | A lane file per kind of work: build, deploy, market, plan, triage, scan, analyze, learn |
@@ -27,11 +27,11 @@ The rows are from reading their documentation and issue trackers in October 2026
 | Priority | None; the order of the feature folders | The order of the ticket list | RICE on the feature, P1 to P4 bands by quartile; the inbox, `card list --band` and the Initiatives page sort by it |
 | One SDK under CLI and UI | Slash commands only; no API | Slash commands only; no API | `@protoboxai/codeloop/sdk`: the CLI and the board call the same client, and each operation is tested through the HTTP and the local transport against one project |
 | Hosts | Forty or more, through per-host command folders | Twenty or more, as generic skills | Claude Code, Cursor, Codex, and MCP |
-| Ceremony for a one-line fix | The full pipeline | Sized after a short investigation | The full lane. Size-adaptive lanes are planned |
+| Ceremony for a one-line fix | The full pipeline | Sized after a short investigation | The full lane; an L card is refused at the spec gate until split. Size-adaptive lanes are planned |
 | Cost per card | Not reported | Not reported | Not reported. Planned |
 | Importing from the other | | | `import speckit`; `import bmad` reads an older file layout |
 | Install | A Python tool plus `uv` | A Node installer, or generic skills | `npm install -g @protoboxai/codeloop` |
-| Age and community | Large | Large | Small. 0.3.0, one team, MIT |
+| Age and community | Large | Large | Small. 0.4.1, one team, MIT |
 
 ## What the table says
 

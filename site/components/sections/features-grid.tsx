@@ -14,9 +14,9 @@ const FEATURES: Feature[] = [
   { badge: 'Work', title: 'Board', description: 'Every card by lane and stage. Proposed cards wait in the backlog.', icon: Kanban },
   { badge: 'Work', title: 'Inbox', description: 'What waits on you, oldest first, with the exact commands to type.', icon: Inbox },
   { badge: 'Work', title: 'Initiatives and priority', description: 'Initiative, epic, feature, story, each with a metric and a goal.', icon: Layers },
-  { badge: 'Knowledge', title: 'Wiki', description: 'Pages agents read before a stage and write after. The same lesson three times becomes critical.', icon: BookOpen },
-  { badge: 'Engine', title: 'Lanes and gates', description: 'A lane file per kind of work. A stage is done when its command exits 0. An agent cannot approve a gate.', icon: GitBranch },
-  { badge: 'Engine', title: 'Any host', description: 'Claude Code, Cursor, Codex and any MCP client. init writes the skills for each.', icon: Plug },
+  { badge: 'Knowledge', title: 'Wiki', description: 'Pages agents read before a stage and write after it. A page captured three times is marked critical.', icon: BookOpen },
+  { badge: 'Engine', title: 'Lanes and gates', description: 'One YAML file per kind of work. A stage is done when its command exits 0. An agent process cannot approve a gate.', icon: GitBranch },
+  { badge: 'Engine', title: 'Any host', description: 'Claude Code, Cursor, Codex and any MCP client. init writes the skill files and hooks for each.', icon: Plug },
 ];
 
 export function FeaturesGrid() {
@@ -28,7 +28,7 @@ export function FeaturesGrid() {
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">What ships</span>
         </div>
         <h2 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-          A board, an inbox and an engine that keeps score.
+          What is in the package
         </h2>
       </div>
 

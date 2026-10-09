@@ -1,6 +1,6 @@
 ---
 title: Config
-description: The keys in .codeloop/config.yaml that codeloop 0.3.0 reads, and the local.yaml overlay.
+description: The keys in .codeloop/config.yaml that codeloop 0.4.1 reads, and the local.yaml overlay.
 ---
 
 ## Two files

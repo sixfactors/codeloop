@@ -30,11 +30,12 @@ export function HeroSplit() {
                 Open source, MIT
               </span>
               <h1 className="mb-6 text-4xl font-medium tracking-tight md:text-5xl">
-                Your agents finish the job. You decide at the gates.
+                Run coding agents stage by stage, with a check after each stage and a gate where a person approves.
               </h1>
               <p className="mb-8 text-lg text-muted-foreground md:text-xl">
-                Your coding agent runs each stage of a card. A command checks it. The card stops where a
-                person has to decide.
+                A lane is a YAML file of stages. Each stage names a skill, the file it must write and a
+                command that must exit 0. A gate parks the card until an owner or reviewer approves.
+                Works in Claude Code, Cursor, Codex and any MCP client.
               </p>
               <div className="flex flex-col items-start gap-4">
                 <CopyInstall />

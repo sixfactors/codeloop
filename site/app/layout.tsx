@@ -14,9 +14,9 @@ const azeretMono = Azeret_Mono({
   weight: ['400', '500'],
 });
 
-const title = 'codeloop - your agents finish the job, you decide at the gates';
+const title = 'codeloop: lanes, checks and gates for coding agents';
 const description =
-  'Agents do the stages of each job. You approve at the gates. Open source, MIT. Works in Claude Code, Cursor and Codex.';
+  'A CLI and local board that runs coding agents through YAML lanes: a check command after each stage, a human approval at each gate. MIT. Claude Code, Cursor, Codex and MCP.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codeloop.protobox.ai'),

@@ -6,25 +6,25 @@ import Image from 'next/image';
 const STEPS = [
   {
     cmd: 'codeloop start "Export invoices as CSV"',
-    lead: 'A card opens in the build lane.',
+    lead: 'Creates a card and its spec folder in the build lane.',
     screen: '/screens/board.png',
     alt: 'The board with the new card',
   },
   {
     cmd: 'codeloop run --agent',
-    lead: 'Your agent does the stage. A command checks it.',
+    lead: 'Starts your agent on the current stage, then runs the check command of that stage.',
     screen: '/screens/card.png',
     alt: 'A card parked at its gate after the check passed',
   },
   {
     cmd: 'codeloop approve c-001',
-    lead: 'Gates wait for you in the inbox.',
+    lead: 'Approves the gate the card is parked at. Gates are listed in the inbox.',
     screen: '/screens/inbox.png',
     alt: 'The inbox listing gates waiting',
   },
   {
     cmd: 'codeloop wiki capture',
-    lead: 'A lesson saved once is read before the next stage.',
+    lead: 'Writes a wiki page. Pages whose scope matches the files are put in the next stage brief.',
     screen: '/screens/wiki.png',
     alt: 'The wiki agents read before a stage',
   },
@@ -39,7 +39,7 @@ export function SolutionOverview() {
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">The loop</span>
         </div>
         <h2 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-          Four commands.
+          The loop is four commands.
           <br />
           <span className="text-muted-foreground">One card at a time.</span>
         </h2>

@@ -11,21 +11,21 @@ const PERSONAS = [
   {
     id: 'founder',
     title: 'Founder',
-    description: 'Ten minutes in the inbox on Monday. The rest of the week runs from cron.',
+    description: 'Reads the inbox and approves or rejects gates. The plan, triage, scan and analyze lanes run from cron.',
     screen: '/screens/inbox.png',
     alt: 'The inbox a founder reads on Monday',
   },
   {
     id: 'developer',
     title: 'Developer',
-    description: 'Your slash commands become lane skills. Every stage leaves an event on the card.',
+    description: 'Existing slash commands and skills are indexed and named in lane stages. Every stage run leaves an event on the card.',
     screen: '/screens/card.png',
     alt: 'A card with its gate and details',
   },
   {
     id: 'consultant',
     title: 'Consultant',
-    description: 'A deck goes through your review skill on every deliverable. You approve the send.',
+    description: 'Any skill that writes a file can be a stage. A review skill runs on every deliverable, and the send waits for approval.',
     screen: '/screens/board.png',
     alt: 'The board with cards by lane',
   },
@@ -43,7 +43,7 @@ export function WhoFor() {
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">Who it is for</span>
           </div>
           <h2 className="text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-            One loop, not only for code.
+            Who it is for
           </h2>
         </div>
 

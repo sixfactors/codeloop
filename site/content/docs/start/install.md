@@ -23,7 +23,7 @@ cd your-project
 codeloop init --tools claude
 ```
 
-Output from codeloop 0.4.0 in an empty repo:
+Output from codeloop 0.4.1 in an empty repo:
 
 ```text
   No specific stack detected, using generic config

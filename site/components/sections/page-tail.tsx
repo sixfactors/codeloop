@@ -7,9 +7,9 @@ export function PageTail() {
   return (
     <section id="install" className="section-padding container scroll-mt-20">
       <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center md:px-16 md:py-16">
-        <h2 className="text-3xl font-medium tracking-tight md:text-4xl">Install it.</h2>
+        <h2 className="text-3xl font-medium tracking-tight md:text-4xl">Install</h2>
         <p className="mx-auto mt-4 max-w-[50ch] text-lg text-muted-foreground">
-          Your repo, your agent, your gates.
+          One npm package. Everything it writes is a file in your repo.
         </p>
         <div className="mt-8 flex justify-center">
           <CopyInstall />

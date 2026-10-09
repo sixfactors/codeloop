@@ -1,6 +1,6 @@
 ---
 title: Planned
-description: What is on the board and not in 0.3.0. Nothing on this page works today.
+description: What is on the board and not in 0.4.1. Nothing on this page works today.
 ---
 
 Everything on this page is <span class="planned">planned</span>. It is here so the rest of the docs can stay about what the CLI does now. The order is the order on codeloop's own board.
@@ -8,10 +8,6 @@ Everything on this page is <span class="planned">planned</span>. It is here so t
 ## Size-adaptive lanes
 
 A card gets a size from a short investigate stage that reads the code, and the founder confirms it. Lane stages take a `when:` clause, so a trivial card skips research, mock and spec and goes build, verify, review. Today every build card goes through every stage. This is the biggest gap in the [compare table](/docs/compare).
-
-## Splitting a card
-
-`codeloop card split <id>` turns an L card into two or three sibling stories under the same feature, each following the story standard, each with `split_from: <parent>`. The spec template already names the command. Until it exists, `codeloop start ... --feature <slug> --epic <parent>` by hand.
 
 ## Cost per card
 
@@ -53,15 +49,11 @@ plugins/<name>/
 | lane | market, analyze, scan, triage, and any founder lane | Installed as a lane file plus the stages and specialists it needs |
 | integration, importer | github, slack, vercel, fly; speckit, bmad | Reconcile, notify, deploy; import |
 
-The first two specialists ship together, one for NestJS and one for FastAPI, so the plugin interface is proven on two languages before it is called an interface. Today the ten skills from `init` are the only stage prompts, and `codeloop pack build` is the only packaging command.
+The first two specialists ship together, one for NestJS and one for FastAPI, so the plugin interface is proven on two languages before it is called an interface. Today `init` installs ten commands and thirteen stage skills (`.claude/skills/<name>/` with a `SKILL.md`, a template and a checklist), and `codeloop artifact new` has three fixed kinds (mock, system-design, workflow); none of them is loaded from a plugin folder, and `codeloop pack build` is the only packaging command.
 
 ## A hosted board with roles
 
 The cloud copy on Protobox becomes a board a team opens, with authenticated owner and reviewer roles, so `gate check` can say who approved. Today approvals are local events, and `gate check` says so.
-
-## An interview stage in a lane
-
-A lane stage that asks the owner one question at a time and writes the answer into the spec section it changes. `codeloop ask` and `codeloop answer` ship today, and the inbox and the board show the questions with a recommended answer; no shipped lane has a stage that uses them.
 
 ## An importer for Linear, Jira or GitHub
 
@@ -69,4 +61,4 @@ A ticket id now lives on the card (`ticket:`, shipped — see below). What is st
 
 ## Shipped since this page was first written
 
-No longer planned: story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call; a `ticket:` field on the card, set from a ticket-style title prefix or `--ticket` and printed by `card show`. They are on `main` and not yet in the npm package; the README lists what the next publish carries.
+No longer planned: thirteen stage skills and a build lane with an interview stage (`check questions`), `card split`, `skill eval`, `wiki init --from-repo`, `artifact new` with three kinds and `check artifact`, `render` writing the agent protocol into CLAUDE.md, AGENTS.md, Cursor and Copilot files, and `init --hooks` with the guard hooks; story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call; a `ticket:` field on the card, set from a ticket-style title prefix or `--ticket` and printed by `card show`. They are on `main` and not yet in the npm package; the README lists what the next publish carries.

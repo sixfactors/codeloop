@@ -1,9 +1,9 @@
 // Copied from chanl-site/src/components/sections/reality-today.tsx. Strings inlined, next-intl
 // dropped, the Card primitive replaced by a div with the same classes.
 const PROBLEMS = [
-  { step: '01', scenario: 'The checking, the release, the launch post and the numbers are still your hands.' },
-  { step: '02', scenario: 'Nothing says a stage is done except the agent that did it.' },
-  { step: '03', scenario: 'The same mistake lands a third time. Nothing kept the first.' },
+  { step: '01', scenario: 'Checking the work, releasing it, writing the launch post and reading the numbers are still manual steps.' },
+  { step: '02', scenario: 'The only signal that a step is finished is the agent saying so. Nothing runs a check.' },
+  { step: '03', scenario: 'A mistake made in one session is not recorded, so the next session makes it again.' },
 ];
 
 export function RealityToday() {
@@ -15,7 +15,7 @@ export function RealityToday() {
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">Today</span>
         </div>
         <h2 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-          Agents write code and stop.
+          What a coding agent leaves undone
         </h2>
       </div>
 
