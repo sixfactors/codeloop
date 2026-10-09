@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { createRequire } from 'node:module';
 import { initCommand } from './commands/init.js';
 import { updateCommand } from './commands/update.js';
 import { statusCommand } from './commands/status.js';
@@ -31,6 +32,8 @@ import { learnCommand, wikiCommand } from './commands/wiki.js';
 import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
 import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
 import { mockCommand, mocksCommand } from './commands/mock.js';
+import { artifactCommand, artifactsCommand } from './commands/artifact.js';
+import { guardCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
 import { scanCommand } from './commands/scan.js';
 
 export function buildProgram(): Command {
@@ -39,7 +42,7 @@ export function buildProgram(): Command {
   program
     .name('codeloop')
     .description('Self-improving development workflow for AI coding agents')
-    .version('0.3.0');
+    .version((createRequire(import.meta.url)('../package.json') as { version: string }).version);
 
   // With the cloud connected, every command first pushes pending writes and takes what changed there.
   program.hook('preAction', (_program, action) => {
@@ -78,6 +81,8 @@ export function buildProgram(): Command {
   program.addCommand(specCommand);
   program.addCommand(mockCommand);
   program.addCommand(mocksCommand);
+  program.addCommand(artifactCommand);
+  program.addCommand(artifactsCommand);
   program.addCommand(scanCommand);
   program.addCommand(taskCommand);
   program.addCommand(importCommand);
@@ -90,6 +95,9 @@ export function buildProgram(): Command {
   program.addCommand(gateCommand);
   program.addCommand(configCommand);
   program.addCommand(cloudCommand);
+  program.addCommand(guardCommand);
+  program.addCommand(presenceCommand);
+  program.addCommand(whoamiCommand);
 
   // Skill registry
   program.addCommand(installCommand);

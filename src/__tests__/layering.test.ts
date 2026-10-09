@@ -12,9 +12,11 @@ import { fileURLToPath } from 'url';
 /** Whole files that still drive the engine directly: lane evaluation, packaging, cloud sync, project setup. */
 const EXEMPT_FILES: Record<string, string> = {
   'adopt.ts': 'skills adoption writes .codeloop/skills.index.yaml; no SDK operation yet',
+  'artifact.ts': 'artifact scaffolding writes docs/artifacts (and docs/mocks for the mock kind); no SDK operation yet',
   'check.ts': 'the gate check runs stage checks in-process for CI',
   'cloud.ts': 'cloud sync is a transport of its own',
   'guard.ts': 'the shell helper that maps engine errors to exit codes',
+  'guard-hooks.ts': 'the host hooks (guard edit/prompt/diff, presence, whoami, card activate) read .codeloop/state directly; no SDK operation yet',
   'import.ts': 'bulk import of cards from files',
   'init.ts': 'project scaffolding before a store exists',
   'install.ts': 'skill registry',

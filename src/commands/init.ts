@@ -4,6 +4,7 @@ import { createInterface } from 'readline';
 import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { detectProject, detectStack, type StackId } from '../lib/detect.js';
+import { installHostHooks } from '../lib/host-hooks.js';
 import { applyDetection, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
@@ -84,6 +85,9 @@ export const initCommand = new Command('init')
         process.exit(1);
       }
       console.log(chalk.green(`  + ${hook.path}`));
+      for (const h of installHostHooks(projectDir)) {
+        console.log(h.installed ? chalk.green(`  + ${h.name}${h.reason === 'unchanged' ? ' (unchanged)' : ''}`) : chalk.yellow(`  ~ ${h.name}: ${h.reason}`));
+      }
       return;
     }
 

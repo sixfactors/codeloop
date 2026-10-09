@@ -56,13 +56,19 @@ describe('render', () => {
       '.claude/agents/codeloop-market-draft.md',
       '.claude/agents/codeloop-market-publish.md',
       '.cursor/rules/codeloop-market.mdc',
+      '.cursor/rules/codeloop.mdc',
+      '.github/copilot-instructions.md',
       'AGENTS.md',
+      'CLAUDE.md',
     ]);
     const before = snapshot(dir);
 
     expect(render(dir, ['claude', 'cursor', 'codex']).written).toEqual([]);
     expect(snapshot(dir)).toEqual(before);
     expect(before['AGENTS.md']).toMatch(/^# Agents\n\nHouse rules stay here\.\n\n<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
+    expect(before['CLAUDE.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*Active card: none[\s\S]*<!-- codeloop:end -->\n$/);
+    expect(before['.github/copilot-instructions.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
+    expect(before['.cursor/rules/codeloop.mdc']).toMatch(/alwaysApply: true/);
   });
 });
 
@@ -134,7 +140,7 @@ describe('mcp server', () => {
       { method: 'tools/call', params: { name: 'approve', arguments: { id: 'c-1' } } },
     ]);
 
-    expect(list.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(['advance', 'approve', 'get_card', 'inbox', 'next_up', 'reject', 'task_done', 'wiki_capture', 'wiki_inject']);
+    expect(list.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(['advance', 'answer', 'approve', 'ask', 'brief', 'check', 'get_card', 'inbox', 'next_up', 'propose', 'reject', 'task_done', 'wiki_capture', 'wiki_inject']);
     expect(JSON.parse(got.result.content[0].text)).toMatchObject({ id: 'c-1', title: 'Launch post', stage: 'draft', brief: { skill: 'blog', output: 'marketing/c-1/blog.md' } });
     expect(JSON.parse(advanced.result.content[0].text)).toMatchObject({ outcome: 'parked', gate: 'copy' });
     expect(approved.result.isError).toBe(true);

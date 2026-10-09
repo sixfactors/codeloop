@@ -3,18 +3,25 @@ import chalk from 'chalk';
 import { loadConfig } from '../lib/config.js';
 import { RefusalError } from '../lib/engine.js';
 import { gateApproval } from '../lib/flow.js';
+import { installHostHooks } from '../lib/host-hooks.js';
 import { serveMcp } from '../lib/mcp.js';
 import { HOSTS, render, type Host } from '../lib/render.js';
 import { guard } from './guard.js';
 
 export const renderCommand = new Command('render')
-  .description('Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus an AGENTS.md block')
+  .description('Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it')
   .option('--host <host>', 'claude | cursor | codex | all', 'all')
-  .action(guard((opts: { host: string }) => {
+  .option('--hooks', 'Also install the Claude Code and Cursor hooks and the pre-commit/pre-push git guards (same as `codeloop init --hooks`)', false)
+  .action(guard((opts: { host: string; hooks?: boolean }) => {
     if (opts.host !== 'all' && !HOSTS.includes(opts.host as Host)) throw new RefusalError(`unknown host "${opts.host}" (claude, cursor, codex or all)`);
     const result = render(process.cwd(), opts.host === 'all' ? HOSTS : [opts.host as Host]);
     result.written.forEach(f => console.log(chalk.green(`  + ${f}`)));
     console.log(`  ${result.written.length} written, ${result.unchanged.length} unchanged`);
+    if (opts.hooks) {
+      for (const h of installHostHooks(process.cwd())) {
+        console.log(h.installed ? chalk.green(`  + ${h.name}${h.reason === 'unchanged' ? ' (unchanged)' : ''}`) : chalk.yellow(`  ~ ${h.name}: ${h.reason}`));
+      }
+    }
   }));
 
 export const mcpCommand = new Command('mcp')
