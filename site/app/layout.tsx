@@ -14,7 +14,7 @@ const azeretMono = Azeret_Mono({
   weight: ['400', '500'],
 });
 
-const title = 'codeloop - your product moves forward every day';
+const title = 'codeloop - your agents finish the job, you decide at the gates';
 const description =
   'Agents do the stages of each job. You approve at the gates. Open source, MIT. Works in Claude Code, Cursor and Codex.';
 
