@@ -1,5 +1,5 @@
 {
-  "version": 227,
+  "version": 228,
   "cards": [
     {
       "id": "CL-001",
@@ -10,7 +10,8 @@
       "retries": {},
       "evidence": [
         "specs/001/research.md",
-        "specs/001/tasks.md"
+        "specs/001/tasks.md",
+        "evidence/001/verify.md"
       ],
       "events": [
         {
@@ -52,10 +53,18 @@
           "action": "advance",
           "stage": "spec",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-09T19:54:24.585Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "build",
+          "note": "result: pass at 527980d"
         }
       ],
       "createdAt": "2026-10-02T03:31:36.119Z",
-      "updatedAt": "2026-10-07T18:47:41.148Z"
+      "updatedAt": "2026-10-09T19:54:24.585Z"
     },
     {
       "id": "CL-002",

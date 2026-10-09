@@ -2,3 +2,9 @@ gates:
   mode: all
 capacity:
   gates_per_day: 8
+agents:
+  default: claude
+  claude:
+    cmd: "claude -p --permission-mode acceptEdits < {brief}"
+    timeout_minutes: 10
+    max_runs_per_day: 50
