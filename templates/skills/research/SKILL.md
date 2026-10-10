@@ -62,7 +62,8 @@ Read these before writing anything:
    clothes.
 6. List 2–3 Options under `## Options`, noting which was chosen when the verdict is `build`.
 7. List `## Risks`, what building this costs or breaks if the `exists:` call is wrong.
-8. Write at least three `- source: <url>, <note>` lines (the dash before "source" and the dash
+8. Write at least three `- source: <url or path> — <note>` lines (a URL, or a file in this repo,
+   optionally `path:line`; a path counts only when the file exists) (the dash before "source" and the dash
    before the note both matter; `codeloop check research` parses the exact pattern).
 9. End the file with one line starting `verdict:`, `build`, `buy`, or `drop`. Nothing after this
    line is read by the check, so don't bury it in a risks paragraph. When the stage passes, the
@@ -125,7 +126,7 @@ See `checklist.md`. Every line is verifiable by a reviewer or by `codeloop check
 - [ ] a path or URL given when `exists:` is not `build`
 - [ ] every competitor row's name matches an existing page under `.codeloop/wiki/competitors/`
 - [ ] `pain:` has a source, or says `assumption:` with what would confirm it
-- [ ] at least 3 lines matching `- source: <url>, <note>`
+- [ ] at least 3 lines matching `- source: <url or path> — <note>`
 - [ ] file ends with a line starting `verdict:` followed by `build`, `buy`, or `drop`
 - [ ] `codeloop check research {id} --min-sources 3` exits 0
 
@@ -216,7 +217,7 @@ Ran `codeloop check research c-058 --min-sources 3` against this file: exit 1, w
 
 ```
 specs/058-small-fixes-skip-the-ceremony/research.md has no line starting with "verdict:"
-specs/058-small-fixes-skip-the-ceremony/research.md cites 0 sources, needs 3 (`- source: <url>, <note>`)
+specs/058-small-fixes-skip-the-ceremony/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
 ```
 
 It fails for two reasons: no `verdict:` line, and zero `- source:` lines. `exists: build` is also

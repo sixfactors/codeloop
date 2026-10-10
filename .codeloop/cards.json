@@ -1,5 +1,5 @@
 {
-  "version": 233,
+  "version": 234,
   "cards": [
     {
       "id": "CL-001",
@@ -3635,6 +3635,32 @@
       ],
       "createdAt": "2026-10-10T04:22:44.753Z",
       "updatedAt": "2026-10-10T04:22:44.753Z"
+    },
+    {
+      "id": "c-094",
+      "title": "Seed the wiki from design docs, not only code",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "wiki init --from-repo wrote 'assumption: nothing found' for ERD, service contracts, data flows and deploy on a repo whose backend exists only as a design. It should also read docs/architecture/, docs/backend/, ADRs (docs/architecture/decisions/ADR-*.md) and deploy/*/README.md, and workspace packages (pnpm-workspace.yaml, workspaces), not only schemas, route handlers and deploy configs.",
+      "source": "ops-ai session 2026-10-10",
+      "dedupe": "build:ops-ai session 2026-10-10:Seed the wiki from design docs, not only code",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T05:44:30.921Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai session 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T05:44:30.921Z",
+      "updatedAt": "2026-10-10T05:44:30.921Z"
     }
   ]
 }

@@ -46,12 +46,12 @@ afterEach(() => {
 
 describe('check research', () => {
   it('fails on the unfilled template', () => {
-    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md has no line starting with "verdict:"`, `${SPEC}/research.md cites 0 sources, needs 3 (\`- source: <url> — <note>\`)`]);
+    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md has no line starting with "verdict:"`, `${SPEC}/research.md cites 0 sources, needs 3 (\`- source: <url or path> — <note>\`)`]);
   });
 
   it('fails with a verdict and too few source lines, and counts only well-formed ones', () => {
     append(`${SPEC}/research.md`, `${SOURCES.slice(0, 2).join('\n')}\n- source: not a url — nope\nsee https://stray.test/link\nverdict: build\n`);
-    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md cites 2 sources, needs 3 (\`- source: <url> — <note>\`)`]);
+    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md cites 2 sources, needs 3 (\`- source: <url or path> — <note>\`)`]);
     expect(checkResearch(dir, 'c-001', 2).errors).toEqual([]);
   });
 
@@ -119,6 +119,16 @@ describe('competitor pages', () => {
     expect(brief).toContain('## Wiki folders this skill reads');
     expect(brief).toContain('### product/');
     expect(brief).toContain('Invoices for small firms.');
+  });
+
+  it('counts a repo file as a source when it exists, and not when it does not', () => {
+    write('src/export.ts', 'export {};\n');
+    append(`${SPEC}/research.md`, `- source: src/export.ts — the current exporter\n- source: src/export.ts:12 — the loop that writes rows\n- source: src/missing.ts — not here\n- source: https://acme.test/docs — docs\nverdict: build\n`);
+    const result = checkResearch(dir, 'c-001', 3);
+    expect(result.errors).toEqual([]);
+    expect(result.urls).toEqual(['https://acme.test/docs']);
+    append(`${SPEC}/research.md`, '');
+    expect(checkResearch(dir, 'c-001', 4).errors[0]).toMatch(/cites 3 sources, needs 4/);
   });
 
   it('appends the findings row for each competitor named in research.md when the research stage passes, once per card', () => {

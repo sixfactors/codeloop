@@ -12,9 +12,7 @@ import { annotateCard, createCard, queueCard, recordEvent, RefusalError, type Ro
 import { EPICS_DIR, FEATURES_DIR } from './features.js';
 import { findCard, readCards, type Card, type Size } from './cards.js';
 import { loadLane } from './lane.js';
-import { SOURCE } from './research.js';
-
-const BRIEF_SOURCE = /^- source: (\S+) (?:—|–|-) \S.*$/;
+import { sourceOf } from './research.js';
 import { newSpec, resolveSpecDir, slugify } from './spec.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -59,7 +57,7 @@ export function checkBrief(projectDir: string, ref: string): { file: string; err
   if (!/^users:[ \t]*\S/m.test(text)) errors.push(`${file} has no "users:" line filled in`);
   if (!/^exists:[ \t]*\S/m.test(text)) errors.push(`${file} has no "exists:" line (have, unlock, port or build)`);
   // A brief's sources are mostly files in this repo or a sibling, so a path counts as well as a URL.
-  const sources = text.split('\n').map(l => BRIEF_SOURCE.exec(l.trim())?.[1] ?? SOURCE.exec(l.trim())?.[1]).filter((u): u is string => !!u);
+  const sources = text.split('\n').map(l => sourceOf(projectDir, l.trim())).filter((u): u is string => !!u);
   if (sources.length < 3) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs at least 3 (\`- source: <url or path> — <note>\`)`);
   return { file, errors };
 }

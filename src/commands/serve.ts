@@ -61,6 +61,17 @@ export const serveCommand = new Command('serve')
     // --bg: fork as background process
     if (options.bg) {
       const { fork } = await import('child_process');
+      // A port another process holds would make the probe below answer for a child that died.
+      const { createServer } = await import('net');
+      const free = await new Promise<boolean>(resolve => {
+        const s = createServer();
+        s.once('error', () => resolve(false));
+        s.listen(port, options.host, () => s.close(() => resolve(true)));
+      });
+      if (!free) {
+        console.log(chalk.red(`  Port ${port} is already in use. See what holds it with \`lsof -iTCP:${port} -sTCP:LISTEN\`, or pass --port.`));
+        process.exit(1);
+      }
       const child = fork(process.argv[1], ['serve', '--port', String(port), '--host', options.host, ...(options.owner ? ['--owner'] : [])], {
         detached: true,
         stdio: 'ignore',
@@ -70,6 +81,30 @@ export const serveCommand = new Command('serve')
       child.unref();
 
       if (child.pid) {
+        // Only a child that answers on the port counts as started: one that dies on a port already
+        // in use would otherwise leave a pid file pointing at nothing and a success line on screen.
+        const probe = `http://${options.host === '0.0.0.0' ? '127.0.0.1' : options.host}:${port}/api/cards`;
+        const deadline = Date.now() + 15_000;
+        let up = false;
+        while (Date.now() < deadline) {
+          try {
+            process.kill(child.pid, 0);
+          } catch {
+            break;
+          }
+          try {
+            const res = await fetch(probe, { signal: AbortSignal.timeout(1000) });
+            if (res.ok) {
+              up = true;
+              break;
+            }
+          } catch {}
+          await new Promise(r => setTimeout(r, 300));
+        }
+        if (!up) {
+          console.log(chalk.red(`  Board server did not start on port ${port}. Another process may hold it: \`lsof -iTCP:${port} -sTCP:LISTEN\`, or pass --port.`));
+          process.exit(1);
+        }
         const pidPath = join(projectDir, PID_FILE);
         writeFileSync(pidPath, String(child.pid), 'utf-8');
         console.log(chalk.green(`  Board server started in background (PID ${child.pid})`));

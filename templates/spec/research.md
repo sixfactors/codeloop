@@ -22,6 +22,6 @@ pain:
 
 ## Sources
 
-<!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
+<!-- At least three, one per line: a dash, the word source and a colon, a URL or a path in this repo (optionally path:line), a dash, a note. `codeloop check research` counts them; a path counts only when the file exists. -->
 
 <!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->

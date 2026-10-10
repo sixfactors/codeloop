@@ -2,9 +2,20 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { resolveSpecDir } from './spec.js';
 
-// `- source: <url> — <note>`. A spaced hyphen is accepted in place of the dash. Exported so the
-// shape workflow's brief check (src/lib/shape.ts) counts sources the same way research.md does.
+// `- source: <url or path> — <note>`. A spaced hyphen is accepted in place of the dash. Exported so
+// the shape workflow's brief check (src/lib/shape.ts) counts sources the same way research.md does.
 export const SOURCE = /^- source: (https?:\/\/\S+) (?:—|–|-) \S.*$/;
+// A file in this repo, optionally with a line number, counts when it exists: most evidence for a
+// story lives in the codebase and its docs, and a repo with no remote has no URL for them.
+const PATH_SOURCE = /^- source: ((?!https?:\/\/)[^\s:]+(?::\d+)?) (?:—|–|-) \S.*$/;
+
+export function sourceOf(projectDir: string, line: string): string | undefined {
+  const url = SOURCE.exec(line)?.[1];
+  if (url) return url;
+  const path = PATH_SOURCE.exec(line)?.[1];
+  if (!path) return undefined;
+  return existsSync(join(projectDir, path.replace(/:\d+$/, ''))) ? path : undefined;
+}
 const VERDICT = /^verdict:\s*\S/m;
 const ONLINE_TIMEOUT_MS = 10_000;
 
@@ -13,10 +24,11 @@ export function checkResearch(projectDir: string, ref: string, minSources: numbe
   const file = `${resolveSpecDir(projectDir, ref)}/research.md`;
   if (!existsSync(join(projectDir, file))) return { file, errors: [`missing file: ${file}`], urls: [] };
   const text = readFileSync(join(projectDir, file), 'utf-8');
-  const urls = text.split('\n').map(l => SOURCE.exec(l.trim())?.[1]).filter((u): u is string => !!u);
+  const sources = text.split('\n').map(l => sourceOf(projectDir, l.trim())).filter((u): u is string => !!u);
+  const urls = sources.filter(s => /^https?:\/\//.test(s));
   const errors: string[] = [];
   if (!VERDICT.test(text)) errors.push(`${file} has no line starting with "verdict:"`);
-  if (urls.length < minSources) errors.push(`${file} cites ${urls.length} ${urls.length === 1 ? 'source' : 'sources'}, needs ${minSources} (\`- source: <url> — <note>\`)`);
+  if (sources.length < minSources) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs ${minSources} (\`- source: <url or path> — <note>\`)`);
   return { file, errors, urls };
 }
 

@@ -57,9 +57,9 @@ codeloop next c-001
 
 ```text
 specs/001-export-invoices-as-csv/research.md has no line starting with "verdict:"
-specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
+specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
 c-001 failed the research check (1 so far)
-Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`). The /research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
+Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`). The /research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
 ```
 
 The failure is counted. After the lane's `retries` (three in every shipped lane) the card parks as stuck and shows up in the inbox for you.
@@ -158,7 +158,7 @@ Next: read specs/001-export-invoices-as-csv/tasks.md, then `codeloop approve c-0
 Four commands moved the card. Each move was a check command exiting 0, recorded as an event:
 
 ```text
-  2026-10-09T20:36:54.358Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
+  2026-10-09T20:36:54.358Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
   2026-10-09T20:36:54.817Z  engine   advance research: to interview
   2026-10-09T20:36:56.400Z  engine   advance interview: to mock
   2026-10-09T20:36:56.865Z  engine   advance mock: to spec

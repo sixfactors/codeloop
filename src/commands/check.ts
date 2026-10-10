@@ -63,7 +63,7 @@ function failing(run: () => string[] | Promise<string[]>) {
 
 checkCommand
   .command('research <card>')
-  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines")
+  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url or path> — <note>` lines")
   .option('--min-sources <n>', 'How many source lines are required', '3')
   .option('--online', 'Also require each source URL to answer with 2xx or 3xx')
   .action((card: string, opts: { minSources: string; online?: boolean }) => failing(async () => {
