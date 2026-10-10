@@ -39,7 +39,7 @@ Initializing codeloop...
 
 Done.
 
-  8 lanes in .codeloop/lanes/, 39 skills indexed in .codeloop/skills.index.yaml.
+  9 lanes in .codeloop/lanes/, 39 skills indexed in .codeloop/skills.index.yaml.
   codeloop serve opens the board in a browser.
 
   Next, type:
@@ -52,7 +52,7 @@ Four things to know from that output:
 - **A `.claude/commands/` folder with files in it is left alone.** Nothing is written next to your commands unless you pass `--yes`. With `--yes`, the ten shipped commands go in and a file that already exists is kept and listed under `Skipped (already exist):` with a `~`; the repo above keeps its own `/test`. `CLAUDE.md`, your workflows and your `package.json` are not touched, and only `.codeloop/` is new in `git status`.
 - **Scripts in `package.json` become quality checks.** `scripts.lint` and `scripts.build` are written to `quality_checks:` in `config.yaml`. The test command in `config.yaml` stays commented out; the build stage runs `npm test` from `.codeloop/lanes/build.yaml` whatever the config says, so change that line for another runner.
 - **Stack detection reads one file.** `tsconfig.json` means TypeScript; `pyproject.toml`, `setup.py`, `requirements.txt` or `Pipfile` means Python; `go.mod` means Go. A `package.json` on its own is "Generic project". `--starter node-typescript` picks the Node starter without a `tsconfig.json`.
-- **Your own commands are indexed.** The 39 skills are the bundled ones plus the two under `.claude/commands/` it found; with `--yes` it is 48. `grep fix-ticket .codeloop/skills.index.yaml` shows yours as `kind: command`.
+- **Your own commands are indexed.** The 39 skills are the bundled ones plus the two under `.claude/commands/` it found; with `--yes` it is 64. `grep fix-ticket .codeloop/skills.index.yaml` shows yours as `kind: command`.
 
 There is no flag to skip one of the ten commands. Delete what you do not want after `init --yes`; `codeloop update` does not bring a deleted file back, it lists it as `not installed` and refreshes only the skill files that exist with an older version comment. `init --hooks` and `init --ci github` write only the hook and only the workflows.
 
@@ -212,7 +212,7 @@ codeloop lane list
 ```
 
 ```text
-  8 lanes ok
+  9 lanes ok
   analyze    v1  pull → compare → judge → findings  cron 0 9 * * FRI
   build      v1  research → mock → spec → build → verify → review → staging → live  manual
   deploy     v1  staging → verify → prod → smoke  on git.tag

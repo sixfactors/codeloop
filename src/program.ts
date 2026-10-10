@@ -14,6 +14,7 @@ import { publishCommand } from './commands/publish.js';
 import { loginCommand } from './commands/login.js';
 import { laneCommand } from './commands/lane.js';
 import { approveCommand, cardCommand, nextCommand, rejectCommand, startCommand } from './commands/card.js';
+import { shapeCommand } from './commands/shape.js';
 import { inboxCommand } from './commands/inbox.js';
 import { featureCommand } from './commands/feature.js';
 import { epicCommand } from './commands/epic.js';
@@ -63,6 +64,7 @@ export function buildProgram(): Command {
   program.addCommand(laneCommand);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
+  program.addCommand(shapeCommand);
   program.addCommand(nextCommand);
   program.addCommand(approveCommand);
   program.addCommand(rejectCommand);

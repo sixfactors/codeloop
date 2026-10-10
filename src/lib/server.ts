@@ -346,6 +346,14 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
     return c.json(services.writeWikiOutline(projectDir, { force: !!body.force }));
   }));
 
+  // Starts the shape workflow: a problem statement, not a story, so no title check runs.
+  app.post('/api/shape', writing(async c => {
+    const body = await json(c, { problem: undefined as string | undefined });
+    const made = services.shape(projectDir, body.problem ?? '', role);
+    await refreshCards();
+    return c.json(made, 201);
+  }));
+
   // A new card or a proposal, made the way `codeloop card new` and `card propose` make one: the
   // story check runs first, so a technical title is refused with the same message the CLI prints.
   app.post('/api/cards', writing(async c => {

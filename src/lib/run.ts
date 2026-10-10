@@ -4,7 +4,7 @@ import { dirname, join } from 'path';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, runAgent, type AgentConfig } from './agent.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
-import { advanceCard, awaitsApproval, createCard, loadEngineConfig, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, createCard, loadEngineConfig, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -74,6 +74,9 @@ export function runDue(projectDir: string, now: Date = clock(), filter: RunFilte
   const file = join(projectDir, LAST_RUN);
   // Two schedulers started together must not both see the same slot as new.
   const result = withLock(file, () => startDue(projectDir, file, now, filter));
+  // A queued story (shape's on_done.queue) is promoted into its lane's first stage here, not on
+  // every advance: the owner's plan approval already covers the promotion, so it only needs a run.
+  promoteQueued(projectDir, { now, lane: filter.lane });
 
   for (const { id } of active(projectDir, filter)) {
     result.advanced.push(advanceUntilStop(projectDir, id, now));
@@ -212,6 +215,7 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
 export async function runDueWithAgent(projectDir: string, agent: AgentConfig, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
   const file = join(projectDir, LAST_RUN);
   const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
+  promoteQueued(projectDir, { now, lane: filter.lane });
 
   for (const { id, stage } of active(projectDir, filter)) {
     let current = stage;

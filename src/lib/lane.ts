@@ -30,7 +30,8 @@ export interface Lane {
   wip?: number;
   retries: number;
   stages: Stage[];
-  on_done?: { start?: string };
+  /** `start`: a simple follow-on card in another lane. `queue`: a shape breakdown's epic of stories (see src/lib/shape.ts). Both opt-in via `lanes.auto_start`, except `queue`, which always runs: the owner already approved the exact list of stories it makes. */
+  on_done?: { start?: string; queue?: string };
 }
 
 export interface SkillEntry {

@@ -15,7 +15,7 @@ codeloop init --tools claude
 codeloop serve --owner --open
 ```
 
-`init` writes `.codeloop/` (eight lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and thirteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New story button or from the terminal:
+`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New story button or from the terminal:
 
 ```sh
 codeloop start "Download every invoice as one CSV" \

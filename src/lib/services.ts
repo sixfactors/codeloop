@@ -9,7 +9,7 @@ import { dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
 import { DONE, DROPPED, findCard, inLane, readCards, RefusalError, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
-import { advanceCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
+import { advanceCard, createCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
 import { getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
@@ -20,6 +20,7 @@ import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js
 import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { MOCKS_DIR } from './mock.js';
 import { readTasks, type Task } from './spec.js';
+import { newShape } from './shape.js';
 import { computeStats, type Stats } from './stats.js';
 import { listFilter, migrateStories, storyFields, type StoryFlags } from './story.js';
 import { migrateFeatures } from './migrate-features.js';
@@ -151,6 +152,21 @@ export function newProposal(projectDir: string, input: ProposalInput, who?: Role
     fields,
   });
   return { card, created, hint: nextHint(projectDir, card) };
+}
+
+/**
+ * `codeloop shape "<problem>"`: starts the shape workflow. A problem statement is not a user
+ * story, so this bypasses `storyFields`/`titleProblems` (the word-count and no-mechanism-marks
+ * check) by calling `createCard` directly instead of going through `newCard`/`startCard`; the
+ * title is the problem as given.
+ */
+export function shape(projectDir: string, problem: string, who?: Role): CardCreated {
+  const text = (problem ?? '').trim();
+  if (!text) throw new RefusalError('a problem statement is required');
+  const created = createCard(projectDir, { lane: 'shape', title: text, role: who ?? 'agent' });
+  newShape(projectDir, created.id, text, who ?? 'agent');
+  const card = findCard(readCards(projectDir).cards, created.id);
+  return { card, hint: nextHint(projectDir, card) };
 }
 
 /** Advances one card; with no ref, the one active card, refused when there is not exactly one. */

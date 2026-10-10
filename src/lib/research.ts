@@ -2,8 +2,9 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { resolveSpecDir } from './spec.js';
 
-// `- source: <url> — <note>`. A spaced hyphen is accepted in place of the dash.
-const SOURCE = /^- source: (https?:\/\/\S+) (?:—|–|-) \S.*$/;
+// `- source: <url> — <note>`. A spaced hyphen is accepted in place of the dash. Exported so the
+// shape workflow's brief check (src/lib/shape.ts) counts sources the same way research.md does.
+export const SOURCE = /^- source: (https?:\/\/\S+) (?:—|–|-) \S.*$/;
 const VERDICT = /^verdict:\s*\S/m;
 const ONLINE_TIMEOUT_MS = 10_000;
 

@@ -1,6 +1,6 @@
 {
   "version": "0.4.1",
-  "generatedAt": "2026-10-10T02:24:41.140Z",
+  "generatedAt": "2026-10-10T04:19:32.232Z",
   "commands": [
     {
       "name": "init",
@@ -18,7 +18,7 @@
         },
         {
           "signature": "--hooks",
-          "description": "Only install the commit-msg hook that adds the Feature: trailer"
+          "description": "Only install the hooks: the commit-msg trailer, the Claude Code and Cursor hooks, and the pre-commit and pre-push guards"
         },
         {
           "signature": "--ci <provider>",
@@ -593,6 +593,24 @@
       "commands": []
     },
     {
+      "name": "shape",
+      "usage": "codeloop shape [options] <problem>",
+      "description": "Turn a problem into an epic of shippable stories: brief → interview → breakdown → rank, then queued into the build lane",
+      "arguments": [
+        {
+          "signature": "problem",
+          "description": "The problem as the person stated it"
+        }
+      ],
+      "options": [
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+        }
+      ],
+      "commands": []
+    },
+    {
       "name": "next",
       "usage": "codeloop next [options] [id]",
       "description": "Run the check for a card and move it on (same as card advance); with one active card the id is optional",
@@ -887,7 +905,7 @@
     {
       "name": "run",
       "usage": "codeloop run [options]",
-      "description": "Start cards for due cron lanes, then advance every card that is not waiting for you one step",
+      "description": "Start cards for due cron lanes, then advance every card that is not waiting for you until it stops on its own",
       "arguments": [],
       "options": [
         {
@@ -1049,7 +1067,7 @@
         {
           "name": "check research",
           "usage": "codeloop check research [options] <card>",
-          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url>, <note>` lines",
+          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines",
           "arguments": [],
           "options": [
             {
@@ -1090,6 +1108,27 @@
           "description": "Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "check brief",
+          "usage": "codeloop check brief [options] <card>",
+          "description": "Exit 1 unless the card's shape brief has problem:, users: and exists: filled in, and at least 3 `- source:` lines",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "check breakdown",
+          "usage": "codeloop check breakdown [options] <card>",
+          "description": "Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--ranked",
+              "description": "Also require a `rice:` part on every story"
+            }
+          ],
           "commands": []
         },
         {
@@ -1570,7 +1609,7 @@
       "options": [
         {
           "signature": "--host <host>",
-          "description": "claude | cursor | codex | all (default: \"all\")"
+          "description": "claude | cursor | codex | all; by default the hosts init set up (.claude, .cursor, .agents present), or all when none is (default: \"auto\")"
         },
         {
           "signature": "--hooks",
@@ -1731,6 +1770,14 @@
           "name": "guard edit",
           "usage": "codeloop guard edit [options] [path]",
           "description": "PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard session",
+          "usage": "codeloop guard session [options]",
+          "description": "SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active",
           "arguments": [],
           "options": [],
           "commands": []

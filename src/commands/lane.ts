@@ -39,6 +39,7 @@ laneCommand
       for (const note of s.notes ?? []) console.log(chalk.dim(`             note: ${note}`));
     }
     if (lane.on_done?.start) console.log(`on_done: start ${lane.on_done.start}`);
+    if (lane.on_done?.queue) console.log(`on_done: queue ${lane.on_done.queue}`);
   }));
 
 laneCommand
@@ -52,6 +53,8 @@ laneCommand
     for (const lane of lanes) {
       const target = lane.on_done?.start;
       if (target && !lanes.some(l => l.id === target)) errors.push(`lane ${lane.id}: on_done starts lane "${target}", which does not exist`);
+      const queueTarget = lane.on_done?.queue;
+      if (queueTarget && !lanes.some(l => l.id === queueTarget)) errors.push(`lane ${lane.id}: on_done queues lane "${queueTarget}", which does not exist`);
     }
     errors.forEach(e => console.error(chalk.red(`  ${e}`)));
     if (errors.length) process.exit(2);

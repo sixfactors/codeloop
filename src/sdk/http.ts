@@ -155,6 +155,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
       if (!ref) throw new ApiError(400, 'say which card: the http transport cannot pick the active one');
       return post(`/api/cards/${encodeURIComponent(ref)}/advance`, { event: opts.event });
     },
+    shapeProblem: (problem, opts) => post('/api/shape', { problem, ...role(opts) }),
     approveCard: (ref, opts = {}) => post<{ decision: Awaited<ReturnType<Transport['approveCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/approve`, { note: opts.note }).then(b => b.decision),
     rejectCard: (ref, note) => post<{ decision: Awaited<ReturnType<Transport['rejectCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/reject`, { note }).then(b => b.decision),
     brief: async ref => (await send(`/api/cards/${encodeURIComponent(ref)}/brief`)).text(),

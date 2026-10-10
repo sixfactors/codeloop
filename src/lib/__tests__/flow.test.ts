@@ -144,7 +144,7 @@ describe('shipped lanes', () => {
     const index = scanSkills(dir, [join(dir, '.claude/commands'), join(dir, '.claude/skills')]);
     writeSkillsIndex(dir, index);
 
-    expect(loadLanes(dir)).toHaveLength(8);
+    expect(loadLanes(dir)).toHaveLength(9);
     expect(loadLanes(dir).flatMap(l => lintLane(l, index))).toEqual([]);
     const pack = buildPack(dir);
     expect(pack.skills.filter(s => !s.description)).toEqual([]);

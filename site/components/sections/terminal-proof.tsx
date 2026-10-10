@@ -6,7 +6,8 @@ import Link from 'next/link';
 const STEPS = [
   { cmd: 'npm install -g @protoboxai/codeloop', note: 'One package. Node 20 or newer.' },
   { cmd: 'codeloop init --tools claude', note: 'Writes the workflows, stage skills and hooks into your repo. Also cursor, codex.' },
-  { cmd: 'codeloop serve --open', note: 'Opens the board. Add your first user story with the New story button.' },
+  { cmd: 'codeloop shape "<your problem>"', note: 'Turns a problem into an epic of small, ordered stories. You approve the plan on the board.' },
+  { cmd: 'codeloop serve --open', note: 'Opens the board. Or add a single user story with the New story button.' },
   { cmd: 'codeloop run --agent', note: 'Starts your agent on the first stage. Watch the story move on the board.' },
 ];
 
@@ -35,7 +36,7 @@ export function TerminalProof() {
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">Get started</span>
         </div>
         <h2 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-          Four commands to a running agent
+          Five commands to a running agent
         </h2>
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-12 lg:gap-8">

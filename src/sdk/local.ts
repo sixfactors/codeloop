@@ -68,6 +68,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     createCard: async (input, opts) => services.newCard(projectDir, input, role(opts)),
     proposeCard: async (input, opts) => services.newProposal(projectDir, input, role(opts)),
     advanceCard: async (ref, opts) => services.advance(projectDir, ref, opts),
+    shapeProblem: async (problem, opts) => services.shape(projectDir, problem, role(opts)),
     approveCard: async (ref, opts = {}) => services.approve(projectDir, ref, role(opts), opts.note),
     rejectCard: async (ref, note, opts) => services.reject(projectDir, ref, role(opts), note),
     brief: async ref => services.brief(projectDir, ref),

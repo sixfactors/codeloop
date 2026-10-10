@@ -77,7 +77,7 @@ change where you look or how hard you look. Written through `codeloop ask {id} -
 the file in this format:
 
 ```
-## Q1 Is there a sibling repo (chanl-api, protobox, chanl-admin) that may already have this?
+## Q1 Is there a sibling repo in the same workspace that may already have this?
 recommended: Check the repo named in the card's feature or initiative first; search there before this codebase if it's named.
 
 ## Q2 Should this research check against a specific competitor, or none?

@@ -45,7 +45,7 @@ cards_in() { codeloop card list --json | node -e "const d=JSON.parse(require('fs
 
 # --- init installs the shipped lanes -------------------------------------------------------
 expect 0 "init runs" codeloop init --tools claude --starter generic
-expect 0 "init installed the 8 shipped lanes" test "$(lane_count)" = 8
+expect 0 "init installed the 9 shipped lanes" test "$(lane_count)" = 9
 expect 0 "the shipped build lane has on_done commented out" sh -c "grep -q '^# on_done: { start: market }' .codeloop/lanes/build.yaml"
 # on_done is opt-in; the e2e lanes below rely on it.
 printf 'lanes:\n  auto_start: true\n' >> .codeloop/config.yaml
@@ -351,7 +351,7 @@ expect 0 "import bmad" codeloop import bmad "$WORK/bmad"
 expect 0 "bmad import created three cards: done maps to done, unknown stages to the first" test "$(imported bmad | sed 's/[^ ]*://g')" = "done research research"
 
 # --- hosts, MCP, CI --------------------------------------------------------------------------
-expect 0 "render writes agents, rules, skills and the AGENTS.md block" sh -c "codeloop render && test -f .claude/agents/codeloop-market-publish.md -a -f .cursor/rules/codeloop-market.mdc -a -f .agents/skills/codeloop-market/SKILL.md && grep -q 'codeloop:start' AGENTS.md"
+expect 0 "render writes agents, rules, skills and the AGENTS.md block" sh -c "codeloop render --host all && test -f .claude/agents/codeloop-market-publish.md -a -f .cursor/rules/codeloop-market.mdc -a -f .agents/skills/codeloop-market/SKILL.md && grep -q 'codeloop:start' AGENTS.md"
 expect 0 "the publish agent is told to wait for approval before acting" grep -q 'Do nothing until a person has approved it' .claude/agents/codeloop-market-publish.md
 git add -A
 expect 0 "a second render produces no diff" sh -c "codeloop render | grep -q '^  0 written' && git diff --exit-code --quiet"
@@ -413,7 +413,7 @@ json "GET setup status says the project is set up" "d.initialised===true && d.la
 lane_skills=$(grep -h 'skill:' .codeloop/lanes/*.yaml | sed 's/.*skill: *//' | sort -u | wc -l | tr -d ' ')
 want=$((lane_skills + 1))
 expect 0 "pack build" codeloop pack build --out dist/pack.json
-json "manifest has $want skills ($lane_skills from lanes + codeloop_guide) in the Protobox shape" \
+json "manifest has $want skills ($lane_skills from lanes + codeloop_guide) in the hosted-server shape" \
   "d.skills.find(s=>s.skillId==='codeloop_guide').content.includes('approve before') && d.kind==='platform' && d.auth[0].type==='none' && d.availability==='available' && d.skills.length===$want && d.skills.some(s=>s.skillId==='codeloop_guide') && d.skills.every(s=>/^[a-z][a-z0-9_]*$/.test(s.skillId) && s.content && Array.isArray(s.toolDeps))" \
   cat dist/pack.json
 
@@ -555,6 +555,78 @@ json "the scan card finished although the changelog could not be fetched, and th
 expect 0 "the owner promotes the proposal into the plan lane's first stage" sh -c "codeloop approve c-002 --as owner | grep -q 'c-002 promoted to plan/gather'"
 json "the promoted card is in the plan lane and its check has not run" "d.stage==='gather' && !d.gate && !d.retries.gather" codeloop card show c-002 --json
 expect 0 "a second proposal is dropped by a rejection" sh -c "codeloop card propose plan 'Try a dark theme' --source issues/12 | grep -q '^proposed' && codeloop reject \"\$(codeloop card list --json | node -e \"console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).find(c=>c.title==='Try a dark theme').id)\")\" 'not now' --as owner | grep -q 'dropped'"
+
+# --- shape workflow: a problem in, an epic of stories out, queued into the build lane ----------
+# A fresh project with the shipped shape lane as init installs it, and a trivial one-stage build
+# lane standing in for the full one, so finishing a story is one flag file, not nine real stages.
+mkdir "$WORK/shape" && cd "$WORK/shape"
+codeloop init --tools claude --starter generic > /dev/null
+cat > .codeloop/lanes/build.yaml <<'YAML'
+id: build
+version: 1
+metric: { name: cycle_time_days, source: cards }
+trigger: { manual: true }
+wip: 1
+stages:
+  - id: work
+    skill: api
+    done: { cmd: "test -f {id}.flag" }
+YAML
+expect 0 "lane lint passes with the shipped shape lane and a trivial build lane" codeloop lane lint
+
+SHAPE=c-001
+expect 0 "shape creates a card from the problem, not a story" sh -c "codeloop shape 'Let a workspace publish a skill pack from the web app' | tee shape.out | grep -q 'created $SHAPE in shape at stage brief'"
+BF=shape/$SHAPE/brief.md
+expect 1 "check brief fails: the template brief has no sources yet" codeloop check brief $SHAPE
+printf -- '- source: https://a.test/docs — a\n- source: https://b.test/docs — b\n- source: https://c.test/docs — c\n' >> $BF
+expect 0 "check brief passes once three sources are cited" codeloop check brief $SHAPE
+expect 0 "next moves brief to interview" sh -c "codeloop next $SHAPE | grep -q '$SHAPE moved to interview'"
+
+expect 1 "check questions fails with none asked" codeloop check questions $SHAPE --min 3
+codeloop ask $SHAPE 'Which skills can publish?' --recommended 'Any the workspace owns' --as agent > /dev/null
+codeloop ask $SHAPE 'Who approves a pack?' --recommended 'The workspace owner' --as agent > /dev/null
+codeloop ask $SHAPE 'Where does it appear?' --recommended 'The workspace catalog' --as agent > /dev/null
+codeloop answer $SHAPE 1 --accept > /dev/null && codeloop answer $SHAPE 2 --accept > /dev/null && codeloop answer $SHAPE 3 --accept > /dev/null
+expect 0 "next moves interview to breakdown" sh -c "codeloop next $SHAPE | grep -q '$SHAPE moved to breakdown'"
+
+BD=shape/$SHAPE/breakdown.md
+cat > $BD <<'MD'
+# Epic: Publish a skill pack from the web app
+hypothesis: letting a workspace publish a pack grows weekly active packs
+metric: packs_published_per_week
+
+## Stories
+- S1 [S] See my skills listed in the web app · exists: unlock packages/api/skills.ts · done_when: open /skills and see the list · depends_on: S2
+- S2 [M] Pick skills into a draft pack · exists: build · done_when: a draft pack with two skills saved and reopened · depends_on: none
+
+## Later
+- Versions and deprecation
+MD
+expect 1 "check breakdown fails on a forward dependency" codeloop check breakdown $SHAPE
+sed -i.bak 's/depends_on: S2/depends_on: none/' $BD && rm $BD.bak
+expect 0 "check breakdown passes once S1 no longer depends on a later story" codeloop check breakdown $SHAPE
+expect 0 "next moves breakdown to rank" sh -c "codeloop next $SHAPE | grep -q '$SHAPE moved to rank'"
+expect 1 "check breakdown --ranked fails with no rice on either story" codeloop check breakdown $SHAPE --ranked
+perl -pi -e 's/depends_on: none$/depends_on: none · rice: R=3 I=2 C=3 E=1/ if /^- S1/' $BD
+perl -pi -e 's/depends_on: none$/depends_on: none · rice: R=2 I=2 C=2 E=2/ if /^- S2/' $BD
+expect 0 "check breakdown --ranked passes once every story carries a rice part" codeloop check breakdown $SHAPE --ranked
+expect 0 "advance parks the card at the plan gate" sh -c "codeloop next $SHAPE | grep -q 'waiting for you'"
+json "the card is parked at the rank stage's plan gate" "d.stage==='rank' && d.gate==='plan' && d.awaiting==='owner'" codeloop card show $SHAPE --json
+
+expect 0 "owner approves the plan: the shape card finishes and queues its stories" sh -c "codeloop approve $SHAPE --as owner | grep -q '$SHAPE done'"
+EPIC=.codeloop/wiki/epics/publish-a-skill-pack-from-the-web-app.md
+expect 0 "the epic page was written with the stories table" sh -c "test -f $EPIC && grep -q 'hypothesis: letting a workspace publish a pack grows weekly active packs' $EPIC && grep -q '| S1 |' $EPIC && grep -q '| S2 |' $EPIC"
+S1ID=$(codeloop card list --json | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.find(c=>c.split_from==='$SHAPE' && c.title.startsWith('See my skills')).id)")
+S2ID=$(codeloop card list --json | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.find(c=>c.split_from==='$SHAPE' && c.title.startsWith('Pick skills')).id)")
+json "story one started in build/work; story two sits queued behind it with after set" \
+  "d.find(c=>c.id==='$S1ID').stage==='work' && d.find(c=>c.id==='$S2ID').stage==='queued' && d.find(c=>c.id==='$S2ID').after==='$S1ID'" \
+  codeloop card list --json
+
+touch "$S1ID.flag"
+expect 0 "finishing story one" sh -c "codeloop card advance $S1ID | grep -q '$S1ID done'"
+json "story two is still queued: finishing story one alone does not promote it" "d.find(c=>c.id==='$S2ID').stage==='queued'" codeloop card list --json
+expect 0 "run promotes story two now that the story it is after is done" codeloop run
+json "story two is no longer queued" "d.find(c=>c.id==='$S2ID').stage!=='queued'" codeloop card list --json
 cd "$PROJECT"
 
 echo

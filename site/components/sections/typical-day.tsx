@@ -3,6 +3,7 @@
 type Actor = 'Agent' | 'You' | 'Reviewer';
 
 const STAGES: { stage: string; actor: Actor[]; does: string; moves: string; gate?: boolean }[] = [
+  { stage: 'Shape', actor: ['Agent', 'You'], does: 'A problem in; an epic of small, ordered stories out', moves: 'You approve the plan; stories queue in order', gate: true },
   { stage: 'Research', actor: ['Agent'], does: 'Reads the code, cites sources, gives a verdict', moves: 'Check: 3 sources and a verdict' },
   { stage: 'Interview', actor: ['Agent', 'You'], does: 'Agent asks; you answer from the inbox', moves: 'Check: 3 questions answered' },
   { stage: 'Mock', actor: ['Agent'], does: 'Draws each screen with its states', moves: 'Check: every screen drawn' },
@@ -34,7 +35,7 @@ export function TypicalDay() {
           Enable agents to act at each stage of the build workflow, with checks to ensure the story is ready for the next stage.
         </p>
       </div>
-      <ol className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
         {STAGES.map((s, i) => (
           <li key={s.stage} className="flex flex-col gap-3 bg-card p-5">
             <div className="flex items-center justify-between">

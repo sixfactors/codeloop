@@ -36,6 +36,8 @@ export interface StoryFields {
   metric?: string;
   /** Weeks; replaces the feature's effort in this card's RICE score. */
   effort?: number;
+  /** A command that exits 0 or a screen a person opens; carried from a shape breakdown's story line onto its build card. */
+  done_when?: string;
 }
 
 /** Fields a card carries besides the story standard's. */
@@ -44,6 +46,8 @@ export interface CardExtras {
   ticket?: string;
   /** The card this one was split from (`card split`); siblings share its feature. */
   split_from?: string;
+  /** The card this one is queued behind: it holds no lane slot until that card reaches `done`. */
+  after?: string;
 }
 
 export interface Card extends StoryFields, CardExtras {
@@ -83,9 +87,11 @@ export const PROPOSED = 'proposed';
 export const PROPOSAL_GATE = 'proposal';
 /** A proposal the owner turned down. */
 export const DROPPED = 'dropped';
+/** A story queued behind another by a shape breakdown's `on_done.queue`: it holds no lane slot until `after` reaches `done` (or, with no `after`, until wip opens up). `codeloop run` promotes it; nothing else does, because the owner's plan approval already covers it. */
+export const QUEUED = 'queued';
 
-/** In its lane and not finished. A proposal, promoted or not yet, is neither started nor counted until the owner promotes it. */
-export const inLane = (card: { stage: string }) => card.stage !== DONE && card.stage !== PROPOSED && card.stage !== DROPPED;
+/** In its lane and not finished. A proposal or a queued story is neither started nor counted until it is promoted. */
+export const inLane = (card: { stage: string }) => card.stage !== DONE && card.stage !== PROPOSED && card.stage !== DROPPED && card.stage !== QUEUED;
 
 /** A check, gate or permission said no. The CLI maps this to exit code 2. */
 export class RefusalError extends Error {

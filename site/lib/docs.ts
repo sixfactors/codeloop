@@ -28,6 +28,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Stages and checks', href: '/docs/concepts/stages-and-checks' },
       { title: 'The inbox', href: '/docs/concepts/the-inbox' },
       { title: 'Initiatives, epics, features and priority', href: '/docs/concepts/initiatives-epics-features-and-priority' },
+      { title: 'Shape a problem into stories', href: '/docs/concepts/shape-a-problem-into-stories' },
       { title: 'Wiki and learning', href: '/docs/concepts/wiki-and-learning' },
       { title: 'Cloud and hosting', href: '/docs/concepts/cloud-and-hosting' },
       { title: 'How codeloop keeps an agent honest', href: '/docs/concepts/how-codeloop-keeps-an-agent-honest' },

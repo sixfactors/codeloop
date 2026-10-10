@@ -8,10 +8,14 @@ import { researchSummary } from './research.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
-import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
+import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
+// Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
+// epic page and build stories. Imported here the same way researchSummary and appendFindings are:
+// engine.ts drives a stage's domain-specific side effect without owning its parsing.
+import { queueBreakdown } from './shape.js';
 
 export type Role = 'owner' | 'reviewer' | 'agent';
 
@@ -346,6 +350,77 @@ export function createCard(
   return card;
 }
 
+/**
+ * A card made directly at `QUEUED`: it holds no lane slot (`inLane` excludes it), so it is never
+ * subject to wip. `promoteQueued` moves it into the lane's first stage once it is ready. Used by
+ * the shape workflow's on_done.queue to make every story after the first, which must wait for the
+ * one before it regardless of wip, and to make the first one too when wip refused it outright.
+ */
+export function queueCard(
+  projectDir: string,
+  input: { lane: string; title: string; id?: string; role?: Role | 'engine'; note?: string; fields?: CardFields } & Clock,
+): Card {
+  const lane = loadLane(projectDir, input.lane);
+  if (lane.stages.length === 0) throw new RefusalError(`lane ${lane.id} has no stages`);
+  const now = input.now ?? clock();
+  const file = readCards(projectDir);
+  const id = input.id ?? nextCardId(file.cards);
+  if (!CARD_ID.test(id)) throw new RefusalError(`card id "${id}" must be letters, a dash and digits, like c-001 or CL-12`);
+  if (file.cards.some(c => c.id === id)) throw new RefusalError(`card "${id}" already exists`);
+  const at = now.toISOString();
+  const card: Card = {
+    id,
+    title: input.title,
+    ...input.fields,
+    lane: lane.id,
+    laneVersion: lane.version,
+    stage: QUEUED,
+    retries: {},
+    evidence: [],
+    events: [event(now, input.role ?? 'agent', 'queue', QUEUED, input.note)],
+    createdAt: at,
+    updatedAt: at,
+  };
+  writeCards(projectDir, file, [...file.cards, card]);
+  return card;
+}
+
+/**
+ * Promotes every queued card that is ready: its `after` card (if it has one) is `done`, and its
+ * lane has room under wip. Only `codeloop run` calls this (src/lib/run.ts) — nothing else promotes
+ * a queued card, because the owner's approval of the plan that queued it is the only approval it needs.
+ */
+export function promoteQueued(projectDir: string, opts: { lane?: string } & Clock = {}): Card[] {
+  const now = opts.now ?? clock();
+  const promoted: Card[] = [];
+  // Each iteration promotes at most one card, so a lane's wip is re-checked fresh after every
+  // promotion instead of being computed once against a board that is about to change under it.
+  for (let i = 0; i < 1000; i++) {
+    const file = readCards(projectDir);
+    const ready = file.cards.find(c => {
+      if (c.stage !== QUEUED) return false;
+      if (opts.lane && c.lane !== opts.lane) return false;
+      if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
+      const lane = loadLane(projectDir, c.lane);
+      const active = file.cards.filter(x => x.lane === c.lane && inLane(x)).length;
+      return lane.wip === undefined || active < lane.wip;
+    });
+    if (!ready) break;
+    const lane = loadLane(projectDir, ready.lane);
+    const card: Card = {
+      ...ready,
+      stage: lane.stages[0].id,
+      laneVersion: lane.version,
+      events: [...ready.events, event(now, 'engine', 'promote', lane.stages[0].id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`)],
+      updatedAt: now.toISOString(),
+    };
+    parkIfOutward(card, lane, now);
+    writeCards(projectDir, file, replace(file.cards, card));
+    promoted.push(card);
+  }
+  return promoted;
+}
+
 export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
   let before = findCard(file.cards, ref);
@@ -468,6 +543,17 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     }
   }
   writeCards(projectDir, file, cards);
+  // Runs as its own read-modify-write, after the write above has committed the shape card as done:
+  // queueBreakdown makes new cards and wiki pages of its own, so folding it into the write above
+  // would mean this advance's compare-and-swap loses the race against queueBreakdown's.
+  if (!next && lane.on_done?.queue) {
+    try {
+      queueBreakdown(projectDir, card.id, lane.on_done.queue, now);
+    } catch (e) {
+      if (!(e instanceof RefusalError)) throw e;
+      recordEvent(projectDir, card.id, () => ({ action: 'on_done-failed', note: e.message }), now);
+    }
+  }
   return { card, outcome: !next ? 'done' : card.gate ? 'parked' : 'moved', output, started, because };
 }
 

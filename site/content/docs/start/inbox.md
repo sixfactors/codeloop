@@ -27,6 +27,7 @@ Numbers
   market     active 0  waiting 0  done 0  human turns/card -  first pass -
   plan       active 0  waiting 0  done 0  human turns/card -  first pass -
   scan       active 0  waiting 0  done 0  human turns/card -  first pass -
+  shape      active 0  waiting 0  done 0  human turns/card -  first pass -
   triage     active 0  waiting 0  done 0  human turns/card -  first pass -
 ```
 

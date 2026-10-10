@@ -92,6 +92,8 @@ export interface Transport {
   createCard(input: NewCardInput, opts?: RoleOption): Promise<CardCreated>;
   proposeCard(input: ProposalInput, opts?: RoleOption): Promise<CardProposed>;
   advanceCard(ref: string | undefined, opts?: { event?: string }): Promise<AdvanceReport>;
+  /** Starts the shape workflow: a problem statement, so no story title check runs. */
+  shapeProblem(problem: string, opts?: RoleOption): Promise<CardCreated>;
   approveCard(ref: string, opts?: RoleOption & { note?: string }): Promise<DecisionReport>;
   rejectCard(ref: string, note: string, opts?: RoleOption): Promise<DecisionReport>;
   brief(ref: string): Promise<string>;
@@ -175,6 +177,8 @@ export class CodeloopClient {
     propose: (input: ProposalInput, opts?: RoleOption) => this.transport.proposeCard(input, opts),
     /** Runs the stage's check and moves the card if it passes; with no ref, the one active card. */
     advance: (ref?: string, opts?: { event?: string }) => this.transport.advanceCard(ref, opts),
+    /** `codeloop shape "<problem>"`: starts the shape workflow (brief → interview → breakdown → rank). */
+    shape: (problem: string, opts?: RoleOption) => this.transport.shapeProblem(problem, opts),
     approve: (ref: string, opts?: RoleOption & { note?: string }) => this.transport.approveCard(ref, opts),
     reject: (ref: string, note: string, opts?: RoleOption) => this.transport.rejectCard(ref, note, opts),
     /** What an agent is given to do the card's current stage. */
