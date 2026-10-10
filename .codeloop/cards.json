@@ -1,5 +1,5 @@
 {
-  "version": 229,
+  "version": 233,
   "cards": [
     {
       "id": "CL-001",
@@ -3531,6 +3531,110 @@
       ],
       "createdAt": "2026-10-10T03:14:45.427Z",
       "updatedAt": "2026-10-10T03:14:45.427Z"
+    },
+    {
+      "id": "c-090",
+      "title": "Refresh stale lanes after an upgrade",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "init never overwrites .codeloop/lanes, so a repo set up on 0.3.0 keeps a build lane whose stages name skills (design, plan) that no longer ship; the brief then points at the wrong skill and file. codeloop update should report lanes older than the shipped templates and offer update --lanes <id> to replace one, keeping the person's edits visible as a diff.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Refresh stale lanes after an upgrade",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.299Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.299Z",
+      "updatedAt": "2026-10-10T04:22:44.299Z"
+    },
+    {
+      "id": "c-091",
+      "title": "Seed the wiki without one-line stubs",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "wiki init --from-repo wrote 116 pages on a large monorepo and 105 were one-line stubs (one per route or entity). Collapse stubs into one index page per folder and write a page only when there is a paragraph of content, so inject and the brief carry signal.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Seed the wiki without one-line stubs",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.453Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.453Z",
+      "updatedAt": "2026-10-10T04:22:44.453Z"
+    },
+    {
+      "id": "c-092",
+      "title": "Refuse an out-of-plan edit in Cursor",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "Cursor gets presence hooks only; nothing stops an edit outside the active story. Find the Cursor hook that can veto a tool call (or the nearest equivalent) and wire guard edit to it, the way the Claude PreToolUse hook is.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Refuse an out-of-plan edit in Cursor",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.606Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.606Z",
+      "updatedAt": "2026-10-10T04:22:44.606Z"
+    },
+    {
+      "id": "c-093",
+      "title": "Adopt a repo that already has its own board",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "A repo with its own delivery board (a features JSON with its own ids and a Feature: trailer rule in CLAUDE.md) gets a second board and a second id scheme from codeloop. Decide between importing that board into cards.json, bridging ids on the card (ticket:), or declaring codeloop the board; then make init detect the file and say which it did.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Adopt a repo that already has its own board",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.753Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.753Z",
+      "updatedAt": "2026-10-10T04:22:44.753Z"
     }
   ]
 }
