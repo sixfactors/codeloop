@@ -1,5 +1,5 @@
 {
-  "version": 228,
+  "version": 229,
   "cards": [
     {
       "id": "CL-001",
@@ -3505,6 +3505,32 @@
       "metric": "returning teams",
       "spec": "specs/088-sign-in-to-the-hosted-board",
       "feature": "hosted-board"
+    },
+    {
+      "id": "c-089",
+      "title": "Turn a problem into an epic of shippable stories",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "Shape workflow: brief, interview, breakdown with check breakdown, rank, owner approves, stories queued in build. Spec: chanl-platform docs/plans/codeloop/2026-10-09-shape-workflow.md",
+      "source": "docs/plans/codeloop/2026-10-09-shape-workflow.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-09-shape-workflow.md:Turn a problem into an epic of shippable stories",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T03:14:45.427Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-09-shape-workflow.md"
+        }
+      ],
+      "createdAt": "2026-10-10T03:14:45.427Z",
+      "updatedAt": "2026-10-10T03:14:45.427Z"
     }
   ]
 }
