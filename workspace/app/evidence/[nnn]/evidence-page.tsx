@@ -29,7 +29,7 @@ export function EvidencePage({ nnn }: { nnn: string }) {
   const files = ev.data?.files ?? [];
   return (
     <PageLayout icon={FolderOpen} backHref={routes.card(`c-${real}`)} breadcrumbs={crumbs} title={`Evidence ${real}`} description={ev.isLoading ? undefined : `${files.length} files`}>
-      {ev.isLoading ? <PageSkeleton statCards={0} showToolbar={false} tableRows={4} /> : !files.length ? <EmptyState icon={FolderOpen} title="Empty folder" description="No evidence has been written for this card yet. Verify writes its proof here." /> : (
+      {ev.isLoading ? <PageSkeleton statCards={0} showToolbar={false} tableRows={4} /> : !files.length ? <EmptyState icon={FolderOpen} title="Empty folder" description="No evidence has been written for this story yet. Verify writes its proof here." /> : (
         <div className="flex flex-col gap-4">
           <Table>
             <TableHeader><TableRow><TableHead>File</TableHead><TableHead>Kind</TableHead><TableHead>Path</TableHead></TableRow></TableHeader>

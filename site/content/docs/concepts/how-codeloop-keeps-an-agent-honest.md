@@ -14,7 +14,7 @@ do this, in order of how hard they are to ignore:
 |---|---|---|
 | Context files | `CLAUDE.md`, `.cursor/rules/codeloop.mdc`, `.github/copilot-instructions.md`, `AGENTS.md` | Yes, these are read, not enforced |
 | MCP tools | `brief`, `ask`, `answer`, `check`, `propose`, `inbox`, plus the existing card tools | Yes, if the host never calls them |
-| Hooks + git + watch | PreToolUse/UserPromptSubmit/Stop (Claude Code), sessionStart/sessionEnd/subagentStart/subagentStop (Cursor), pre-commit/pre-push, `watch --guard` | No, these run outside the chat |
+| Hooks + git + watch | SessionStart/PreToolUse/UserPromptSubmit/Stop (Claude Code), sessionStart/sessionEnd/subagentStart/subagentStop (Cursor), pre-commit/pre-push, `watch --guard` | No, these run outside the chat |
 
 ## Layer 1: context files
 
@@ -60,8 +60,9 @@ existing hook):
 
 | Event | Runs | Effect |
 |---|---|---|
+| `SessionStart` | `codeloop guard session` | Prints the active story and the instruction to run its brief; with none active, the top three open stories by priority band and the `card activate` command, so the session starts from the board's order |
 | `PreToolUse` on `Edit\|Write\|MultiEdit` | `codeloop guard edit` | Exits 2 with no active card, or when the path is outside the active card's plan and the plan names files |
-| `UserPromptSubmit` | `codeloop guard prompt` | Prints the active card, its stage, open-question count, and flags a prompt whose words match none of the card's title (a heuristic, stated as one) |
+| `UserPromptSubmit` | `codeloop guard prompt` | Prints the active card, its stage, open-question count, and flags a prompt whose words match none of the card's title (a heuristic, stated as one). Exits 2, which blocks the prompt, when the repo has open stories and none is active; a repo with no stories yet passes |
 | `Stop` | `codeloop wiki capture --quiet` | No-ops without a title; the hook is a reminder slot, not yet an auto-summarizer |
 
 **Cursor** (same install, writes `.cursor/hooks.json` from `templates/hooks/cursor-hooks.json`):
@@ -92,8 +93,8 @@ section, and serving it at `/api/inbox`, is not built yet, today it is a file yo
 
 | Host | Advisory (layer 1) | Tool-gated (layer 2) | Enforced regardless of chat (layer 3) |
 |---|---|---|---|
-| Claude Code | `CLAUDE.md` block | MCP, if configured | `guard edit`/`guard prompt` on every edit and prompt, `Stop` hook |
-| Cursor | `.cursor/rules/codeloop.mdc` | MCP, if configured | presence only, no PreToolUse-equivalent guard shipped yet (see caveat below) |
+| Claude Code | `CLAUDE.md` block | MCP (`init` writes `.mcp.json`) | `guard edit`/`guard prompt` on every edit and prompt, `Stop` hook |
+| Cursor | `.cursor/rules/codeloop.mdc` | MCP (`init` writes `.cursor/mcp.json`) | presence only, no PreToolUse-equivalent guard shipped yet (see caveat below) |
 | Copilot (VS Code) | `.github/copilot-instructions.md` | MCP, if configured | none, Copilot has no hook system; context + MCP are the whole story |
 | Headless (CI, a scripted agent) | `AGENTS.md`, if the harness reads it | MCP, if wired | git hooks and `watch --guard` still run, since they are outside any chat |
 

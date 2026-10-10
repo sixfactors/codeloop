@@ -12,6 +12,9 @@ import { withLock } from './lock.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+// A tick keeps advancing one card stage by stage until its own check stops it. A lane whose
+// stages keep passing into each other with no gate would otherwise loop forever.
+const MAX_ADVANCES_PER_CARD = 20;
 
 interface LastRun {
   at: string;
@@ -73,14 +76,26 @@ export function runDue(projectDir: string, now: Date = clock(), filter: RunFilte
   const result = withLock(file, () => startDue(projectDir, file, now, filter));
 
   for (const { id } of active(projectDir, filter)) {
-    try {
-      result.advanced.push({ id, outcome: advanceCard(projectDir, id, { now, unattended: true }).outcome });
-    } catch (e) {
-      if (!(e instanceof RefusalError)) throw e;
-      result.advanced.push({ id, outcome: 'refused', note: e.message });
-    }
+    result.advanced.push(advanceUntilStop(projectDir, id, now));
   }
   return result;
+}
+
+// Keeps calling advanceCard on the same card, which re-reads it each time, until the card stops
+// moving on its own: a failed check, a gate, stuck, done, or the safety cap.
+function advanceUntilStop(projectDir: string, id: string, now: Date): RunResult['advanced'][number] {
+  let last: RunResult['advanced'][number] = { id, outcome: 'refused' };
+  for (let i = 0; i < MAX_ADVANCES_PER_CARD; i++) {
+    try {
+      last = { id, outcome: advanceCard(projectDir, id, { now, unattended: true }).outcome };
+    } catch (e) {
+      if (!(e instanceof RefusalError)) throw e;
+      last = { id, outcome: 'refused', note: e.message };
+      break;
+    }
+    if (last.outcome !== 'moved') break;
+  }
+  return last;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -191,14 +206,22 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
   return turn;
 }
 
-/** `runDue`, with an agent started first on each card whose stage check does not pass yet. One stage per card. */
+/** `runDue`, with an agent started first on each card whose stage check does not pass yet. Each
+ *  card's stage keeps advancing until its own check stops it: a failed check, a gate, stuck, done,
+ *  the agent's max_runs_per_day, or the safety cap. */
 export async function runDueWithAgent(projectDir: string, agent: AgentConfig, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
   const file = join(projectDir, LAST_RUN);
   const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
 
   for (const { id, stage } of active(projectDir, filter)) {
-    const turn = await workCard(projectDir, id, stage, agent, now);
-    if (turn.agent) result.agents!.push(turn.agent);
+    let current = stage;
+    let turn: CardTurn = { advanced: { id, outcome: 'refused' } };
+    for (let i = 0; i < MAX_ADVANCES_PER_CARD; i++) {
+      turn = await workCard(projectDir, id, current, agent, now);
+      if (turn.agent) result.agents!.push(turn.agent);
+      if (turn.busy || turn.advanced.outcome !== 'moved') break;
+      current = findCard(readCards(projectDir).cards, id).stage;
+    }
     if (turn.busy) continue;
     result.advanced.push(turn.advanced);
   }

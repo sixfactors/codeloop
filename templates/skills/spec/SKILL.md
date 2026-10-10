@@ -4,6 +4,7 @@ stage: spec
 lane: build
 inputs:
   - docs/story-standard.md
+  - .codeloop/wiki/decisions/*.md
   - specs/{id}/research.md
   - specs/{id}/interview.md
   - templates/spec/spec.md

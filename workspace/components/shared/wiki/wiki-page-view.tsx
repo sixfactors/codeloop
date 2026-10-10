@@ -73,9 +73,9 @@ export function WikiPageView({ path, onEdit, canEdit }: { path: string; onEdit: 
         <EmptyState
           icon={FileText}
           title={`No wiki page for ${cardId} yet`}
-          description="The engine writes a card's page when it ships: story, decisions at each gate, evidence and the pages it touched. Until then you can start it by hand."
-          action={canEdit ? { label: 'Start the card page', onClick: () => void create.mutateAsync({ path, write: { frontmatter: { title: cardId, card: cardId, status: 'open' }, body: `## Story\n\n## Decisions\n\n## Links\n\n- card: /cards/${cardId}/\n` } }).then(onEdit) } : undefined}
-          secondaryAction={{ label: 'Open the card', href: routes.card(cardId) }}
+          description="The engine writes a story's page when it ships: story, decisions at each gate, evidence and the pages it touched. Until then you can start it by hand."
+          action={canEdit ? { label: 'Start the story page', onClick: () => void create.mutateAsync({ path, write: { frontmatter: { title: cardId, card: cardId, status: 'open' }, body: `## Story\n\n## Decisions\n\n## Links\n\n- story: /cards/${cardId}/\n` } }).then(onEdit) } : undefined}
+          secondaryAction={{ label: 'Open the story', href: routes.card(cardId) }}
         />
       );
     }

@@ -24,7 +24,7 @@ Every command ends with a `Next:` line. It names the skill to run, the file to w
 
 The title must say what the user can now do, and the story needs all three parts. `start` refuses a title with a flag, a path or a code term in it, and a story with no `so that`. The [story standard](/docs/reference/story-standard) has the full check.
 
-The board does the same thing: `codeloop serve`, then the New card button on the Cards view opens a dialog with the title, persona, "I can", "so that", size and feature fields, and shows the same refusal inline when the title names a mechanism.
+The board does the same thing: `codeloop serve`, then the New story button on the Cards view opens a dialog with the title, persona, "I can", "so that", size and feature fields, and shows the same refusal inline when the title names a mechanism.
 
 ## Read the card
 

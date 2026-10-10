@@ -35,7 +35,7 @@ export const loginCommand = new Command('login')
       console.log('  Create a GitHub Personal Access Token at:');
       console.log(chalk.cyan('  https://github.com/settings/tokens/new'));
       console.log();
-      console.log('  Required scopes: (none — public read access is sufficient)');
+      console.log('  Required scopes: (none, public read access is sufficient)');
       console.log();
       console.log('  Then run:');
       console.log(chalk.dim('  codeloop login --token ghp_xxxx'));

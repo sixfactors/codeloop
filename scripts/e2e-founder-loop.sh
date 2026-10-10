@@ -53,6 +53,9 @@ printf 'lanes:\n  auto_start: true\n' >> .codeloop/config.yaml
 # --- a fresh repo is usable straight after init --------------------------------------------
 expect 0 "init wrote the skills index" test -s .codeloop/skills.index.yaml
 expect 0 "init ends by saying what to type next" sh -c "codeloop init --tools claude --starter generic | grep -q 'codeloop start \"<your feature>\"'"
+# init wrote a real agents: block for whichever tool is on this machine's PATH; strip it so the
+# rest of this project's steps keep testing the no-agent path (POST run with no agent configured).
+perl -0777 -pi -e 's/^agents:\n(?:[ \t].*\n)*//m' .codeloop/config.yaml
 expect 0 "lane lint passes on the shipped lanes right after init" codeloop lane lint
 expect 0 "pack build works right after init" codeloop pack build --out dist/fresh-pack.json
 json "no packed skill has an empty description" "d.skills.length>=10 && d.skills.every(s=>s.description)" cat dist/fresh-pack.json
@@ -452,6 +455,9 @@ case "$stage" in
 esac
 SH
 chmod +x fake-agent.sh
+# init wrote a real agents: block for whichever tool is on this machine's PATH (part of what makes
+# run --agent work right after init); strip it so the next check can set up the no-agent premise.
+perl -0777 -pi -e 's/^agents:\n(?:[ \t].*\n)*//m' .codeloop/config.yaml
 expect 2 "run --agent with no agent configured is refused" codeloop run --agent
 cat >> .codeloop/config.yaml <<'YAML'
 agents:
@@ -463,11 +469,11 @@ RUNS=.codeloop/state/agent-runs
 codeloop start "Agent export" > /dev/null
 expect 0 "brief names the output and the check and carries the skill text" sh -c "codeloop brief 1 --out brief.md > /dev/null && grep -q '^Output: specs/001-agent-export/research.md' brief.md && grep -q 'codeloop check file specs/001-agent-export/research.md --has verdict:' brief.md && grep -q '^## Skill: design' brief.md && grep -q 'Do not run .codeloop approve' brief.md"
 expect 0 "run --agent --dry-run says what would start and starts nothing" sh -c "codeloop run --agent fake --dry-run | grep -q 'c-001: would start agent fake on research' && test ! -e .codeloop/state"
-expect 0 "run --agent: the agent does research, the check passes, the card moves" sh -c "codeloop run --agent fake | tee run1.out | grep -q 'c-001: agent fake ran research (exit 0' && grep -q 'c-001: moved' run1.out"
-json "the card is at spec with an agent-run event and its log" "d.stage==='spec' && !d.gate && d.events.some(e=>e.action==='agent-run' && e.agent==='fake' && e.exit===0 && e.log==='$RUNS/c-001-research-1.log')" codeloop card show c-001 --json
+# One run keeps going: the agent does research, the check passes, moves to spec, the agent does
+# spec too, and the card waits at the spec gate - it does not stop after the first stage any more.
+expect 0 "run --agent: the agent does research then spec, and the card waits at the spec gate" sh -c "codeloop run --agent fake > run1.out && grep -q 'c-001: agent fake ran research (exit 0' run1.out && grep -q 'c-001: agent fake ran spec (exit 0' run1.out && grep -q 'c-001: waiting for you' run1.out"
+json "the card is waiting at the spec gate with both agent-run events and their logs" "d.stage==='spec' && d.gate==='spec' && d.awaiting==='owner' && d.events.filter(e=>e.action==='agent-run').length===2 && d.events.some(e=>e.action==='agent-run' && e.agent==='fake' && e.exit===0 && e.log==='$RUNS/c-001-research-1.log') && d.events.some(e=>e.action==='agent-run' && e.agent==='fake' && e.exit===0 && e.log==='$RUNS/c-001-spec-1.log')" codeloop card show c-001 --json
 expect 0 "the agent ran as CODELOOP_ROLE=agent" grep -q 'fake agent: c-001 research, role agent' $RUNS/c-001-research-1.log
-expect 0 "run --agent again: the agent writes the spec and the card stops at the gate" sh -c "codeloop run --agent fake | tee run2.out | grep -q 'c-001: agent fake ran spec (exit 0' && grep -q 'c-001: waiting for you' run2.out"
-json "the card waits for the owner at the spec gate" "d.stage==='spec' && d.gate==='spec' && d.awaiting==='owner'" codeloop card show c-001 --json
 expect 0 "run --agent while the card waits starts no agent" sh -c "codeloop run --agent fake | grep -q '0 advanced, 0 agent runs' && test \"\$(ls $RUNS | wc -l | tr -d ' ')\" = 2"
 expect 0 "the owner approves the spec" sh -c "codeloop approve 1 --as owner | grep -q 'c-001 moved to ship'"
 expect 0 "run --agent after the approval: the agent ships and the card finishes" sh -c "codeloop run --agent fake | tee run3.out | grep -q 'c-001: agent fake ran ship (exit 0' && grep -q 'c-001: done' run3.out"

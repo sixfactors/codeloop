@@ -46,7 +46,7 @@ export function AskQuestionDialog({ card, open, onOpenChange }: { card: CardT; o
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="ask-recommended">Recommended answer <span className="font-normal text-muted-foreground">(optional)</span></Label>
-            <Input id="ask-recommended" value={recommended} onChange={(e) => setRecommended(e.target.value)} placeholder="CSV; XLSX in a later card" data-testid="ask-question-recommended" />
+            <Input id="ask-recommended" value={recommended} onChange={(e) => setRecommended(e.target.value)} placeholder="CSV; XLSX in a later story" data-testid="ask-question-recommended" />
           </div>
           {refusal ? <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" data-testid="ask-question-refusal">{refusal}</p> : null}
           <DialogFooter>

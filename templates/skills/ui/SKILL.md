@@ -3,6 +3,7 @@ name: ui
 stage: build
 lane: build
 inputs:
+  - .codeloop/wiki/architecture/*.md
   - specs/{id}/spec.md
   - "the sdk stage's hooks for the data this card shows"
   - "the app's existing component registry (components/ui, components/shared, components/<feature>)"

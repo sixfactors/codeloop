@@ -27,9 +27,9 @@ const humanise = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toU
 
 // Known keys get a label and a unit; the stat row is the four headline numbers.
 const HEADLINE: { key: string; label: string; fmt: (v: unknown) => string | undefined }[] = [
-  { key: 'cards', label: 'Cards', fmt: (v) => num(v, 0) },
+  { key: 'cards', label: 'Stories', fmt: (v) => num(v, 0) },
   { key: 'done', label: 'Done', fmt: (v) => num(v, 0) },
-  { key: 'human_turns_per_card', label: 'Human turns per card', fmt: (v) => num(v) },
+  { key: 'human_turns_per_card', label: 'Human turns per story', fmt: (v) => num(v) },
   { key: 'unattended_span_hours', label: 'Unattended span', fmt: hours },
 ];
 const RATES: { key: string; label: string; fmt: (v: unknown) => string | undefined }[] = [
@@ -37,7 +37,7 @@ const RATES: { key: string; label: string; fmt: (v: unknown) => string | undefin
   { key: 'rework', label: 'Rework', fmt: (v) => num(v, 0) },
   { key: 'stuck_rate', label: 'Stuck', fmt: pct },
   { key: 'first_pass_rate', label: 'First-pass verify', fmt: pct },
-  { key: 'cost_per_card', label: 'Cost per card', fmt: (v) => (typeof v === 'number' ? `$${num(v, 2)}` : undefined) },
+  { key: 'cost_per_card', label: 'Cost per story', fmt: (v) => (typeof v === 'number' ? `$${num(v, 2)}` : undefined) },
 ];
 
 export default function StatsPage() {
@@ -47,7 +47,7 @@ export default function StatsPage() {
     return (
       <PageLayout icon={BarChart3} title="Stats" description="How the loop is running.">
         {isMissing(stats.error)
-          ? <EmptyState icon={BarChart3} title="Stats are not served yet" description="GET /api/stats is being added. Cost per card, human turns, first-pass verify, cycle time and unattended span land here." />
+          ? <EmptyState icon={BarChart3} title="Stats are not served yet" description="GET /api/stats is being added. Cost per story, human turns, first-pass verify, cycle time and unattended span land here." />
           : <InlineError title="Stats failed to load" error={stats.error} onRetry={() => stats.refetch()} />}
       </PageLayout>
     );
@@ -55,13 +55,13 @@ export default function StatsPage() {
 
   const data = (stats.data ?? {}) as Record<string, unknown>;
   const known = new Set([...HEADLINE, ...RATES].map((h) => h.key));
-  const headline: RecordStat[] = HEADLINE.map((h) => ({ label: h.label, value: h.fmt(data[h.key]) ?? '—', testId: `stat-${h.key}` }));
+  const headline: RecordStat[] = HEADLINE.map((h) => ({ label: h.label, value: h.fmt(data[h.key]) ?? '-', testId: `stat-${h.key}` }));
   const extras = Object.entries(data).filter(([k, v]) => !known.has(k) && (typeof v !== 'object' || v === null));
   const byGate = data.first_pass_rate_by_gate as Record<string, number> | undefined;
   const tables = Object.entries(data).filter(([k, v]) => k !== 'first_pass_rate_by_gate' && typeof v === 'object' && v !== null);
 
   return (
-    <PageLayout icon={BarChart3} title="Stats" description="How the loop is running: cards, human turns, unattended span, cycle time, first-pass verify.">
+    <PageLayout icon={BarChart3} title="Stats" description="How the loop is running: stories, human turns, unattended span, cycle time, first-pass verify.">
       <div className="flex flex-col gap-6">
         <RecordStatRow stats={headline} testId="stats-headline" />
         <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
@@ -72,7 +72,7 @@ export default function StatsPage() {
           <Card data-testid="stats-by-gate">
             <CardHeader>
               <CardTitle>First-pass rate by gate</CardTitle>
-              <CardDescription>Share of cards that cleared each gate on the first try.</CardDescription>
+              <CardDescription>Share of stories that cleared each gate on the first try.</CardDescription>
             </CardHeader>
             <CardContent>
               {byGate && Object.keys(byGate).length ? (
@@ -80,11 +80,11 @@ export default function StatsPage() {
                   <TableHeader><TableRow><TableHead>Gate</TableHead><TableHead className="text-right">First pass</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {Object.entries(byGate).map(([gate, rate]) => (
-                      <TableRow key={gate}><TableCell className="font-medium">{gate}</TableCell><TableCell className="text-right tabular-nums">{pct(rate) ?? '—'}</TableCell></TableRow>
+                      <TableRow key={gate}><TableCell className="font-medium">{gate}</TableCell><TableCell className="text-right tabular-nums">{pct(rate) ?? '-'}</TableCell></TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              ) : <EmptyState compact icon={Gauge} title="No gate has been passed yet" description="Rates appear once a card clears its first gate." />}
+              ) : <EmptyState compact icon={Gauge} title="No gate has been passed yet" description="Rates appear once a story clears its first gate." />}
             </CardContent>
           </Card>
         </div>

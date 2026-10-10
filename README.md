@@ -15,7 +15,7 @@ codeloop init --tools claude
 codeloop serve --owner --open
 ```
 
-`init` writes `.codeloop/` (eight lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and thirteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New card button or from the terminal:
+`init` writes `.codeloop/` (eight lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and thirteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New story button or from the terminal:
 
 ```sh
 codeloop start "Download every invoice as one CSV" \
@@ -69,7 +69,7 @@ Next: run the /api skill, then `codeloop next c-002`.
 
 The npm package is 0.4.0, published from `main` before the work below landed; its `--version` still prints 0.3.0. Everything below is on `main` as 0.4.1 and goes out with the next publish; until then it needs a clone or a tarball built from one:
 
-- the workspace board with New card, the Inbox page, Initiatives and the card drawer
+- the workspace board with New story, the Inbox page, Initiatives and the card drawer
 - story fields on a card (`--persona`, `--can`, `--so`, `--size`), the story check and a strict `spec check`
 - `ask` and `answer`, the questions band in the inbox, and the interview stage in the build lane
 - RICE on features, P1 to P4 bands, `feature`, `epic`, `initiative` and `card split` commands

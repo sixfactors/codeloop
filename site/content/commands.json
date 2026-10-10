@@ -1,6 +1,6 @@
 {
-  "version": "0.4.0",
-  "generatedAt": "2026-10-09T16:43:56.207Z",
+  "version": "0.4.1",
+  "generatedAt": "2026-10-10T02:24:41.140Z",
   "commands": [
     {
       "name": "init",
@@ -136,6 +136,10 @@
         {
           "signature": "--bg",
           "description": "Run in background"
+        },
+        {
+          "signature": "--guard",
+          "description": "Append a warning to .codeloop/state/warnings.jsonl when files change with no active card"
         }
       ],
       "commands": []
@@ -507,6 +511,14 @@
               "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
             }
           ],
+          "commands": []
+        },
+        {
+          "name": "card activate",
+          "usage": "codeloop card activate [options] <id>",
+          "description": "Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this",
+          "arguments": [],
+          "options": [],
           "commands": []
         }
       ]
@@ -1037,7 +1049,7 @@
         {
           "name": "check research",
           "usage": "codeloop check research [options] <card>",
-          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines",
+          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url>, <note>` lines",
           "arguments": [],
           "options": [
             {
@@ -1060,11 +1072,37 @@
           "commands": []
         },
         {
+          "name": "check artifact",
+          "usage": "codeloop check artifact [options] <card>",
+          "description": "Exit 1 unless the card's artifact (mock, system-design or workflow) meets its kind's anatomy: tokens, dark mode, no raw colour, valid mermaid, and every frame/layer/flow/actor the frontmatter names",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--kind <kind>",
+              "description": "mock | system-design | workflow, auto-detected from whichever artifact exists for the card when omitted"
+            }
+          ],
+          "commands": []
+        },
+        {
           "name": "check story",
           "usage": "codeloop check story [options] <card>",
           "description": "Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "check questions",
+          "usage": "codeloop check questions [options] <card>",
+          "description": "Exit 1 unless the card's interview has at least --min questions and every one of them has an answer",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--min <n>",
+              "description": "Questions the interview must hold (default: \"1\")"
+            }
+          ],
           "commands": []
         }
       ]
@@ -1162,6 +1200,53 @@
           "name": "mocks index",
           "usage": "codeloop mocks index [options]",
           "description": "Write docs/mocks/index.html: projects, then topics, then cards, newest first",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "artifact",
+      "usage": "codeloop artifact [options] [command]",
+      "description": "A card's artifact, mock, system design, or workflow, built from the shared templates so every artifact looks like the same product",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "artifact new",
+          "usage": "codeloop artifact new [options] <card>",
+          "description": "Create docs/artifacts/<project>/<topic>/<card-id>-<kind>.html from templates/artifacts/<kind>/template.html. `--kind mock` is the same engine as `codeloop mock new`: it writes docs/mocks/<project>/<topic>/<card-id>.html instead.",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--kind <kind>",
+              "description": "Which artifact to create: mock | system-design | workflow"
+            },
+            {
+              "signature": "--topic <topic>",
+              "description": "Folder the artifact is filed under, e.g. board"
+            },
+            {
+              "signature": "--from <card-id|latest|none>",
+              "description": "The artifact to build on: a card id, the newest of this kind in this topic, or none for the bare template (default: \"latest\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "artifacts",
+      "usage": "codeloop artifacts [options] [command]",
+      "description": "The artifact gallery: mocks, system designs and workflows, grouped by kind, topic and lineage",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "artifacts index",
+          "usage": "codeloop artifacts index [options]",
+          "description": "Write docs/artifacts/index.html: kind, then project, then topic, then cards, newest first",
           "arguments": [],
           "options": [],
           "commands": []
@@ -1342,7 +1427,7 @@
           "options": [
             {
               "signature": "--title <title>",
-              "description": "Page title"
+              "description": "Page title (required unless --quiet)"
             },
             {
               "signature": "--scope <glob...>",
@@ -1359,6 +1444,10 @@
             {
               "signature": "--card <id>",
               "description": "Card this came from"
+            },
+            {
+              "signature": "--quiet",
+              "description": "Used by the Claude Code Stop hook: exit 0 silently when no --title was given, instead of refusing (default: false)"
             }
           ],
           "commands": []
@@ -1394,6 +1483,35 @@
           "description": "Report broken links (exit 1), stale pages and duplicate titles",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki init",
+          "usage": "codeloop wiki init [options]",
+          "description": "Seed the wiki from the repo's own files instead of writing an empty tree",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--from-repo",
+              "description": "Scan README, docs, package manifests, Makefile/scripts, CI, deploy config, routes, schemas, git log and TODOs (default: false)"
+            },
+            {
+              "signature": "--write",
+              "description": "Write the pages (default is a dry run) (default: false)"
+            },
+            {
+              "signature": "--dry-run",
+              "description": "Print the outline without writing anything (the default) (default: false)"
+            },
+            {
+              "signature": "--force",
+              "description": "Overwrite pages that already exist (default: false)"
+            },
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
           "commands": []
         },
         {
@@ -1447,12 +1565,16 @@
     {
       "name": "render",
       "usage": "codeloop render [options]",
-      "description": "Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus an AGENTS.md block",
+      "description": "Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it",
       "arguments": [],
       "options": [
         {
           "signature": "--host <host>",
           "description": "claude | cursor | codex | all (default: \"all\")"
+        },
+        {
+          "signature": "--hooks",
+          "description": "Also install the Claude Code and Cursor hooks and the pre-commit/pre-push git guards (same as `codeloop init --hooks`) (default: false)"
         }
       ],
       "commands": []
@@ -1599,6 +1721,85 @@
       ]
     },
     {
+      "name": "guard",
+      "usage": "codeloop guard [options] [command]",
+      "description": "Hooks that enforce the codeloop protocol regardless of what the chat says",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "guard edit",
+          "usage": "codeloop guard edit [options] [path]",
+          "description": "PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard prompt",
+          "usage": "codeloop guard prompt [options]",
+          "description": "UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard diff",
+          "usage": "codeloop guard diff [options]",
+          "description": "Pre-commit hook: lists changed files outside the active card's plan; exits 1 when any are found and the plan has a files list",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--staged",
+              "description": "Compare the git index instead of the working tree (default: false)"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "presence",
+      "usage": "codeloop presence [options] [command]",
+      "description": "Presence files Cursor session hooks write under .codeloop/state/presence/ (serving this over HTTP as GET /api/presence is not built yet)",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "presence start",
+          "usage": "codeloop presence start [options]",
+          "description": "sessionStart hook: records host, session id and machine",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "presence end",
+          "usage": "codeloop presence end [options]",
+          "description": "sessionEnd hook: clears the presence file",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "presence event",
+          "usage": "codeloop presence event [options] <kind>",
+          "description": "subagentStart/subagentStop hooks: appends an event line to the session's presence log",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "whoami",
+      "usage": "codeloop whoami [options]",
+      "description": "This repo's active card, your git identity and role, and who else is present (from Cursor session hooks)",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
       "name": "install",
       "usage": "codeloop install [options] <source>",
       "description": "Install a skill from the registry, GitHub, or local path",
@@ -1687,6 +1888,82 @@
         }
       ],
       "commands": []
+    },
+    {
+      "name": "skill",
+      "usage": "codeloop skill [options] [command]",
+      "description": "Skills (templates/skills/) and their eval fixtures",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "skill list",
+          "usage": "codeloop skill list [options]",
+          "description": "Every skill under the skills dir",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print as JSON"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "skill show",
+          "usage": "codeloop skill show [options] <name>",
+          "description": "A skill's SKILL.md: its frontmatter and its body",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print as JSON"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "skill eval",
+          "usage": "codeloop skill eval [options] <name>",
+          "description": "Replay a skill's fixtures: the configured agent on the stage, the stage's check, then a graded run against checklist.md",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--fixture <id>",
+              "description": "Only this fixture (default: every fixture under the skill)"
+            },
+            {
+              "signature": "--agent <name>",
+              "description": "The configured agent to use (default agents.default, or the only one configured)"
+            },
+            {
+              "signature": "--min <0..1>",
+              "description": "Score a fixture must reach to pass (default: \"0.8\")"
+            },
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--fixtures-dir <dir>",
+              "description": "Fixtures dir, relative to the project root (default fixtures/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print the report as JSON instead of a table"
+            }
+          ],
+          "commands": []
+        }
+      ]
     }
   ]
 }

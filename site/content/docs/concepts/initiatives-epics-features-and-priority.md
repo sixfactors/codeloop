@@ -22,7 +22,7 @@ Rules that follow:
 - Splitting a story makes sibling stories under the same feature, each with `split_from: <id>`.
 - Titles at every level say what the user can now do. Initiatives and epics may be phrased as outcomes: "Founder ships without ceremony".
 
-The pages are made from the terminal: `codeloop feature new <slug>`, `codeloop epic new <slug>`. Initiatives are written by hand under `.codeloop/wiki/initiatives/` with `title`, `status`, `metric`, `goal`, `persona` and `hypothesis` in the frontmatter. A card is tied to its feature at creation (`codeloop start ... --feature <slug>`, or the Feature field in the board's New card dialog) or later with `codeloop card migrate-features`.
+The pages are made from the terminal: `codeloop feature new <slug>`, `codeloop epic new <slug>`. Initiatives are written by hand under `.codeloop/wiki/initiatives/` with `title`, `status`, `metric`, `goal`, `persona` and `hypothesis` in the frontmatter. A card is tied to its feature at creation (`codeloop start ... --feature <slug>`, or the Feature field in the board's New story dialog) or later with `codeloop card migrate-features`.
 
 ## RICE lives on the feature
 

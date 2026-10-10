@@ -117,7 +117,7 @@ export type CardsPayload = Awaited<ReturnType<typeof cardsPayload>>;
 
 // --- cards: engine writes and the CLI's reads ------------------------------------------------
 
-// `ACME-412: add CSV export` — a tracker key, a colon, the title. The key is letters and digits, a
+// `ACME-412: add CSV export`, a tracker key, a colon, the title. The key is letters and digits, a
 // dash and a number, as Jira, Linear and GitHub-style trackers write them.
 const TICKET_TITLE = /^([A-Za-z][A-Za-z0-9]*-\d+):\s+(.+)$/s;
 

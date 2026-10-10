@@ -6,7 +6,7 @@ import { guard } from './guard.js';
 const isKind = (k: string): k is ArtifactKind => (ARTIFACT_KINDS as readonly string[]).includes(k);
 
 export const artifactCommand = new Command('artifact').description(
-  "A card's artifact — mock, system design, or workflow — built from the shared templates so every artifact looks like the same product",
+  "A card's artifact, mock, system design, or workflow, built from the shared templates so every artifact looks like the same product",
 );
 
 artifactCommand

@@ -16,7 +16,7 @@ interface RunOptions {
 }
 
 export const runCommand = new Command('run')
-  .description('Start cards for due cron lanes, then advance every card that is not waiting for you one step')
+  .description('Start cards for due cron lanes, then advance every card that is not waiting for you until it stops on its own')
   .option('--due', 'Run what is due (the default; kept so older scripts still work)')
   .option('--agent [name]', 'First start a headless agent on each stage whose check does not pass yet (an entry under agents: in config.yaml)')
   .option('--no-agent', 'Only check and advance, even when config.yaml has run.agent: true')

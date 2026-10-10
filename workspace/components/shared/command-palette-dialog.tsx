@@ -29,14 +29,14 @@ export function CommandPaletteDialog({ open, onOpenChange }: { open: boolean; on
 
   return (
     <>
-      <CommandDialog open={open} onOpenChange={onOpenChange} title="Search" description="Cards and wiki pages">
+      <CommandDialog open={open} onOpenChange={onOpenChange} title="Search" description="Stories and wiki pages">
         {/* This registry's CommandDialog does not wrap its children in a Command root, and CommandInput
             subscribes to that root's store; without it the dialog throws on open. */}
         <Command shouldFilter={false} className="rounded-xl">
-        <CommandInput placeholder="Search cards and pages…" value={q} onValueChange={setQ} />
+        <CommandInput placeholder="Search stories and pages…" value={q} onValueChange={setQ} />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>
-          <CommandGroup heading="Cards">
+          <CommandGroup heading="Stories">
             {cards.cards.slice(0, 50).map((c) => (
               <CommandItem key={c.id} value={`${c.id} ${c.title} ${c.initiative ?? ''} ${c.persona ?? ''}`} onSelect={() => go(routes.card(c.id))}>
                 <span className="font-mono text-xs text-muted-foreground">{c.id}</span>

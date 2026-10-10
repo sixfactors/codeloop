@@ -15,7 +15,7 @@ description: The keys in .codeloop/config.yaml that codeloop 0.4.1 reads, and th
 |---|---|---|
 | `project.name` | the folder name | Mock paths, status output. |
 | `personas` | founder, builder, reviewer, dev, visitor, team | The story check. A list of names, a list of `{ name, pains }`, or a map keyed by name. |
-| `agents.default` | the only agent, when one is configured | `run --agent` with no name. |
+| `agents.default` | the first tool `init` set up | `run --agent` with no name. `init` writes an `agents:` block for the tools it detects (`claude -p --permission-mode acceptEdits < {brief}`, `codex exec --full-auto`, `cursor-agent -p`) and never overwrites one that exists. |
 | `agents.<name>.cmd` | required | Shell command run in the project directory. `{brief}` becomes the shell-quoted path of the stage brief. |
 | `agents.<name>.timeout_minutes` | 20 | The agent and its children are killed after this. |
 | `agents.<name>.max_runs_per_day` | 20 | Starts of this agent across the project in any 24 hours. |

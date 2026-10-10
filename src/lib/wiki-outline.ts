@@ -644,7 +644,7 @@ function pageGlossary(facts: RepoFacts): OutlinePage {
   for (const m of prose.matchAll(/\b([A-Z][a-zA-Z]{2,})\b/g)) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
   for (const [term, n] of counts) if (n >= 2) terms.add(term);
   const lines = ['---', 'title: Glossary', '---', '', '# Glossary', ''];
-  if (terms.size) for (const t of [...terms].sort()) lines.push(`- **${t}** — assumption: term found in schemas or repeated in docs; confirm its meaning.`);
+  if (terms.size) for (const t of [...terms].sort()) lines.push(`- **${t}**, assumption: term found in schemas or repeated in docs; confirm its meaning.`);
   else lines.push('assumption: no entity names or repeated capitalised terms were found.');
   return mk(`${WIKI_DIR}/glossary.md`, 'Glossary', lines.join('\n'));
 }

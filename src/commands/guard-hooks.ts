@@ -5,7 +5,8 @@ import { join } from 'path';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { getActiveCard, setActiveCard } from '../lib/active-card.js';
-import { findCard, readCards } from '../lib/cards.js';
+import { findCard, inLane, readCards, type Card } from '../lib/cards.js';
+import { listCards } from '../lib/services.js';
 import { resolveRole } from '../lib/engine.js';
 import { openQuestions } from '../lib/interview.js';
 import { pathInPlan, planFiles } from '../lib/plan-scope.js';
@@ -92,6 +93,50 @@ guardCommand
     }
   });
 
+// Open stories by priority band, then score, then age: what a session with nothing active should pick from.
+async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
+  const order: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+  const open = (await listCards(projectDir)).filter(c => inLane(c as unknown as Card) && !c.gate);
+  return open
+    .sort((a, b) => (order[a.band ?? ''] ?? 9) - (order[b.band ?? ''] ?? 9) || (b.score ?? 0) - (a.score ?? 0) || a.createdAt.localeCompare(b.createdAt))
+    .slice(0, limit)
+    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.band }));
+}
+
+function candidateLines(list: { id: string; title: string; stage: string; band?: string }[]): string[] {
+  return list.map(c => `  ${c.id}  ${c.band ?? '--'}  ${c.stage.padEnd(9)} ${c.title}`);
+}
+
+guardCommand
+  .command('session')
+  .description('SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active')
+  .action(async () => {
+    const projectDir = process.cwd();
+    if (!existsSync(join(projectDir, '.codeloop'))) return;
+    const activeId = getActiveCard(projectDir);
+    if (activeId) {
+      let card;
+      try {
+        card = findCard(readCards(projectDir).cards, activeId);
+      } catch {
+        console.log(`codeloop: active story ${activeId} not found; \`codeloop card activate <id>\` to pick another`);
+        return;
+      }
+      const open = openQuestions(projectDir, card).length;
+      console.log(`codeloop: active story ${card.id} ${card.title} (${card.lane}/${card.stage}${card.gate ? `, waiting at gate ${card.gate}` : ''}, ${open} open question(s))`);
+      console.log(`Run \`codeloop brief ${card.id}\` before any work; it names the stage, the skill, the output and the check.`);
+      return;
+    }
+    const top = await candidates(projectDir, 3);
+    if (top.length === 0) {
+      console.log('codeloop: no stories yet. `codeloop start "<title>"` opens one; `codeloop card propose build "<title>"` queues one for the owner.');
+      return;
+    }
+    console.log(`codeloop: no active story. ${top.length === 1 ? 'The open story' : 'Top open stories'} by priority:`);
+    for (const line of candidateLines(top)) console.log(line);
+    console.log(`\`codeloop card activate ${top[0].id}\` to take the first; \`codeloop inbox\` for what waits on a person.`);
+  });
+
 guardCommand
   .command('prompt')
   .description("UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)")
@@ -100,8 +145,18 @@ guardCommand
     const input = await readStdinJson();
     const activeId = getActiveCard(projectDir);
     if (!activeId) {
-      console.log('codeloop: no active card, `codeloop start "<title>"` or `codeloop card activate <id>` first');
-      return;
+      // A repo with open stories and none active: the board's priority order decides what a session
+      // works on, not the chat. Exit 2 blocks the prompt and shows the list. A repo with no stories
+      // yet is left alone so the first session can start one.
+      const top = await candidates(projectDir, 3);
+      if (top.length === 0) {
+        console.log('codeloop: no active card, `codeloop start "<title>"` or `codeloop card activate <id>` first');
+        return;
+      }
+      console.error(`codeloop: no active story, and ${top.length === 1 ? 'one is' : 'these are'} open. Activate one before working:`);
+      for (const line of candidateLines(top)) console.error(line);
+      console.error(`\`codeloop card activate ${top[0].id}\`, or \`codeloop start "<title>"\` for new work.`);
+      process.exit(2);
     }
     let card;
     try {

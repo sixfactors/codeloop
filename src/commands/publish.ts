@@ -64,7 +64,7 @@ export const publishCommand = new Command('publish')
 
     if (options.dryRun) {
       console.log();
-      console.log(chalk.bold('  Dry run complete — would publish:'));
+      console.log(chalk.bold('  Dry run complete, would publish:'));
       console.log(chalk.dim(`    Name: ${parsed.manifest.name}`));
       console.log(chalk.dim(`    Version: ${parsed.manifest.version}`));
       console.log(chalk.dim(`    Tags: ${parsed.manifest.tags.join(', ') || 'none'}`));

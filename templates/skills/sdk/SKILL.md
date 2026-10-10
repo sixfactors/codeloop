@@ -4,6 +4,7 @@ stage: build
 lane: build
 inputs:
   - docs/architecture.md
+  - .codeloop/wiki/architecture/*.md
   - specs/{id}/spec.md
   - specs/{id}/tasks.md
   - "the api stage's contract entry for the routes this card touches"

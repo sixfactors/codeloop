@@ -97,7 +97,7 @@ function StoriesTable({ stories, onOpen }: { stories: TreeStory[]; onOpen: (id: 
             <TableCell className="py-1.5 font-mono text-xs text-muted-foreground">{s.id}</TableCell>
             <TableCell className="max-w-[28rem] py-1.5"><span className="block truncate" title={s.title}>{s.title}</span></TableCell>
             <TableCell className="py-1.5"><Badge variant="secondary" className={cn('rounded-full', stageTone(s))}>{s.stage}</Badge></TableCell>
-            <TableCell className="py-1.5">{s.gate || s.awaiting ? <Badge variant="secondary" className="max-w-[7rem] truncate rounded-full bg-warning/15 text-warning-foreground dark:text-warning" title={String(s.gate ?? s.awaiting)}>{s.gate ?? s.awaiting}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+            <TableCell className="py-1.5">{s.gate || s.awaiting ? <Badge variant="secondary" className="max-w-[7rem] truncate rounded-full bg-warning/15 text-warning-foreground dark:text-warning" title={String(s.gate ?? s.awaiting)}>{s.gate ?? s.awaiting}</Badge> : <span className="text-muted-foreground">-</span>}</TableCell>
             <TableCell className="py-1.5"><BandChip band={s.band} score={s.score} /></TableCell>
           </TableRow>
         ))}
@@ -118,7 +118,7 @@ function RowShell({ depth, open, children, trailing, testId }: { depth: 0 | 1; o
   );
 }
 
-/** `compact`: a narrow column (the roadmap) — no release chip, Board or Open; the title keeps the width. */
+/** `compact`: a narrow column (the roadmap), no release chip, Board or Open; the title keeps the width. */
 export function FeatureRow({ feature, defaultOpen, link, onOpen, compact }: { feature: TreeFeature; defaultOpen: boolean; link: boolean; onOpen: (id: string) => void; compact?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -238,7 +238,7 @@ export function WorkTree({ root }: { root: TreeRoot }) {
           ]}
         />
         {view.epics.length === 0 ? (
-          <EmptyState icon={root.kind === 'initiative' ? Flag : Gauge} title="Nothing under this yet" description={root.kind === 'initiative' ? 'Epics and features that name this initiative appear here; a story names its feature, a feature its initiative.' : 'Stories naming this appear here once a card carries it.'} />
+          <EmptyState icon={root.kind === 'initiative' ? Flag : Gauge} title="Nothing under this yet" description={root.kind === 'initiative' ? 'Epics and features that name this initiative appear here; a story names its feature, a feature its initiative.' : 'Stories naming this appear here once a story carries it.'} />
         ) : (
           <div className="flex flex-col gap-3" data-testid="work-tree">
             {view.epics.map((e) => <EpicRow key={e.id || 'none'} epic={e} defaultOpen link={root.kind === 'initiative'} featuresOpen={root.kind === 'feature'} onOpen={setOpen} />)}

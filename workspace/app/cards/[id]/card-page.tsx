@@ -13,8 +13,8 @@ export function CardPage({ id }: { id: string }) {
   const crumbs = [{ label: 'Board', href: routes.board }, { label: id }];
 
   if (isLoading) return <PageLayout icon={Kanban} backHref={routes.board} title={id} breadcrumbs={crumbs} actionsLoading><CardDetailSkeleton /></PageLayout>;
-  if (error && !isMissing(error)) return <PageLayout icon={Kanban} backHref={routes.board} title={id} breadcrumbs={crumbs}><InlineError title="Card failed to load" error={error} onRetry={() => refetch()} /></PageLayout>;
-  if (!card) return <PageLayout icon={Kanban} backHref={routes.board} title={id} breadcrumbs={crumbs}><EmptyState icon={Hash} title={`No card ${id}`} description="It may have been dropped or renamed." action={{ label: 'Back to board', href: routes.board }} /></PageLayout>;
+  if (error && !isMissing(error)) return <PageLayout icon={Kanban} backHref={routes.board} title={id} breadcrumbs={crumbs}><InlineError title="Story failed to load" error={error} onRetry={() => refetch()} /></PageLayout>;
+  if (!card) return <PageLayout icon={Kanban} backHref={routes.board} title={id} breadcrumbs={crumbs}><EmptyState icon={Hash} title={`No story ${id}`} description="It may have been dropped or renamed." action={{ label: 'Back to board', href: routes.board }} /></PageLayout>;
 
   return (
     <PageLayout

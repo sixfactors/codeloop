@@ -4,6 +4,7 @@ stage: build
 lane: build
 inputs:
   - docs/architecture.md
+  - .codeloop/wiki/architecture/*.md
   - specs/{id}/spec.md
   - specs/{id}/tasks.md
   - specs/{id}/research.md

@@ -141,9 +141,44 @@ describe('guard prompt (UserPromptSubmit hook)', () => {
     expect(result.stdout).toMatch(/active card c-5 \(spec\), 0 open question\(s\)/);
   });
 
-  it('prints a no-active-card line when nothing is active', () => {
+  it('prints a no-active-card line and exits 0 when the repo has no stories at all', () => {
     const result = cli(['guard', 'prompt'], { input: '{}' });
+    expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/no active card/);
+  });
+
+  it('exits 2 and lists the open stories when stories exist and none is active', () => {
+    writeCard('c-7', 'spec');
+    const result = cli(['guard', 'prompt'], { input: JSON.stringify({ prompt: 'anything' }) });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toMatch(/no active story/);
+    expect(result.stderr).toMatch(/c-7/);
+    expect(result.stderr).toMatch(/codeloop card activate c-7/);
+  });
+});
+
+describe('guard session (SessionStart hook)', () => {
+  it('prints the active story and the brief instruction when one is active', () => {
+    writeCard('c-5', 'spec');
+    setActiveCard(dir, 'c-5');
+    const result = cli(['guard', 'session']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/active story c-5 Card c-5 \(build\/spec, 0 open question\(s\)\)/);
+    expect(result.stdout).toMatch(/codeloop brief c-5/);
+  });
+
+  it('lists the top open stories and the activate command when none is active', () => {
+    writeCard('c-7', 'spec');
+    const result = cli(['guard', 'session']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/no active story/);
+    expect(result.stdout).toMatch(/c-7 .*Card c-7/);
+    expect(result.stdout).toMatch(/codeloop card activate c-7/);
+  });
+
+  it('is installed as a SessionStart hook by the Claude hooks template', () => {
+    const template = JSON.parse(readFileSync(join(ROOT, 'templates/hooks/claude-hooks.json'), 'utf-8'));
+    expect(JSON.stringify(template.hooks.SessionStart)).toContain('codeloop guard session');
   });
 });
 

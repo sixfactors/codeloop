@@ -17,7 +17,7 @@ const excerpt = (text: string, n = 120) => (text.length > n ? `${text.slice(0, n
 
 function printFixture(f: FixtureEvalResult): void {
   const status = f.pass ? chalk.green('PASS') : chalk.red('FAIL');
-  const flag = f.doneCheckPassed ? '' : chalk.yellow(' [done-check failed — score capped at 0.5]');
+  const flag = f.doneCheckPassed ? '' : chalk.yellow(' [done-check failed, score capped at 0.5]');
   console.log(`\n${chalk.bold(f.fixture)}  score ${f.score.toFixed(2)} (min ${f.min})  ${status}${flag}`);
   if (f.gradeError) {
     console.log(chalk.red('  grader did not return valid JSON; raw reply:'));
@@ -96,6 +96,6 @@ skillCommand
     }
     report.fixtures.forEach(printFixture);
     const passed = report.fixtures.filter(f => f.pass).length;
-    console.log(`\n${passed}/${report.fixtures.length} fixture(s) passed — agent ${report.agent}, min ${report.min}`);
+    console.log(`\n${passed}/${report.fixtures.length} fixture(s) passed, agent ${report.agent}, min ${report.min}`);
     if (!report.pass) process.exit(1);
   }));

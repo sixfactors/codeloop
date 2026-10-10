@@ -98,6 +98,29 @@ describe('competitor pages', () => {
     expect(buildBrief(dir, card())).not.toContain('## Competitors');
   });
 
+  it('writes a decision page from the verdict, exists, pain and options when the research stage passes', () => {
+    write(`${SPEC}/research.md`, read(`${SPEC}/research.md`).replace('exists: build', 'exists: unlock src/export.ts').replace('## Options\n', '## Options\n- A: toolbar button\n- B: scheduled email\n').replace('pain:\n', 'pain: support inbox, four requests this month\n') + `${SOURCES.join('\n')}\nverdict: build\n`);
+
+    const { card } = advanceCard(dir, 'c-001');
+    const page = read('.codeloop/wiki/decisions/add-csv-export-build.md');
+    expect(page).toContain('title: "Add CSV export: build"');
+    expect(page).toContain('Verdict: build');
+    expect(page).toContain('Exists: unlock src/export.ts');
+    expect(page).toContain('Pain: support inbox, four requests this month');
+    expect(page).toContain('- A: toolbar button');
+    expect(card.events.find(e => e.action === 'decision')?.note).toBe('.codeloop/wiki/decisions/add-csv-export-build.md');
+    expect(read('.codeloop/wiki/INDEX.md')).toContain('| `decisions/` |');
+  });
+
+  it('puts the wiki folders a skill names in its inputs into the brief', () => {
+    write('.codeloop/wiki/product/overview.md', '# Acme App\n\nInvoices for small firms.\n');
+    write('.codeloop/skills.index.yaml', `- name: research\n  source: ${resolve('templates/skills/research/SKILL.md')}\n`);
+    const brief = buildBrief(dir, findCard(readCards(dir).cards, 'c-001'));
+    expect(brief).toContain('## Wiki folders this skill reads');
+    expect(brief).toContain('### product/');
+    expect(brief).toContain('Invoices for small firms.');
+  });
+
   it('appends the findings row for each competitor named in research.md when the research stage passes, once per card', () => {
     addCompetitor(dir, { name: 'acme', docs: 'https://acme.test/docs' });
     addCompetitor(dir, { name: 'globex', docs: 'https://globex.test/docs' });

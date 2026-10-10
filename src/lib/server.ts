@@ -484,7 +484,7 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
         return new Response(content, { headers: { 'Content-Type': mime } });
       }
 
-      // SPA fallback — serve index.html for unmatched routes
+      // SPA fallback, serve index.html for unmatched routes
       const indexPath = join(uiDir, 'index.html');
       if (existsSync(indexPath)) {
         const content = readFileSync(indexPath);

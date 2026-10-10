@@ -35,3 +35,13 @@ async function answers(url: string): Promise<string | null> {
 export async function checkOnline(urls: string[]): Promise<string[]> {
   return (await Promise.all(urls.map(answers))).filter((e): e is string => e !== null);
 }
+
+/** The lines of a research file worth keeping after the card is gone: the exists call, the pain, the options and the verdict. */
+export function researchSummary(text: string): { verdict: string; exists?: string; pain?: string; options: string } | null {
+  const verdict = /^verdict:\s*(\S.*)$/m.exec(text)?.[1]?.trim();
+  if (!verdict) return null;
+  const exists = /^exists:\s*(\S.*)$/m.exec(text)?.[1]?.trim();
+  const pain = /^pain:\s*(\S.*)$/m.exec(text)?.[1]?.trim();
+  const options = (/^## Options\s*\n([\s\S]*?)(?=\n## |\s*$)/m.exec(text)?.[1] ?? '').trim();
+  return { verdict, ...(exists ? { exists } : {}), ...(pain ? { pain } : {}), options };
+}

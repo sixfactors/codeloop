@@ -1,7 +1,7 @@
 'use client';
 
 // Mocks and published pages, grouped by topic. Each one is an EntityCard (title, lineage line,
-// kind / project chips, Open / Card in the menu); picking one previews it beside the list.
+// kind / project chips, Open / Story in the menu); picking one previews it beside the list.
 
 import { useMemo, useState } from 'react';
 import { ExternalLink, Image as ImageIcon, Images, Kanban } from 'lucide-react';
@@ -46,13 +46,13 @@ export default function ArtifactsPage() {
   const activeTopic = topic ?? topics[0]?.[0] ?? null;
   const list = topics.find(([t]) => t === activeTopic)?.[1] ?? [];
 
-  const description = 'Mocks and published pages, by topic. Lineage shows which card each one came from.';
+  const description = 'Mocks and published pages, by topic. Lineage shows which story each one came from.';
   const loading = artifacts.isLoading && cards.isLoading;
   if (loading) return <PageLayout icon={Images} title="Artifacts" description={description}><PageSkeleton statCards={0} tableRows={3} /></PageLayout>;
   if (artifacts.error && !isMissing(artifacts.error)) return <PageLayout icon={Images} title="Artifacts" description={description}><InlineError title="Artifacts failed to load" error={artifacts.error} onRetry={() => artifacts.refetch()} /></PageLayout>;
 
   const gallery = items.length === 0 ? (
-    <EmptyState icon={Images} title="No artifacts yet" description={artifacts.error && isMissing(artifacts.error) ? 'GET /api/artifacts is being added. Mocks on cards show here meanwhile.' : 'A mock or a published page appears here once a card produces one.'} />
+    <EmptyState icon={Images} title="No artifacts yet" description={artifacts.error && isMissing(artifacts.error) ? 'GET /api/artifacts is being added. Mocks on stories show here meanwhile.' : 'A mock or a published page appears here once a story produces one.'} />
   ) : (
     <div className="flex flex-col gap-4">
       <SavedViewTabs
@@ -77,13 +77,13 @@ export default function ArtifactsPage() {
             onClick={() => setOpen(a)}
             menuItems={[
               { label: 'Open in new tab', icon: ExternalLink, onClick: () => window.open(hrefOf(a), '_blank', 'noopener') },
-              ...(a.cardId ? [{ label: `Card ${a.cardId}`, icon: Kanban, onClick: () => router.push(routes.card(a.cardId!)) }] : []),
+              ...(a.cardId ? [{ label: `Story ${a.cardId}`, icon: Kanban, onClick: () => router.push(routes.card(a.cardId!)) }] : []),
             ]}
             footer={
               <div className="mt-3 flex flex-wrap gap-1">
                 {a.kind ? <MetaChip label="Kind" value={a.kind} /> : null}
                 {a.project ? <MetaChip label="Project" value={a.project} /> : null}
-                {a.cardId ? <MetaChip label="Card" value={a.cardId} /> : null}
+                {a.cardId ? <MetaChip label="Story" value={a.cardId} /> : null}
               </div>
             }
             data-testid={`artifact-${a.id}`}

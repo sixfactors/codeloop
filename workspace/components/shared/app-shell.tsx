@@ -191,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate font-medium">{payload?.owner ? 'Owner' : 'Read only'}</span>
-              <span className="truncate text-xs text-muted-foreground tabular-nums">{total} cards</span>
+              <span className="truncate text-xs text-muted-foreground tabular-nums">{total} stories</span>
             </div>
             <ThemeToggle />
           </div>

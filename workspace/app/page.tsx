@@ -27,7 +27,7 @@ export default async function BoardPage({ searchParams }: { searchParams: Promis
   await Promise.all([...columns.map((q) => qc.prefetchInfiniteQuery(cardsQueryOptions(q))), qc.prefetchQuery(cardCountQueryOptions(base))]);
   return (
     <HydrationBoundary state={dehydrated(qc)}>
-      <PageLayout icon={Kanban} title="Board" description="Every card by lane and stage. Proposed cards wait in the backlog.">
+      <PageLayout icon={Kanban} title="Board" description="Every story by lane and stage. Proposed stories wait in the backlog.">
         <Board initial={initial} />
       </PageLayout>
     </HydrationBoundary>

@@ -57,6 +57,6 @@ export function Questions({ cardId, compact = false }: { cardId: string; compact
   if (!data && !error) return <Skeleton className="h-16 w-full" />;
   if (error) return <p className="text-xs text-muted-foreground">Questions unavailable: {(error as Error).message}</p>;
   const list = compact ? (data ?? []).filter((q) => !q.answer) : data ?? [];
-  if (!list.length) return <p className="text-xs text-muted-foreground">{compact ? 'Nothing open.' : 'No questions on this card.'}</p>;
+  if (!list.length) return <p className="text-xs text-muted-foreground">{compact ? 'Nothing open.' : 'No questions on this story.'}</p>;
   return <ItemGroup className="gap-2">{list.map((q) => <QuestionRow key={q.n} cardId={cardId} q={q} />)}</ItemGroup>;
 }

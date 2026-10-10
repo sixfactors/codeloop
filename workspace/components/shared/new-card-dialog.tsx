@@ -79,7 +79,7 @@ export function NewCardDialog({ open, onOpenChange, onCreated }: { open: boolean
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setRefusal(null); }}>
       <DialogContent className="sm:max-w-[520px]" data-testid="new-card-dialog">
         <DialogHeader>
-          <DialogTitle>New card</DialogTitle>
+          <DialogTitle>New story</DialogTitle>
           <DialogDescription>A story: who, what they can now do, and why. It lands in the backlog as a proposal{owner ? ', or starts in its lane now' : ''}.</DialogDescription>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
@@ -161,7 +161,7 @@ export function NewCardDialog({ open, onOpenChange, onCreated }: { open: boolean
           {refusal ? <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" data-testid="new-card-refusal">{refusal}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={!canSubmit} data-testid="new-card-create">{create.isPending ? 'Creating…' : start && owner ? 'Start card' : 'Propose card'}</Button>
+            <Button type="submit" disabled={!canSubmit} data-testid="new-card-create">{create.isPending ? 'Creating…' : start && owner ? 'Start story' : 'Propose story'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

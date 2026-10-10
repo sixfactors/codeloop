@@ -39,7 +39,7 @@ export function WikiHome({ pages, loading, onNew }: { pages: PageSummary[]; load
     );
   }
   if (!pages.length) {
-    return <EmptyState icon={FolderOpen} title="The wiki is empty" description="Pages under .codeloop/wiki and one per card appear here. New page writes the first one." action={onNew ? { label: 'New page', onClick: onNew } : undefined} />;
+    return <EmptyState icon={FolderOpen} title="The wiki is empty" description="Pages under .codeloop/wiki and one per story appear here. New page writes the first one." action={onNew ? { label: 'New page', onClick: onNew } : undefined} />;
   }
 
   return (
@@ -94,7 +94,7 @@ export function WikiHome({ pages, loading, onNew }: { pages: PageSummary[]; load
 
       {specCount ? (
         <p className="flex flex-wrap items-center gap-2 border-t pt-6 text-sm text-muted-foreground" data-testid="wiki-section-specs">
-          {specCount} cards have working files: research, spec, plan and tasks. They live on each card.
+          {specCount} stories have working files: research, spec, plan and tasks. They live on each story.
           <Link href={routes.board} className="inline-flex items-center gap-1 text-foreground hover:underline">Open the board<ArrowRight className="size-3.5" /></Link>
         </p>
       ) : null}

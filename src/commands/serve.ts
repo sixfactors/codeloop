@@ -131,7 +131,7 @@ export function getServeStatus(projectDir: string): { running: boolean; pid?: nu
     process.kill(pid, 0); // Test if process exists
     return { running: true, pid };
   } catch {
-    // Stale PID file — clean up
+    // Stale PID file, clean up
     try { unlinkSync(pidPath); } catch {}
     return { running: false };
   }

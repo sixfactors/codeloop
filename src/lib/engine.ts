@@ -4,6 +4,8 @@ import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
+import { researchSummary } from './research.js';
+import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
@@ -136,6 +138,25 @@ function researchFindings(projectDir: string, card: Card, stage: Stage): string[
   if (stage.id !== 'research' || !stage.output) return [];
   const file = join(projectDir, substitute(stage.output, card));
   return existsSync(file) && statSync(file).isFile() ? appendFindings(projectDir, card, readFileSync(file, 'utf-8')) : [];
+}
+
+// The verdict, the exists call, the pain and the options outlive the card as a decision page, so
+// the next card that touches the same ground starts from what was already decided.
+function researchDecision(projectDir: string, card: Card, stage: Stage, now: Date): string | null {
+  if (stage.id !== 'research' || !stage.output) return null;
+  const file = join(projectDir, substitute(stage.output, card));
+  if (!existsSync(file) || !statSync(file).isFile()) return null;
+  const summary = researchSummary(readFileSync(file, 'utf-8'));
+  if (!summary) return null;
+  const body = [
+    `Verdict: ${summary.verdict}`,
+    ...(summary.exists ? [`Exists: ${summary.exists}`] : []),
+    ...(summary.pain ? [`Pain: ${summary.pain}`] : []),
+    ...(summary.options ? ['', '## Options', '', summary.options] : []),
+    '',
+    `From ${substitute(stage.output, card)}.`,
+  ].join('\n');
+  return capture(projectDir, { title: `${card.title}: ${summary.verdict}`, scope: [], body, kind: 'decision', card: card.id }, now).path;
 }
 
 function park(card: Card, stage: Stage, now: Date, when: string): void {
@@ -412,6 +433,8 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   if (stage.output) card.evidence.push(substitute(stage.output, card));
   card.events.push(event(now, 'engine', 'advance', stage.id, `to ${card.stage}`));
   for (const page of researchFindings(projectDir, card, stage)) card.events.push(event(now, 'engine', 'findings', stage.id, page));
+  const decision = researchDecision(projectDir, card, stage, now);
+  if (decision) card.events.push(event(now, 'engine', 'decision', stage.id, decision));
   if (next) parkIfOutward(card, lane, now);
 
   let cards = replace(file.cards, card);

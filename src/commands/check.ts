@@ -62,7 +62,7 @@ function failing(run: () => string[] | Promise<string[]>) {
 
 checkCommand
   .command('research <card>')
-  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines")
+  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url>, <note>` lines")
   .option('--min-sources <n>', 'How many source lines are required', '3')
   .option('--online', 'Also require each source URL to answer with 2xx or 3xx')
   .action((card: string, opts: { minSources: string; online?: boolean }) => failing(async () => {
@@ -80,7 +80,7 @@ checkCommand
 checkCommand
   .command('artifact <card>')
   .description("Exit 1 unless the card's artifact (mock, system-design or workflow) meets its kind's anatomy: tokens, dark mode, no raw colour, valid mermaid, and every frame/layer/flow/actor the frontmatter names")
-  .option('--kind <kind>', 'mock | system-design | workflow — auto-detected from whichever artifact exists for the card when omitted')
+  .option('--kind <kind>', 'mock | system-design | workflow, auto-detected from whichever artifact exists for the card when omitted')
   .action((card: string, opts: { kind?: string }) =>
     failing(() => {
       const kind = opts.kind as ArtifactKind | undefined;

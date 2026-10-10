@@ -222,7 +222,7 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
   const ids = useMemo(() => [...backlogCards.map((c) => c.id), ...Object.values(states).flatMap((s) => s.ids)], [backlogCards, states]);
   const total = matching.data ?? payload?.total;
 
-  if (backlog.error) return <InlineError title="Cards failed to load" error={backlog.error} onRetry={() => backlog.refetch()} />;
+  if (backlog.error) return <InlineError title="Stories failed to load" error={backlog.error} onRetry={() => backlog.refetch()} />;
   if (lanes.isLoading && backlog.isLoading) return <PageSkeleton statCards={0} columns={4} />;
 
   const promote = (c: CardT) =>
@@ -254,23 +254,23 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
               onDeleteView={() => {}}
               canSave={false}
             />
-            <span className="text-xs text-muted-foreground tabular-nums" data-testid="board-total">{total === undefined ? '…' : `${total} cards`}</span>
-            <Button size="sm" onClick={() => setCreating(true)} data-testid="board-new-card"><Plus />New card</Button>
+            <span className="text-xs text-muted-foreground tabular-nums" data-testid="board-total">{total === undefined ? '…' : `${total} stories`}</span>
+            <Button size="sm" onClick={() => setCreating(true)} data-testid="board-new-card"><Plus />New story</Button>
           </>
         }
       />
 
       {empty ? (
         Object.keys(filters.facets).length || filters.q
-          ? <EmptyState icon={Kanban} title="No cards match" description="Clear the search or a filter and the board fills back in." action={{ label: 'Reset filters', onClick: () => setFilters(EMPTY_SEARCH) }} />
-          : <EmptyState icon={Kanban} title="No cards yet" description="Make the first one here, or from the terminal with `codeloop start` or `codeloop card propose`." action={{ label: 'New card', onClick: () => setCreating(true) }} />
+          ? <EmptyState icon={Kanban} title="No stories match" description="Clear the search or a filter and the board fills back in." action={{ label: 'Reset filters', onClick: () => setFilters(EMPTY_SEARCH) }} />
+          : <EmptyState icon={Kanban} title="No stories yet" description="Make the first one here, or from the terminal with `codeloop start` or `codeloop card propose`." action={{ label: 'New story', onClick: () => setCreating(true) }} />
       ) : (
         <div className={cn('flex flex-col gap-6 transition-opacity duration-200', pending && 'opacity-60')} aria-busy={pending}>
           {/* Backlog: proposals wait here until someone promotes or drops them. */}
           <section className="flex flex-col gap-2.5" data-testid="board-backlog">
             <ColumnHeader label="Backlog · proposed" count={backlog.total} tone={backlog.total ? 'waiting' : 'none'} />
             {backlog.isLoading ? <ColumnSkeleton /> : backlog.total === 0 ? (
-              <EmptyState compact icon={Inbox} title="Nothing proposed" description="Proposals land here: New card above, or `codeloop card propose <lane> <title>` from the terminal." />
+              <EmptyState compact icon={Inbox} title="Nothing proposed" description="Proposals land here: New story above, or `codeloop card propose <lane> <title>` from the terminal." />
             ) : (
               <VirtualGrid
                 items={backlogCards}
@@ -291,7 +291,7 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
                 <div className="grid gap-3" style={{ gridTemplateColumns: initiativeCols.map(() => 'minmax(15rem,1fr)').join(' '), minWidth: 'max-content' }}>
                   {initiativeCols.map((c) => <Column key={c.key} spec={c} onOpen={setOpen} onState={onState} />)}
                 </div>
-                {initiativeCols.length === 0 ? <p className="text-sm text-muted-foreground">No card names an initiative yet.</p> : null}
+                {initiativeCols.length === 0 ? <p className="text-sm text-muted-foreground">No story names an initiative yet.</p> : null}
               </div>
             )}
         </div>

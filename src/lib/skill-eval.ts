@@ -1,7 +1,7 @@
 /**
  * `codeloop skill eval`: proves a skill under `templates/skills/<name>/` (or a custom skills
  * dir) actually gets an agent through its stage. Each fixture under `fixtures/skills/<name>/`
- * is replayed in a throwaway temp project — a one-stage lane synthesized from the skill's own
+ * is replayed in a throwaway temp project, a one-stage lane synthesized from the skill's own
  * frontmatter, so the fixture never touches this project's cards or specs. The agent runs the
  * stage, the stage's `check` decides whether the work passed, and a second agent call grades the
  * output against the skill's checklist. Records land under `.codeloop/state/skill-evals/`.
@@ -157,7 +157,7 @@ function gradingPrompt(skill: SkillDef, checklist: string, output: string): stri
     '',
     '## Output produced',
     '',
-    output.trim() || '(empty — the file was not written)',
+    output.trim() || '(empty, the file was not written)',
     '',
     '## Your answer',
     '',

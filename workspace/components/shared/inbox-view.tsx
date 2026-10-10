@@ -172,7 +172,7 @@ export function InboxView() {
               {hidden > 0 && !all ? <p className="text-xs text-muted-foreground">{hidden} more wait. <button type="button" className="underline" onClick={() => setAll(true)}>Show all {data.needsYou.total}</button></p> : null}
               {all && more(data.needsYou) ? <p className="text-xs text-muted-foreground">{more(data.needsYou)} more wait on the board.</p> : null}
             </div>
-          ) : <EmptyState compact icon={CheckCircle2} title="No gate is waiting on you" description={Object.keys(filters.facets).length ? 'Nothing matches these filters.' : 'A card parked at a gate shows up here.'} />}
+          ) : <EmptyState compact icon={CheckCircle2} title="No gate is waiting on you" description={Object.keys(filters.facets).length ? 'Nothing matches these filters.' : 'A story parked at a gate shows up here.'} />}
         </AttributeCard>
 
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -189,7 +189,7 @@ export function InboxView() {
                     <Questions cardId={c.id} compact />
                   </div>
                 ))}
-                {asking.total > QUESTION_CARDS ? <p className="text-xs text-muted-foreground">{asking.total - QUESTION_CARDS} more cards have questions; open them from the board.</p> : null}
+                {asking.total > QUESTION_CARDS ? <p className="text-xs text-muted-foreground">{asking.total - QUESTION_CARDS} more stories have questions; open them from the board.</p> : null}
               </div>
             ) : <EmptyState compact icon={MessageSquare} title="Nothing to answer" description="Questions the agent asks land here with a recommended answer." />}
           </AttributeCard>
@@ -200,7 +200,7 @@ export function InboxView() {
                 {shipped.cards.map((c) => <FieldRow key={c.id} label={c.id} value={c.title} href={routes.card(c.id)} adornment={<MetaChip label="Lane" value={c.lane} tone="good" />} />)}
                 {more(shipped) ? <p className="pt-2 text-xs text-muted-foreground">{more(shipped)} more shipped this week.</p> : null}
               </>
-            ) : <EmptyState compact icon={CheckCircle2} title="Nothing shipped yet" description="Cards that reach a done stage in the last 7 days show here." />}
+            ) : <EmptyState compact icon={CheckCircle2} title="Nothing shipped yet" description="Stories that reach a done stage in the last 7 days show here." />}
           </AttributeCard>
 
           <AttributeCard title="Numbers per lane" icon={Waypoints} testId="inbox-lanes" className="lg:col-span-2">
@@ -223,7 +223,7 @@ export function InboxView() {
                   adornment={lane?.wip ? <UsageBar label="WIP" current={inFlight} limit={lane.wip} size="sm" showLabel={false} className="w-16" /> : undefined}
                 />
               );
-            }) : <EmptyState compact icon={Waypoints} title="No lanes yet" description="Lane numbers appear once cards exist." />}
+            }) : <EmptyState compact icon={Waypoints} title="No lanes yet" description="Lane numbers appear once stories exist." />}
           </AttributeCard>
         </div>
       </div>

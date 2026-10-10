@@ -188,6 +188,26 @@ describe('init detection', () => {
     expect(existsSync(join(dir, 'tasks/todo.md'))).toBe(false);
   });
 
+  it('writes agents: for the tools it set up, so `run --agent` works without extra config', () => {
+    rmSync(join(dir, '.codeloop'), { recursive: true });
+    const out = init();
+    expect(out.status).toBe(0);
+    const config = parseYaml(readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8'));
+    expect(config.agents.default).toBe('claude');
+    expect(config.agents.claude.cmd).toContain('{brief}');
+    expect(config.agents.claude.timeout_minutes).toBe(15);
+    expect(config.agents.claude.max_runs_per_day).toBe(50);
+  });
+
+  it('never overwrites an agents: block that is already there', () => {
+    rmSync(join(dir, '.codeloop'), { recursive: true });
+    write('.codeloop/config.yaml', 'project:\n  name: demo\nagents:\n  default: fake\n  fake: { cmd: "./fake-agent.sh < {brief}" }\n');
+    const out = init();
+    expect(out.status).toBe(0);
+    const config = parseYaml(readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8'));
+    expect(config.agents).toEqual({ default: 'fake', fake: { cmd: './fake-agent.sh < {brief}' } });
+  });
+
   it('leaves an existing .claude/commands/ alone without --yes, and writes into it with --yes', () => {
     write('.claude/commands/mine.md', '---\ndescription: mine\n---\n');
     const out = init();

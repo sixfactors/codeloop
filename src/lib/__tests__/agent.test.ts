@@ -35,6 +35,7 @@ const TWO_STAGES = `  - id: draft
     output: out/{id}.md
     done: { cmd: "test -f out/{id}.md" }
   - id: polish
+    output: out/{id}.polished
     done: { cmd: "test -f out/{id}.polished" }
 `;
 const GATED_THEN_PUBLIC = `  - id: draft
@@ -96,29 +97,66 @@ describe('brief', () => {
 });
 
 describe('run --agent', () => {
-  it('starts the agent on a stage whose check fails, then moves the card when the check passes', async () => {
+  it('starts the agent on each stage whose check fails, moving the card until it is done', async () => {
     lane('build', TWO_STAGES);
     agents(WRITES_OUTPUT);
     createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
 
     const result = await run();
-    expect(result.advanced).toEqual([{ id: 'c-001', outcome: 'moved' }]);
-    expect(card('c-001').stage).toBe('polish');
-    const ran = card('c-001').events.find(e => e.action === 'agent-run')!;
-    expect(ran).toMatchObject({ agent: 'fake', exit: 0, stage: 'draft', log: '.codeloop/state/agent-runs/c-001-draft-1.log' });
-    expect(ran.durationMs).toBeGreaterThanOrEqual(0);
-    expect(existsSync(join(dir, ran.log!))).toBe(true);
+    expect(result.advanced).toEqual([{ id: 'c-001', outcome: 'done' }]);
+    expect(card('c-001').stage).toBe('done');
+    const runs = card('c-001').events.filter(e => e.action === 'agent-run');
+    expect(runs).toMatchObject([{ agent: 'fake', exit: 0, stage: 'draft' }, { agent: 'fake', exit: 0, stage: 'polish' }]);
+    expect(runs[0].durationMs).toBeGreaterThanOrEqual(0);
+    expect(existsSync(join(dir, runs[0].log!))).toBe(true);
     expect(readFileSync(join(dir, '.codeloop/state/briefs/c-001-draft.md'), 'utf-8')).toContain('Stage: draft');
   });
 
-  it('does not start the agent when the check already passes', async () => {
+  it('does not start the agent on a stage whose check already passes, but still advances past it', async () => {
     lane('build', TWO_STAGES);
     agents('touch agent-ran');
     createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
     write('out/c-001.md', 'by hand');
+    write('out/c-001.polished', 'by hand');
 
-    expect((await run()).advanced).toEqual([{ id: 'c-001', outcome: 'moved' }]);
+    expect((await run()).advanced).toEqual([{ id: 'c-001', outcome: 'done' }]);
     expect(existsSync(join(dir, 'agent-ran'))).toBe(false);
+  });
+
+  it('a card with three passing stages reaches the gate in one run', async () => {
+    lane('market', `  - id: draft
+    output: out/{id}.md
+    done: { cmd: "true" }
+  - id: review
+    output: out/{id}.review
+    done: { cmd: "true" }
+  - id: polish
+    done: { cmd: "true" }
+    gate: { name: copy, approver: owner }
+`);
+    agents('touch agent-ran');
+    createCard(dir, { lane: 'market', title: 'a', id: 'c-001' });
+
+    const result = await run();
+    expect(result.advanced).toEqual([{ id: 'c-001', outcome: 'parked' }]);
+    expect(card('c-001')).toMatchObject({ stage: 'polish', gate: 'copy' });
+    // Every stage's check is `true`, so the agent is never needed.
+    expect(existsSync(join(dir, 'agent-ran'))).toBe(false);
+  });
+
+  it('a failing check stops the loop and counts one retry, even after an earlier stage moved', async () => {
+    lane('build', `  - id: draft
+    output: out/{id}.md
+    done: { cmd: "true" }
+  - id: polish
+    done: { cmd: "false" }
+`);
+    agents('touch agent-ran');
+    createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
+
+    const result = await run();
+    expect(result.advanced).toEqual([{ id: 'c-001', outcome: 'failed', next: expect.any(String) }]);
+    expect(card('c-001')).toMatchObject({ stage: 'polish', retries: { polish: 1 } });
   });
 
   it('counts a retry and keeps the log when the agent exits non-zero, even with nothing changed since', async () => {

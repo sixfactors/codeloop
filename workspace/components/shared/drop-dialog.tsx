@@ -20,7 +20,7 @@ export function DropDialog({ card, onClose }: { card: CardT | null; onClose: () 
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Drop {card?.id}?</AlertDialogTitle>
-          <AlertDialogDescription>“{card?.title}” leaves the backlog. The note goes on the card history.</AlertDialogDescription>
+          <AlertDialogDescription>“{card?.title}” leaves the backlog. The note goes on the story history.</AlertDialogDescription>
         </AlertDialogHeader>
         <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why (optional)" rows={2} aria-label="Drop note" />
         <AlertDialogFooter>

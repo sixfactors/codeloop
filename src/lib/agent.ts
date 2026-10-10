@@ -9,7 +9,7 @@ import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX } from './lane.js';
 import { checkEnv } from './shell.js';
 import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
-import { inject } from './wiki.js';
+import { folderPages, inject } from './wiki.js';
 
 export const BRIEFS_DIR = '.codeloop/state/briefs';
 export const AGENT_RUNS_DIR = '.codeloop/state/agent-runs';
@@ -62,11 +62,30 @@ export function briefPath(card: Card): string {
   return `${BRIEFS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}.md`;
 }
 
-function skillBody(projectDir: string, name: string): string | null {
+function skillFile(projectDir: string, name: string): string | null {
   const source = loadSkillsIndex(projectDir)?.find(s => s.name === name)?.source;
   if (!source) return null;
   const file = isAbsolute(source) ? source : join(projectDir, source);
-  return existsSync(file) ? parseFrontmatter(readFileSync(file, 'utf-8')).body.trim() : null;
+  return existsSync(file) ? readFileSync(file, 'utf-8') : null;
+}
+
+function skillBody(projectDir: string, name: string): string | null {
+  const text = skillFile(projectDir, name);
+  return text ? parseFrontmatter(text).body.trim() : null;
+}
+
+// Wiki folders a skill lists under `inputs:` (as `.codeloop/wiki/<folder>/*.md`). Read line by line:
+// skill frontmatter is not always valid YAML, and only this one key matters here.
+function skillWikiFolders(projectDir: string, name: string): string[] {
+  const text = skillFile(projectDir, name);
+  if (!text) return [];
+  const block = /^inputs:\s*\n((?:[ \t]+-.*\n?)+)/m.exec(text)?.[1] ?? '';
+  const folders: string[] = [];
+  for (const line of block.split('\n')) {
+    const m = /^[ \t]+-\s*\.codeloop\/wiki\/([\w-]+)\//.exec(line);
+    if (m && !folders.includes(m[1])) folders.push(m[1]);
+  }
+  return folders;
 }
 
 // The stage output, what is already in the card's spec folder, and the paths its open tasks name.
@@ -134,6 +153,17 @@ export function buildBrief(projectDir: string, card: Card): string {
   if (pages.length) {
     lines.push('## Wiki pages that apply', '');
     for (const p of pages) lines.push(`### ${p.title} (${p.kind}, freq ${p.freq}, ${p.severity})`, '', p.body, '');
+  }
+
+  // Competitor pages have their own section below, with the instruction that goes with them.
+  const folders = stage.skill ? skillWikiFolders(projectDir, stage.skill).filter(f => f !== 'competitors') : [];
+  const folderPagesByName = folders.map(f => [f, folderPages(projectDir, f).filter(p => !pages.some(q => q.path === p.path))] as const).filter(([, ps]) => ps.length);
+  if (folderPagesByName.length) {
+    lines.push('## Wiki folders this skill reads', '', 'Named in the skill\'s inputs. Read them before searching anywhere else; what they say is already decided.', '');
+    for (const [folder, ps] of folderPagesByName) {
+      lines.push(`### ${folder}/`, '');
+      for (const p of ps) lines.push(`#### ${p.title} (${p.path})`, '', p.body, '');
+    }
   }
 
   const competitors = card.stage === 'research' ? listCompetitors(projectDir) : [];

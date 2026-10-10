@@ -5,6 +5,8 @@ lane: build
 inputs:
   - docs/story-standard.md
   - specs/{id}/research.md
+  - .codeloop/wiki/product/*.md
+  - .codeloop/wiki/decisions/*.md
   - .codeloop/wiki/competitors/*.md
   - specs/{id}/spec.md (if it already exists)
 outputs:
@@ -31,10 +33,14 @@ Read these before writing anything:
    means expose don't rebuild, `port` means a sibling repo already has it, `build` means absent.
 2. `specs/{id}/research.md`, the file `codeloop spec new {id}` scaffolded from
    `templates/spec/research.md`. You fill it in, you don't replace its structure.
-3. `.codeloop/wiki/competitors/*.md`, run `codeloop wiki competitor list` for the current set.
+3. `.codeloop/wiki/product/` and `.codeloop/wiki/decisions/`, both in the brief: what the product
+   is, and what earlier research already decided. A decision page that covers this ground means
+   the `exists:` call and the pain are already known; cite the page instead of re-deriving them.
+   `.codeloop/wiki/INDEX.md` lists every folder and who writes it.
+4. `.codeloop/wiki/competitors/*.md`, run `codeloop wiki competitor list` for the current set.
    Only add a row for a competitor that already has a page; `codeloop wiki competitor add <name>`
    first if one doesn't exist and the comparison is worth keeping.
-4. `specs/{id}/spec.md`, if the card already has one, the title and story tell you what to search
+5. `specs/{id}/spec.md`, if the card already has one, the title and story tell you what to search
    for; research never contradicts an already-approved spec, it questions an unapproved one.
 
 ## Procedure
@@ -59,7 +65,9 @@ Read these before writing anything:
 8. Write at least three `- source: <url>, <note>` lines (the dash before "source" and the dash
    before the note both matter; `codeloop check research` parses the exact pattern).
 9. End the file with one line starting `verdict:`, `build`, `buy`, or `drop`. Nothing after this
-   line is read by the check, so don't bury it in a risks paragraph.
+   line is read by the check, so don't bury it in a risks paragraph. When the stage passes, the
+   engine copies the verdict, the `exists:` line, the `pain:` line and `## Options` to
+   `.codeloop/wiki/decisions/<title>.md`, so write them to read standalone there.
 10. Run the done command and fix every line it reports before moving the card on.
 
 ## Questions to ask before working

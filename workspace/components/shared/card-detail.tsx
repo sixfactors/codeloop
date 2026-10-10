@@ -39,7 +39,7 @@ const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(undefi
 
 export function storyLine(card: CardT): string | undefined {
   const s = card.story;
-  if (s?.as || s?.can || s?.so) return `As a ${s.as ?? '—'}, I can ${s.can ?? '—'}, so that ${s.so ?? '—'}.`;
+  if (s?.as || s?.can || s?.so) return `As a ${s.as ?? '-'}, I can ${s.can ?? '-'}, so that ${s.so ?? '-'}.`;
   return card.description;
 }
 
@@ -228,8 +228,8 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
 export function CardDetail({ id, stacked }: { id: string; stacked?: boolean }) {
   const { data: card, isLoading, error, refetch } = useCard(id);
   if (isLoading) return <CardDetailSkeleton />;
-  if (error) return <InlineError title="Card failed to load" error={error} onRetry={() => refetch()} />;
-  if (!card) return <EmptyState icon={Hash} title={`No card ${id}`} description="It may have been dropped or renamed." action={{ label: 'Back to board', href: routes.board }} />;
+  if (error) return <InlineError title="Story failed to load" error={error} onRetry={() => refetch()} />;
+  if (!card) return <EmptyState icon={Hash} title={`No story ${id}`} description="It may have been dropped or renamed." action={{ label: 'Back to board', href: routes.board }} />;
   return <CardDetailBody card={card} stacked={stacked} />;
 }
 

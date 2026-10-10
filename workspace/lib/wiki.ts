@@ -44,7 +44,7 @@ export const WIKI_FOLDERS: WikiFolder[] = [
   },
   {
     id: 'concepts', label: 'Concepts', singular: 'Concept', icon: Lightbulb,
-    description: 'Cross-cutting ideas the code and the cards refer to.',
+    description: 'Cross-cutting ideas the code and the stories refer to.',
     template: { frontmatter: {}, body: '' },
   },
   {
@@ -68,8 +68,8 @@ export const WIKI_FOLDERS: WikiFolder[] = [
     template: { frontmatter: {}, body: '## What they do\n\n## Where we differ\n\n' },
   },
   {
-    id: 'cards', label: 'Cards', singular: 'Card page', icon: FileText,
-    description: 'One page per card: what shipped and what was learned.',
+    id: 'cards', label: 'Stories', singular: 'Story page', icon: FileText,
+    description: 'One page per story: what shipped and what was learned.',
     template: { frontmatter: {}, body: '' },
   },
 ];

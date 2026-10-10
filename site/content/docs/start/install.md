@@ -31,6 +31,8 @@ Output from codeloop 0.4.1 in an empty repo:
 Initializing codeloop...
   Tools: claude | Stack: Generic project
 
+  + .mcp.json (codeloop mcp server)
+  agents: configured for claude, so run --agent works now
   Created:
     + .claude/commands/design.md
     + .claude/commands/plan.md

@@ -5,7 +5,7 @@ import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { detectProject, detectStack, type StackId } from '../lib/detect.js';
 import { installHostHooks } from '../lib/host-hooks.js';
-import { applyDetection, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
+import { applyAgentsConfig, applyDetection, applyMcpConfig, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
 import { defaultSkillDirs, ensureSkillsIndex, scanSkills } from '../lib/skills.js';
@@ -109,7 +109,7 @@ export const initCommand = new Command('init')
       }
     }
 
-    // Select tools — interactive prompt or flag
+    // Select tools, interactive prompt or flag
     let tools: ToolId[];
     if (options.tools) {
       tools = options.tools.split(',').map(t => t.trim()) as ToolId[];
@@ -150,6 +150,11 @@ export const initCommand = new Command('init')
     const applied = applyDetection(projectDir, detection, result.created);
     if (applied.includes('.codeloop/config.yaml')) console.log(chalk.dim(`  quality_checks from package.json: ${detection.qualityChecks.map(c => `${c.name} (${c.command})`).join(', ')}`));
     if (applied.includes('.codeloop/lanes/build.yaml')) console.log(chalk.dim(`  build lane test command: ${detection.testCommand}`));
+
+    for (const f of applyMcpConfig(projectDir, tools)) console.log(chalk.green(`  + ${f} (codeloop mcp server)`));
+    const agentsResult = applyAgentsConfig(projectDir, tools);
+    if (agentsResult.changed) console.log(chalk.dim(`  agents: configured for ${tools.filter(t => !agentsResult.skipped.includes(t)).join(', ')}, so run --agent works now`));
+    for (const t of agentsResult.skipped) console.log(chalk.yellow(`  ~ agents.${t} skipped: cursor-agent is not on PATH`));
 
     // The shipped lanes name the skills just installed, so the index has to exist before lint or pack
     // can pass. An existing index is left alone: adopt replaces it, it does not merge.
