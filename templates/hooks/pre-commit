@@ -1,0 +1,10 @@
+#!/bin/sh
+# Installed by `codeloop init --hooks` / `codeloop render --hooks`. A staged file outside the
+# active card's plan.md `## Files` list refuses the commit with the list; a plan with no files
+# list only warns. CODELOOP_GUARD=off skips this hook, as does a repo with no .codeloop/ or no
+# active card.
+[ "$CODELOOP_GUARD" = "off" ] && exit 0
+[ -d .codeloop ] || exit 0
+[ -s .codeloop/state/active-card ] || exit 0
+command -v codeloop >/dev/null 2>&1 || exit 0
+codeloop guard diff --staged

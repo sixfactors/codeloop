@@ -1,0 +1,39 @@
+id: build
+version: 1
+metric: { name: cycle_time_days, source: cards, target: "<5" }
+trigger: { manual: true }
+wip: 2
+retries: 3
+stages:
+  - id: research
+    skill: design
+    output: "{spec}/research.md"
+    done: { cmd: "codeloop check file {spec}/research.md --has 'verdict:'" }
+  - id: spec
+    skill: plan
+    output: "{spec}/tasks.md"
+    done: { cmd: "codeloop spec check {id}" }
+    gate: { name: spec, approver: owner }
+  - id: build
+    skill: test
+    done: { cmd: "codeloop task check {id} --all-done && npm test" }
+  - id: verify
+    skill: qa
+    output: evidence/{nnn}/verify.md
+    done: { cmd: "codeloop verify {id}" }
+    gate: { name: local, approver: owner }
+  - id: review
+    skill: qa
+    output: evidence/{nnn}/review.md
+    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'" }
+    gate: { name: pr, approver: reviewer }
+  - id: staging
+    skill: deploy
+    output: evidence/{nnn}/staging.md
+    done: { cmd: "codeloop check file evidence/{nnn}/staging.md --has 'result: pass'" }
+  - id: live
+    skill: ship
+    output: evidence/{nnn}/prod.md
+    done: { cmd: "codeloop check file evidence/{nnn}/prod.md --has 'result: pass'" }
+    gate: { name: prod, approver: owner, outward: true }
+on_done: { start: market }

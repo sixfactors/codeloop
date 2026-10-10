@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: workflow 1 -->
+<!-- codeloop artifact lineage: {{lineage}} -->
+<!-- codeloop-artifact
+id: {{id}}
+kind: workflow
+title: {{title}}
+actors: []
+entities: []
+flows: []
+-->
+<title>{{id}} {{title}}</title>
+<style>
+/* codeloop-artifact-base-css */
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>{{title}}</h1>
+    <p class="meta">{{id}} · {{project}} · {{topic}} · workflow</p>
+    <p class="scope">One-sentence scope: what this workflow does end to end.</p>
+    <div class="legend">
+      <!-- One chip per actor named under `actors:` above. -->
+    </div>
+  </header>
+
+  <section class="changestrip">
+    <h2>What changed</h2>
+    <ul>
+      <!-- One <li> per change vs the prior version in this lineage. Delete for a fresh workflow. -->
+    </ul>
+  </section>
+
+  <main>
+    <!--
+      One <section class="screen-group" data-flow="<name>"> per flow named under `flows:` above:
+      a sequence diagram naming every actor/entity involved, a swimlane table, and a state diagram
+      for the flow's main entity (one state diagram per card is enough if several flows share an
+      entity's lifecycle).
+
+      <section class="screen-group" data-flow="example-flow">
+        <h3>Example flow</h3>
+        <p class="scope">One sentence: the trigger and the outcome.</p>
+        <pre class="mermaid">
+sequenceDiagram
+  participant User as User
+  participant API as API
+  participant Entity as Entity
+  User->>API: action (data in)
+  API->>Entity: mutate (field: value)
+  Entity-->>API: result (field: value)
+  API-->>User: outcome (data out)
+        </pre>
+        <table>
+          <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+          <tr><td>1</td><td>User</td><td>API</td><td>field: value</td><td>field: value</td><td>What happens on failure, and what the user sees.</td></tr>
+        </table>
+      </section>
+    -->
+  </main>
+
+  <section class="contract">
+    <h3>Entity state</h3>
+    <p>State diagram for the main entity this workflow drives.</p>
+    <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Pending
+  Pending --> Approved
+  Pending --> Rejected
+  Approved --> [*]
+  Rejected --> [*]
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Actors and entities</h3>
+    <table>
+      <tr><th>Actor</th><th>Role in this workflow</th></tr>
+      <!-- One row per actor named under `actors:` above; every actor must appear in at least one diagram. -->
+    </table>
+    <table>
+      <tr><th>Entity</th><th>Lifecycle owner</th></tr>
+      <!-- One row per entity named under `entities:` above. -->
+    </table>
+  </section>
+</div>
+<script>
+  try {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
+  } catch (e) {}
+</script>
+</body>
+</html>

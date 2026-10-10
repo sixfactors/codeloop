@@ -1,0 +1,5 @@
+id: uc-001-01
+accept: US1
+failure_mode: "a failing check moves the card anyway, or never parks it"
+layers:
+  cli: { run: "bash usecases/001/uc.sh us1", expect: { exit: 0, stdout: "stays-then-stuck" } }

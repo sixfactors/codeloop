@@ -1,0 +1,20 @@
+id: learn
+version: 1
+metric: { name: repeat_gotcha_rate, source: knowledge }
+trigger: { manual: true }
+wip: 2
+retries: 3
+stages:
+  - id: capture
+    skill: reflect
+    output: learn/{id}/capture.md
+    done: { cmd: "codeloop check file learn/{id}/capture.md --has 'gotcha:'" }
+  - id: bump
+    skill: reflect
+    output: learn/{id}/bump.md
+    done: { cmd: "codeloop check file learn/{id}/bump.md --has 'freq:'" }
+  - id: promote
+    skill: reflect
+    output: learn/{id}/promote.md
+    done: { cmd: "codeloop check file learn/{id}/promote.md --has 'rule:'" }
+    gate: { name: rule, approver: owner }

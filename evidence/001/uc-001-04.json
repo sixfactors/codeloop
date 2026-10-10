@@ -1,0 +1,15 @@
+{
+  "id": "uc-001-04",
+  "accept": "US4",
+  "failure_mode": "trusted mode auto-approves a gate that guards something public",
+  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "outward-gate-stops\n\nexit 0"
+    }
+  ]
+}

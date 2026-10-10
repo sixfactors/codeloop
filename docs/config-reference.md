@@ -202,6 +202,31 @@ watch:
 
 Watch logs are written to `.codeloop/watch.log`. If `codeloop serve` is running, changes are also pushed via SSE.
 
+## Agents
+
+Used by `codeloop run --agent` and `codeloop schedule install`. With no `agents:` key, `codeloop run` only checks and advances cards.
+
+```yaml
+agents:
+  default: claude
+  claude:
+    cmd: "claude -p --permission-mode acceptEdits < {brief}"
+    timeout_minutes: 20
+    max_runs_per_day: 20
+  codex:
+    cmd: "codex exec - < {brief}"
+run:
+  agent: true
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `agents.default` | the only agent, when one is configured | Agent used by `run --agent` with no name. |
+| `agents.<name>.cmd` | required | Shell command run in the project directory. `{brief}` is replaced with the shell-quoted path of the stage brief. |
+| `agents.<name>.timeout_minutes` | 20 | The agent and its child processes are killed after this. |
+| `agents.<name>.max_runs_per_day` | 20 | Starts of this agent across the project in any 24 hours. |
+| `run.agent` | false | `true` makes plain `codeloop run` start agents; `--no-agent` turns it off for one run. |
+
 ## Codeloop Settings
 
 | Setting | Default | Description |

@@ -1,0 +1,29 @@
+# Written by `codeloop init --ci github`.
+name: codeloop pr
+on:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npx --yes @protoboxai/codeloop lane lint
+      - name: Every commit carries a Feature trailer
+        run: |
+          missing=0
+          for sha in $(git log --no-merges --format=%H "origin/${{ github.base_ref }}..HEAD"); do
+            if [ -z "$(git log -1 --format='%(trailers:key=Feature,valueonly)' "$sha")" ]; then
+              echo "::error::commit $sha has no Feature: <card-id> trailer"
+              missing=1
+            fi
+          done
+          exit $missing

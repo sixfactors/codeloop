@@ -75,6 +75,19 @@ commit:
 #     - .git
 #     - "*.log"
 
+# Unattended runs — used by `codeloop run --agent` and `codeloop schedule install`.
+# The command gets the stage brief; {brief} becomes the shell-quoted path to it.
+# agents:
+#   default: claude
+#   claude:
+#     cmd: "claude -p --permission-mode acceptEdits < {brief}"
+#     timeout_minutes: 20        # the agent is killed after this
+#     max_runs_per_day: 20       # agent starts across the project in any 24 hours
+#   codex:
+#     cmd: "codex exec - < {brief}"
+# run:
+#   agent: true                  # plain `codeloop run` starts agents too
+
 # Codeloop behavior settings.
 codeloop:
   critical_frequency: 3      # Gotchas at this freq or higher → CRITICAL in review

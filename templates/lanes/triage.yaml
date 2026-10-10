@@ -1,0 +1,24 @@
+id: triage
+version: 1
+metric: { name: proposals_accepted_ratio, source: cards }
+trigger: { cron: "0 20 * * *" }
+wip: 1
+retries: 3
+stages:
+  - id: capture
+    skill: debug
+    output: triage/{id}/capture.md
+    done: { cmd: "codeloop check file triage/{id}/capture.md --has 'sources:'" }
+  - id: classify
+    skill: manage
+    output: triage/{id}/classified.md
+    done: { cmd: "codeloop check file triage/{id}/classified.md --has 'category:'" }
+  - id: dedupe
+    skill: manage
+    output: triage/{id}/deduped.md
+    done: { cmd: "codeloop check file triage/{id}/deduped.md --has 'duplicates:'" }
+  - id: file
+    skill: manage
+    output: triage/{id}/proposals.md
+    done: { cmd: "codeloop check file triage/{id}/proposals.md --has 'proposals:'" }
+    gate: { name: proposals, approver: owner }

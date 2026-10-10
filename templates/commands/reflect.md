@@ -3,7 +3,7 @@ description: Session-end reflection — capture what you learned
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash
 ---
 
-<!-- codeloop-version: 0.1.0 -->
+<!-- codeloop-version: 0.4.2 -->
 
 # /reflect
 

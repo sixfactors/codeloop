@@ -1,0 +1,15 @@
+{
+  "id": "uc-001-05",
+  "accept": "US5",
+  "failure_mode": "a lane changes without evidence, or with a red eval",
+  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "proposal-cites-cards-promote-refused\n\nexit 0"
+    }
+  ]
+}

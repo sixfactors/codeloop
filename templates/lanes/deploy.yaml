@@ -1,0 +1,24 @@
+id: deploy
+version: 1
+metric: { name: change_failure_rate, source: cards, target: "<15%" }
+trigger: { on: git.tag }
+wip: 1
+retries: 3
+stages:
+  - id: staging
+    skill: deploy
+    output: deploy/{id}/staging.md
+    done: { cmd: "codeloop check file deploy/{id}/staging.md --has 'result: pass'" }
+  - id: verify
+    skill: qa
+    output: deploy/{id}/verify.md
+    done: { cmd: "codeloop check file deploy/{id}/verify.md --has 'result: pass'" }
+  - id: prod
+    skill: ship
+    output: deploy/{id}/prod.md
+    done: { cmd: "codeloop check file deploy/{id}/prod.md --has 'result: pass'" }
+    gate: { name: prod, approver: owner, outward: true }
+  - id: smoke
+    skill: debug
+    output: deploy/{id}/smoke.md
+    done: { cmd: "codeloop check file deploy/{id}/smoke.md --has 'result: pass'" }

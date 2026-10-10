@@ -1,0 +1,27 @@
+id: analyze
+version: 1
+metric: { name: north_star, source: analytics }
+trigger: { cron: "0 9 * * FRI" }
+wip: 1
+retries: 3
+stages:
+  - id: pull
+    skill: reflect
+    output: growth/{id}/metrics.md
+    done: { cmd: "codeloop check file growth/{id}/metrics.md --has 'north_star:'" }
+  - id: compare
+    skill: reflect
+    output: growth/{id}/compare.md
+    done: { cmd: "codeloop check file growth/{id}/compare.md --has 'delta:'" }
+  - id: judge
+    skill: reflect
+    output: growth/{id}/verdicts.md
+    done: { cmd: "codeloop check file growth/{id}/verdicts.md --has 'verdict:'" }
+    gate: { name: verdicts, approver: owner }
+  - id: findings
+    skill: reflect
+    output: growth/{id}/findings.md
+    done: { cmd: "codeloop check file growth/{id}/findings.md --has 'findings:'" }
+# on_done starts the next lane's card when one here finishes. It is off until config.yaml has
+# `lanes: { auto_start: true }`; until then a finished card only announces what it would start.
+# on_done: { start: plan }

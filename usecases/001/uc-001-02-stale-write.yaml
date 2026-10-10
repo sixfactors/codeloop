@@ -1,0 +1,5 @@
+id: uc-001-02
+accept: US2
+failure_mode: "two writers who read the same version both land, losing a write"
+layers:
+  cli: { run: "bash usecases/001/uc.sh us2", expect: { exit: 0, stdout: "conflict-no-lost-write" } }

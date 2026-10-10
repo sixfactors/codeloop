@@ -2,82 +2,70 @@
 
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
-import { GitHubStars } from './github-stars';
 import { ThemeToggle } from './theme-toggle';
 
 const links = [
-  { label: 'Pipeline', href: '#loop' },
-  { label: 'How It Works', href: '#knowledge' },
-  { label: 'Get Started', href: '#quickstart' },
+  { label: 'Docs', href: '/docs' },
+  { label: 'Compare', href: '/docs/compare' },
+  { label: 'GitHub', href: 'https://github.com/sixfactors/codeloop', external: true },
 ];
+
+const installButton =
+  'rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90';
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <a href="#" className="font-mono text-lg font-semibold tracking-tight">
+    <nav className="fixed top-0 z-50 w-full border-b border-border bg-background/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
+        <a href="/" className="font-mono text-lg font-medium tracking-tight">
           codeloop
         </a>
 
-        {/* Desktop */}
         <div className="hidden items-center gap-6 md:flex">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
+              target={l.external ? '_blank' : undefined}
+              rel={l.external ? 'noopener noreferrer' : undefined}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {l.label}
             </a>
           ))}
-          <GitHubStars />
           <ThemeToggle />
-          <a
-            href="#quickstart"
-            className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-light"
-          >
+          <a href="/docs/start/install" className={installButton}>
             Install
           </a>
         </div>
 
-        {/* Mobile toggle */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
-          <button
-            onClick={() => setOpen(!open)}
-            className="text-muted-foreground"
-            aria-label="Toggle menu"
-          >
+          <button onClick={() => setOpen(!open)} className="text-muted-foreground" aria-label="Toggle menu">
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div className="border-t border-border/50 bg-background px-6 pb-4 pt-2 md:hidden">
+        <div className="border-t border-border bg-background px-4 pb-4 pt-2 md:hidden">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
+              target={l.external ? '_blank' : undefined}
+              rel={l.external ? 'noopener noreferrer' : undefined}
               onClick={() => setOpen(false)}
               className="block py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {l.label}
             </a>
           ))}
-          <div className="mt-2 flex items-center gap-3">
-            <GitHubStars />
-            <a
-              href="#quickstart"
-              onClick={() => setOpen(false)}
-              className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground"
-            >
-              Install
-            </a>
-          </div>
+          <a href="/docs/start/install" onClick={() => setOpen(false)} className={`mt-2 inline-block ${installButton}`}>
+            Install
+          </a>
         </div>
       )}
     </nav>

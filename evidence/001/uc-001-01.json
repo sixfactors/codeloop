@@ -1,0 +1,15 @@
+{
+  "id": "uc-001-01",
+  "accept": "US1",
+  "failure_mode": "a failing check moves the card anyway, or never parks it",
+  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "stays-then-stuck\n\nexit 0"
+    }
+  ]
+}

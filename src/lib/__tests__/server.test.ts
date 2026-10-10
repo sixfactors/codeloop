@@ -13,7 +13,9 @@ describe('server', () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'codeloop-server-'));
     // Seed with an empty board
     saveBoard(tmpDir, createBoard());
-    ({ app } = createApp(tmpDir));
+    const created = createApp(tmpDir, undefined, { token: 'test-token' });
+    // Every write needs the start-up token; the tests here are about the task API, so it is added for them.
+    app = { request: (path: string, init: RequestInit = {}) => created.app.request(path, { ...init, headers: { ...init.headers, 'x-codeloop-token': 'test-token' } }) } as typeof created.app;
   });
 
   afterEach(() => {

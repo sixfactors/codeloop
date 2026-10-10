@@ -1,275 +1,93 @@
 # codeloop
 
-**The full dev lifecycle for AI coding agents.**
+A lane engine with a board, for AI coding agents.
 
-Your AI agent plans the work, tests it, reviews its own commits, deploys to staging, debugs production, and learns from every mistake — across sessions, across tools, without you babysitting it.
+A lane is a YAML file in your repo listing stages. Each stage names the skill an agent runs, the file it must write, and a command that decides whether the stage is done. A card is one story that moves through a lane. Where you want to decide, a stage carries a gate: the card stops, appears in your inbox and on the board, and moves only when you approve. An agent process cannot approve a gate; the engine refuses it. The build lane that ships with it goes research, interview, mock, spec, build, verify, review, staging, live, with gates at spec, local, pr and prod. Other lanes cover deploy, launch copy, weekly planning, triage, competitor scan and a growth review. Everything is files in your repo: `.codeloop/`, `specs/`, `usecases/`, `evidence/`. Docs: <https://codeloop.protobox.ai/docs>.
 
-![Codeloop Board](https://codeloop.sixfactors.ai/board.png)
+## Run it
 
-## The Problem
+Node 20 or newer, a git repository, and Claude Code, Cursor or Codex.
 
-AI coding tools (Claude Code, Cursor, Codex) are stateless. Every session starts from zero. You've explained that `doc.save()` has race conditions six times. You've caught `console.log` in production code on every PR. The agent never learns, because it can't remember.
-
-Worse — the agent can write code, but it can't test, deploy, or debug. You're still the glue between "code complete" and "live in production." That's where most of the time goes.
-
-## The Pipeline
-
-codeloop gives your project ten slash commands that cover the full development lifecycle:
-
-```
-/design → /plan → /manage → /test → /commit → /qa → /deploy → /debug → /reflect → /ship
-```
-
-| Command | What it does |
-|---------|-------------|
-| `/design` | Analyze the codebase, generate a lightweight architectural spec |
-| `/plan` | Write a task plan with acceptance criteria, enter plan mode |
-| `/manage` | Track steps, check off progress, manage the task board |
-| `/test` | Run your test suite, parse results, track coverage over time |
-| `/commit` | Three-phase commit: review diff against learned rubrics → reflect on session → commit |
-| `/qa` | Quality gate: static analysis + tests + coverage threshold + integrity checks |
-| `/deploy` | Deploy to staging or production with verification gates |
-| `/debug` | Search production logs, check health, cross-reference with recent commits |
-| `/reflect` | Deep session review: scan all work, propose lessons to save |
-| `/ship` | Close the loop: QA → staging → production → verify → done |
-
-Each command reads your project's config and knowledge files. No runtime, no server — just markdown and YAML that the LLM reads directly.
-
-## How Knowledge Compounds
-
-Every gotcha has a frequency counter:
-
-```
-Session 1: You discover that boolean query params need Transform decorators.
-           /commit saves it → gotchas.md [freq:1]
-           Next review: appears as a WARNING (non-blocking)
-
-Session 4: It comes up again. /reflect increments → [freq:2]
-
-Session 7: Third time. → [freq:3]
-           Now it's CRITICAL. /commit blocks until you confirm it's handled.
-
-Session 20: [freq:10+]
-            codeloop status says: "promote this to rules.md?"
-            It graduates from gotcha to non-negotiable rule.
-```
-
-**Frequency = severity.** The more something bites you, the harder the system fights to prevent it. No configuration needed — it emerges from use.
-
-The review is scoped too. Changed a backend file? It loads backend gotchas. Frontend only? It skips database warnings. Scopes in your config control what's relevant:
-
-```yaml
-scopes:
-  backend:
-    paths: ["src/**", "lib/**"]
-    gotcha_sections: ["Backend", "Database"]
-  frontend:
-    paths: ["app/**", "components/**"]
-    gotcha_sections: ["Frontend", "React"]
-```
-
-## Quick Start
-
-```bash
-npm install -g @sixfactors-ai/codeloop
+```sh
+npm install -g @protoboxai/codeloop
 cd your-project
-codeloop init
+codeloop init --tools claude
+codeloop serve --owner --open
 ```
 
-It asks which AI tools you use, detects your tech stack, and scaffolds:
+`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New story button or from the terminal:
 
-```
-.codeloop/
-  config.yaml       ← Scopes, quality checks, deploy/test/debug config
-  rules.md          ← Non-negotiable rules (always CRITICAL in review)
-  gotchas.md        ← Discovered gotchas with frequency tracking
-  patterns.md       ← Proven patterns with confidence levels
-  principles.md     ← How you want the AI to operate
-
-.claude/commands/   ← 10 slash commands (Claude Code)
-.cursor/commands/   ← 10 slash commands (Cursor)
-.agents/skills/     ← 10 skills (Codex)
-
-tasks/todo.md       ← Current task plan
+```sh
+codeloop start "Download every invoice as one CSV" \
+  --persona dev --can "download every invoice as one CSV" --so "I stop exporting by hand" --size S
 ```
 
-The knowledge base (`.codeloop/`) is shared across all tools. Doesn't matter if you use Claude Code on Monday and Cursor on Tuesday — same gotchas, same rules.
-
-## The Config
-
-`.codeloop/config.yaml` controls everything. The AI reads it directly.
-
-```yaml
-project:
-  name: "my-api"
-
-# Map file paths to knowledge sections
-scopes:
-  backend:
-    paths: ["src/**"]
-    gotcha_sections: ["Backend", "Database", "API"]
-  tests:
-    paths: ["**/*.test.*"]
-    gotcha_sections: ["Testing"]
-
-# Build/lint checks run during /commit and /qa
-quality_checks:
-  backend:
-    - name: "Typecheck"
-      command: "npx tsc --noEmit 2>&1 | tail -20"
-
-# Patterns banned in diffs
-diff_scan:
-  - pattern: "console\\.log"
-    files: "*.ts,*.js"
-    exclude: "*.test.*"
-    severity: CRITICAL
-    message: "console.log in production code"
-
-# Test runner config (used by /test and /qa)
-test:
-  command: "npm test"
-  coverage_threshold: 80
-  integrity_checks: true
-
-# Deployment gates (used by /deploy and /ship)
-deploy:
-  staging:
-    command: "make deploy-staging"
-    verify: "curl -sf https://staging.example.com/health"
-  production:
-    command: "make deploy-prod"
-    verify: "curl -sf https://example.com/health"
-    requires: staging
-
-# Production debugging (used by /debug)
-debug:
-  logs: "fly logs --app myapp"
-  health: "curl -sf https://example.com/health"
-
-# Frequency thresholds
-codeloop:
-  critical_frequency: 3
-  promote_frequency: 10
+```text
+created c-002 in build at stage research (specs/002-download-every-invoice-as-one-csv/)
+Next: run the /research skill to write specs/002-download-every-invoice-as-one-csv/research.md, then `codeloop next c-002`.
 ```
 
-## The Commit Flow
+Every command ends with a `Next:` line naming the skill, the file and the command that moves the card. Already have a repo with CI, tickets and your own slash commands? Read [You already have a project](https://codeloop.protobox.ai/docs/start/already-have-a-project).
 
-When you type `/commit`:
+## The three things you will do most
 
-```
-Phase 1: Review
-  ├─ Map changed files → scopes
-  ├─ Load gotchas (freq ≥ 3 = CRITICAL, 1-2 = WARNING)
-  ├─ Load patterns (HIGH confidence = expected)
-  ├─ Run quality checks for active scopes
-  ├─ Scan diff for violations
-  └─ Verdict: CLEAN / WARNINGS / BLOCKED
+**Start a card and move it.** `codeloop start "<title>"` makes the card and its spec folder. `codeloop next <id>` runs the current stage's check and moves the card when the check exits 0; a failing check is counted and the card parks as stuck after three. The title must say what the user can now do, and the story needs a `--so`. `codeloop brief <id>` prints what an agent is given for the stage.
 
-Phase 2: Reflect (lightweight)
-  ├─ Scan session for new gotchas or patterns
-  ├─ Propose saves (you pick what to keep)
-  └─ Write to gotchas.md or patterns.md
+**Answer the inbox.** `codeloop inbox` lists what needs you: cards at gates, proposals, open questions, what shipped, and numbers per lane. The board's Inbox page shows the same list grouped by priority band.
 
-Phase 3: Commit
-  ├─ Stage files
-  ├─ Generate conventional commit message
-  └─ Create commit
+```text
+1 shipped this week, 1 waiting on you, oldest today
+
+Waiting for you (1)
+  c-003  Rate-limit the invoices API: build/proposed, gate proposal
+        proposed from https://linear.app/acme/issue/ACME-413; `codeloop card show c-003` has the detail
+        codeloop approve c-003   puts it in the build lane   or   codeloop reject c-003 "<why not>"   drops it
+Questions for you (1)
+  c-001  ACME-412: add CSV export endpoint to /invoices: 1 open, first: Should the CSV include voided invoices?
+        codeloop answer c-001 <n> "<text>"   or   codeloop answer c-001 <n> --accept
+Shipped (1)
+  c-002  build  Download every invoice as one CSV
 ```
 
-If the review finds CRITICAL issues, it blocks. You can fix them, override, or abort.
+An agent asks with `codeloop ask <id> "<question>" --recommended "<answer>"`; you take the recommended answer with `codeloop answer <id> 1 --accept` or type your own.
 
-## The Deployment Pipeline
+**Approve a gate.** Read the file the inbox names, then approve or reject with a note. On the board, open the card and use the Gate panel.
 
-`/qa` → `/deploy staging` → `/deploy prod` forms a gate chain:
-
-```
-/qa passes           → sets env:local-pass    → unlocks staging
-/deploy staging      → sets env:staging-pass  → unlocks production
-/deploy prod         → sets env:prod-pass     → task is done
+```sh
+codeloop approve c-002 --as owner
 ```
 
-`/ship` runs the full chain in one command. If any gate fails, it stops and creates a regression task on the board.
-
-## Watch Mode
-
-Monitor your project in the background:
-
-```bash
-codeloop watch                # Start watching
-codeloop watch --with-serve   # Watch + board server (live UI)
+```text
+c-002 gate spec approved
+c-002 moved to build
+Next: run the /api skill, then `codeloop next c-002`.
 ```
 
-Watch detects file changes, git commits, test results, and build errors. Events are logged to `.codeloop/watch.log` and pushed to the board UI via SSE when the server is running.
+`--as` is only needed outside a terminal; a person at a terminal is the owner. A gate marked `outward` (live, prod, publish) stops before the stage runs, so nothing is released until you approve. Rejecting keeps the card in its stage and puts your note in the next brief.
 
-## Skill Registry
+## What is unreleased
 
-Install community skills or share your own:
+The npm package is 0.4.1. Everything below is on `main` as 0.4.2 and goes out with the next publish; until then it needs a clone or a tarball built from one:
 
-```bash
-codeloop search "deploy"              # Find skills
-codeloop install review-checklist     # Install from registry
-codeloop install github:user/repo     # Install from GitHub
-codeloop install ./local-skill        # Install from local path
-codeloop list                         # Show installed skills
-codeloop remove review-checklist      # Uninstall
+- the workspace board with New story, the Inbox page, Initiatives and the card drawer
+- story fields on a card (`--persona`, `--can`, `--so`, `--size`), the story check and a strict `spec check`
+- `ask` and `answer`, the questions band in the inbox, and the interview stage in the build lane
+- RICE on features, P1 to P4 bands, `feature`, `epic`, `initiative` and `card split` commands
+- the SDK (`@protoboxai/codeloop/sdk`) the CLI and the board both call
+- thirteen stage skills, `skill eval`, `wiki init --from-repo`, `artifact new` (mock, system design, workflow)
+- `render` writing the agent protocol for Claude Code, Cursor, Copilot and AGENTS.md, and `init --hooks` with edit, commit and push guards
+
+## Working on codeloop itself
+
+```sh
+npm ci && npm --prefix ui ci
+npm run build:all
+node dist/index.js lane lint
+npm test && bash scripts/first-user.sh
+npm pack
 ```
 
-Every installed skill gets security-validated (no `exec()`, no credential access, no pipe-to-shell) and locked with integrity hashes in `.codeloop/skills.lock`.
-
-## Works With Everything
-
-codeloop auto-detects your stack and tools:
-
-| Stack | Detected by | Starter config |
-|-------|-------------|----------------|
-| TypeScript | `tsconfig.json` | Typecheck, console.log scan, `any` warnings |
-| Python | `pyproject.toml`, `setup.py` | mypy, ruff, print() detection, pdb scan |
-| Go | `go.mod` | go vet, go build, fmt.Print detection |
-| Generic | Fallback | Minimal — you configure |
-
-| Tool | Commands installed to | Compatibility |
-|------|---------------------|---------------|
-| Claude Code | `.claude/commands/` | Full (primary target) |
-| Cursor | `.cursor/commands/` | Knowledge + config (tool hints are Claude-specific) |
-| Codex | `.agents/skills/` | Knowledge + config (tool hints are Claude-specific) |
-
-**Note**: The `allowed-tools` frontmatter in skill files uses Claude Code tool names (Bash, Read, Edit, etc.). Cursor and Codex ignore this field — the skill instructions still work, but tool restrictions aren't enforced. The knowledge files (gotchas, patterns, rules) and config are fully portable across all tools.
-
-## CLI Reference
-
-```bash
-# Project setup
-codeloop init                         # Interactive setup
-codeloop init --tools claude,cursor   # Skip tool prompt
-codeloop init --starter python        # Force specific stack
-codeloop status                       # Knowledge stats, version check
-codeloop update                       # Update skills (never touches knowledge)
-
-# Live monitoring
-codeloop watch                        # Background file + git monitor
-codeloop serve                        # Board UI server (http://localhost:4242)
-
-# Skill registry
-codeloop search <query>               # Search for skills
-codeloop install <name>               # Install a skill
-codeloop list                         # Show installed skills
-codeloop remove <name>                # Uninstall a skill
-codeloop publish                      # Publish your skill to the registry
-codeloop login                        # Authenticate with GitHub
-```
-
-## The Knowledge Files
-
-**`rules.md`** — Non-negotiable. Always loaded as CRITICAL. Start with universal rules, add yours.
-
-**`gotchas.md`** — Discovered through work. Each entry has `[freq:N]`. Severity auto-scales with frequency. Organized by sections matching your scopes.
-
-**`patterns.md`** — What works well. HIGH-confidence patterns become expectations — deviations trigger warnings during review.
-
-**`principles.md`** — How you want the AI to operate. Plan first? Verify before done? Write it here once, it applies everywhere.
-
-All plain markdown. No lock-in, no proprietary format. If you stop using codeloop tomorrow, the knowledge stays as useful documentation.
+`scripts/first-user.sh` installs the packed tarball into a private prefix and runs the Start pages' own commands against it. `npm pack` is how a trial tarball is made. The repo runs on its own lanes; `node dist/index.js inbox` shows its cards.
 
 ## License
 

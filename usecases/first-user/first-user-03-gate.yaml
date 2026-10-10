@@ -1,0 +1,5 @@
+id: first-user-03-gate
+accept: US3
+failure_mode: "the packaged board does not load, hides the gate box, or Approve from the UI does not move the card, so the owner has to go back to the terminal"
+layers:
+  cli: { run: "bash scripts/first-user.sh --only gate", expect: { exit: 0, stdout: "FIRST-USER PASS gate" } }

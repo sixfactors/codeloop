@@ -1,0 +1,5 @@
+id: uc-001-03
+accept: US3
+failure_mode: "an agent approves its own gate"
+layers:
+  cli: { run: "bash usecases/001/uc.sh us3", expect: { exit: 0, stdout: "agent-refused-owner-releases" } }

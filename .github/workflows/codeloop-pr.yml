@@ -1,0 +1,20 @@
+# CI for codeloop itself: build, test, lane lint and the end-to-end script. No deploy or publish steps.
+name: codeloop pr
+on:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm --prefix ui ci
+      # The e2e script loads the board page, so the UI is built too.
+      - run: npm run build:all
+      - run: npm test
+      - run: node dist/index.js lane lint
+      - run: bash scripts/e2e-founder-loop.sh

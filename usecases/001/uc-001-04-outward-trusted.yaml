@@ -1,0 +1,5 @@
+id: uc-001-04
+accept: US4
+failure_mode: "trusted mode auto-approves a gate that guards something public"
+layers:
+  cli: { run: "bash usecases/001/uc.sh us4", expect: { exit: 0, stdout: "outward-gate-stops" } }

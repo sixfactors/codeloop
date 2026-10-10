@@ -48,10 +48,10 @@ export const searchCommand = new Command('search')
           }));
         }
       } catch {
-        // Registry offline — use local results only
+        // Registry offline, use local results only
         if (results.length === 0) {
           // Only show hint if local had no results either
-          console.log(chalk.dim('  (Community registry offline — showing local results only)'));
+          console.log(chalk.dim('  (Community registry offline, showing local results only)'));
         }
       }
     }

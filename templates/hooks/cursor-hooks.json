@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "sessionStart": [{ "command": "codeloop presence start" }],
+    "sessionEnd": [{ "command": "codeloop presence end" }],
+    "subagentStart": [{ "command": "codeloop presence event subagentStart" }],
+    "subagentStop": [{ "command": "codeloop presence event subagentStop" }]
+  }
+}

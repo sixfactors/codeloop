@@ -11,7 +11,8 @@ export const watchCommand = new Command('watch')
   .option('--with-serve', 'Also start the board server')
   .option('--stop', 'Stop background watcher')
   .option('--bg', 'Run in background')
-  .action(async (options: { withServe?: boolean; stop?: boolean; bg?: boolean }) => {
+  .option('--guard', 'Append a warning to .codeloop/state/warnings.jsonl when files change with no active card')
+  .action(async (options: { withServe?: boolean; stop?: boolean; bg?: boolean; guard?: boolean }) => {
     const projectDir = process.cwd();
 
     // --stop: kill background watcher
@@ -51,6 +52,7 @@ export const watchCommand = new Command('watch')
       const { fork } = await import('child_process');
       const args = ['watch'];
       if (options.withServe) args.push('--with-serve');
+      if (options.guard) args.push('--guard');
 
       const child = fork(process.argv[1], args, {
         detached: true,
@@ -82,7 +84,7 @@ export const watchCommand = new Command('watch')
       });
     }
 
-    const engine = createWatchEngine(projectDir, broadcastFn);
+    const engine = createWatchEngine(projectDir, broadcastFn, { guard: options.guard });
 
     console.log();
     console.log(chalk.bold('  Codeloop Watch'));

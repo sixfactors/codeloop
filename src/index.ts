@@ -1,38 +1,11 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
-import { initCommand } from './commands/init.js';
-import { updateCommand } from './commands/update.js';
-import { statusCommand } from './commands/status.js';
-import { serveCommand } from './commands/serve.js';
-import { watchCommand } from './commands/watch.js';
-import { installCommand } from './commands/install.js';
-import { searchCommand } from './commands/search.js';
-import { listCommand } from './commands/list.js';
-import { removeCommand } from './commands/remove.js';
-import { publishCommand } from './commands/publish.js';
-import { loginCommand } from './commands/login.js';
+import { skillCommand } from './commands/skill.js';
+import { buildProgram } from './program.js';
 
-const program = new Command();
-
-program
-  .name('codeloop')
-  .description('Self-improving development workflow for AI coding agents')
-  .version('0.2.0');
-
-// Project management
-program.addCommand(initCommand);
-program.addCommand(updateCommand);
-program.addCommand(statusCommand);
-program.addCommand(serveCommand);
-program.addCommand(watchCommand);
-
-// Skill registry
-program.addCommand(installCommand);
-program.addCommand(searchCommand);
-program.addCommand(listCommand);
-program.addCommand(removeCommand);
-program.addCommand(publishCommand);
-program.addCommand(loginCommand);
-
+// Registered here rather than in program.ts: `codeloop skill eval` is new and program.ts is
+// being edited by other work in parallel. addCommand before parse puts it in the same tree
+// `--help` and the subcommand dispatch walk.
+const program = buildProgram();
+program.addCommand(skillCommand);
 program.parse();

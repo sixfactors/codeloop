@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 import { watchFiles, pollGitCommits, createIdleTimer, type SignalConfig, type WatchSignal } from './signals.js';
 import { processSignal } from './triggers.js';
 import { createReporter } from './reporter.js';
+import { guardSignal } from './guard.js';
 
 export interface WatchConfig {
   enabled: boolean;
@@ -61,7 +62,7 @@ export interface WatchEngine {
  * Create the watch engine.
  * Orchestrates file watchers, git polling, idle timer, and reporting.
  */
-export function createWatchEngine(projectDir: string, broadcastFn?: () => void): WatchEngine {
+export function createWatchEngine(projectDir: string, broadcastFn?: () => void, options: { guard?: boolean } = {}): WatchEngine {
   const config = loadWatchConfig(projectDir);
   const reporter = createReporter(projectDir, broadcastFn);
 
@@ -76,6 +77,7 @@ export function createWatchEngine(projectDir: string, broadcastFn?: () => void):
 
     const results = processSignal(projectDir, signal);
     reporter.log(signal, results);
+    guardSignal(projectDir, signal, options.guard);
   }
 
   return {

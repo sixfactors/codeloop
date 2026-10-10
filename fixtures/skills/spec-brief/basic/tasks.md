@@ -1,0 +1,3 @@
+- [ ] Add `--csv` to `codeloop inbox`
+- [ ] One row per parked card: id, lane, stage, gate, awaiting, age
+- [ ] Test: `codeloop inbox --csv` on a board with two parked cards prints a header row and two data rows

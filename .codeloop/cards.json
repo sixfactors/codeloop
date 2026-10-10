@@ -1,0 +1,3666 @@
+{
+  "version": 234,
+  "cards": [
+    {
+      "id": "CL-001",
+      "title": "Lane engine with enforced gates",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "build",
+      "retries": {},
+      "evidence": [
+        "specs/001/research.md",
+        "specs/001/tasks.md",
+        "evidence/001/verify.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-02T03:31:36.119Z",
+          "actor": "agent",
+          "human": false,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-02T03:31:36.197Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-02T03:31:36.604Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec"
+        },
+        {
+          "at": "2026-10-07T18:47:41.137Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "fingerprint": "76b02dc6ea6115a23e9697a1a629c29a8350191d"
+        },
+        {
+          "at": "2026-10-07T18:47:41.148Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to build"
+        },
+        {
+          "at": "2026-10-09T19:54:24.585Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "build",
+          "note": "result: pass at 527980d"
+        }
+      ],
+      "createdAt": "2026-10-02T03:31:36.119Z",
+      "updatedAt": "2026-10-09T19:54:24.585Z"
+    },
+    {
+      "id": "CL-002",
+      "title": "README matches the lane engine the site sells",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "spec",
+      "retries": {},
+      "evidence": [
+        "specs/002-readme-matches-the-lane-engine-the-site/research.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:14.139Z",
+          "actor": "owner",
+          "human": true,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-07T17:42:14.149Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/002-readme-matches-the-lane-engine-the-site"
+        },
+        {
+          "at": "2026-10-08T17:56:02.512Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-08T17:56:03.896Z",
+          "actor": "owner",
+          "human": true,
+          "action": "output",
+          "stage": "spec",
+          "note": "specs/002-readme-matches-the-lane-engine-the-site/tasks.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:14.139Z",
+      "updatedAt": "2026-10-08T17:56:03.896Z",
+      "spec": "specs/002-readme-matches-the-lane-engine-the-site"
+    },
+    {
+      "id": "c-003",
+      "title": "Size-adaptive lanes: investigate stage sets card size, stages carry when:",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "A one-line fix runs all eight stages today. Both competitors are hated for this. Trivial cards should go build > verify > review.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Size-adaptive lanes: investigate stage sets card size, stages carry when:",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:30.967Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:13.301Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:30.967Z",
+      "updatedAt": "2026-10-07T17:53:13.301Z"
+    },
+    {
+      "id": "c-004",
+      "title": "Import BMAD from tickets.toml; Spec Kit import pulls clarifications and checklists",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "BMAD v6.12 no longer writes sprint-status.yaml. Our importer reads a file that does not exist.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Import BMAD from tickets.toml; Spec Kit import pulls clarifications and checklists",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.099Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.241Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.099Z",
+      "updatedAt": "2026-10-07T17:53:20.241Z"
+    },
+    {
+      "id": "c-005",
+      "title": "Clarify through the inbox: up to five questions with recommended answers, written back to the spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Founder answers async from inbox or board; agent resumes. Nobody does this outside a chat session.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Clarify through the inbox: up to five questions with recommended answers, written back to the spec",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.224Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.365Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.224Z",
+      "updatedAt": "2026-10-07T17:53:20.365Z"
+    },
+    {
+      "id": "c-006",
+      "title": "Cost and autonomy per card: tokens and dollars per stage from agent runs",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Shown in stats, on the board and the site. BMAD users ask for this in issues; neither tool reports it.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Cost and autonomy per card: tokens and dollars per stage from agent runs",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.346Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.487Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.346Z",
+      "updatedAt": "2026-10-07T17:53:20.487Z"
+    },
+    {
+      "id": "c-007",
+      "title": "Executable rules: rules.md entries carry check: commands run at build and review",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Rule with a check blocks; without one advises. Learned gotchas promote with a check.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Executable rules: rules.md entries carry check: commands run at build and review",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.471Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.610Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.471Z",
+      "updatedAt": "2026-10-07T17:53:20.610Z"
+    },
+    {
+      "id": "c-008",
+      "title": "Review triage feeds the queue: verdict and evidence per finding; deferred findings become triage cards",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "The self-feeding queue, grounded in review output.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Review triage feeds the queue: verdict and evidence per finding; deferred findings become triage cards",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.598Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.731Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.598Z",
+      "updatedAt": "2026-10-07T17:53:20.731Z"
+    },
+    {
+      "id": "c-009",
+      "title": "Agent Skills layout so npx skills add works; lanes installable as packs from the Protobox catalog",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "BMAD ships as plain Agent Skills in one command. Lane packs are our answer to Spec Kit extensions.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Agent Skills layout so npx skills add works; lanes installable as packs from the Protobox catalog",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.720Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.850Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.720Z",
+      "updatedAt": "2026-10-07T17:53:20.850Z"
+    },
+    {
+      "id": "c-010",
+      "title": "Replay eval runs each card's checks at its own SHA, not HEAD",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "A lane change can pass eval against history that no longer matches.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Replay eval runs each card's checks at its own SHA, not HEAD",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.849Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:20.971Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.849Z",
+      "updatedAt": "2026-10-07T17:53:20.971Z"
+    },
+    {
+      "id": "c-011",
+      "title": "Adopt without --from merges into the index; index plugin-namespaced skills",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Adopt wipes the index today; marketing-os:* skills cannot be indexed.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Adopt without --from merges into the index; index plugin-namespaced skills",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:31.973Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.096Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:31.973Z",
+      "updatedAt": "2026-10-07T17:53:21.096Z"
+    },
+    {
+      "id": "c-012",
+      "title": "First run --due must not create a deploy card for a pre-existing tag",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Surprise card on day one in any repo with tags.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:First run --due must not create a deploy card for a pre-existing tag",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:32.097Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.214Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:32.097Z",
+      "updatedAt": "2026-10-07T17:53:21.214Z"
+    },
+    {
+      "id": "c-013",
+      "title": "UI verify runner so the ui layer of a use case executes",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "verify has cli and api runners; the ui layer is prose.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:UI verify runner so the ui layer of a use case executes",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:32.219Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.332Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:32.219Z",
+      "updatedAt": "2026-10-07T17:53:21.332Z"
+    },
+    {
+      "id": "c-014",
+      "title": "Backlog: WIP refusal points to card propose; board shows proposed cards as a backlog column",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Found today: creating 12 cards hit wip 2 with no hint where the rest should go.",
+      "source": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md:Backlog: WIP refusal points to card propose; board shows proposed cards as a backlog column",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:42:32.341Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-07-speckit-bmad-competitive.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.455Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:42:32.341Z",
+      "updatedAt": "2026-10-07T17:53:21.455Z"
+    },
+    {
+      "id": "c-015",
+      "title": "card propose takes --id; inbox and card show take --as",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Proposals come out as c-NNN next to CL-NNN cards; role flag is inconsistent across commands.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:card propose takes --id; inbox and card show take --as",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.311Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.579Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.311Z",
+      "updatedAt": "2026-10-07T17:53:21.579Z"
+    },
+    {
+      "id": "c-016",
+      "title": "serve --bg writes its URL and token to .codeloop/serve.json",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Backgrounded start loses the token; only the parent terminal sees it.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:serve --bg writes its URL and token to .codeloop/serve.json",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.437Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.708Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.437Z",
+      "updatedAt": "2026-10-07T17:53:21.708Z"
+    },
+    {
+      "id": "c-017",
+      "title": "init stops writing tasks/todo.md",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Dead artifact from the pre-lane model.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:init stops writing tasks/todo.md",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.567Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.832Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.567Z",
+      "updatedAt": "2026-10-07T17:53:21.832Z"
+    },
+    {
+      "id": "c-018",
+      "title": "Lanes use adopted skills: init maps each stage to a matching adopted skill before falling back to the bundled one",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Protobox has /spec and /ctrl; adopt indexed 56 skills and the lanes ignored all of them.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Lanes use adopted skills: init maps each stage to a matching adopted skill before falling back to the bundled one",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.705Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:21.955Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.705Z",
+      "updatedAt": "2026-10-07T17:53:21.955Z"
+    },
+    {
+      "id": "c-019",
+      "title": "Build done-check detects the package manager and test command",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "npm test is hardcoded; Protobox is pnpm.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Build done-check detects the package manager and test command",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.836Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.078Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.836Z",
+      "updatedAt": "2026-10-07T17:53:22.078Z"
+    },
+    {
+      "id": "c-020",
+      "title": "Cards carry rice; run and the board sort by it",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Our process picks by RICE from Next up; codeloop takes file order.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Cards carry rice; run and the board sort by it",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:05.975Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.205Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:05.975Z",
+      "updatedAt": "2026-10-07T17:53:22.205Z"
+    },
+    {
+      "id": "c-021",
+      "title": "Cards carry owner, branch, pr; run reconciles from git and GitHub: PR merged ends review, merge reachable from prodRef derives live",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Our process derives live from the prod ref; codeloop wants a hand-written prod.md.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Cards carry owner, branch, pr; run reconciles from git and GitHub: PR merged ends review, merge reachable from prodRef derives live",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:06.112Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.333Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:06.112Z",
+      "updatedAt": "2026-10-07T17:53:22.333Z"
+    },
+    {
+      "id": "c-022",
+      "title": "Mock stage accepts a route in the app; check mock renders the named screens from a URL",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Our rule says prototype as a real page; codeloop draws standalone HTML.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Mock stage accepts a route in the app; check mock renders the named screens from a URL",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:06.241Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.460Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:06.241Z",
+      "updatedAt": "2026-10-07T17:53:22.460Z"
+    },
+    {
+      "id": "c-023",
+      "title": "Spec carries docs: and site: lines; review done-check requires them changed or marked none",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Ours ships docs and site with major cards; the build lane has no docs or site step.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Spec carries docs: and site: lines; review done-check requires them changed or marked none",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:06.368Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.588Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:06.368Z",
+      "updatedAt": "2026-10-07T17:53:22.588Z"
+    },
+    {
+      "id": "c-024",
+      "title": "card split writes children with epic:; the board nests them",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "spec check says split the card and stops.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:card split writes children with epic:; the board nests them",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:06.509Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.712Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:06.509Z",
+      "updatedAt": "2026-10-07T17:53:22.712Z"
+    },
+    {
+      "id": "c-025",
+      "title": "Gate notifications to Slack or a webhook with the evidence link",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Ours posts evidence in chat and #all-6fs before a gate.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Gate notifications to Slack or a webhook with the evidence link",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:47:06.651Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+        },
+        {
+          "at": "2026-10-07T17:53:22.835Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "superseded by refined list, docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:47:06.651Z",
+      "updatedAt": "2026-10-07T17:53:22.835Z"
+    },
+    {
+      "id": "c-026",
+      "title": "A1 Plugin loader: plugin.yaml shape, four kinds, detect, load order repo/home/npm/catalog",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Core stays small; plugins carry rules, skill, patterns, gotchas, checks, spines.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A1 Plugin loader: plugin.yaml shape, four kinds, detect, load order repo/home/npm/catalog",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:52:59.450Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.162Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:52:59.450Z",
+      "updatedAt": "2026-10-07T18:01:27.162Z"
+    },
+    {
+      "id": "c-027",
+      "title": "A2 init maps each build stage to the matching specialist or adopted skill; detects package manager and test command",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Adopt indexed 56 Protobox skills and the lanes ignored them; npm test hardcoded.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A2 init maps each build stage to the matching specialist or adopted skill; detects package manager and test command",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:52:59.576Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.284Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:52:59.576Z",
+      "updatedAt": "2026-10-07T18:01:27.284Z"
+    },
+    {
+      "id": "c-028",
+      "title": "A3 Size-adaptive lanes: investigate stage sets size, stages carry when:",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Trivial cards skip research, mock, spec; epics run every thinking stage.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A3 Size-adaptive lanes: investigate stage sets size, stages carry when:",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:52:59.699Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.402Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:52:59.699Z",
+      "updatedAt": "2026-10-07T18:01:27.402Z"
+    },
+    {
+      "id": "c-029",
+      "title": "A4 Card model: rice, owner, branch, pr, epic, size; run and the board sort by rice",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Our process picks by RICE; codeloop takes file order.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A4 Card model: rice, owner, branch, pr, epic, size; run and the board sort by rice",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:52:59.833Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.559Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:52:59.833Z",
+      "updatedAt": "2026-10-07T18:01:27.559Z"
+    },
+    {
+      "id": "c-030",
+      "title": "A5 Reconcile from git and GitHub: PR merged ends review; merge reachable from prodRef derives live",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Live is derived, never hand-written.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A5 Reconcile from git and GitHub: PR merged ends review; merge reachable from prodRef derives live",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:52:59.960Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.683Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:52:59.960Z",
+      "updatedAt": "2026-10-07T18:01:27.683Z"
+    },
+    {
+      "id": "c-031",
+      "title": "A6 Backlog column; card propose --id; --as on every command; serve --bg writes .codeloop/serve.json",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Found dogfooding on 10-07.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A6 Backlog column; card propose --id; --as on every command; serve --bg writes .codeloop/serve.json",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.185Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.819Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.185Z",
+      "updatedAt": "2026-10-07T18:01:27.819Z"
+    },
+    {
+      "id": "c-032",
+      "title": "A7 card split writes children with epic:; the board nests them",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "spec check says split and stops.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A7 card split writes children with epic:; the board nests them",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.335Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:27.944Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.335Z",
+      "updatedAt": "2026-10-07T18:01:27.944Z"
+    },
+    {
+      "id": "c-033",
+      "title": "A8 check diff, spec check --strict, Not-building section required",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Files in plan, deps named, no task-less file, tests do not drop. No extra features.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A8 check diff, spec check --strict, Not-building section required",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.467Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.074Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.467Z",
+      "updatedAt": "2026-10-07T18:01:28.074Z"
+    },
+    {
+      "id": "c-034",
+      "title": "A9 Executable rules: check: on rules.md entries, run at build and review",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Rule with a check blocks; without one advises.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A9 Executable rules: check: on rules.md entries, run at build and review",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.596Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.205Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.596Z",
+      "updatedAt": "2026-10-07T18:01:28.205Z"
+    },
+    {
+      "id": "c-035",
+      "title": "A10 Review triage: verdict and evidence per finding; deferred become cards; unnecessary removes code",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Self-feeding queue from real review output.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A10 Review triage: verdict and evidence per finding; deferred become cards; unnecessary removes code",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.783Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.333Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.783Z",
+      "updatedAt": "2026-10-07T18:01:28.333Z"
+    },
+    {
+      "id": "c-036",
+      "title": "A11 Cost and autonomy per card from agent runs; stats, board, site",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Neither competitor reports cost; BMAD users ask for it.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A11 Cost and autonomy per card from agent runs; stats, board, site",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:00.953Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.461Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:00.953Z",
+      "updatedAt": "2026-10-07T18:01:28.461Z"
+    },
+    {
+      "id": "c-037",
+      "title": "A12 Wiki pane in serve; engine-written card pages; gate notes become decisions",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Board details live in the wiki and survive the card.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A12 Wiki pane in serve; engine-written card pages; gate notes become decisions",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.083Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.596Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.083Z",
+      "updatedAt": "2026-10-07T18:01:28.596Z"
+    },
+    {
+      "id": "c-038",
+      "title": "A13 Gate notifications to Slack or a webhook with the evidence link",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Ours posts evidence before every gate.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A13 Gate notifications to Slack or a webhook with the evidence link",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.219Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.728Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.219Z",
+      "updatedAt": "2026-10-07T18:01:28.728Z"
+    },
+    {
+      "id": "c-039",
+      "title": "A14 Replay eval at each card SHA; run --due ignores pre-existing tags; adopt merges the index",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Three known engine limits.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A14 Replay eval at each card SHA; run --due ignores pre-existing tags; adopt merges the index",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.349Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.853Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.349Z",
+      "updatedAt": "2026-10-07T18:01:28.853Z"
+    },
+    {
+      "id": "c-040",
+      "title": "A15 Agent Skills layout for npx skills add; plugins and lanes installable from the Protobox catalog",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "BMAD ships as plain Agent Skills.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A15 Agent Skills layout for npx skills add; plugins and lanes installable from the Protobox catalog",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.480Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:28.977Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.480Z",
+      "updatedAt": "2026-10-07T18:01:28.977Z"
+    },
+    {
+      "id": "c-041",
+      "title": "A16 Importers: BMAD tickets.toml; Spec Kit clarifications and checklists; fixtures from current versions",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "BMAD import reads a file that no longer exists.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A16 Importers: BMAD tickets.toml; Spec Kit clarifications and checklists; fixtures from current versions",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.639Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.107Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.639Z",
+      "updatedAt": "2026-10-07T18:01:29.107Z"
+    },
+    {
+      "id": "c-042",
+      "title": "A17 README matches the lane engine; init stops writing tasks/todo.md",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "README still sells the old loop.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A17 README matches the lane engine; init stops writing tasks/todo.md",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.784Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.233Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.784Z",
+      "updatedAt": "2026-10-07T18:01:29.233Z"
+    },
+    {
+      "id": "c-043",
+      "title": "B1 interview stage through the inbox: five questions, recommended answers, written back to the spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Founder answers async; nobody else does this.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B1 interview stage through the inbox: five questions, recommended answers, written back to the spec",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:01.933Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.363Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:01.933Z",
+      "updatedAt": "2026-10-07T18:01:29.363Z"
+    },
+    {
+      "id": "c-044",
+      "title": "B2 whys, options, premortem, scope-cut stages with checks",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "BMAD thinking pieces as checked stages.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B2 whys, options, premortem, scope-cut stages with checks",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.062Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.493Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.062Z",
+      "updatedAt": "2026-10-07T18:01:29.493Z"
+    },
+    {
+      "id": "c-045",
+      "title": "B3 codeloop research <card>: competitor wiki + web + screenshots, research.md, draft spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Research that creates specs.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B3 codeloop research <card>: competitor wiki + web + screenshots, research.md, draft spec",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.191Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.628Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.191Z",
+      "updatedAt": "2026-10-07T18:01:29.628Z"
+    },
+    {
+      "id": "c-046",
+      "title": "C1 ui-mock plugin: mock is a route in the app; screen inventory spine; ui-spec-compare check",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From ui-mock-artifacts and design-graph.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C1 ui-mock plugin: mock is a route in the app; screen inventory spine; ui-spec-compare check",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.316Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.761Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.316Z",
+      "updatedAt": "2026-10-07T18:01:29.761Z"
+    },
+    {
+      "id": "c-047",
+      "title": "C2 ui-shadcn plugin: frontend-apps rules as checks: tokens, weights, registry first, components/shared",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "How chanl-admin was built.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C2 ui-shadcn plugin: frontend-apps rules as checks: tokens, weights, registry first, components/shared",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.447Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:29.892Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.447Z",
+      "updatedAt": "2026-10-07T18:01:29.892Z"
+    },
+    {
+      "id": "c-048",
+      "title": "C3 marketing-site plugin: section templates, StoryBrand, copy rules; spec carries docs: and site:",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From landing-copy and chanl-site.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C3 marketing-site plugin: section templates, StoryBrand, copy rules; spec carries docs: and site:",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.582Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.029Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.582Z",
+      "updatedAt": "2026-10-07T18:01:30.029Z"
+    },
+    {
+      "id": "c-049",
+      "title": "C4 backend-nestjs plugin: DTO, envelope, swagger, scoping checks; spines ERD, contracts, data flows with file-to-doc mapping",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From backend-services, api-contracts, nestjs-coder, ARCHITECTURE-DOCS.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C4 backend-nestjs plugin: DTO, envelope, swagger, scoping checks; spines ERD, contracts, data flows with file-to-doc mapping",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.715Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.159Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.715Z",
+      "updatedAt": "2026-10-07T18:01:30.159Z"
+    },
+    {
+      "id": "c-050",
+      "title": "C5 backend-fastapi plugin: same spines and stage in Python; proves the interface on two languages",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Dogfood on sherpa-backend.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C5 backend-fastapi plugin: same spines and stage in Python; proves the interface on two languages",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.839Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.295Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.839Z",
+      "updatedAt": "2026-10-07T18:01:30.295Z"
+    },
+    {
+      "id": "c-051",
+      "title": "C6 sdk-cli plugin: SDK exposes the change and the CLI shows it, as the pre-gate check",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From sdk-cli rules and process.md.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C6 sdk-cli plugin: SDK exposes the change and the CLI shows it, as the pre-gate check",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:02.965Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.426Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:02.965Z",
+      "updatedAt": "2026-10-07T18:01:30.426Z"
+    },
+    {
+      "id": "c-052",
+      "title": "C7 qa plugin: use cases per layer, UI runner, --mutate",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From usecase, test-writer, e2e-testing.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C7 qa plugin: use cases per layer, UI runner, --mutate",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:03.088Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.557Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:03.088Z",
+      "updatedAt": "2026-10-07T18:01:30.557Z"
+    },
+    {
+      "id": "c-053",
+      "title": "C8 deploy plugin: deploy guard, smoke test, Fly and Vercel integrations, GitHub Environment gate",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From deployer, prod-smoke-test, deploy-guard.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C8 deploy plugin: deploy guard, smoke test, Fly and Vercel integrations, GitHub Environment gate",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:03.212Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.685Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:03.212Z",
+      "updatedAt": "2026-10-07T18:01:30.685Z"
+    },
+    {
+      "id": "c-054",
+      "title": "C9 review plugin: PR and service review in the triage format",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "From pr-reviewer, service-reviewer, code-quality-check.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C9 review plugin: PR and service review in the triage format",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:03.336Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.813Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:03.336Z",
+      "updatedAt": "2026-10-07T18:01:30.813Z"
+    },
+    {
+      "id": "c-055",
+      "title": "D1 Publish the plugin and lane catalog to Protobox prod; page writes on hosted servers",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "Hosted tier is a demo until this.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:D1 Publish the plugin and lane catalog to Protobox prod; page writes on hosted servers",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:03.460Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:30.943Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:03.460Z",
+      "updatedAt": "2026-10-07T18:01:30.943Z"
+    },
+    {
+      "id": "c-056",
+      "title": "D2 Sign-in and real roles for the hosted board",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "dropped",
+      "description": "--as owner is a flag, not auth.",
+      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
+      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:D2 Sign-in and real roles for the hosted board",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T17:53:03.581Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+        },
+        {
+          "at": "2026-10-07T18:01:31.072Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reject",
+          "stage": "proposed",
+          "note": "rewritten as a user story per docs/story-standard.md"
+        }
+      ],
+      "createdAt": "2026-10-07T17:53:03.581Z",
+      "updatedAt": "2026-10-07T18:01:31.072Z"
+    },
+    {
+      "id": "c-057",
+      "title": "Cards read like user stories",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can only create a card that says who, what and why in plain words, so that the board is readable by anyone and agents build what users need. Initiative: founder ships without ceremony · S · metric: cards failing check story",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Cards read like user stories",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.206Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T18:47:10.534Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-07T19:14:19.562Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/057-cards-read-like-user-stories"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.206Z",
+      "updatedAt": "2026-10-07T19:14:19.562Z",
+      "story": {
+        "as": "founder",
+        "can": "only create a card that says who, what and why in plain words",
+        "so": "the board is readable by anyone and agents build what users need"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "cards failing check story",
+      "spec": "specs/057-cards-read-like-user-stories",
+      "feature": "right-sized-cards"
+    },
+    {
+      "id": "c-058",
+      "title": "Small fixes skip the ceremony",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can start a one-line fix and watch it go straight to build and verify, so that the pipeline matches the size of the work. Initiative: founder ships without ceremony · M · metric: cycle time, trivial cards",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Small fixes skip the ceremony",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.339Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:58.628Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/058-small-fixes-skip-the-ceremony"
+        },
+        {
+          "at": "2026-10-07T19:15:08.524Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Skip research, spec and the spec gate; keep build, verify (local gate) and review (pr gate). Prod gate unchanged. Splitting and epics stay in c-060."
+        },
+        {
+          "at": "2026-10-07T21:19:48.977Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.339Z",
+      "updatedAt": "2026-10-07T21:19:48.977Z",
+      "story": {
+        "as": "founder",
+        "can": "start a one-line fix and watch it go straight to build and verify",
+        "so": "the pipeline matches the size of the work"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "cycle time, trivial cards",
+      "spec": "specs/058-small-fixes-skip-the-ceremony",
+      "feature": "right-sized-cards"
+    },
+    {
+      "id": "c-059",
+      "title": "Park ideas in a backlog",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can add more cards than the work-in-progress limit and find them in a backlog column, so that nothing is refused or lost. Initiative: founder ships without ceremony · S · metric: proposals accepted",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Park ideas in a backlog",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.465Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:58.775Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/059-park-ideas-in-a-backlog"
+        },
+        {
+          "at": "2026-10-07T20:08:43.797Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Column and propose-beyond-WIP only. `--as` goes as a task under c-088 (roles); `serve --bg` as a task under c-062."
+        },
+        {
+          "at": "2026-10-07T20:08:43.838Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Column and propose-beyond-WIP only. `--as` goes as a task under c-088 (roles); `serve --bg` as a task under c-062."
+        },
+        {
+          "at": "2026-10-07T20:09:48.205Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Both. `run` pulls the top-RICE backlog card when a slot frees (createdAt order until c-061 ships); `card start <id>` jumps the queue."
+        },
+        {
+          "at": "2026-10-07T20:10:49.907Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given WIP=2 with two cards in build, when `card propose` a third, then it sits in `backlog` on `serve`, the inbox counts it under parked, and `run` leaves it there until a slot frees."
+        },
+        {
+          "at": "2026-10-08T16:38:19.893Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Age it, never drop: inbox prints \"N in backlog, oldest 21d\"; the plan lane's Monday rank is the only thing that reorders it."
+        },
+        {
+          "at": "2026-10-08T16:38:27.304Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: One column: rename stage `proposed` to `backlog`; scan proposals and founder parkings sit together, sorted by rice."
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.465Z",
+      "updatedAt": "2026-10-08T16:38:27.304Z",
+      "story": {
+        "as": "founder",
+        "can": "add more cards than the work-in-progress limit and find them in a backlog column",
+        "so": "nothing is refused or lost"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "proposals accepted",
+      "spec": "specs/059-park-ideas-in-a-backlog",
+      "feature": "value-ranked-board"
+    },
+    {
+      "id": "c-060",
+      "title": "Split a card that is too big",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can split a card into two or three children under one epic, so that each piece ships in under a week. Initiative: founder ships without ceremony · S · metric: cards over one week",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Split a card that is too big",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.595Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:58.916Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/060-split-a-card-that-is-too-big"
+        },
+        {
+          "at": "2026-10-08T16:29:41.461Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.595Z",
+      "updatedAt": "2026-10-08T16:29:41.461Z",
+      "story": {
+        "as": "founder",
+        "can": "split a card into two or three children under one epic",
+        "so": "each piece ships in under a week"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "cards over one week",
+      "spec": "specs/060-split-a-card-that-is-too-big",
+      "feature": "right-sized-cards"
+    },
+    {
+      "id": "c-061",
+      "title": "Cards are picked by value",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can give a card a RICE score and see the board and the agent take the highest first, so that the most valuable work ships first. Initiative: founder ships without ceremony · S · metric: shipped cards that moved their metric",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Cards are picked by value",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.726Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.055Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/061-cards-are-picked-by-value"
+        },
+        {
+          "at": "2026-10-08T16:29:47.150Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.726Z",
+      "updatedAt": "2026-10-08T16:29:47.150Z",
+      "story": {
+        "as": "founder",
+        "can": "give a card a RICE score and see the board and the agent take the highest first",
+        "so": "the most valuable work ships first"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "shipped cards that moved their metric",
+      "spec": "specs/061-cards-are-picked-by-value",
+      "feature": "value-ranked-board"
+    },
+    {
+      "id": "c-062",
+      "title": "The board follows git",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can merge a pull request or deploy and see the card move on its own, so that I never update status by hand. Initiative: founder ships without ceremony · M · metric: human turns per card",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:The board follows git",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.851Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.191Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/062-the-board-follows-git"
+        },
+        {
+          "at": "2026-10-08T16:29:54.750Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.851Z",
+      "updatedAt": "2026-10-08T16:29:54.750Z",
+      "story": {
+        "as": "founder",
+        "can": "merge a pull request or deploy and see the card move on its own",
+        "so": "I never update status by hand"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "human turns per card",
+      "spec": "specs/062-the-board-follows-git",
+      "feature": "board-follows-git"
+    },
+    {
+      "id": "c-063",
+      "title": "Answer the agent's questions from my inbox",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can answer up to five questions, each with a suggested answer, from the inbox or my phone, so that the agent keeps going without a meeting. Initiative: founder ships without ceremony · M · metric: unattended span",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Answer the agent's questions from my inbox",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:31.981Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.323Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/063-answer-the-agent-s-questions-from-my-inb"
+        },
+        {
+          "at": "2026-10-08T16:30:05.881Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:31.981Z",
+      "updatedAt": "2026-10-08T16:30:05.881Z",
+      "story": {
+        "as": "founder",
+        "can": "answer up to five questions, each with a suggested answer, from the inbox or my phone",
+        "so": "the agent keeps going without a meeting"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "unattended span",
+      "spec": "specs/063-answer-the-agent-s-questions-from-my-inb",
+      "feature": "agent-thinks-first"
+    },
+    {
+      "id": "c-064",
+      "title": "Get pinged when a card needs me",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can get a message with the evidence link when a card reaches a gate, so that I approve from wherever I am. Initiative: founder ships without ceremony · S · metric: time waiting at gates",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Get pinged when a card needs me",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.113Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.461Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/064-get-pinged-when-a-card-needs-me"
+        },
+        {
+          "at": "2026-10-08T16:31:43.124Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-08T16:31:52.770Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q3: Given `notify.webhook` set, when a card parks at the spec gate, then one message lands in #all-6fs in the same `run` with card id, gate name and evidence link, and a second `run` sends nothing for the same park event."
+        },
+        {
+          "at": "2026-10-08T16:31:54.422Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q4: The hosted card page when cloud sync is on; otherwise the `serve --bg` localhost URL plus a three-line evidence summary pasted into the message so it reads without the link."
+        },
+        {
+          "at": "2026-10-08T16:31:55.582Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q5: One retry, then an event `notify: failed` on the card; the run continues."
+        },
+        {
+          "at": "2026-10-08T16:31:57.127Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q1: Generic webhook POST with a Slack-shaped payload; `notify.webhook` URL from env. No reply-from-Slack; approving stays on the board or CLI."
+        },
+        {
+          "at": "2026-10-08T16:31:58.906Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q2: Gate park, interview question posted, and retries exhausted. Nothing else; `run` summaries stay in the inbox."
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.113Z",
+      "updatedAt": "2026-10-08T16:31:58.906Z",
+      "story": {
+        "as": "founder",
+        "can": "get a message with the evidence link when a card reaches a gate",
+        "so": "I approve from wherever I am"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "time waiting at gates",
+      "spec": "specs/064-get-pinged-when-a-card-needs-me",
+      "feature": "board-follows-git"
+    },
+    {
+      "id": "c-065",
+      "title": "Know what each card cost",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can see tokens, dollars and my own turns per shipped card, so that I know what autonomy costs and where it stalls. Initiative: founder ships without ceremony · M · metric: cost per shipped card",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Know what each card cost",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.242Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.595Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/065-know-what-each-card-cost"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.242Z",
+      "updatedAt": "2026-10-07T19:13:59.595Z",
+      "story": {
+        "as": "founder",
+        "can": "see tokens, dollars and my own turns per shipped card",
+        "so": "I know what autonomy costs and where it stalls"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "cost per shipped card",
+      "spec": "specs/065-know-what-each-card-cost",
+      "feature": "board-follows-git"
+    },
+    {
+      "id": "c-066",
+      "title": "The agent thinks before it builds",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a founder, I can read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec, so that I approve a decision and not a guess. Initiative: founder ships without ceremony · M · metric: first-pass verify",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:The agent thinks before it builds",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.370Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.731Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/066-the-agent-thinks-before-it-builds"
+        },
+        {
+          "at": "2026-10-08T16:32:25.499Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.370Z",
+      "updatedAt": "2026-10-08T16:32:25.499Z",
+      "story": {
+        "as": "founder",
+        "can": "read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec",
+        "so": "I approve a decision and not a guess"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "first-pass verify",
+      "spec": "specs/066-the-agent-thinks-before-it-builds",
+      "feature": "agent-thinks-first"
+    },
+    {
+      "id": "c-067",
+      "title": "Research writes the first draft",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can get a research page with sources and screenshots and a draft spec before I spend a minute, so that my time goes to deciding, not gathering. Initiative: founder ships without ceremony · M · metric: time to spec gate",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Research writes the first draft",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.496Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.860Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/067-research-writes-the-first-draft"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.496Z",
+      "updatedAt": "2026-10-07T19:13:59.860Z",
+      "story": {
+        "as": "founder",
+        "can": "get a research page with sources and screenshots and a draft spec before I spend a minute",
+        "so": "my time goes to deciding, not gathering"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "founder-ships-without-ceremony",
+      "metric": "time to spec gate",
+      "spec": "specs/067-research-writes-the-first-draft",
+      "feature": "agent-thinks-first"
+    },
+    {
+      "id": "c-068",
+      "title": "Nothing ships that the plan did not ask for",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can trust that every file, dependency and task traces to an acceptance line, so that agents do not add features I never wanted. Initiative: nothing unasked ships, everything ships proven · M · metric: rework ratio",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Nothing ships that the plan did not ask for",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.624Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:13:59.991Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/068-nothing-ships-that-the-plan-did-not-ask"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.624Z",
+      "updatedAt": "2026-10-07T19:13:59.991Z",
+      "story": {
+        "as": "founder",
+        "can": "trust that every file, dependency and task traces to an acceptance line",
+        "so": "agents do not add features I never wanted"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "rework ratio",
+      "spec": "specs/068-nothing-ships-that-the-plan-did-not-ask",
+      "feature": "scope-and-rules-as-checks"
+    },
+    {
+      "id": "c-069",
+      "title": "Rules that enforce themselves",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can attach a check to a rule and have the build fail when it is broken, so that rules are followed and not just read. Initiative: nothing unasked ships, everything ships proven · M · metric: critical gotcha recurrence",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Rules that enforce themselves",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.756Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.175Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/069-rules-that-enforce-themselves"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.756Z",
+      "updatedAt": "2026-10-07T19:14:00.175Z",
+      "story": {
+        "as": "founder",
+        "can": "attach a check to a rule and have the build fail when it is broken",
+        "so": "rules are followed and not just read"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "critical gotcha recurrence",
+      "spec": "specs/069-rules-that-enforce-themselves",
+      "feature": "scope-and-rules-as-checks"
+    },
+    {
+      "id": "c-070",
+      "title": "Review findings become cards",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a reviewer, I can mark each finding fix now, defer or unnecessary, and see deferred ones become cards, so that nothing is lost and nothing is padded. Initiative: nothing unasked ships, everything ships proven · M · metric: rework ratio",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Review findings become cards",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:32.885Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.319Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/070-review-findings-become-cards"
+        },
+        {
+          "at": "2026-10-08T16:41:10.902Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research",
+          "note": "I think each card must follow a user story and also define acceptance criteria - if we do review it should be saved as a set of cards - but it should update cards that are in backlog instead of duplicating them and try to reuse them (if not done). "
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:32.885Z",
+      "updatedAt": "2026-10-08T16:41:10.902Z",
+      "story": {
+        "as": "reviewer",
+        "can": "mark each finding fix now, defer or unnecessary, and see deferred ones become cards",
+        "so": "nothing is lost and nothing is padded"
+      },
+      "persona": "reviewer",
+      "size": "M",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "rework ratio",
+      "spec": "specs/070-review-findings-become-cards",
+      "feature": "reviews-and-proof"
+    },
+    {
+      "id": "c-071",
+      "title": "Proof that tests can fail",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can see every acceptance line proven through API, CLI and UI and proven to fail without the fix, so that green means something. Initiative: nothing unasked ships, everything ships proven · L · metric: first-pass verify",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Proof that tests can fail",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.008Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.453Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/071-proof-that-tests-can-fail"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.008Z",
+      "updatedAt": "2026-10-07T19:14:00.453Z",
+      "story": {
+        "as": "founder",
+        "can": "see every acceptance line proven through API, CLI and UI and proven to fail without the fix",
+        "so": "green means something"
+      },
+      "persona": "founder",
+      "size": "L",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "first-pass verify",
+      "spec": "specs/071-proof-that-tests-can-fail",
+      "feature": "reviews-and-proof"
+    },
+    {
+      "id": "c-072",
+      "title": "Lane changes are judged against real history",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can change a lane and see it replayed on finished cards at their own commits, so that a lane change cannot pass on history that no longer matches. Initiative: nothing unasked ships, everything ships proven · S · metric: lane proposals promoted",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Lane changes are judged against real history",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.134Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.586Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/072-lane-changes-are-judged-against-real-his"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.134Z",
+      "updatedAt": "2026-10-07T19:14:00.586Z",
+      "story": {
+        "as": "founder",
+        "can": "change a lane and see it replayed on finished cards at their own commits",
+        "so": "a lane change cannot pass on history that no longer matches"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "lane proposals promoted",
+      "spec": "specs/072-lane-changes-are-judged-against-real-his",
+      "feature": "scope-and-rules-as-checks"
+    },
+    {
+      "id": "c-073",
+      "title": "Deploy with a guard and a smoke test",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can click approve and see the deploy, the smoke test and the card move to live, so that prod never moves without proof. Initiative: nothing unasked ships, everything ships proven · M · metric: prod incidents per deploy",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Deploy with a guard and a smoke test",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.262Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.709Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/073-deploy-with-a-guard-and-a-smoke-test"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.262Z",
+      "updatedAt": "2026-10-07T19:14:00.709Z",
+      "story": {
+        "as": "founder",
+        "can": "click approve and see the deploy, the smoke test and the card move to live",
+        "so": "prod never moves without proof"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "prod incidents per deploy",
+      "spec": "specs/073-deploy-with-a-guard-and-a-smoke-test",
+      "feature": "reviews-and-proof"
+    },
+    {
+      "id": "c-074",
+      "title": "Reviews come in one format",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a reviewer, I get pull request and service reviews as one findings table with verdicts, so that I read evidence, not prose. Initiative: nothing unasked ships, everything ships proven · S · metric: review turnaround",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Reviews come in one format",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.390Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.830Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/074-reviews-come-in-one-format"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.390Z",
+      "updatedAt": "2026-10-07T19:14:00.830Z",
+      "story": {
+        "as": "reviewer",
+        "can": "get pull request and service reviews as one findings table with verdicts",
+        "so": "I read evidence, not prose"
+      },
+      "persona": "reviewer",
+      "size": "S",
+      "initiative": "nothing-unasked-ships-everything-proven",
+      "metric": "review turnaround",
+      "spec": "specs/074-reviews-come-in-one-format",
+      "feature": "reviews-and-proof"
+    },
+    {
+      "id": "c-075",
+      "title": "Add a plugin and codeloop uses it",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev, I can drop a plugin folder in my repo or install one from npm or the catalog, so that my stack's rules and checks run without touching core. Initiative: any stack, same loop · L · metric: plugins installed",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Add a plugin and codeloop uses it",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.521Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:00.948Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/075-add-a-plugin-and-codeloop-uses-it"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.521Z",
+      "updatedAt": "2026-10-07T19:14:00.948Z",
+      "story": {
+        "as": "dev",
+        "can": "drop a plugin folder in my repo or install one from npm or the catalog",
+        "so": "my stack's rules and checks run without touching core"
+      },
+      "persona": "dev",
+      "size": "L",
+      "initiative": "any-stack-same-loop",
+      "metric": "plugins installed",
+      "spec": "specs/075-add-a-plugin-and-codeloop-uses-it",
+      "feature": "plugins-load"
+    },
+    {
+      "id": "c-076",
+      "title": "Lanes use the skills I already have",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev, I can run init and see each stage mapped to my own skill and my own test command, so that nothing generic replaces what I built. Initiative: any stack, same loop · M · metric: stages mapped to adopted skills",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Lanes use the skills I already have",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.651Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.072Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/076-lanes-use-the-skills-i-already-have"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.651Z",
+      "updatedAt": "2026-10-07T19:14:01.072Z",
+      "story": {
+        "as": "dev",
+        "can": "run init and see each stage mapped to my own skill and my own test command",
+        "so": "nothing generic replaces what I built"
+      },
+      "persona": "dev",
+      "size": "M",
+      "initiative": "any-stack-same-loop",
+      "metric": "stages mapped to adopted skills",
+      "spec": "specs/076-lanes-use-the-skills-i-already-have",
+      "feature": "plugins-load"
+    },
+    {
+      "id": "c-077",
+      "title": "Mocks are real pages",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can click a mock inside the app built from real components, so that what I approve is what gets built. Initiative: any stack, same loop · M · metric: mock to build divergence",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Mocks are real pages",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.778Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.190Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/077-mocks-are-real-pages"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.778Z",
+      "updatedAt": "2026-10-07T19:14:01.190Z",
+      "story": {
+        "as": "founder",
+        "can": "click a mock inside the app built from real components",
+        "so": "what I approve is what gets built"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "any-stack-same-loop",
+      "metric": "mock to build divergence",
+      "spec": "specs/077-mocks-are-real-pages",
+      "feature": "ui-specialists"
+    },
+    {
+      "id": "c-078",
+      "title": "Screens match the design system every time",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can trust that every screen uses the tokens, weights and shared components, because anything off-system fails the check, so that the product looks like one product. Initiative: any stack, same loop · M · metric: design check failures",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Screens match the design system every time",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:33.904Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.316Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/078-screens-match-the-design-system-every-ti"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:33.904Z",
+      "updatedAt": "2026-10-07T19:14:01.316Z",
+      "story": {
+        "as": "founder",
+        "can": "trust that every screen uses the tokens, weights and shared components, because anything off-system fails the check",
+        "so": "the product looks like one product"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "any-stack-same-loop",
+      "metric": "design check failures",
+      "spec": "specs/078-screens-match-the-design-system-every-ti",
+      "feature": "ui-specialists"
+    },
+    {
+      "id": "c-079",
+      "title": "Ship the site and docs with the feature",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can see the site and docs changes in the same card as the feature, so that launches are never half done. Initiative: any stack, same loop · S · metric: features live without docs",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Ship the site and docs with the feature",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.040Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.440Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/079-ship-the-site-and-docs-with-the-feature"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.040Z",
+      "updatedAt": "2026-10-07T19:14:01.440Z",
+      "story": {
+        "as": "founder",
+        "can": "see the site and docs changes in the same card as the feature",
+        "so": "launches are never half done"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "any-stack-same-loop",
+      "metric": "features live without docs",
+      "spec": "specs/079-ship-the-site-and-docs-with-the-feature",
+      "feature": "ui-specialists"
+    },
+    {
+      "id": "c-080",
+      "title": "Backend work keeps the ERD and contracts current",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can trust that a schema or API change updates the ERD and contract docs in the same card, because the check fails otherwise, so that the docs never lie. Initiative: any stack, same loop · L · metric: spine drift",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Backend work keeps the ERD and contracts current",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.169Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.571Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/080-backend-work-keeps-the-erd-and-contracts"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.169Z",
+      "updatedAt": "2026-10-07T19:14:01.571Z",
+      "story": {
+        "as": "founder",
+        "can": "trust that a schema or API change updates the ERD and contract docs in the same card, because the check fails otherwise",
+        "so": "the docs never lie"
+      },
+      "persona": "founder",
+      "size": "L",
+      "initiative": "any-stack-same-loop",
+      "metric": "spine drift",
+      "spec": "specs/080-backend-work-keeps-the-erd-and-contracts",
+      "feature": "backend-specialists"
+    },
+    {
+      "id": "c-081",
+      "title": "The same loop in Python",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev on a FastAPI service, I get the same stages, spines and checks as a NestJS service, so that the loop is not tied to one language. Initiative: any stack, same loop · M · metric: stacks running the build lane",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:The same loop in Python",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.293Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.695Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/081-the-same-loop-in-python"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.293Z",
+      "updatedAt": "2026-10-07T19:14:01.695Z",
+      "story": {
+        "as": "dev on a FastAPI service",
+        "can": "get the same stages, spines and checks as a NestJS service",
+        "so": "the loop is not tied to one language"
+      },
+      "persona": "dev on a FastAPI service",
+      "size": "M",
+      "initiative": "any-stack-same-loop",
+      "metric": "stacks running the build lane",
+      "spec": "specs/081-the-same-loop-in-python",
+      "feature": "backend-specialists"
+    },
+    {
+      "id": "c-082",
+      "title": "Every feature reaches the SDK and CLI",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev, I can call a new feature from the SDK and the CLI before the gate, or read why not, so that nothing ships API-only by accident. Initiative: any stack, same loop · S · metric: features without SDK or CLI",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Every feature reaches the SDK and CLI",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.426Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.821Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/082-every-feature-reaches-the-sdk-and-cli"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.426Z",
+      "updatedAt": "2026-10-07T19:14:01.821Z",
+      "story": {
+        "as": "dev",
+        "can": "call a new feature from the SDK and the CLI before the gate, or read why not",
+        "so": "nothing ships API-only by accident"
+      },
+      "persona": "dev",
+      "size": "S",
+      "initiative": "any-stack-same-loop",
+      "metric": "features without SDK or CLI",
+      "spec": "specs/082-every-feature-reaches-the-sdk-and-cli",
+      "feature": "backend-specialists"
+    },
+    {
+      "id": "c-083",
+      "title": "Bring my Spec Kit or BMAD work with me",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "research",
+      "description": "As a dev switching tools, I can import my current Spec Kit or BMAD folders and get cards, so that trying codeloop costs nothing. Initiative: any stack, same loop · S · metric: imports succeeded",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Bring my Spec Kit or BMAD work with me",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.559Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:01.940Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/083-bring-my-spec-kit-or-bmad-work-with-me"
+        },
+        {
+          "at": "2026-10-08T16:30:51.222Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Spec Kit first (its `specs/nnn/` layout is ours); BMAD in the same card if it stays S, else a child."
+        },
+        {
+          "at": "2026-10-08T16:30:53.569Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Card plus spec, plan and tasks copied into `specs/<nnn>/` with an `imported_from:` line; clarifications become `interview.md`; the source is never written."
+        },
+        {
+          "at": "2026-10-08T16:30:55.751Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given vendored fixtures from the current Spec Kit and BMAD versions, when `codeloop import speckit ./specs`, then N backlog cards exist, each passing `check story` or tagged `needs-story` with the failing line, and the source directory hash is unchanged."
+        },
+        {
+          "at": "2026-10-08T16:31:22.396Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Expected; import prints the count and posts one inbox question \"rewrite titles? recommended yes\", which runs the interview stage over them."
+        },
+        {
+          "at": "2026-10-08T16:31:30.331Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Vendored under `usecases/import/fixtures/` with the version in the folder name."
+        },
+        {
+          "at": "2026-10-08T16:31:32.947Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.559Z",
+      "updatedAt": "2026-10-08T16:31:32.947Z",
+      "story": {
+        "as": "dev switching tools",
+        "can": "import my current Spec Kit or BMAD folders and get cards",
+        "so": "trying codeloop costs nothing"
+      },
+      "persona": "dev switching tools",
+      "size": "S",
+      "initiative": "any-stack-same-loop",
+      "metric": "imports succeeded",
+      "spec": "specs/083-bring-my-spec-kit-or-bmad-work-with-me",
+      "feature": "install-and-import"
+    },
+    {
+      "id": "c-084",
+      "title": "Install codeloop the way any skill installs",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev, I can run one skills command and pick plugins from a catalog, so that trying codeloop takes a minute. Initiative: any stack, same loop · S · metric: installs",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Install codeloop the way any skill installs",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.688Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:02.061Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/084-install-codeloop-the-way-any-skill-insta"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.688Z",
+      "updatedAt": "2026-10-07T19:14:02.061Z",
+      "story": {
+        "as": "dev",
+        "can": "run one skills command and pick plugins from a catalog",
+        "so": "trying codeloop takes a minute"
+      },
+      "persona": "dev",
+      "size": "S",
+      "initiative": "any-stack-same-loop",
+      "metric": "installs",
+      "spec": "specs/084-install-codeloop-the-way-any-skill-insta",
+      "feature": "install-and-import"
+    },
+    {
+      "id": "c-085",
+      "title": "The README describes the product that ships",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a visitor, I can read the README and the site and find the same product, so that I trust the install. Initiative: any stack, same loop · S · metric: install after visit",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:The README describes the product that ships",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.811Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:02.186Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/085-the-readme-describes-the-product-that-sh"
+        },
+        {
+          "at": "2026-10-08T16:33:40.949Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: README and the init change; site copy only where a line contradicts the README, fixed in the same card."
+        },
+        {
+          "at": "2026-10-08T16:33:44.524Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: What: lanes with gates for a solo founder's agents. Run: skills add, init, start, next, approve. Three tasks: answer the inbox, approve a gate, change a lane."
+        },
+        {
+          "at": "2026-10-08T16:33:46.662Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a clean clone, when a fresh agent follows the README top to bottom, then it reaches an approved spec gate on a dogfood card with no missing step, and `init` output contains no `tasks/todo.md`."
+        },
+        {
+          "at": "2026-10-08T16:33:47.776Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Only shipped commands appear; proposed ones sit under one \"Planned\" heading linking the board."
+        },
+        {
+          "at": "2026-10-08T16:33:52.919Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: The dev installing; the founder story lives on the site."
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.811Z",
+      "updatedAt": "2026-10-08T16:33:52.919Z",
+      "story": {
+        "as": "visitor",
+        "can": "read the README and the site and find the same product",
+        "so": "I trust the install"
+      },
+      "persona": "visitor",
+      "size": "S",
+      "initiative": "any-stack-same-loop",
+      "metric": "install after visit",
+      "spec": "specs/085-the-readme-describes-the-product-that-sh",
+      "feature": "install-and-import"
+    },
+    {
+      "id": "c-086",
+      "title": "Read the wiki next to the board",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a founder, I can open any card and read its story, decisions, evidence and the pages it touched beside the board, so that the board's history survives the card. Initiative: a hosted board the team shares · L · metric: wiki pages read per card",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Read the wiki next to the board",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:34.938Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:02.305Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/086-read-the-wiki-next-to-the-board"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:34.938Z",
+      "updatedAt": "2026-10-07T19:14:02.305Z",
+      "story": {
+        "as": "founder",
+        "can": "open any card and read its story, decisions, evidence and the pages it touched beside the board",
+        "so": "the board's history survives the card"
+      },
+      "persona": "founder",
+      "size": "L",
+      "initiative": "hosted-board-the-team-shares",
+      "metric": "wiki pages read per card",
+      "spec": "specs/086-read-the-wiki-next-to-the-board",
+      "feature": "hosted-board"
+    },
+    {
+      "id": "c-087",
+      "title": "Install plugins from the Protobox catalog",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a dev, I can install lanes and plugins from the hosted catalog and keep my wiki in the cloud, so that my team shares one source. Initiative: a hosted board the team shares · M · metric: catalog installs",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Install plugins from the Protobox catalog",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:35.068Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:02.421Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/087-install-plugins-from-the-protobox-catalo"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:35.068Z",
+      "updatedAt": "2026-10-07T19:14:02.421Z",
+      "story": {
+        "as": "dev",
+        "can": "install lanes and plugins from the hosted catalog and keep my wiki in the cloud",
+        "so": "my team shares one source"
+      },
+      "persona": "dev",
+      "size": "M",
+      "initiative": "hosted-board-the-team-shares",
+      "metric": "catalog installs",
+      "spec": "specs/087-install-plugins-from-the-protobox-catalo",
+      "feature": "hosted-board"
+    },
+    {
+      "id": "c-088",
+      "title": "Sign in to the hosted board",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "As a team, we can sign in and approve as ourselves, so that an approval means a person. Initiative: a hosted board the team shares · M · metric: returning teams",
+      "source": "docs/story-standard.md",
+      "dedupe": "build:docs/story-standard.md:Sign in to the hosted board",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-07T18:01:35.197Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/story-standard.md"
+        },
+        {
+          "at": "2026-10-07T19:14:02.541Z",
+          "actor": "agent",
+          "human": false,
+          "action": "spec",
+          "stage": "proposed",
+          "note": "specs/088-sign-in-to-the-hosted-board"
+        }
+      ],
+      "createdAt": "2026-10-07T18:01:35.197Z",
+      "updatedAt": "2026-10-07T19:14:02.541Z",
+      "story": {
+        "as": "team",
+        "can": "sign in and approve as ourselves",
+        "so": "an approval means a person"
+      },
+      "persona": "team",
+      "size": "M",
+      "initiative": "hosted-board-the-team-shares",
+      "metric": "returning teams",
+      "spec": "specs/088-sign-in-to-the-hosted-board",
+      "feature": "hosted-board"
+    },
+    {
+      "id": "c-089",
+      "title": "Turn a problem into an epic of shippable stories",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "Shape workflow: brief, interview, breakdown with check breakdown, rank, owner approves, stories queued in build. Spec: chanl-platform docs/plans/codeloop/2026-10-09-shape-workflow.md",
+      "source": "docs/plans/codeloop/2026-10-09-shape-workflow.md",
+      "dedupe": "build:docs/plans/codeloop/2026-10-09-shape-workflow.md:Turn a problem into an epic of shippable stories",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T03:14:45.427Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/plans/codeloop/2026-10-09-shape-workflow.md"
+        }
+      ],
+      "createdAt": "2026-10-10T03:14:45.427Z",
+      "updatedAt": "2026-10-10T03:14:45.427Z"
+    },
+    {
+      "id": "c-090",
+      "title": "Refresh stale lanes after an upgrade",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "init never overwrites .codeloop/lanes, so a repo set up on 0.3.0 keeps a build lane whose stages name skills (design, plan) that no longer ship; the brief then points at the wrong skill and file. codeloop update should report lanes older than the shipped templates and offer update --lanes <id> to replace one, keeping the person's edits visible as a diff.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Refresh stale lanes after an upgrade",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.299Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.299Z",
+      "updatedAt": "2026-10-10T04:22:44.299Z"
+    },
+    {
+      "id": "c-091",
+      "title": "Seed the wiki without one-line stubs",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "wiki init --from-repo wrote 116 pages on a large monorepo and 105 were one-line stubs (one per route or entity). Collapse stubs into one index page per folder and write a page only when there is a paragraph of content, so inject and the brief carry signal.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Seed the wiki without one-line stubs",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.453Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.453Z",
+      "updatedAt": "2026-10-10T04:22:44.453Z"
+    },
+    {
+      "id": "c-092",
+      "title": "Refuse an out-of-plan edit in Cursor",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "Cursor gets presence hooks only; nothing stops an edit outside the active story. Find the Cursor hook that can veto a tool call (or the nearest equivalent) and wire guard edit to it, the way the Claude PreToolUse hook is.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Refuse an out-of-plan edit in Cursor",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.606Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.606Z",
+      "updatedAt": "2026-10-10T04:22:44.606Z"
+    },
+    {
+      "id": "c-093",
+      "title": "Adopt a repo that already has its own board",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "A repo with its own delivery board (a features JSON with its own ids and a Feature: trailer rule in CLAUDE.md) gets a second board and a second id scheme from codeloop. Decide between importing that board into cards.json, bridging ids on the card (ticket:), or declaring codeloop the board; then make init detect the file and say which it did.",
+      "source": "adoption review 2026-10-10",
+      "dedupe": "build:adoption review 2026-10-10:Adopt a repo that already has its own board",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T04:22:44.753Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "adoption review 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T04:22:44.753Z",
+      "updatedAt": "2026-10-10T04:22:44.753Z"
+    },
+    {
+      "id": "c-094",
+      "title": "Seed the wiki from design docs, not only code",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "wiki init --from-repo wrote 'assumption: nothing found' for ERD, service contracts, data flows and deploy on a repo whose backend exists only as a design. It should also read docs/architecture/, docs/backend/, ADRs (docs/architecture/decisions/ADR-*.md) and deploy/*/README.md, and workspace packages (pnpm-workspace.yaml, workspaces), not only schemas, route handlers and deploy configs.",
+      "source": "ops-ai session 2026-10-10",
+      "dedupe": "build:ops-ai session 2026-10-10:Seed the wiki from design docs, not only code",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-10T05:44:30.921Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai session 2026-10-10"
+        }
+      ],
+      "createdAt": "2026-10-10T05:44:30.921Z",
+      "updatedAt": "2026-10-10T05:44:30.921Z"
+    }
+  ]
+}

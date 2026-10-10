@@ -1,10 +1,12 @@
 import { Command } from 'commander';
+import { randomBytes } from 'crypto';
 import chalk from 'chalk';
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../lib/server.js';
-import { loadBoard } from '../lib/board.js';
+import { getIndex } from '../lib/index/index.js';
+import { findWorkspaceBuild, loadNext, splitListener, staticChunks } from '../lib/next-server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,7 +22,10 @@ export const serveCommand = new Command('serve')
   .option('--bg', 'Run in background')
   .option('--stop', 'Stop background server')
   .option('--open', 'Open browser after starting')
-  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean }) => {
+  .option('--owner', 'Allow Approve and Reject from the board, for whoever has the URL with its token')
+  .option('--ui <dir>', 'Serve this static build instead of the workspace app (or set CODELOOP_UI_DIR)')
+  .option('--host <host>', 'Address to listen on. Anything but the default exposes the board to the network', '127.0.0.1')
+  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean; owner?: boolean; host: string; ui?: string }) => {
     const projectDir = process.cwd();
     const port = parseInt(options.port, 10);
 
@@ -43,39 +48,100 @@ export const serveCommand = new Command('serve')
       return;
     }
 
-    // Check board exists
-    const boardPath = join(projectDir, '.codeloop', 'board.json');
-    if (!existsSync(boardPath)) {
-      console.log(chalk.red('  No board.json found. Run `codeloop init` first.'));
+    const token = process.env.CODELOOP_SERVE_TOKEN ?? randomBytes(24).toString('hex');
+    const wantedUiEnv = options.ui ?? process.env.CODELOOP_UI_DIR;
+    const loopback = ['127.0.0.1', 'localhost', '::1'].includes(options.host);
+    const url = `http://${loopback ? '127.0.0.1' : options.host}:${port}/?token=${token}`;
+    const stateDir = join(projectDir, '.codeloop');
+    if (!existsSync(stateDir)) {
+      console.log(chalk.red('  No .codeloop folder found. Run `codeloop init` first.'));
       process.exit(1);
     }
 
     // --bg: fork as background process
     if (options.bg) {
       const { fork } = await import('child_process');
-      const child = fork(process.argv[1], ['serve', '--port', String(port)], {
+      // A port another process holds would make the probe below answer for a child that died.
+      const { createServer } = await import('net');
+      const free = await new Promise<boolean>(resolve => {
+        const s = createServer();
+        s.once('error', () => resolve(false));
+        s.listen(port, options.host, () => s.close(() => resolve(true)));
+      });
+      if (!free) {
+        console.log(chalk.red(`  Port ${port} is already in use. See what holds it with \`lsof -iTCP:${port} -sTCP:LISTEN\`, or pass --port.`));
+        process.exit(1);
+      }
+      const child = fork(process.argv[1], ['serve', '--port', String(port), '--host', options.host, ...(options.owner ? ['--owner'] : [])], {
         detached: true,
         stdio: 'ignore',
+        // The child cannot print its token to this terminal, so the parent chooses it.
+        env: { ...process.env, CODELOOP_SERVE_TOKEN: token, ...(wantedUiEnv ? { CODELOOP_UI_DIR: wantedUiEnv } : {}) },
       });
       child.unref();
 
       if (child.pid) {
+        // Only a child that answers on the port counts as started: one that dies on a port already
+        // in use would otherwise leave a pid file pointing at nothing and a success line on screen.
+        const probe = `http://${options.host === '0.0.0.0' ? '127.0.0.1' : options.host}:${port}/api/cards`;
+        const deadline = Date.now() + 15_000;
+        let up = false;
+        while (Date.now() < deadline) {
+          try {
+            process.kill(child.pid, 0);
+          } catch {
+            break;
+          }
+          try {
+            const res = await fetch(probe, { signal: AbortSignal.timeout(1000) });
+            if (res.ok) {
+              up = true;
+              break;
+            }
+          } catch {}
+          await new Promise(r => setTimeout(r, 300));
+        }
+        if (!up) {
+          console.log(chalk.red(`  Board server did not start on port ${port}. Another process may hold it: \`lsof -iTCP:${port} -sTCP:LISTEN\`, or pass --port.`));
+          process.exit(1);
+        }
         const pidPath = join(projectDir, PID_FILE);
         writeFileSync(pidPath, String(child.pid), 'utf-8');
         console.log(chalk.green(`  Board server started in background (PID ${child.pid})`));
-        console.log(`  ${chalk.cyan(`http://localhost:${port}`)}`);
+        console.log(`  ${chalk.cyan(url)}`);
       }
       return;
     }
 
-    // Foreground mode
-    const uiDir = existsSync(UI_DIR) ? UI_DIR : undefined;
-    const { app, broadcast } = createApp(projectDir, uiDir);
+    // Foreground mode. The workspace app runs as a Next server inside this process when a build
+    // is present and `next` can be loaded; `--ui` or a missing build serves a static folder instead.
+    const wantedUi = options.ui ?? process.env.CODELOOP_UI_DIR;
+    const workspaceBuild = wantedUi ? undefined : findWorkspaceBuild(PACKAGE_ROOT);
+    const uiDir = wantedUi ? resolve(projectDir, wantedUi) : existsSync(UI_DIR) ? UI_DIR : undefined;
+    if (wantedUi && !existsSync(join(uiDir!, 'index.html'))) {
+      console.error(chalk.red(`  no index.html under ${uiDir}; build the UI first`));
+      process.exit(2);
+    }
+    // Server components in the workspace read the API at this address; same process, same port.
+    process.env.CODELOOP_PORT = String(port);
+    process.env.CODELOOP_API_INTERNAL = `http://127.0.0.1:${port}`;
+    // The index starts building before Next loads; the two do not wait on each other.
+    const index = getIndex(projectDir);
+    const pages = workspaceBuild ? await loadNext(workspaceBuild, { hostname: options.host, port }) : undefined;
+    const { app } = createApp(projectDir, pages ? undefined : uiDir, { owner: options.owner, token, anyHost: !loopback });
 
-    const { serve } = await import('@hono/node-server');
-    serve({ fetch: app.fetch, port }, () => {
+    void index.ready.then(() => console.log(chalk.dim(`  Index built in ${index.buildMs} ms`)));
+    const { createServer } = await import('http');
+    const { getRequestListener } = await import('@hono/node-server');
+    const api = getRequestListener(app.fetch);
+    const server = createServer(pages ? splitListener(api, pages, { anyHost: !loopback, chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined }) : api);
+    server.listen(port, options.host, () => {
       console.log();
-      console.log(chalk.bold(`  Codeloop board: ${chalk.cyan(`http://localhost:${port}`)}`));
+      console.log(chalk.bold(`  Codeloop board: ${chalk.cyan(url)}`));
+      console.log(chalk.dim('  The token in that URL is needed for every change. Anyone who has the URL can make them.'));
+      if (!loopback) console.log(chalk.yellow(`  Listening on ${options.host}: the board is reachable from the network.`));
+      console.log(chalk.dim(options.owner ? '  Approve and Reject are enabled (--owner)' : '  Read-only for cards; add --owner to approve from the board'));
+      console.log(chalk.dim(pages ? `  Workspace app: ${workspaceBuild}` : uiDir ? `  Static board: ${uiDir}` : '  API only: no workspace build or static board found'));
       console.log(chalk.dim('  Press Ctrl+C to stop'));
       console.log();
 
@@ -83,24 +149,12 @@ export const serveCommand = new Command('serve')
       if (options.open) {
         import('child_process').then(({ exec }) => {
           const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-          exec(`${cmd} http://localhost:${port}`);
+          exec(`${cmd} '${url}'`);
         });
       }
     });
-
-    // Watch board.json for external changes (skill writes) and push via SSE
-    const { watch } = await import('fs');
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    try {
-      watch(boardPath, () => {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          broadcast();
-        }, 100);
-      });
-    } catch {
-      // board.json not created yet
-    }
+    // The index follows the store's own watcher (cards, lanes, wiki, specs, evidence, mocks), so
+    // nothing here watches files.
   });
 
 export function getServeStatus(projectDir: string): { running: boolean; pid?: number; port?: number } {
@@ -112,7 +166,7 @@ export function getServeStatus(projectDir: string): { running: boolean; pid?: nu
     process.kill(pid, 0); // Test if process exists
     return { running: true, pid };
   } catch {
-    // Stale PID file — clean up
+    // Stale PID file, clean up
     try { unlinkSync(pidPath); } catch {}
     return { running: false };
   }

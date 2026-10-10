@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +17,7 @@ import { TaskCard } from './task-card';
 import { TaskDetail } from './task-detail';
 import { cn } from '@/lib/cn';
 
-export function Board() {
+export function Board({ nav }: { nav?: ReactNode }) {
   const { board, connected, moveTask } = useBoard();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -81,6 +81,7 @@ export function Board() {
       <header className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="flex items-center gap-3">
           <h1 className="text-base font-semibold text-foreground">Codeloop Board</h1>
+          {nav}
           {totalTasks > 0 && (
             <span className="text-xs text-muted">{totalTasks} task{totalTasks !== 1 ? 's' : ''}</span>
           )}

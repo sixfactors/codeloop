@@ -94,7 +94,7 @@ function getKnowledgeStats(projectDir: string, filename: string): KnowledgeStats
 
 const KNOWN_TOP_LEVEL_KEYS = new Set([
   'project', 'scopes', 'quality_checks', 'diff_scan', 'test', 'deploy',
-  'debug', 'commit', 'codeloop', 'watch',
+  'debug', 'commit', 'codeloop', 'watch', 'gates', 'capacity', 'verify',
 ]);
 
 const COMMON_TYPOS: Record<string, string> = {
@@ -116,7 +116,7 @@ export function validateConfig(projectDir: string): string[] {
   const issues: string[] = [];
 
   if (!existsSync(configPath)) {
-    issues.push('No config.yaml found — run codeloop init');
+    issues.push('No config.yaml found, run codeloop init');
     return issues;
   }
 
@@ -139,7 +139,7 @@ export function validateConfig(projectDir: string): string[] {
     if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
       const suggestion = COMMON_TYPOS[key];
       if (suggestion) {
-        issues.push(`Unknown key "${key}" — did you mean "${suggestion}"?`);
+        issues.push(`Unknown key "${key}", did you mean "${suggestion}"?`);
       } else {
         issues.push(`Unknown top-level key "${key}"`);
       }
@@ -153,18 +153,18 @@ export function validateConfig(projectDir: string): string[] {
 
   // scopes
   if (!config.scopes || Object.keys(config.scopes).length === 0) {
-    issues.push('No scopes defined — /commit review will load all knowledge (not scoped)');
+    issues.push('No scopes defined, /commit review will load all knowledge (not scoped)');
   } else {
     for (const [name, scope] of Object.entries(config.scopes) as [string, any][]) {
       if (!scope.paths || !Array.isArray(scope.paths) || scope.paths.length === 0) {
-        issues.push(`Scope "${name}" has no paths — it will never match any files`);
+        issues.push(`Scope "${name}" has no paths, it will never match any files`);
       }
     }
   }
 
   // quality_checks
   if (!config.quality_checks || Object.keys(config.quality_checks).length === 0) {
-    issues.push('No quality_checks defined — /commit will skip build/type checks');
+    issues.push('No quality_checks defined, /commit will skip build/type checks');
   } else {
     for (const [scope, checks] of Object.entries(config.quality_checks) as [string, any][]) {
       if (Array.isArray(checks)) {
@@ -186,7 +186,7 @@ export function validateConfig(projectDir: string): string[] {
       const envConfig = config.deploy[env];
       if (envConfig) {
         if (envConfig.command === '') {
-          issues.push(`deploy.${env}.command is empty — /deploy will skip it. Remove or fill in.`);
+          issues.push(`deploy.${env}.command is empty, /deploy will skip it. Remove or fill in.`);
         }
       }
     }
@@ -194,7 +194,7 @@ export function validateConfig(projectDir: string): string[] {
 
   // test
   if (config.test && config.test.command === '') {
-    issues.push('test.command is empty — /test will try to auto-detect');
+    issues.push('test.command is empty, /test will try to auto-detect');
   }
 
   return issues;
@@ -251,7 +251,7 @@ export const statusCommand = new Command('status')
     if (gotchas.highFreqEntries.length > 0) {
       console.log();
       console.log(chalk.bold('  Suggestions'));
-      console.log(chalk.yellow(`    ${gotchas.highFreqEntries.length} gotcha(s) at freq >= 10 — consider promoting to rules.md:`));
+      console.log(chalk.yellow(`    ${gotchas.highFreqEntries.length} gotcha(s) at freq >= 10, consider promoting to rules.md:`));
       for (const entry of gotchas.highFreqEntries) {
         console.log(chalk.yellow(`      - ${entry}`));
       }

@@ -17,7 +17,7 @@ describe('validateConfig', () => {
 
   it('reports missing config.yaml', () => {
     const issues = validateConfig(tmpDir);
-    expect(issues).toContain('No config.yaml found — run codeloop init');
+    expect(issues).toContain('No config.yaml found, run codeloop init');
   });
 
   it('reports invalid YAML', () => {

@@ -1,54 +1,79 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
-
-  /* Brand accent — sixfactors coral */
-  --color-accent: #dc424a;
-  --color-accent-light: #e5636a;
-  --color-accent-dark: #c33039;
-  --color-accent-foreground: #ffffff;
-
-  /* Severity colors (unchanged between themes) */
-  --color-amber: #f59e0b;
-
-  /* Semantic tokens — dark values as defaults.
-     Tailwind v4 generates utilities (bg-background, text-foreground, etc.)
-     that resolve via var(--color-*). The .light class overrides these
-     at a higher cascade priority (unlayered > @layer theme). */
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-card: #0f0f12;
-  --color-card-foreground: #fafafa;
-  --color-border: #27272a;
-  --color-input: #27272a;
-  --color-ring: #dc424a;
-  --color-surface-1: #111113;
-  --color-surface-2: #18181b;
-  --color-surface-3: #1f1f23;
-  --color-accent-glow: rgba(220, 66, 74, 0.15);
+/* Protobox site palette (apps/protobox-site/src/app/globals.css). Light is the default;
+   .dark on <html> swaps the same tokens. */
+:root {
+  --background: oklch(0.9818 0.0054 95.0986);
+  --foreground: oklch(0.3438 0.0269 95.7226);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.1908 0.002 106.5859);
+  --primary: oklch(0.6171 0.1375 39.0427);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9245 0.0138 92.9892);
+  --secondary-foreground: oklch(0.4334 0.0177 98.6048);
+  --muted: oklch(0.9341 0.0153 90.239);
+  --muted-foreground: oklch(0.6059 0.0075 97.4233);
+  --accent: oklch(0.9245 0.0138 92.9892);
+  --accent-foreground: oklch(0.2671 0.0196 98.939);
+  --border: oklch(0.8847 0.0069 97.3627);
+  --input: oklch(0.7621 0.0156 98.3528);
+  --ring: oklch(0.6171 0.1375 39.0427);
+  --code-bg: oklch(0.22 0.005 95);
+  --code-header: oklch(0.26 0.005 95);
+  --code-foreground: oklch(0.9 0.01 95);
+  --code-filename: oklch(0.75 0.01 95);
+  --radius: 0.5rem;
 }
 
-/* ── Light theme override ──
-   Unlayered CSS always wins over @layer theme in the cascade,
-   so these override the dark defaults when .light is on <html>. */
-.light {
-  --color-background: #ffffff;
-  --color-foreground: #0f0f12;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #52525b;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f0f12;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #dc424a;
-  --color-surface-1: #f9f9fb;
-  --color-surface-2: #f4f4f5;
-  --color-surface-3: #ebebee;
-  --color-accent-glow: rgba(220, 66, 74, 0.08);
+.dark {
+  --background: oklch(0.2679 0.0036 106.6427);
+  --foreground: oklch(0.8074 0.0142 93.0137);
+  --card: oklch(0.2679 0.0036 106.6427);
+  --card-foreground: oklch(0.9818 0.0054 95.0986);
+  --primary: oklch(0.6724 0.1308 38.7559);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9818 0.0054 95.0986);
+  --secondary-foreground: oklch(0.3085 0.0035 106.6039);
+  --muted: oklch(0.2213 0.0038 106.707);
+  --muted-foreground: oklch(0.7713 0.0169 99.0657);
+  --accent: oklch(0.213 0.0078 95.4245);
+  --accent-foreground: oklch(0.9663 0.008 98.8792);
+  --border: oklch(0.3618 0.0101 106.8928);
+  --input: oklch(0.4336 0.0113 100.2195);
+  --ring: oklch(0.6724 0.1308 38.7559);
+  --code-bg: oklch(0.15 0.003 95);
+  --code-header: oklch(0.18 0.003 95);
+  --code-foreground: oklch(0.88 0.01 95);
+  --code-filename: oklch(0.7 0.01 95);
+}
+
+/* Tailwind utilities (bg-background, text-primary, …) resolve through these. */
+@theme inline {
+  --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-azeret-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-code-bg: var(--code-bg);
+  --color-code-header: var(--code-header);
+  --color-code-foreground: var(--code-foreground);
+  --color-code-filename: var(--code-filename);
+
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
 }
 
 html {
@@ -56,33 +81,70 @@ html {
 }
 
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s, color 0.2s;
 }
 
-/* Selection */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
 ::selection {
-  background: rgba(220, 66, 74, 0.3);
+  background: color-mix(in oklch, var(--primary) 30%, transparent);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-
-/* Code blocks */
 pre code {
   font-family: var(--font-mono);
+}
+
+/* Docs body. Markdown renders into .doc; `.not-doc` opts a block out of these rules. */
+.doc { font-size: 1rem; line-height: 1.7; }
+.doc p, .doc ul, .doc ol, .doc table, .doc .code, .doc blockquote, .doc .not-doc { margin-top: 1rem; }
+.doc li > p { margin-top: 0; }
+.doc h2 { margin-top: 2.5rem; font-size: 1.5rem; font-weight: 500; letter-spacing: -0.01em; scroll-margin-top: 5rem; }
+.doc h3 { margin-top: 1.75rem; font-size: 1.125rem; font-weight: 500; scroll-margin-top: 5rem; }
+.doc h2 code, .doc h3 code { font-size: 0.95em; }
+.doc p, .doc li { color: var(--foreground); max-width: 70ch; }
+.doc a { color: var(--primary); text-underline-offset: 4px; }
+.doc a:hover { text-decoration: underline; }
+.doc ul { list-style: disc; padding-left: 1.5rem; }
+.doc ol { list-style: decimal; padding-left: 1.5rem; }
+.doc li + li { margin-top: 0.35rem; }
+.doc code { font-family: var(--font-mono); font-size: 0.875em; background: var(--muted); padding: 0.1em 0.35em; border-radius: 0.3rem; }
+.doc .code { background: var(--code-bg); border-radius: var(--radius); overflow: hidden; }
+.doc .code + .code { margin-top: 0.75rem; }
+.doc h2 + *, .doc h3 + * { margin-top: 0.75rem; }
+.doc .code-label { background: var(--code-header); color: var(--code-filename); font-family: var(--font-mono); font-size: 0.75rem; padding: 0.4rem 1rem; border-bottom: 1px solid rgb(255 255 255 / 0.1); }
+.doc .code pre { overflow-x: auto; padding: 1rem; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: var(--code-foreground); }
+.doc .code code { background: none; padding: 0; font-size: inherit; color: inherit; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 0.9rem; display: block; overflow-x: auto; }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+.doc th { font-weight: 500; color: var(--muted-foreground); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.doc td code { white-space: nowrap; }
+.doc blockquote { border-left: 3px solid var(--primary); padding-left: 1rem; color: var(--muted-foreground); }
+.doc hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+.doc .planned { display: inline-block; border: 1px solid var(--primary); color: var(--primary); border-radius: 999px; padding: 0 0.6em; font-size: 0.75rem; font-family: var(--font-mono); vertical-align: middle; }
+
+/* Section rhythm and the page container, copied from chanl-site/src/app/globals.css so the
+   sections copied from there keep their spacing. The container's 1rem side gutter is the
+   phone-width rule; chanl-site uses 1.5rem. */
+@layer components {
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  width: 100%;
+  max-width: 72rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    padding-inline: 1.5rem;
+  }
 }

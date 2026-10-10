@@ -1,0 +1,27 @@
+# Written by `codeloop init --ci github`. The `production` environment is the human gate: give it
+# required reviewers in the repository settings and the job waits for one of them.
+name: codeloop prod
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build --if-present
+      - name: Deploy to production
+        run: |
+          cmd=$(npx --yes @protoboxai/codeloop config get deploy.production.command)
+          [ -n "$cmd" ] || cmd=$(npx --yes @protoboxai/codeloop config get deploy.prod.command)
+          if [ -z "$cmd" ]; then
+            echo "deploy.production.command is not set; nothing to deploy"
+            exit 0
+          fi
+          sh -c "$cmd"

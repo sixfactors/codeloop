@@ -1,0 +1,2016 @@
+{
+  "version": "0.4.1",
+  "generatedAt": "2026-10-10T04:21:33.347Z",
+  "commands": [
+    {
+      "name": "init",
+      "usage": "codeloop init [options]",
+      "description": "Initialize codeloop in the current project",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "-s, --starter <name>",
+          "description": "Use a specific starter (generic, node-typescript, python, go)"
+        },
+        {
+          "signature": "-t, --tools <tools>",
+          "description": "Comma-separated tools: claude,cursor,codex (skip prompt)"
+        },
+        {
+          "signature": "--hooks",
+          "description": "Only install the hooks: the commit-msg trailer, the Claude Code and Cursor hooks, and the pre-commit and pre-push guards"
+        },
+        {
+          "signature": "--ci <provider>",
+          "description": "Only write CI workflows (github)"
+        },
+        {
+          "signature": "-y, --yes",
+          "description": "Write into an existing .claude/commands/ without asking"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "update",
+      "usage": "codeloop update [options]",
+      "description": "Update codeloop skills to latest version",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--dry-run",
+          "description": "Show what would change without modifying files"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "status",
+      "usage": "codeloop status [options]",
+      "description": "Show codeloop status and knowledge stats",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "serve",
+      "usage": "codeloop serve [options]",
+      "description": "Start the visual board server",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "-p, --port <port>",
+          "description": "Port to listen on (default: \"4040\")"
+        },
+        {
+          "signature": "--bg",
+          "description": "Run in background"
+        },
+        {
+          "signature": "--stop",
+          "description": "Stop background server"
+        },
+        {
+          "signature": "--open",
+          "description": "Open browser after starting"
+        },
+        {
+          "signature": "--owner",
+          "description": "Allow Approve and Reject from the board, for whoever has the URL with its token"
+        },
+        {
+          "signature": "--ui <dir>",
+          "description": "Serve this static build instead of the workspace app (or set CODELOOP_UI_DIR)"
+        },
+        {
+          "signature": "--host <host>",
+          "description": "Address to listen on. Anything but the default exposes the board to the network (default: \"127.0.0.1\")"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "store",
+      "usage": "codeloop store [options] [command]",
+      "description": "The store under the board: which driver, which migrations have run",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "store status",
+          "usage": "codeloop store status [options]",
+          "description": "Show the driver in use and the migrations applied and pending",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "store migrate",
+          "usage": "codeloop store migrate [options]",
+          "description": "Apply the pending migrations and record them in .codeloop/store.json",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "watch",
+      "usage": "codeloop watch [options]",
+      "description": "Watch project for changes, track progress on the board",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--with-serve",
+          "description": "Also start the board server"
+        },
+        {
+          "signature": "--stop",
+          "description": "Stop background watcher"
+        },
+        {
+          "signature": "--bg",
+          "description": "Run in background"
+        },
+        {
+          "signature": "--guard",
+          "description": "Append a warning to .codeloop/state/warnings.jsonl when files change with no active card"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "lane",
+      "usage": "codeloop lane [options] [command]",
+      "description": "Inspect, check and change lanes",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "lane list",
+          "usage": "codeloop lane list [options]",
+          "description": "List lanes",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "lane show",
+          "usage": "codeloop lane show [options] <id>",
+          "description": "Show one lane",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "lane lint",
+          "usage": "codeloop lane lint [options]",
+          "description": "Check every lane; exits 2 on any error",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "lane propose",
+          "usage": "codeloop lane propose [options]",
+          "description": "Write lane-change proposals from repeated rejections and stuck stages",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "lane eval",
+          "usage": "codeloop lane eval [options] <proposal>",
+          "description": "Lint, fixture-test and replay a proposal; writes eval-result.json",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "lane promote",
+          "usage": "codeloop lane promote [options] <proposal>",
+          "description": "Install an evaluated proposal as the live lane",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "lane rollback",
+          "usage": "codeloop lane rollback [options] <lane>",
+          "description": "Restore the previous version of a lane",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "usage": "codeloop card [options] [command]",
+      "description": "Create and move cards through a lane",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "card new",
+          "usage": "codeloop card new [options] <lane> <title>",
+          "description": "Create a card in the first stage of a lane",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--id <id>",
+              "description": "Card id (default: next c-NNN)"
+            },
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            },
+            {
+              "signature": "--persona <persona>",
+              "description": "Who the story is for: founder, builder, reviewer, dev, visitor, team or a persona from config.yaml"
+            },
+            {
+              "signature": "--can <what>",
+              "description": "The \"I can\" part of the story"
+            },
+            {
+              "signature": "--so <outcome>",
+              "description": "The \"so that\" part of the story"
+            },
+            {
+              "signature": "--size <size>",
+              "description": "S (hours), M (a day or two) or L (split it)"
+            },
+            {
+              "signature": "--points <n>",
+              "description": "Story points: 1, 2, 3, 5 or 8"
+            },
+            {
+              "signature": "--initiative <initiative>",
+              "description": "The initiative this card serves"
+            },
+            {
+              "signature": "--epic <card-id>",
+              "description": "The parent card this one was split from"
+            },
+            {
+              "signature": "--feature <feature>",
+              "description": "The capability this card is a slice of"
+            },
+            {
+              "signature": "--effort <weeks>",
+              "description": "Weeks; replaces the feature's effort in this card's RICE score"
+            },
+            {
+              "signature": "--metric <metric>",
+              "description": "The one stage metric this card moves"
+            },
+            {
+              "signature": "--ticket <key>",
+              "description": "Tracker key, like ACME-412; a title starting \"ACME-412: \" sets it too"
+            },
+            {
+              "signature": "--force",
+              "description": "Create it even though the title or story fails the standard"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card propose",
+          "usage": "codeloop card propose [options] <lane> <title>",
+          "description": "Propose a card: it waits in the inbox until the owner promotes it with `codeloop approve`, and nothing starts it",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--id <id>",
+              "description": "Card id (default: next c-NNN)"
+            },
+            {
+              "signature": "--description <text>",
+              "description": "What was seen, for the owner deciding"
+            },
+            {
+              "signature": "--source <url or path>",
+              "description": "Where it came from"
+            },
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            },
+            {
+              "signature": "--persona <persona>",
+              "description": "Who the story is for: founder, builder, reviewer, dev, visitor, team or a persona from config.yaml"
+            },
+            {
+              "signature": "--can <what>",
+              "description": "The \"I can\" part of the story"
+            },
+            {
+              "signature": "--so <outcome>",
+              "description": "The \"so that\" part of the story"
+            },
+            {
+              "signature": "--size <size>",
+              "description": "S (hours), M (a day or two) or L (split it)"
+            },
+            {
+              "signature": "--points <n>",
+              "description": "Story points: 1, 2, 3, 5 or 8"
+            },
+            {
+              "signature": "--initiative <initiative>",
+              "description": "The initiative this card serves"
+            },
+            {
+              "signature": "--epic <card-id>",
+              "description": "The parent card this one was split from"
+            },
+            {
+              "signature": "--feature <feature>",
+              "description": "The capability this card is a slice of"
+            },
+            {
+              "signature": "--effort <weeks>",
+              "description": "Weeks; replaces the feature's effort in this card's RICE score"
+            },
+            {
+              "signature": "--metric <metric>",
+              "description": "The one stage metric this card moves"
+            },
+            {
+              "signature": "--ticket <key>",
+              "description": "Tracker key, like ACME-412; a title starting \"ACME-412: \" sets it too"
+            },
+            {
+              "signature": "--force",
+              "description": "Create it even though the title or story fails the standard"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card show",
+          "usage": "codeloop card show [options] <id>",
+          "description": "Show a card, its current stage brief and its events",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card list",
+          "usage": "codeloop card list [options]",
+          "description": "List cards; dropped proposals are hidden unless --all",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output --lane <lane> --stage <stage> --initiative <slug> --epic <slug> --feature <slug>"
+            },
+            {
+              "signature": "--band <band>",
+              "description": "P1, P2, P3 or P4 --persona <persona>"
+            },
+            {
+              "signature": "--size <size>",
+              "description": "S, M or L --points <n>"
+            },
+            {
+              "signature": "--all",
+              "description": "Include dropped proposals"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card migrate-stories",
+          "usage": "codeloop card migrate-stories [options]",
+          "description": "Fill the story fields of proposals whose description is written as `As a X, I can Y, so that Z. Initiative: W · S · metric: M`",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card migrate-features",
+          "usage": "codeloop card migrate-features [options] [mapping]",
+          "description": "Set `feature:` and its initiative on each card a mapping file names (default .codeloop/migrations/features.yaml); an unknown feature refuses the run",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card run",
+          "usage": "codeloop card run [options] <id>",
+          "description": "Run the current stage: its check, the agent when the check fails, then one advance; waits for the run and prints its log",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--agent <name>",
+              "description": "The agent to start (default: agents.default, or the one configured)"
+            },
+            {
+              "signature": "--json",
+              "description": "JSON output: the final run record"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card output",
+          "usage": "codeloop card output [options] <id> [file]",
+          "description": "Print the current stage's output file, or write it from a file (`-` for stdin)",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card split",
+          "usage": "codeloop card split [options] <id> <titles...>",
+          "description": "Split a card into siblings under the same feature, one per title; each is marked split_from",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card advance",
+          "usage": "codeloop card advance [options] [id]",
+          "description": "Run the current stage's check and move the card if it passes",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--event <name>",
+              "description": "Report the event a stage with `done.event` is waiting for"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card approve",
+          "usage": "codeloop card approve [options] <id>",
+          "description": "Approve the gate a card is waiting at, then advance it once",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            },
+            {
+              "signature": "--note <note>",
+              "description": "Optional note"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card reject",
+          "usage": "codeloop card reject [options] <id> [note]",
+          "description": "Reject the gate with a note; the card stays in its stage",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--note <note>",
+              "description": "What to change"
+            },
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card activate",
+          "usage": "codeloop card activate [options] <id>",
+          "description": "Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "start",
+      "usage": "codeloop start [options] <title>",
+      "description": "Start a card: `codeloop start \"<title>\"` (same as card new, plus its spec folder)",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--lane <lane>",
+          "description": "Lane to start in (default: \"build\")"
+        },
+        {
+          "signature": "--id <id>",
+          "description": "Card id (default: next c-NNN)"
+        },
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+        },
+        {
+          "signature": "--persona <persona>",
+          "description": "Who the story is for: founder, builder, reviewer, dev, visitor, team or a persona from config.yaml"
+        },
+        {
+          "signature": "--can <what>",
+          "description": "The \"I can\" part of the story"
+        },
+        {
+          "signature": "--so <outcome>",
+          "description": "The \"so that\" part of the story"
+        },
+        {
+          "signature": "--size <size>",
+          "description": "S (hours), M (a day or two) or L (split it)"
+        },
+        {
+          "signature": "--points <n>",
+          "description": "Story points: 1, 2, 3, 5 or 8"
+        },
+        {
+          "signature": "--initiative <initiative>",
+          "description": "The initiative this card serves"
+        },
+        {
+          "signature": "--epic <card-id>",
+          "description": "The parent card this one was split from"
+        },
+        {
+          "signature": "--feature <feature>",
+          "description": "The capability this card is a slice of"
+        },
+        {
+          "signature": "--effort <weeks>",
+          "description": "Weeks; replaces the feature's effort in this card's RICE score"
+        },
+        {
+          "signature": "--metric <metric>",
+          "description": "The one stage metric this card moves"
+        },
+        {
+          "signature": "--ticket <key>",
+          "description": "Tracker key, like ACME-412; a title starting \"ACME-412: \" sets it too"
+        },
+        {
+          "signature": "--force",
+          "description": "Create it even though the title or story fails the standard"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "shape",
+      "usage": "codeloop shape [options] <problem>",
+      "description": "Turn a problem into an epic of shippable stories: brief → interview → breakdown → rank, then queued into the build lane",
+      "arguments": [
+        {
+          "signature": "problem",
+          "description": "The problem as the person stated it"
+        }
+      ],
+      "options": [
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "next",
+      "usage": "codeloop next [options] [id]",
+      "description": "Run the check for a card and move it on (same as card advance); with one active card the id is optional",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--event <name>",
+          "description": "Report the event a stage with `done.event` is waiting for"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "approve",
+      "usage": "codeloop approve [options] <id>",
+      "description": "Approve the gate a card is waiting at (same as card approve)",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+        },
+        {
+          "signature": "--note <note>",
+          "description": "Optional note"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "reject",
+      "usage": "codeloop reject [options] <id> [note]",
+      "description": "Reject with a note: `codeloop reject <id> \"<what to change>\"`",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--note <note>",
+          "description": "What to change"
+        },
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "inbox",
+      "usage": "codeloop inbox [options]",
+      "description": "What needs you, what shipped, and the numbers per lane",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--json",
+          "description": "JSON output"
+        },
+        {
+          "signature": "--seen",
+          "description": "Mark everything shipped so far as seen"
+        },
+        {
+          "signature": "--by <order>",
+          "description": "score (highest RICE first, then oldest) or age (oldest first) (default: \"score\")"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "feature",
+      "usage": "codeloop feature [options] [command]",
+      "description": "Features: the capabilities stories roll up to, scored by RICE",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "feature new",
+          "usage": "codeloop feature new [options] <slug>",
+          "description": "Create .codeloop/wiki/features/<slug>.md",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--title <title>",
+              "description": "What the user can now do"
+            },
+            {
+              "signature": "--initiative <slug>",
+              "description": "The initiative it serves"
+            },
+            {
+              "signature": "--epic <slug>",
+              "description": "The epic it belongs to"
+            },
+            {
+              "signature": "--status <status>",
+              "description": "planned, active, done (default: \"planned\")"
+            },
+            {
+              "signature": "--release <tag>",
+              "description": "Target release tag, or next"
+            },
+            {
+              "signature": "--body <text>",
+              "description": "A line or two on the capability"
+            },
+            {
+              "signature": "--reach <n>",
+              "description": "How many users it touches, 1–10"
+            },
+            {
+              "signature": "--impact <n>",
+              "description": "How much it moves the initiative metric, 1–10"
+            },
+            {
+              "signature": "--confidence <n>",
+              "description": "How sure the estimates are, 1–10"
+            },
+            {
+              "signature": "--effort <weeks>",
+              "description": "Weeks of work"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "feature list",
+          "usage": "codeloop feature list [options]",
+          "description": "Every feature with its score and band, highest first",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output --initiative <slug> --epic <slug>"
+            },
+            {
+              "signature": "--band <band>",
+              "description": "P1, P2, P3 or P4"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "feature score",
+          "usage": "codeloop feature score [options] <slug>",
+          "description": "Set the RICE on a feature; the score and band are derived on every read",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--reach <n>",
+              "description": "How many users it touches, 1–10"
+            },
+            {
+              "signature": "--impact <n>",
+              "description": "How much it moves the initiative metric, 1–10"
+            },
+            {
+              "signature": "--confidence <n>",
+              "description": "How sure the estimates are, 1–10"
+            },
+            {
+              "signature": "--effort <weeks>",
+              "description": "Weeks of work"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "epic",
+      "usage": "codeloop epic [options] [command]",
+      "description": "Epics: outcomes that take several features",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "epic new",
+          "usage": "codeloop epic new [options] <slug>",
+          "description": "Create .codeloop/wiki/epics/<slug>.md",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--title <title>",
+              "description": "The outcome, phrased as what becomes true"
+            },
+            {
+              "signature": "--initiative <slug>",
+              "description": "The initiative it serves"
+            },
+            {
+              "signature": "--status <status>",
+              "description": "planned, active, done (default: \"planned\")"
+            },
+            {
+              "signature": "--goal <goal>",
+              "description": "The target and when"
+            },
+            {
+              "signature": "--body <text>",
+              "description": "A line or two on the outcome"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "epic list",
+          "usage": "codeloop epic list [options]",
+          "description": "Every epic with its score: the sum of its features",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output --initiative <slug>"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "initiative",
+      "usage": "codeloop initiative [options] [command]",
+      "description": "Initiatives: the goals the roadmap rolls up to",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "initiative list",
+          "usage": "codeloop initiative list [options]",
+          "description": "Every initiative with its score: the sum of its features",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "initiative tree",
+          "usage": "codeloop initiative tree [options] <slug>",
+          "description": "initiative › epics › features › stories, with scores and bands",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "ask",
+      "usage": "codeloop ask [options] <card> [question]",
+      "description": "Ask the owner up to 5 questions about a card: `codeloop ask <card> \"<question>\" --recommended \"<answer>\"`, or --file with `## Q1` blocks",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--recommended <answer>",
+          "description": "The answer to take when the owner has no better one"
+        },
+        {
+          "signature": "--file <path>",
+          "description": "A markdown file of `## Q<n> <question>` / `recommended:` blocks"
+        },
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "answer",
+      "usage": "codeloop answer [options] <card> <n> [text]",
+      "description": "Answer a question on a card: `codeloop answer <card> <n> \"<text>\"`, or `--accept` to take the recommended answer",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--accept",
+          "description": "Take the recommended answer"
+        },
+        {
+          "signature": "--as <role>",
+          "description": "owner | reviewer | agent"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "run",
+      "usage": "codeloop run [options]",
+      "description": "Start cards for due cron lanes, then advance every card that is not waiting for you until it stops on its own",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--due",
+          "description": "Run what is due (the default; kept so older scripts still work)"
+        },
+        {
+          "signature": "--agent [name]",
+          "description": "First start a headless agent on each stage whose check does not pass yet (an entry under agents: in config.yaml)"
+        },
+        {
+          "signature": "--no-agent",
+          "description": "Only check and advance, even when config.yaml has run.agent: true"
+        },
+        {
+          "signature": "--lane <id>",
+          "description": "Only this lane: its trigger and its cards; the other lanes' due slots are kept for the next full run"
+        },
+        {
+          "signature": "--card <id>",
+          "description": "Only this card; no lane trigger fires"
+        },
+        {
+          "signature": "--dry-run",
+          "description": "Print what would run; start nothing and change nothing"
+        },
+        {
+          "signature": "--now <iso>",
+          "description": "Treat this as the current time"
+        },
+        {
+          "signature": "--json",
+          "description": "JSON output"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "brief",
+      "usage": "codeloop brief [options] <card>",
+      "description": "Print what an agent is given to do a card's current stage: skill, output, check, feedback, wiki pages, rules",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--out <file>",
+          "description": "Write the brief to a file"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "schedule",
+      "usage": "codeloop schedule [options] [command]",
+      "description": "Run `codeloop run --agent` in this repo on a schedule, from your crontab",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "schedule install",
+          "usage": "codeloop schedule install [options]",
+          "description": "Add (or replace) this repo's crontab entry",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--every <interval>",
+              "description": "5m, 10m, 15m, 20m, 30m, 1h, 2h, 3h, 4h, 6h, 12h or 24h (default: \"30m\")"
+            },
+            {
+              "signature": "--cron <expr>",
+              "description": "A five-field cron expression, in place of --every"
+            },
+            {
+              "signature": "--agent <name>",
+              "description": "Agent to run (default: agents.default)"
+            },
+            {
+              "signature": "--print",
+              "description": "Print the crontab line and change nothing"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "schedule remove",
+          "usage": "codeloop schedule remove [options]",
+          "description": "Remove this repo's crontab entry",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "schedule status",
+          "usage": "codeloop schedule status [options]",
+          "description": "Show the installed entry and the end of the last run's output",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "adopt",
+      "usage": "codeloop adopt [options]",
+      "description": "Index the skills and commands that already exist so lanes can name them; merges into the index unless --replace",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--from <dir...>",
+          "description": "Directories to scan (default: .claude/skills, .claude/commands, .cursor/commands, .agents/skills in the project, and ~/.claude/skills, ~/.claude/commands)"
+        },
+        {
+          "signature": "--replace",
+          "description": "Rebuild the index from the scan alone, dropping entries from other directories"
+        },
+        {
+          "signature": "--gaps",
+          "description": "List lane stages with no mechanical done check"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "check",
+      "usage": "codeloop check [options] [command]",
+      "description": "Done-check helpers for lane stages",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "check file",
+          "usage": "codeloop check file [options] <path>",
+          "description": "Exit 1 unless the file exists, is not empty, and contains every --has string",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--has <str...>",
+              "description": "Strings the file must contain"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check gotchas",
+          "usage": "codeloop check gotchas [options]",
+          "description": "Exit 1 while a critical wiki page applies to these files and has not been acknowledged",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--files <path...>",
+              "description": "Changed files"
+            },
+            {
+              "signature": "--ack <title...>",
+              "description": "Titles of critical pages that were read and handled (default: [])"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check research",
+          "usage": "codeloop check research [options] <card>",
+          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--min-sources <n>",
+              "description": "How many source lines are required (default: \"3\")"
+            },
+            {
+              "signature": "--online",
+              "description": "Also require each source URL to answer with 2xx or 3xx"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check mock",
+          "usage": "codeloop check mock [options] <card>",
+          "description": "Exit 1 unless the card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "check artifact",
+          "usage": "codeloop check artifact [options] <card>",
+          "description": "Exit 1 unless the card's artifact (mock, system-design or workflow) meets its kind's anatomy: tokens, dark mode, no raw colour, valid mermaid, and every frame/layer/flow/actor the frontmatter names",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--kind <kind>",
+              "description": "mock | system-design | workflow, auto-detected from whichever artifact exists for the card when omitted"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check story",
+          "usage": "codeloop check story [options] <card>",
+          "description": "Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "check brief",
+          "usage": "codeloop check brief [options] <card>",
+          "description": "Exit 1 unless the card's shape brief has problem:, users: and exists: filled in, and at least 3 `- source:` lines",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "check breakdown",
+          "usage": "codeloop check breakdown [options] <card>",
+          "description": "Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--ranked",
+              "description": "Also require a `rice:` part on every story"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check questions",
+          "usage": "codeloop check questions [options] <card>",
+          "description": "Exit 1 unless the card's interview has at least --min questions and every one of them has an answer",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--min <n>",
+              "description": "Questions the interview must hold (default: \"1\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "pack",
+      "usage": "codeloop pack [options] [command]",
+      "description": "Package lanes and their skills",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "pack build",
+          "usage": "codeloop pack build [options]",
+          "description": "Compile lanes and the skills they name into a Protobox skills-only manifest",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--out <file>",
+              "description": "Output file (default: \"dist/pack.json\")"
+            },
+            {
+              "signature": "--pack-version <version>",
+              "description": "Manifest version (default: \"1.0.0\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "spec",
+      "usage": "codeloop spec [options] [command]",
+      "description": "A card's spec folder: research, spec, plan, tasks",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "spec new",
+          "usage": "codeloop spec new [options] <card-id>",
+          "description": "Create specs/<nnn>-<slug>/ from the templates and record it on the card",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "spec check",
+          "usage": "codeloop spec check [options] <nnn>",
+          "description": "Exit 2 unless every task is tagged and every acceptance line has a task",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "mock",
+      "usage": "codeloop mock [options] [command]",
+      "description": "A card's mock, built from the shared template so every mock looks like the same product",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "mock new",
+          "usage": "codeloop mock new [options] <card>",
+          "description": "Create docs/mocks/<project>/<topic>/<card-id>.html from templates/mock/template.html",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--topic <topic>",
+              "description": "Folder the mock is filed under, e.g. exports"
+            },
+            {
+              "signature": "--from <card-id|latest|none>",
+              "description": "The mock to build on: a card id, the newest in this topic, or none for the bare template (default: \"latest\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "mocks",
+      "usage": "codeloop mocks [options] [command]",
+      "description": "The mock gallery",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "mocks index",
+          "usage": "codeloop mocks index [options]",
+          "description": "Write docs/mocks/index.html: projects, then topics, then cards, newest first",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "artifact",
+      "usage": "codeloop artifact [options] [command]",
+      "description": "A card's artifact, mock, system design, or workflow, built from the shared templates so every artifact looks like the same product",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "artifact new",
+          "usage": "codeloop artifact new [options] <card>",
+          "description": "Create docs/artifacts/<project>/<topic>/<card-id>-<kind>.html from templates/artifacts/<kind>/template.html. `--kind mock` is the same engine as `codeloop mock new`: it writes docs/mocks/<project>/<topic>/<card-id>.html instead.",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--kind <kind>",
+              "description": "Which artifact to create: mock | system-design | workflow"
+            },
+            {
+              "signature": "--topic <topic>",
+              "description": "Folder the artifact is filed under, e.g. board"
+            },
+            {
+              "signature": "--from <card-id|latest|none>",
+              "description": "The artifact to build on: a card id, the newest of this kind in this topic, or none for the bare template (default: \"latest\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "artifacts",
+      "usage": "codeloop artifacts [options] [command]",
+      "description": "The artifact gallery: mocks, system designs and workflows, grouped by kind, topic and lineage",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "artifacts index",
+          "usage": "codeloop artifacts index [options]",
+          "description": "Write docs/artifacts/index.html: kind, then project, then topic, then cards, newest first",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "scan",
+      "usage": "codeloop scan [options] [command]",
+      "description": "Look outside the repo for what to build next",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "scan competitors",
+          "usage": "codeloop scan competitors [options]",
+          "description": "Compare each competitor page's changelog with the last scan and propose one plan card per competitor that shipped something new",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--from-file <path>",
+              "description": "Use this file as the changelog text instead of fetching the URL"
+            },
+            {
+              "signature": "--only <name>",
+              "description": "Scan one competitor"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "task",
+      "usage": "codeloop task [options] [command]",
+      "description": "Tasks in a spec folder",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "task list",
+          "usage": "codeloop task list [options] <nnn>",
+          "description": "List tasks, optionally one layer",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--layer <layer>",
+              "description": "api | sdk | ui | test | docs"
+            },
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "task done",
+          "usage": "codeloop task done [options] <nnn> <task>",
+          "description": "Tick a task",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "task check",
+          "usage": "codeloop task check [options] <nnn>",
+          "description": "Exit 1 while any task is open",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--all-done",
+              "description": "Require every task ticked"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "import",
+      "usage": "codeloop import [options] [command]",
+      "description": "Bring existing specs in as cards; source files are only read",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "import speckit",
+          "usage": "codeloop import speckit [options] [dir]",
+          "description": "One card per specs/NNN* feature, tasks rewritten with layer tags",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--lane <id>",
+              "description": "Lane to create cards in (default: \"build\")"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "import bmad",
+          "usage": "codeloop import bmad [options] [dir]",
+          "description": "One card per story in sprint-status.yaml, status mapped to a stage",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--lane <id>",
+              "description": "Lane to create cards in (default: \"build\")"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "verify",
+      "usage": "codeloop verify [options] <nnn>",
+      "description": "Run the use cases for a card and write evidence. Exit 2: nothing to verify, or an acceptance line has no use case; 1: a use case failed; 4: --mutate found one that cannot fail; 5: --mutate could not run",
+      "arguments": [
+        {
+          "signature": "nnn",
+          "description": "Card number or id"
+        }
+      ],
+      "options": [
+        {
+          "signature": "--mutate",
+          "description": "Re-run on the commit before the feature (after config verify.setup, default `npm ci && npm run build`); a use case that still passes is vacuous"
+        },
+        {
+          "signature": "--env <name>",
+          "description": "Environment: api use cases use deploy.<name>.base_url from config.yaml"
+        },
+        {
+          "signature": "--no-record",
+          "description": "Do not add the evidence to the card"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "stats",
+      "usage": "codeloop stats [options]",
+      "description": "Autonomy numbers computed from card events",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--card <id>",
+          "description": "One card"
+        },
+        {
+          "signature": "--lane <id>",
+          "description": "One lane"
+        },
+        {
+          "signature": "--compare <versions...>",
+          "description": "Two lane versions to compare, e.g. v1 v2"
+        },
+        {
+          "signature": "--json",
+          "description": "JSON output"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "wiki",
+      "usage": "codeloop wiki [options] [command]",
+      "description": "Gotchas, decisions and concepts that agents read before a stage and write after it",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "wiki capture",
+          "usage": "codeloop wiki capture [options]",
+          "description": "Write a page; capturing an existing title raises its frequency",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--title <title>",
+              "description": "Page title (required unless --quiet)"
+            },
+            {
+              "signature": "--scope <glob...>",
+              "description": "File globs the page applies to (default: [])"
+            },
+            {
+              "signature": "--body <text>",
+              "description": "Page body (default: \"\")"
+            },
+            {
+              "signature": "--kind <kind>",
+              "description": "gotcha | decision | concept (default: \"gotcha\")"
+            },
+            {
+              "signature": "--card <id>",
+              "description": "Card this came from"
+            },
+            {
+              "signature": "--quiet",
+              "description": "Used by the Claude Code Stop hook: exit 0 silently when no --title was given, instead of refusing (default: false)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "wiki inject",
+          "usage": "codeloop wiki inject [options]",
+          "description": "Print the pages whose scope matches the given files",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--files <path...>",
+              "description": "Changed or soon-to-change files"
+            },
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "wiki list",
+          "usage": "codeloop wiki list [options]",
+          "description": "List pages",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki lint",
+          "usage": "codeloop wiki lint [options]",
+          "description": "Report broken links (exit 1), stale pages and duplicate titles",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki init",
+          "usage": "codeloop wiki init [options]",
+          "description": "Seed the wiki from the repo's own files instead of writing an empty tree",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--from-repo",
+              "description": "Scan README, docs, package manifests, Makefile/scripts, CI, deploy config, routes, schemas, git log and TODOs (default: false)"
+            },
+            {
+              "signature": "--write",
+              "description": "Write the pages (default is a dry run) (default: false)"
+            },
+            {
+              "signature": "--dry-run",
+              "description": "Print the outline without writing anything (the default) (default: false)"
+            },
+            {
+              "signature": "--force",
+              "description": "Overwrite pages that already exist (default: false)"
+            },
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "wiki competitor",
+          "usage": "codeloop wiki competitor [options] [command]",
+          "description": "One wiki page per competitor: links at the top, findings from each research stage below",
+          "arguments": [],
+          "options": [],
+          "commands": [
+            {
+              "name": "wiki competitor add",
+              "usage": "codeloop wiki competitor add [options] <name>",
+              "description": "Create .codeloop/wiki/competitors/<name>.md, or update the links of an existing page",
+              "arguments": [],
+              "options": [
+                {
+                  "signature": "--docs <url>",
+                  "description": "Where their product docs are"
+                },
+                {
+                  "signature": "--changelog <url>",
+                  "description": "Where they announce what shipped; `codeloop scan competitors` reads it"
+                },
+                {
+                  "signature": "--title <title>",
+                  "description": "Display name (default: the name)"
+                }
+              ],
+              "commands": []
+            },
+            {
+              "name": "wiki competitor list",
+              "usage": "codeloop wiki competitor list [options]",
+              "description": "List competitor pages",
+              "arguments": [],
+              "options": [],
+              "commands": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "learn",
+      "usage": "codeloop learn [options]",
+      "description": "Apply frequency thresholds: critical at critical_frequency, promoted to rules.md at promote_frequency",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "render",
+      "usage": "codeloop render [options]",
+      "description": "Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--host <host>",
+          "description": "claude | cursor | codex | all; by default the hosts init set up (.claude, .cursor, .agents present), or all when none is (default: \"auto\")"
+        },
+        {
+          "signature": "--hooks",
+          "description": "Also install the Claude Code and Cursor hooks and the pre-commit/pre-push git guards (same as `codeloop init --hooks`) (default: false)"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "mcp",
+      "usage": "codeloop mcp [options]",
+      "description": "Serve the card engine over MCP on stdio (tools: inbox, next_up, get_card, advance, approve, reject, task_done, wiki_inject, wiki_capture)",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "gate",
+      "usage": "codeloop gate [options] [command]",
+      "description": "Gate checks for CI",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "gate check",
+          "usage": "codeloop gate check [options] <id>",
+          "description": "Exit 2 unless the card has an approval for the named gate",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--require <gate>",
+              "description": "Gate name, e.g. local"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "config",
+      "usage": "codeloop config [options] [command]",
+      "description": "Read .codeloop/config.yaml, with .codeloop/local.yaml laid over it",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "config get",
+          "usage": "codeloop config get [options] <path>",
+          "description": "Print one value by dotted path (empty when unset), for use in CI scripts",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "cloud",
+      "usage": "codeloop cloud [options] [command]",
+      "description": "Optional: keep the board, wiki, config and lanes in a Protobox workspace as well as in the repo",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "cloud connect",
+          "usage": "codeloop cloud connect [options]",
+          "description": "Save the connection in .codeloop/cloud.json (gitignored) and upload the board, wiki, config.yaml and lanes",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--url <mcp url>",
+              "description": "Workspace MCP URL"
+            },
+            {
+              "signature": "--key <api key>",
+              "description": "Workspace API key (stored in cloud.json, never printed)"
+            },
+            {
+              "signature": "--workspace-name <name>",
+              "description": "A label for status output"
+            },
+            {
+              "signature": "--folder <path>",
+              "description": "Workspace folder for this project's pages (default: codeloop)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "cloud status",
+          "usage": "codeloop cloud status [options]",
+          "description": "Workspace, page revision against the local version, and each document as in-sync, local-ahead, cloud-ahead or both-changed",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "cloud push",
+          "usage": "codeloop cloud push [options]",
+          "description": "Write the board, wiki pages and config that changed here to the cloud. Lanes are not pushed: they change through `lane promote`",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--force",
+              "description": "Overwrite even if the cloud copy changed since it was last seen here"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "cloud pull",
+          "usage": "codeloop cloud pull [options]",
+          "description": "Take the cloud board, and every other cloud copy whose local file was not edited here",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--force",
+              "description": "Take the cloud copy of every document, discarding local edits"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "cloud disconnect",
+          "usage": "codeloop cloud disconnect [options]",
+          "description": "Push pending writes, pull everything back into the repo, then remove cloud.json",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "cloud search",
+          "usage": "codeloop cloud search [options] <query>",
+          "description": "Search the workspace knowledge base",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "guard",
+      "usage": "codeloop guard [options] [command]",
+      "description": "Hooks that enforce the codeloop protocol regardless of what the chat says",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "guard edit",
+          "usage": "codeloop guard edit [options] [path]",
+          "description": "PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard session",
+          "usage": "codeloop guard session [options]",
+          "description": "SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard prompt",
+          "usage": "codeloop guard prompt [options]",
+          "description": "UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard diff",
+          "usage": "codeloop guard diff [options]",
+          "description": "Pre-commit hook: lists changed files outside the active card's plan; exits 1 when any are found and the plan has a files list",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--staged",
+              "description": "Compare the git index instead of the working tree (default: false)"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "presence",
+      "usage": "codeloop presence [options] [command]",
+      "description": "Presence files Cursor session hooks write under .codeloop/state/presence/ (serving this over HTTP as GET /api/presence is not built yet)",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "presence start",
+          "usage": "codeloop presence start [options]",
+          "description": "sessionStart hook: records host, session id and machine",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "presence end",
+          "usage": "codeloop presence end [options]",
+          "description": "sessionEnd hook: clears the presence file",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "presence event",
+          "usage": "codeloop presence event [options] <kind>",
+          "description": "subagentStart/subagentStop hooks: appends an event line to the session's presence log",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "whoami",
+      "usage": "codeloop whoami [options]",
+      "description": "This repo's active card, your git identity and role, and who else is present (from Cursor session hooks)",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "install",
+      "usage": "codeloop install [options] <source>",
+      "description": "Install a skill from the registry, GitHub, or local path",
+      "arguments": [
+        {
+          "signature": "source",
+          "description": "Skill name, github:user/repo/path, or local path"
+        }
+      ],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "search",
+      "usage": "codeloop search [options] <query>",
+      "description": "Search for skills in the registry",
+      "arguments": [
+        {
+          "signature": "query",
+          "description": "Search query"
+        }
+      ],
+      "options": [
+        {
+          "signature": "--tag <tag>",
+          "description": "Filter by tag"
+        },
+        {
+          "signature": "--stack <stack>",
+          "description": "Filter by stack"
+        },
+        {
+          "signature": "--local",
+          "description": "Search local index only (offline)"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "list",
+      "usage": "codeloop list [options]",
+      "description": "Show installed skills",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "remove",
+      "usage": "codeloop remove [options] <name>",
+      "description": "Uninstall a skill",
+      "arguments": [
+        {
+          "signature": "name",
+          "description": "Skill name to remove"
+        }
+      ],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "publish",
+      "usage": "codeloop publish [options]",
+      "description": "Publish a skill to the registry (validate locally with --dry-run)",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--dry-run",
+          "description": "Validate only, don't publish"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "login",
+      "usage": "codeloop login [options]",
+      "description": "Authenticate with the skill registry (check status with --status)",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--token <token>",
+          "description": "GitHub personal access token"
+        },
+        {
+          "signature": "--status",
+          "description": "Check current auth status"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "skill",
+      "usage": "codeloop skill [options] [command]",
+      "description": "Skills (templates/skills/) and their eval fixtures",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "skill list",
+          "usage": "codeloop skill list [options]",
+          "description": "Every skill under the skills dir",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print as JSON"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "skill show",
+          "usage": "codeloop skill show [options] <name>",
+          "description": "A skill's SKILL.md: its frontmatter and its body",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print as JSON"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "skill eval",
+          "usage": "codeloop skill eval [options] <name>",
+          "description": "Replay a skill's fixtures: the configured agent on the stage, the stage's check, then a graded run against checklist.md",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--fixture <id>",
+              "description": "Only this fixture (default: every fixture under the skill)"
+            },
+            {
+              "signature": "--agent <name>",
+              "description": "The configured agent to use (default agents.default, or the only one configured)"
+            },
+            {
+              "signature": "--min <0..1>",
+              "description": "Score a fixture must reach to pass (default: \"0.8\")"
+            },
+            {
+              "signature": "--skills-dir <dir>",
+              "description": "Skills dir, relative to the project root (default templates/skills)"
+            },
+            {
+              "signature": "--fixtures-dir <dir>",
+              "description": "Fixtures dir, relative to the project root (default fixtures/skills)"
+            },
+            {
+              "signature": "--json",
+              "description": "Print the report as JSON instead of a table"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ argument-hint: [type] [scope] [message] OR [--wip]
 allowed-tools: Bash(git:*), Read, Edit, Write, Glob, Grep, AskUserQuestion
 ---
 
-<!-- codeloop-version: 0.2.0 -->
+<!-- codeloop-version: 0.4.2 -->
 
 # /commit
 
@@ -60,6 +60,16 @@ Only load sections relevant to the active scopes. Don't review the entire gotcha
 **Scope → rubric section mapping** comes from `config.yaml`:
 - `gotcha_sections` defines which gotcha sections to load for that scope
 - `pattern_sections` defines which pattern sections to load for that scope
+
+### 1.3b Critical wiki pages
+
+If `.codeloop/wiki/` exists, run this with the changed files:
+
+```bash
+codeloop check gotchas --files $(git diff HEAD --name-only)
+```
+
+Exit 1 means a critical page applies to this change. Read each page it prints, confirm the change handles it, then re-run with `--ack "<title>"` for each. Do not commit while it exits 1.
 
 ### 1.4 Quality checks
 
