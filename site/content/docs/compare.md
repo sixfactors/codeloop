@@ -9,7 +9,7 @@ The rows are from reading their documentation and issue trackers in October 2026
 
 ## The table
 
-| | Spec-first tools | Agile-persona tools | codeloop 0.4.1 |
+| | Spec-first tools | Agile-persona tools | codeloop 0.4.2 |
 |---|---|---|---|
 | Unit of work | A feature: one branch, one spec folder | A ticket in a list, with artifacts per initiative | A card with a story, in a lane. `.codeloop/cards.json` |
 | The flow | Constitution, specify, clarify, plan, tasks, implement | Clarify, plan, build and verify, learn; ceremony sized after a look at the code | A lane file per kind of work: build, deploy, market, plan, triage, scan, analyze, learn |
@@ -31,7 +31,7 @@ The rows are from reading their documentation and issue trackers in October 2026
 | Cost per card | Not reported | Not reported | Not reported. Planned |
 | Importing from the other | | | `import speckit`; `import bmad` reads an older file layout |
 | Install | A Python tool plus `uv` | A Node installer, or generic skills | `npm install -g @protoboxai/codeloop` |
-| Age and community | Large | Large | Small. 0.4.1, one team, MIT |
+| Age and community | Large | Large | Small. 0.4.2, one team, MIT |
 
 ## What the table says
 

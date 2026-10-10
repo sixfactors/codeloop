@@ -4,7 +4,7 @@ argument-hint: <staging|prod> [--force]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
-<!-- codeloop-version: 0.4.1 -->
+<!-- codeloop-version: 0.4.2 -->
 
 # /deploy
 

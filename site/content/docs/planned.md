@@ -1,6 +1,6 @@
 ---
 title: Planned
-description: What is on the board and not in 0.4.1. Nothing on this page works today.
+description: What is on the board and not in 0.4.2. Nothing on this page works today.
 ---
 
 Everything on this page is <span class="planned">planned</span>. It is here so the rest of the docs can stay about what the CLI does now. The order is the order on codeloop's own board.

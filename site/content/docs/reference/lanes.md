@@ -1,6 +1,6 @@
 ---
 title: Lanes
-description: The eight lanes codeloop init installs, stage by stage, from templates/lanes in the 0.4.1 package.
+description: The eight lanes codeloop init installs, stage by stage, from templates/lanes in the 0.4.2 package.
 ---
 
 Each table is one lane file. The gate column says when the card stops: after the check passes, or before the stage runs for a public step. `codeloop lane show <id>` prints the same from your repo, and [Lanes](/docs/concepts/lanes) explains the keys.

@@ -67,7 +67,7 @@ Next: run the /api skill, then `codeloop next c-002`.
 
 ## What is unreleased
 
-The npm package is 0.4.0, published from `main` before the work below landed; its `--version` still prints 0.3.0. Everything below is on `main` as 0.4.1 and goes out with the next publish; until then it needs a clone or a tarball built from one:
+The npm package is 0.4.1. Everything below is on `main` as 0.4.2 and goes out with the next publish; until then it needs a clone or a tarball built from one:
 
 - the workspace board with New story, the Inbox page, Initiatives and the card drawer
 - story fields on a card (`--persona`, `--can`, `--so`, `--size`), the story check and a strict `spec check`

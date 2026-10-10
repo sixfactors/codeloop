@@ -120,7 +120,7 @@ The plan lane ranks cards by RICE and by which funnel stage is leaking. Do not b
 - `spec check` fails on a malformed story or acceptance block, a missing size, metric or `exists:` verdict, or an unsplit L.
 - `check story <id>` runs all of it on demand and in the spec gate.
 
-## What 0.4.1 enforces
+## What 0.4.2 enforces
 
 | Rule | Enforced by |
 |---|---|
@@ -132,4 +132,4 @@ The plan lane ranks cards by RICE and by which funnel stage is leaking. Do not b
 | A `verdict:` line and enough `- source:` lines in research | `check research` |
 | At least three questions on the card, each answered, before the interview stage passes | `check questions` |
 
-The `exists:` verdict is in the template and the standard; `spec check` does not read it in 0.4.1. `north_star:` in `config.yaml` is a convention the standard asks for; no command reads it.
+The `exists:` verdict is in the template and the standard; `spec check` does not read it in 0.4.2. `north_star:` in `config.yaml` is a convention the standard asks for; no command reads it.
