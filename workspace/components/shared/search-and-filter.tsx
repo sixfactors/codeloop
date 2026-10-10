@@ -89,7 +89,7 @@ export function SearchAndFilter({
           </Button>
         )}
       </div>
-      {trailing ? <div className="flex items-center gap-2">{trailing}</div> : null}
+      {trailing ? <div className="flex min-w-0 flex-wrap items-center gap-2">{trailing}</div> : null}
     </div>
   );
 }

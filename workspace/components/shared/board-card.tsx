@@ -128,11 +128,15 @@ export function BoardCard({
   );
 }
 
-/** pm-board's sticky column header: uppercase label, tone-coloured underline, bold count. */
-export function ColumnHeader({ label, count, tone = 'none', meta }: { label: string; count: number; tone?: CardTone; meta?: React.ReactNode }) {
+/**
+ * A stage column's header: pinned to the top of the column's own scroll (sticky, not the page's),
+ * tone-coloured underline carried over from pm-board, a surface background so it reads as the lid
+ * of the column box rather than a label floating over cards.
+ */
+export function ColumnHeader({ label, count, tone = 'none', meta, className }: { label: string; count: number; tone?: CardTone; meta?: React.ReactNode; className?: string }) {
   const underline = { waiting: 'border-warning', agent: 'border-ai', done: 'border-success', stuck: 'border-destructive', none: 'border-border' }[tone];
   return (
-    <div className={cn('flex items-center gap-1.5 border-b-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase', underline)}>
+    <div className={cn('sticky top-0 z-10 flex items-center gap-1.5 rounded-t-[inherit] border-b-2 bg-muted/90 px-2.5 py-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase backdrop-blur-sm', underline, className)}>
       <span className="truncate">{label}</span>
       <b className="font-semibold text-foreground tabular-nums">{count}</b>
       {meta ? <span className="ml-auto normal-case tracking-normal">{meta}</span> : null}

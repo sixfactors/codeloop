@@ -2,20 +2,21 @@
 
 // The board: pm-board's lane sections (header strip with progress, one column per stage, sticky
 // uppercase stage headers) built from the copied BoardCard / ColumnHeader, with chanl-admin's
-// SearchAndFilter + SavedViewTabs as the toolbar. Column tracks size by content: a stage with cards
-// gets a full track, an empty one a narrow label-width track, so a lane with one card fits the
-// viewport and the card is on screen at first paint.
+// SearchAndFilter + SavedViewTabs as the toolbar. Every stage column is a fixed-width box
+// (COLUMN_WIDTH) with a visible muted surface, so a lane reads as a kanban row rather than a line
+// of headings — fixed width lets every column look the same whether it holds one card or none,
+// instead of the old content-sized grid track collapsing an empty stage to label width.
 //
 // Every column is its own query (`GET /api/cards?lane=&stage=&sort=score&limit=50`), paged by
 // cursor as the column scrolls, so a 5k-card project draws 50 rows per column and never holds the
-// whole list. The backlog grid pages the same way. Every count on the page is a server total: the
+// whole list. The backlog strip pages the same way. Every count on the page is a server total: the
 // header count is `total` for the current filter, a column's count is its page's `total`.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowUpRight, Inbox, Kanban, Layers, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, Kanban, Layers, Plus, Trash2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { VIRTUAL_THRESHOLD, VirtualGrid, VirtualList } from '@/components/shared/virtual-list';
+import { VIRTUAL_THRESHOLD, VirtualList } from '@/components/shared/virtual-list';
 import { BoardCard, ColumnHeader, cardTone, type CardTone } from '@/components/shared/board-card';
 import { BAND_LABEL } from '@/components/shared/band-chip';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -66,12 +67,28 @@ function byScore(cards: CardT[]): CardT[] {
 type ColumnState = { total: number; ids: string[]; loading: boolean };
 
 function ColumnSkeleton() {
-  return <div className="flex flex-col gap-2" aria-busy="true"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
+  return <div className="flex flex-col gap-2 p-2" aria-busy="true"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
 }
 
 const LoadingMore = () => <p className="py-2 text-center text-xs text-muted-foreground">Loading more…</p>;
 
-/** One stage column: its own paged query, the header count from the server's total. */
+/** Fixed width every stage column holds, so a lane reads as a row of same-size kanban columns. */
+const COLUMN_WIDTH = 280;
+/** Column box caps its own height and scrolls internally past this; short columns stretch to match
+ * the tallest column in the row (flex default), so a lane row reads as one shelf of equal boxes. */
+const COLUMN_MAX_H = '26rem';
+
+/** A horizontally-scrolling row of fixed-width column boxes — the one primitive both lane view and
+ * the "by initiative" view lay their columns out with. */
+function ColumnRow({ children, scrollRef }: { children: ReactNode; scrollRef?: RefObject<HTMLDivElement | null> }) {
+  return (
+    <div className="overflow-x-auto overscroll-x-contain pb-2" ref={scrollRef}>
+      <div className="flex items-stretch gap-3" style={{ minWidth: 'max-content' }}>{children}</div>
+    </div>
+  );
+}
+
+/** One stage column: its own paged query, a fixed-width muted box, the header count from the server's total. */
 function Column({ spec, onOpen, onState, menuFor }: {
   spec: ColumnSpec;
   onOpen: (id: string) => void;
@@ -87,20 +104,31 @@ function Column({ spec, onOpen, onState, menuFor }: {
   const gateName = gate ? (typeof gate === 'string' ? gate : gate.name) : undefined;
   if (spec.optional && !isLoading && total === 0) return null;
   return (
-    <div className="flex min-w-0 flex-col gap-2" data-testid={`column-${spec.key.replace('/', '-')}`} data-count={total}>
+    <div
+      className="flex shrink-0 flex-col overflow-y-auto rounded-lg border bg-muted/40"
+      style={{ width: COLUMN_WIDTH, maxHeight: COLUMN_MAX_H, minHeight: '7rem' }}
+      data-testid={`column-${spec.key.replace('/', '-')}`}
+      data-count={total}
+    >
       <ColumnHeader label={spec.label} count={total} tone={stageTone(spec.lane, spec.stageId ?? spec.label, cards)} meta={gateName ? <span className="text-[10px] text-warning-foreground dark:text-warning">gate</span> : null} />
-      {isLoading ? <ColumnSkeleton /> : error ? <InlineError title="Column failed to load" error={error} onRetry={() => refetch()} /> : (
-        <VirtualList
-          items={cards}
-          keyOf={(c) => c.id}
-          gap={8}
-          // A column with more pages scrolls inside itself from the start, so paging never changes its height.
-          threshold={hasNextPage ? 0 : VIRTUAL_THRESHOLD}
-          onEndReached={hasNextPage ? more : undefined}
-          footer={isFetchingNextPage ? <LoadingMore /> : null}
-          render={(c) => <BoardCard card={c} onOpen={onOpen} menuItems={menuFor?.(c)} />}
-        />
-      )}
+      <div className="flex-1 p-2">
+        {isLoading ? <ColumnSkeleton /> : error ? <InlineError title="Column failed to load" error={error} onRetry={() => refetch()} /> : cards.length === 0 ? (
+          <p className="px-1 py-2 text-xs text-muted-foreground">No cards</p>
+        ) : (
+          <VirtualList
+            items={cards}
+            keyOf={(c) => c.id}
+            gap={8}
+            // The column box itself scrolls (header pinned via sticky), so the list never opens a nested scroller.
+            maxHeight="none"
+            // A column with more pages scrolls inside itself from the start, so paging never changes its height.
+            threshold={hasNextPage ? 0 : VIRTUAL_THRESHOLD}
+            onEndReached={hasNextPage ? more : undefined}
+            footer={isFetchingNextPage ? <LoadingMore /> : null}
+            render={(c) => <BoardCard card={c} onOpen={onOpen} menuItems={menuFor?.(c)} />}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -115,9 +143,6 @@ function LaneSection({ lane, base, showDropped, states, onOpen, onState }: {
   const done = visible.filter((c) => c.stageId === 'done' || DONE_STAGE_IDS.includes(c.stageId ?? '') || lane.stages.at(-1)?.id === c.stageId).reduce((n, c) => n + totalOf(c), 0);
   const inFlight = inLane - done;
   const settled = visible.every((c) => states[c.key] && !states[c.key].loading);
-  // Unknown totals (still loading) get a full track so the row does not jump when they land. An
-  // empty stage keeps a label-width track: eight stages with one card then fit a 1280 viewport.
-  const tracks = visible.map((c) => ((states[c.key]?.loading ?? true) || totalOf(c) > 0 ? 'minmax(17rem,1fr)' : 'minmax(5rem,6rem)')).join(' ');
 
   // Once the totals land, the first stage with cards is scrolled into view; a lane whose only card
   // sits in a late stage otherwise shows empty columns at first paint. Once per filter.
@@ -144,13 +169,11 @@ function LaneSection({ lane, base, showDropped, states, onOpen, onState }: {
         <b className="text-sm font-semibold text-foreground">{lane.id}</b>
         <span className="tabular-nums" data-testid={`lane-${lane.id}-done`}>{done}/{inLane} done</span>
         {lane.metric ? <span>measure: {typeof lane.metric === 'string' ? lane.metric : (lane.metric as { name?: string }).name}</span> : null}
-        {lane.wip ? <UsageBar label="WIP" current={inFlight} limit={lane.wip} size="sm" className="ml-auto w-32" /> : null}
+        {lane.wip ? <UsageBar label="WIP" current={inFlight} limit={lane.wip} size="sm" className="ml-auto w-32 shrink-0" /> : null}
       </div>
-      <div className="overflow-x-auto pb-2" ref={scroller}>
-        <div className="grid gap-3" style={{ gridTemplateColumns: tracks, minWidth: 'max-content' }}>
-          {cols.map((c) => <Column key={c.key} spec={c} onOpen={onOpen} onState={onState} />)}
-        </div>
-      </div>
+      <ColumnRow scrollRef={scroller}>
+        {cols.map((c) => <Column key={c.key} spec={c} onOpen={onOpen} onState={onState} />)}
+      </ColumnRow>
     </section>
   );
 }
@@ -166,6 +189,7 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
   const needsYou = inbox.data?.needsYou.total;
   const matching = useCardCount(base);
   const [pending, setPending] = useState(false);
+  const [backlogOpen, setBacklogOpen] = useState(true);
   const [group, setGroup] = useState<'lane' | 'initiative'>('lane');
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -266,33 +290,46 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
           : <EmptyState icon={Kanban} title="No stories yet" description="Make the first one here, or from the terminal with `codeloop start` or `codeloop card propose`." action={{ label: 'New story', onClick: () => setCreating(true) }} />
       ) : (
         <div className={cn('flex flex-col gap-6 transition-opacity duration-200', pending && 'opacity-60')} aria-busy={pending}>
-          {/* Backlog: proposals wait here until someone promotes or drops them. */}
-          <section className="flex flex-col gap-2.5" data-testid="board-backlog">
-            <ColumnHeader label="Backlog · proposed" count={backlog.total} tone={backlog.total ? 'waiting' : 'none'} />
-            {backlog.isLoading ? <ColumnSkeleton /> : backlog.total === 0 ? (
-              <EmptyState compact icon={Inbox} title="Nothing proposed" description="Proposals land here: New story above, or `codeloop card propose <lane> <title>` from the terminal." />
-            ) : (
-              <VirtualGrid
-                items={backlogCards}
-                keyOf={(c) => c.id}
-                threshold={backlog.hasNextPage ? 0 : VIRTUAL_THRESHOLD}
-                maxHeight="60vh"
-                onEndReached={backlog.hasNextPage ? backlogMore : undefined}
-                footer={backlog.isFetchingNextPage ? <LoadingMore /> : null}
-                render={(c) => <BoardCard card={c} onOpen={setOpen} menuItems={menuFor(c)} />}
-              />
-            )}
+          {/* Backlog: proposals wait here until someone promotes or drops them. A collapsible strip,
+              not a full-width block, so an empty or a long backlog never pushes the lanes down. */}
+          <section className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-2.5" data-testid="board-backlog">
+            <button
+              type="button"
+              onClick={() => setBacklogOpen((o) => !o)}
+              className="flex items-center gap-1.5 text-left text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+              aria-expanded={backlogOpen}
+            >
+              <ChevronRight className={cn('size-3.5 shrink-0 transition-transform', backlogOpen && 'rotate-90')} />
+              <span>Backlog · proposed</span>
+              <b className="font-semibold text-foreground tabular-nums">{backlog.total}</b>
+            </button>
+            {backlogOpen ? (
+              backlog.isLoading ? <ColumnSkeleton /> : backlog.total === 0 ? (
+                <p className="py-1 pl-5 text-xs text-muted-foreground">Nothing proposed. New story above, or `codeloop card propose &lt;lane&gt; &lt;title&gt;` from the terminal.</p>
+              ) : (
+                <ColumnRow>
+                  {backlogCards.map((c) => (
+                    <div key={c.id} className="shrink-0" style={{ width: COLUMN_WIDTH }}>
+                      <BoardCard card={c} onOpen={setOpen} menuItems={menuFor(c)} />
+                    </div>
+                  ))}
+                  {backlog.hasNextPage ? (
+                    <Button variant="outline" size="sm" className="h-auto shrink-0 self-stretch px-3" disabled={backlog.isFetchingNextPage} onClick={backlogMore}>
+                      {backlog.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                    </Button>
+                  ) : null}
+                </ColumnRow>
+              )
+            ) : null}
           </section>
 
           {group === 'lane'
             ? orderedLanes.map((lane) => <LaneSection key={lane.id} lane={lane} base={base} showDropped={showDropped} states={states} onOpen={setOpen} onState={onState} />)
             : (
-              <div className="overflow-x-auto pb-2">
-                <div className="grid gap-3" style={{ gridTemplateColumns: initiativeCols.map(() => 'minmax(15rem,1fr)').join(' '), minWidth: 'max-content' }}>
-                  {initiativeCols.map((c) => <Column key={c.key} spec={c} onOpen={setOpen} onState={onState} />)}
-                </div>
+              <ColumnRow>
+                {initiativeCols.map((c) => <Column key={c.key} spec={c} onOpen={setOpen} onState={onState} />)}
                 {initiativeCols.length === 0 ? <p className="text-sm text-muted-foreground">No story names an initiative yet.</p> : null}
-              </div>
+              </ColumnRow>
             )}
         </div>
       )}
