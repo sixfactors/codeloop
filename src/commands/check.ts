@@ -6,6 +6,7 @@ import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.
 import { checkStory } from '../lib/story.js';
 import { readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
+import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
@@ -62,7 +63,7 @@ function failing(run: () => string[] | Promise<string[]>) {
 
 checkCommand
   .command('research <card>')
-  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url>, <note>` lines")
+  .description("Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines")
   .option('--min-sources <n>', 'How many source lines are required', '3')
   .option('--online', 'Also require each source URL to answer with 2xx or 3xx')
   .action((card: string, opts: { minSources: string; online?: boolean }) => failing(async () => {
@@ -99,6 +100,17 @@ checkCommand
   .command('story <card>')
   .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
   .action((card: string) => failing(() => checkStory(process.cwd(), findCard(readCards(process.cwd()).cards, card)))());
+
+checkCommand
+  .command('brief <card>')
+  .description("Exit 1 unless the card's shape brief has problem:, users: and exists: filled in, and at least 3 `- source:` lines")
+  .action((card: string) => failing(() => checkBrief(process.cwd(), card).errors)());
+
+checkCommand
+  .command('breakdown <card>')
+  .description("Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on")
+  .option('--ranked', 'Also require a `rice:` part on every story')
+  .action((card: string, opts: { ranked?: boolean }) => failing(() => checkBreakdown(process.cwd(), card, { ranked: !!opts.ranked }).errors)());
 
 checkCommand
   .command('questions <card>')

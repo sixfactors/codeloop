@@ -5,8 +5,8 @@ import { NumberTicker } from './number-ticker';
 // list in docs/hosts. Run counts live on the founder's week page, not here.
 const FACTS: { value: number | string; label: string; href?: string }[] = [
   { value: 1, label: 'npm package, no server to run' },
-  { value: 8, label: 'workflows included: build, deploy, launch, plan, triage, scan, analyze, learn', href: '/docs/reference/lanes' },
-  { value: 13, label: 'stage skills, from research to release', href: '/docs/start/install' },
+  { value: 9, label: 'workflows included: shape, build, deploy, market, plan, triage, scan, analyze, learn', href: '/docs/reference/lanes' },
+  { value: 15, label: 'stage skills, from brief to release', href: '/docs/start/install' },
   { value: 4, label: 'agent hosts: Claude Code, Cursor, Codex, MCP', href: '/docs/hosts' },
   { value: 0, label: 'data leaves your machine; everything is a file in your repo' },
   { value: 'MIT', label: 'licence, on GitHub', href: 'https://github.com/sixfactors/codeloop' },

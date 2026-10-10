@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { spawn, spawnSync } from 'child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -154,6 +154,36 @@ describe('guard prompt (UserPromptSubmit hook)', () => {
     expect(result.stderr).toMatch(/no active story/);
     expect(result.stderr).toMatch(/c-7/);
     expect(result.stderr).toMatch(/codeloop card activate c-7/);
+  });
+});
+
+describe('headless runs (CODELOOP_CARD)', () => {
+  it('guard prompt and guard edit treat the card named in CODELOOP_CARD as active, with no active-card file', () => {
+    writeCard('c-9', 'build');
+    const prompt = cli(['guard', 'prompt'], { input: JSON.stringify({ prompt: 'anything' }), env: { CODELOOP_CARD: 'c-9' } });
+    expect(prompt.status).toBe(0);
+    expect(prompt.stdout).toMatch(/active card c-9 \(build\)/);
+    const edit = cli(['guard', 'edit'], { input: JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: 'src/x.ts' } }), env: { CODELOOP_CARD: 'c-9' } });
+    expect(edit.status).toBe(0);
+  });
+});
+
+describe('git hooks under core.hooksPath (husky layout)', () => {
+  it('appends the guards to .husky/<hook> instead of writing .git/hooks', () => {
+    spawnSync('git', ['init', '-q'], { cwd: dir });
+    spawnSync('git', ['config', 'core.hooksPath', '.husky/_'], { cwd: dir });
+    write('.husky/pre-commit', '#!/bin/sh\nnpm test\n');
+    const result = cli(['init', '--hooks']);
+    expect(result.status).toBe(0);
+    const hook = readFileSync(join(dir, '.husky/pre-commit'), 'utf-8');
+    expect(hook).toContain('npm test');
+    expect(hook).toContain('# codeloop pre-commit');
+    expect(hook).toContain('codeloop guard diff --staged');
+    expect(readFileSync(join(dir, '.husky/pre-push'), 'utf-8')).toContain('# codeloop pre-push');
+    expect(existsSync(join(dir, '.git/hooks/pre-commit'))).toBe(false);
+    const again = cli(['init', '--hooks']);
+    expect(again.stdout).toContain('(unchanged)');
+    expect(readFileSync(join(dir, '.husky/pre-commit'), 'utf-8').match(/# codeloop pre-commit/g)).toHaveLength(1);
   });
 });
 

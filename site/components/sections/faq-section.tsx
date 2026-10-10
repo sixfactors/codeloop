@@ -27,7 +27,7 @@ const FAQS = [
   {
     question: 'Can I remove it?',
     answer:
-      'Yes. Delete .codeloop/, specs/, usecases/ and evidence/, and the command and skill files init wrote under .claude/ (or .cursor/, .agents/). Nothing leaves your machine unless you set up the Protobox sync.',
+      'Yes. Delete .codeloop/, shape/, specs/, usecases/ and evidence/, the command and skill files init wrote under .claude/, .cursor/ or .agents/, .mcp.json, and the marked codeloop blocks in CLAUDE.md, AGENTS.md and .github/copilot-instructions.md. Nothing leaves your machine unless you set up the Protobox sync.',
   },
   {
     question: 'Which hosts?',

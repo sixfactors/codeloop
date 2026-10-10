@@ -44,8 +44,22 @@ function mergeHooksFile(projectDir: string, destRel: string, templateFile: strin
 function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push'): HookInstall {
   const run = spawnSync('git', ['rev-parse', '--git-path', 'hooks'], { cwd: projectDir, encoding: 'utf-8' });
   if (run.status !== 0) return { name, installed: false, reason: 'not a git repository' };
-  const path = join(resolve(projectDir, run.stdout.trim()), name);
   const source = readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
+  // A repo with core.hooksPath never runs .git/hooks. Husky points it at .husky/_ and runs the
+  // script of the same name one level up, so that is where the guard has to go, appended to
+  // whatever the repo already runs there.
+  const hooksPath = spawnSync('git', ['config', '--get', 'core.hooksPath'], { cwd: projectDir, encoding: 'utf-8' }).stdout.trim();
+  if (hooksPath && /\.husky\/_\/?$/.test(hooksPath)) {
+    const path = join(resolve(projectDir, hooksPath), '..', name);
+    const marker = `# codeloop ${name}`;
+    const block = `\n${marker}\n${source.replace(/^#!.*\n/, '')}`;
+    const current = existsSync(path) ? readFileSync(path, 'utf-8') : '#!/bin/sh\n';
+    if (current.includes(marker)) return { name, installed: true, path, reason: 'unchanged' };
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, `${current.replace(/\n*$/, '\n')}${block}`, { mode: 0o755 });
+    return { name, installed: true, path };
+  }
+  const path = join(resolve(projectDir, hooksPath || run.stdout.trim()), name);
   if (existsSync(path) && readFileSync(path, 'utf-8') === source) return { name, installed: true, path, reason: 'unchanged' };
   if (existsSync(path) && readFileSync(path, 'utf-8') !== source) return { name, installed: false, path, reason: `a different ${name} hook already exists` };
   mkdirSync(dirname(path), { recursive: true });

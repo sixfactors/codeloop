@@ -5,14 +5,14 @@ import { readCards, RefusalError, writeCards, type Card, type Size, type StoryFi
 export const KNOWN_PERSONAS = ['founder', 'builder', 'reviewer', 'dev', 'visitor', 'team'];
 export const SIZES: Size[] = ['S', 'M', 'L'];
 export const POINTS = [1, 2, 3, 5, 8];
-const MAX_TITLE_WORDS = 12;
+const MAX_TITLE_WORDS = 16;
 // Each one marks a mechanism (a flag, a file, a path, a key, a call) rather than what the user can now do.
 const TECHNICAL = ['`', '--', ':', '.yaml', '.md', '/', '()'];
 const CAMEL = /\b[a-z]+[A-Z][A-Za-z]*\b/;
 
 /**
  * Why a title fails the standard, one line each. Empty when it reads as what the user can now do.
- * The standard: at most twelve words, none of the technical marks, no camelCase token.
+ * The standard: at most sixteen words, none of the technical marks, no camelCase token.
  */
 export function titleProblems(title: string): string[] {
   const problems: string[] = [];

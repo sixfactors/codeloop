@@ -203,6 +203,15 @@ function keepTail(file: string): void {
 }
 
 /** Runs the agent command in the project with `{brief}` filled in. Output goes to `logFile`. */
+/** The `Card: <id>` line every stage brief starts with. */
+function cardOfBrief(briefFile: string): string | undefined {
+  try {
+    return /^Card: (\S+)$/m.exec(readFileSync(briefFile, 'utf-8'))?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
 export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string): Promise<AgentRun> {
   mkdirSync(dirname(logFile), { recursive: true });
   // Appended, not truncated: a run started from the API writes the check's output ahead of the agent's.
@@ -226,7 +235,7 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
       shell: true,
       detached: true,
       stdio: ['ignore', out, out],
-      env: { ...checkEnv(), CODELOOP_ROLE: 'agent', CODELOOP_AGENT_RUN: agent.name },
+      env: { ...checkEnv(), CODELOOP_ROLE: 'agent', CODELOOP_AGENT_RUN: agent.name, ...(cardOfBrief(briefFile) ? { CODELOOP_CARD: cardOfBrief(briefFile) } : {}) },
     });
     const timer = setTimeout(() => {
       timedOut = true;

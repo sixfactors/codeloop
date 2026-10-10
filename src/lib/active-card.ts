@@ -5,6 +5,11 @@ export const ACTIVE_CARD_PATH = '.codeloop/state/active-card';
 
 /** The card `codeloop start`, `codeloop card activate` or a Cursor/Claude hook last set in this repo. */
 export function getActiveCard(projectDir: string): string | undefined {
+  // A headless run (`codeloop run --agent`) names its card in the environment; the hooks the host
+  // fires inside that run must see it as active, or the UserPromptSubmit guard blocks the agent's
+  // first turn and the stage does nothing.
+  const fromRun = process.env.CODELOOP_CARD?.trim();
+  if (fromRun) return fromRun;
   const file = join(projectDir, ACTIVE_CARD_PATH);
   if (!existsSync(file)) return undefined;
   const id = readFileSync(file, 'utf-8').trim();

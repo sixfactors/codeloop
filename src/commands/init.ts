@@ -61,7 +61,7 @@ export const initCommand = new Command('init')
   .description('Initialize codeloop in the current project')
   .option('-s, --starter <name>', 'Use a specific starter (generic, node-typescript, python, go)')
   .option('-t, --tools <tools>', 'Comma-separated tools: claude,cursor,codex (skip prompt)')
-  .option('--hooks', 'Only install the commit-msg hook that adds the Feature: trailer')
+  .option('--hooks', 'Only install the hooks: the commit-msg trailer, the Claude Code and Cursor hooks, and the pre-commit and pre-push guards')
   .option('--ci <provider>', 'Only write CI workflows (github)')
   .option('-y, --yes', 'Write into an existing .claude/commands/ without asking')
   .action(async (options: { starter?: string; tools?: string; hooks?: boolean; ci?: string; yes?: boolean }) => {

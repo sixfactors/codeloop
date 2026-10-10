@@ -1,3 +1,5 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { loadConfig } from '../lib/config.js';
@@ -10,11 +12,14 @@ import { guard } from './guard.js';
 
 export const renderCommand = new Command('render')
   .description('Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it')
-  .option('--host <host>', 'claude | cursor | codex | all', 'all')
+  .option('--host <host>', 'claude | cursor | codex | all; by default the hosts init set up (.claude, .cursor, .agents present), or all when none is', 'auto')
   .option('--hooks', 'Also install the Claude Code and Cursor hooks and the pre-commit/pre-push git guards (same as `codeloop init --hooks`)', false)
   .action(guard((opts: { host: string; hooks?: boolean }) => {
-    if (opts.host !== 'all' && !HOSTS.includes(opts.host as Host)) throw new RefusalError(`unknown host "${opts.host}" (claude, cursor, codex or all)`);
-    const result = render(process.cwd(), opts.host === 'all' ? HOSTS : [opts.host as Host]);
+    if (opts.host !== 'all' && opts.host !== 'auto' && !HOSTS.includes(opts.host as Host)) throw new RefusalError(`unknown host "${opts.host}" (claude, cursor, codex or all)`);
+    const markers: Record<Host, string> = { claude: '.claude', cursor: '.cursor', codex: '.agents' };
+    const present = HOSTS.filter(h => existsSync(join(process.cwd(), markers[h])));
+    const hosts = opts.host === 'all' ? HOSTS : opts.host === 'auto' ? (present.length ? present : HOSTS) : [opts.host as Host];
+    const result = render(process.cwd(), hosts);
     result.written.forEach(f => console.log(chalk.green(`  + ${f}`)));
     console.log(`  ${result.written.length} written, ${result.unchanged.length} unchanged`);
     if (opts.hooks) {
