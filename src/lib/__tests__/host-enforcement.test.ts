@@ -74,6 +74,7 @@ describe('render: protocol block', () => {
   });
 
   it('writes .cursor/rules/codeloop.mdc with alwaysApply: true and .github/copilot-instructions.md as a marked block', () => {
+    mkdirSync(join(dir, '.github'), { recursive: true });
     render(dir, []);
     expect(readFileSync(join(dir, '.cursor/rules/codeloop.mdc'), 'utf-8')).toMatch(/alwaysApply: true/);
     expect(readFileSync(join(dir, '.github/copilot-instructions.md'), 'utf-8')).toMatch(/<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->/);
@@ -165,6 +166,20 @@ describe('headless runs (CODELOOP_CARD)', () => {
     expect(prompt.stdout).toMatch(/active card c-9 \(build\)/);
     const edit = cli(['guard', 'edit'], { input: JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: 'src/x.ts' } }), env: { CODELOOP_CARD: 'c-9' } });
     expect(edit.status).toBe(0);
+  });
+});
+
+describe('git hooks when the repo already has one', () => {
+  it('appends the guard under a marker after the existing script, once', () => {
+    spawnSync('git', ['init', '-q'], { cwd: dir });
+    write('.git/hooks/pre-commit', '#!/bin/sh\npnpm -s verify || exit 1\n');
+    const result = cli(['init', '--hooks']);
+    expect(result.status).toBe(0);
+    const hook = readFileSync(join(dir, '.git/hooks/pre-commit'), 'utf-8');
+    expect(hook.indexOf('pnpm -s verify')).toBeLessThan(hook.indexOf('# codeloop pre-commit'));
+    expect(hook).toContain('codeloop guard diff --staged');
+    cli(['init', '--hooks']);
+    expect(readFileSync(join(dir, '.git/hooks/pre-commit'), 'utf-8').match(/# codeloop pre-commit/g)).toHaveLength(1);
   });
 });
 

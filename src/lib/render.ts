@@ -104,10 +104,14 @@ export function render(projectDir: string, hosts: Host[]): { written: string[]; 
   const protocol = protocolText(projectDir);
   const protocolBlock = markedBlock(protocol);
 
+  // AGENTS.md is read by Codex and most other agents, so it is always written. The rest follow the
+  // hosts rendered; the Copilot file only where a .github folder already exists.
   out['AGENTS.md'] = applyMarkedBlock(readIfExists(join(projectDir, 'AGENTS.md')), agentsBlock(lanes, protocol));
-  out['CLAUDE.md'] = applyMarkedBlock(readIfExists(join(projectDir, 'CLAUDE.md')), protocolBlock);
-  out['.github/copilot-instructions.md'] = applyMarkedBlock(readIfExists(join(projectDir, '.github/copilot-instructions.md')), protocolBlock);
-  out['.cursor/rules/codeloop.mdc'] = `---\ndescription: The standing codeloop protocol, read this before any work in the active card.\nalwaysApply: true\n---\n\n${protocol}\n`;
+  // An empty host list means the protocol files for every host, as the tests and `render --host all` use it.
+  const forHost = (h: Host) => hosts.length === 0 || hosts.includes(h);
+  if (forHost('claude')) out['CLAUDE.md'] = applyMarkedBlock(readIfExists(join(projectDir, 'CLAUDE.md')), protocolBlock);
+  if (existsSync(join(projectDir, '.github'))) out['.github/copilot-instructions.md'] = applyMarkedBlock(readIfExists(join(projectDir, '.github/copilot-instructions.md')), protocolBlock);
+  if (forHost('cursor')) out['.cursor/rules/codeloop.mdc'] = `---\ndescription: The standing codeloop protocol, read this before any work in the active card.\nalwaysApply: true\n---\n\n${protocol}\n`;
 
   const result = { written: [] as string[], unchanged: [] as string[] };
   for (const [path, text] of Object.entries(out)) {

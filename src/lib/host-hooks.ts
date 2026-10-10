@@ -61,7 +61,15 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push'): Ho
   }
   const path = join(resolve(projectDir, hooksPath || run.stdout.trim()), name);
   if (existsSync(path) && readFileSync(path, 'utf-8') === source) return { name, installed: true, path, reason: 'unchanged' };
-  if (existsSync(path) && readFileSync(path, 'utf-8') !== source) return { name, installed: false, path, reason: `a different ${name} hook already exists` };
+  if (existsSync(path)) {
+    // A hook the repo already runs (its own script, or one a `prepare` step copies in) keeps running
+    // first; the guard is appended after it under a marker, once.
+    const current = readFileSync(path, 'utf-8');
+    const marker = `# codeloop ${name}`;
+    if (current.includes(marker)) return { name, installed: true, path, reason: 'unchanged' };
+    writeFileSync(path, `${current.replace(/\n*$/, '\n')}\n${marker}\n${source.replace(/^#!.*\n/, '')}`, { mode: 0o755 });
+    return { name, installed: true, path, reason: 'appended to the existing hook' };
+  }
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, source, { mode: 0o755 });
   return { name, installed: true, path };
@@ -74,11 +82,20 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push'): Ho
  * (written to `.cursor/hooks.json`), and the pre-commit/pre-push git guards.
  */
 export function installHostHooks(projectDir: string): HookInstall[] {
-  const claude = mergeHooksFile(projectDir, '.claude/settings.json', 'claude-hooks.json');
-  const cursor = mergeHooksFile(projectDir, '.cursor/hooks.json', 'cursor-hooks.json');
+  // Only the hosts init set up get hook files; a repo with neither folder gets Claude's, the default host.
+  const hasCursor = existsSync(join(projectDir, '.cursor'));
+  const hasClaude = existsSync(join(projectDir, '.claude')) || !hasCursor;
+  const out: HookInstall[] = [];
+  if (hasClaude) {
+    const claude = mergeHooksFile(projectDir, '.claude/settings.json', 'claude-hooks.json');
+    out.push({ name: '.claude/settings.json', installed: true, reason: claude.changed ? undefined : 'unchanged' });
+  }
+  if (hasCursor) {
+    const cursor = mergeHooksFile(projectDir, '.cursor/hooks.json', 'cursor-hooks.json');
+    out.push({ name: '.cursor/hooks.json', installed: true, reason: cursor.changed ? undefined : 'unchanged' });
+  }
   return [
-    { name: '.claude/settings.json', installed: true, reason: claude.changed ? undefined : 'unchanged' },
-    { name: '.cursor/hooks.json', installed: true, reason: cursor.changed ? undefined : 'unchanged' },
+    ...out,
     installGitHook(projectDir, 'pre-commit'),
     installGitHook(projectDir, 'pre-push'),
   ];

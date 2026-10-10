@@ -49,6 +49,7 @@ afterEach(() => {
 describe('render', () => {
   it('changes nothing on a second run and keeps AGENTS.md text outside its block', () => {
     write('AGENTS.md', '# Agents\n\nHouse rules stay here.\n');
+    mkdirSync(join(dir, '.github'), { recursive: true });
 
     const first = render(dir, ['claude', 'cursor', 'codex']);
     expect(first.written.sort()).toEqual([
