@@ -14,9 +14,9 @@ const azeretMono = Azeret_Mono({
   weight: ['400', '500'],
 });
 
-const title = 'codeloop: lanes, checks and gates for coding agents';
+const title = 'codeloop: plan, test and ship code visually, with AI agents';
 const description =
-  'A CLI and local board that runs coding agents through YAML lanes: a check command after each stage, a human approval at each gate. MIT. Claude Code, Cursor, Codex and MCP.';
+  'A visual board of your user stories. Agents that work in stages, with a check after each one. You stay in the loop at the steps you choose. Open source, MIT.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codeloop.protobox.ai'),

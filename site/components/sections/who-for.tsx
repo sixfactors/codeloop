@@ -9,25 +9,25 @@ import { cn } from '@/lib/utils';
 // Radix Tabs and motion are replaced by buttons and plain state.
 const PERSONAS = [
   {
-    id: 'founder',
-    title: 'Founder',
-    description: 'Reads the inbox and approves or rejects gates. The plan, triage, scan and analyze lanes run from cron.',
-    screen: '/screens/inbox.png',
-    alt: 'The inbox a founder reads on Monday',
-  },
-  {
-    id: 'developer',
-    title: 'Developer',
-    description: 'Existing slash commands and skills are indexed and named in lane stages. Every stage run leaves an event on the card.',
-    screen: '/screens/card.png',
-    alt: 'A card with its gate and details',
-  },
-  {
-    id: 'consultant',
-    title: 'Consultant',
-    description: 'Any skill that writes a file can be a stage. A review skill runs on every deliverable, and the send waits for approval.',
+    id: 'individuals',
+    title: 'Individuals',
+    description: 'Several stories in flight with one agent. The board shows which one moved, which one failed a check, and which one is waiting on you.',
     screen: '/screens/board.png',
-    alt: 'The board with cards by lane',
+    alt: 'The board with stories by workflow and stage',
+  },
+  {
+    id: 'teams',
+    title: 'Teams',
+    description: 'A story started by one person in Claude Code is picked up by another in Cursor, with the same brief, history and approvals. Reviewers approve their own step.',
+    screen: '/screens/card.png',
+    alt: 'A story with its approval panel and history',
+  },
+  {
+    id: 'non-code',
+    title: 'Work that is not code',
+    description: 'Any skill that writes a file can be a stage. A review skill runs on every client deliverable, and sending it waits for a person.',
+    screen: '/screens/inbox.png',
+    alt: 'The inbox listing what waits for a person',
   },
 ];
 

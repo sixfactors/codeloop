@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import { NumberTicker } from './number-ticker';
 
-// Every number is from a saved run: scripts/e2e-founder-loop.sh, scripts/first-user.sh and
-// docs/artifacts/demo-founder-week.txt in the codeloop repo.
+// Facts a newcomer can check: the package contents (templates/lanes, templates/skills) and the host
+// list in docs/hosts. Run counts live on the founder's week page, not here.
 const FACTS: { value: number | string; label: string; href?: string }[] = [
-  { value: 229, label: 'steps in the founder e2e' },
-  { value: 29, label: 'steps from package install to first card' },
-  { value: 14, label: 'cards in the saved week', href: '/docs/start/founders-week' },
-  { value: 49, label: 'agent runs in that week', href: '/docs/start/founders-week' },
-  { value: 15, label: 'approvals the founder typed', href: '/docs/start/founders-week' },
+  { value: 1, label: 'npm package, no server to run' },
+  { value: 8, label: 'workflows included: build, deploy, launch, plan, triage, scan, analyze, learn', href: '/docs/reference/lanes' },
+  { value: 13, label: 'stage skills, from research to release', href: '/docs/start/install' },
+  { value: 4, label: 'agent hosts: Claude Code, Cursor, Codex, MCP', href: '/docs/hosts' },
+  { value: 0, label: 'data leaves your machine; everything is a file in your repo' },
   { value: 'MIT', label: 'licence, on GitHub', href: 'https://github.com/sixfactors/codeloop' },
 ];
 

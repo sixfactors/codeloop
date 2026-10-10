@@ -5,26 +5,30 @@ import Image from 'next/image';
 // Every command is real; the docs home shows the same four.
 const STEPS = [
   {
-    cmd: 'codeloop start "Export invoices as CSV"',
-    lead: 'Creates a card and its spec folder in the build lane.',
-    screen: '/screens/board.png',
-    alt: 'The board with the new card',
-  },
-  {
+    title: 'Runs the workflow on its own',
     cmd: 'codeloop run --agent',
-    lead: 'Starts your agent on the current stage, then runs the check command of that stage.',
+    lead: 'Picks the next story, starts your agent on one stage with a brief, runs the check, moves the story, and goes again. From cron, all day.',
     screen: '/screens/card.png',
-    alt: 'A card parked at its gate after the check passed',
+    alt: 'A story at one stage, with its brief, check and history',
   },
   {
-    cmd: 'codeloop approve c-001',
-    lead: 'Approves the gate the card is parked at. Gates are listed in the inbox.',
+    title: 'Visual story board',
+    cmd: 'codeloop serve',
+    lead: 'Every user story on one board, by workflow and stage. A story moves only when its check passed, so the board shows what actually happened.',
+    screen: '/screens/board.png',
+    alt: 'The board: user stories by workflow and stage',
+  },
+  {
+    title: 'Keeps you in the loop',
+    cmd: 'codeloop inbox',
+    lead: 'The steps you mark for a person wait. The inbox lists questions and approvals, oldest first; the agent cannot approve on your behalf.',
     screen: '/screens/inbox.png',
-    alt: 'The inbox listing gates waiting',
+    alt: 'The inbox listing stories waiting for a person',
   },
   {
+    title: 'Remembers what went wrong',
     cmd: 'codeloop wiki capture',
-    lead: 'Writes a wiki page. Pages whose scope matches the files are put in the next stage brief.',
+    lead: 'Agents write what they learned to a wiki in your repo and read the matching pages before the next stage. A lesson captured three times is marked critical.',
     screen: '/screens/wiki.png',
     alt: 'The wiki agents read before a stage',
   },
@@ -36,25 +40,19 @@ export function SolutionOverview() {
       <div className="mb-14">
         <div className="mb-4 flex items-center gap-2">
           <span className="size-3 rounded-full bg-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-primary">The loop</span>
+          <span className="text-sm font-semibold uppercase tracking-wider text-primary">CodeLoop in action</span>
         </div>
         <h2 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight md:text-5xl">
-          The loop is four commands.
-          <br />
-          <span className="text-muted-foreground">One card at a time.</span>
+          Watch your product being built visually
         </h2>
       </div>
 
       <ol className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map((step, i) => (
+        {STEPS.map((step) => (
           <li key={step.cmd} className="flex flex-col gap-4 bg-card p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 font-mono text-sm font-medium text-primary">
-                {i + 1}
-              </span>
-              <code className="min-w-0 break-words font-mono text-sm font-medium text-card-foreground">{step.cmd}</code>
-            </div>
+            <h3 className="text-2xl font-medium text-card-foreground">{step.title}</h3>
             <p className="text-base leading-snug text-muted-foreground">{step.lead}</p>
+            <code className="min-w-0 break-words font-mono text-xs text-muted-foreground">{step.cmd}</code>
             <div className="mt-auto overflow-hidden rounded-lg border border-border">
               <Image src={step.screen} alt={step.alt} width={1440} height={900} unoptimized className="block h-auto w-full" />
             </div>

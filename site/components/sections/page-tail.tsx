@@ -9,7 +9,7 @@ export function PageTail() {
       <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center md:px-16 md:py-16">
         <h2 className="text-3xl font-medium tracking-tight md:text-4xl">Install</h2>
         <p className="mx-auto mt-4 max-w-[50ch] text-lg text-muted-foreground">
-          One npm package. Everything it writes is a file in your repo.
+          One npm package. It writes files into your repo and nothing leaves your machine.
         </p>
         <div className="mt-8 flex justify-center">
           <CopyInstall />

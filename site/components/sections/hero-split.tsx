@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 // text left and the product right. The voice carousel is replaced by static screenshots behind a
 // tab row, and framer-motion is dropped.
 const SCREENS = [
-  { id: 'board', label: 'Board', src: '/screens/board.png', alt: 'The codeloop board: every card by lane and stage' },
+  { id: 'board', label: 'Board', src: '/screens/board.png', alt: 'The codeloop board: every user story by workflow and stage' },
   { id: 'inbox', label: 'Inbox', src: '/screens/inbox.png', alt: 'The inbox: gates waiting on you, oldest first' },
-  { id: 'card', label: 'Card', src: '/screens/card.png', alt: 'A card at its gate with Approve and Reject' },
+  { id: 'card', label: 'Card', src: '/screens/card.png', alt: 'A story waiting for approval, with Approve and Reject' },
   { id: 'wiki', label: 'Wiki', src: '/screens/wiki.png', alt: 'The wiki agents read before a stage' },
 ];
 
@@ -30,15 +30,14 @@ export function HeroSplit() {
                 Open source, MIT
               </span>
               <h1 className="mb-6 text-4xl font-medium tracking-tight md:text-5xl">
-                Run coding agents stage by stage, with a check after each stage and a gate where a person approves.
+                Plan and ship code visually
               </h1>
               <p className="mb-8 text-lg text-muted-foreground md:text-xl">
-                A lane is a YAML file of stages. Each stage names a skill, the file it must write and a
-                command that must exit 0. A gate parks the card until an owner or reviewer approves.
-                Works in Claude Code, Cursor, Codex and any MCP client.
+                A wiki and visual board of your user stories managed by both AI and humans. Agents work in stages from planning to shipping, keeping you in the loop when you need to be.
               </p>
               <div className="flex flex-col items-start gap-4">
                 <CopyInstall />
+                <span className="text-sm text-muted-foreground">Claude Code, Cursor, Codex and any MCP client. MIT.</span>
                 <Link
                   href="/docs"
                   className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"

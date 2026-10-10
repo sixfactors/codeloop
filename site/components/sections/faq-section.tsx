@@ -7,7 +7,7 @@ const FAQS = [
   {
     question: 'Does it replace my tickets?',
     answer:
-      'No. A card is a file in your repo, .codeloop/cards.json. import speckit and import bmad read another tool’s folders.',
+      'No. A story is an entry in .codeloop/cards.json in your repo, and the board reads that file. import speckit and import bmad read another tool’s folders.',
   },
   {
     question: 'Does it need the cloud?',
@@ -17,12 +17,17 @@ const FAQS = [
   {
     question: 'What does an agent run cost me?',
     answer:
-      'Nothing from codeloop. A run starts your own agent command, so the cost is what that host bills. max_runs_per_day caps starts. Cost per card is not reported yet.',
+      'Nothing from codeloop. A run starts your own agent command, so the cost is what that host bills. max_runs_per_day caps starts. Cost per story is not reported yet.',
   },
   {
     question: 'What if the agent is wrong?',
     answer:
-      'A stage is done only when its check exits 0. A failed check parks the card at its gate with the failure logged. An agent process cannot approve a gate.',
+      'A stage is done only when its check exits 0. A failed check keeps the story at that stage with the failure logged. An agent process cannot approve a step that needs a person.',
+  },
+  {
+    question: 'Can I remove it?',
+    answer:
+      'Yes. Delete .codeloop/, specs/, usecases/ and evidence/, and the command and skill files init wrote under .claude/ (or .cursor/, .agents/). Nothing leaves your machine unless you set up the Protobox sync.',
   },
   {
     question: 'Which hosts?',
