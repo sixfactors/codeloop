@@ -4,7 +4,7 @@ argument-hint: [description]
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, EnterPlanMode
 ---
 
-<!-- codeloop-version: 0.4.2 -->
+<!-- codeloop-version: 0.4.3 -->
 
 # /design
 

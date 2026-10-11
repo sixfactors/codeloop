@@ -4,7 +4,7 @@ argument-hint: [pattern] [--health] [--recent]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
-<!-- codeloop-version: 0.4.2 -->
+<!-- codeloop-version: 0.4.3 -->
 
 # /debug
 
