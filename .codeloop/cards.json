@@ -1,5 +1,5 @@
 {
-  "version": 300,
+  "version": 388,
   "cards": [
     {
       "id": "CL-001",
@@ -2232,7 +2232,7 @@
       "title": "The board follows git",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a founder, I can merge a pull request or deploy and see the card move on its own, so that I never update status by hand. Initiative: founder ships without ceremony · M · metric: human turns per card",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The board follows git",
@@ -2269,10 +2269,57 @@
           "action": "park",
           "stage": "research",
           "note": "reconciled 10-11: back to the plan; work continues under the new stories"
+        },
+        {
+          "at": "2026-10-11T22:15:11.662Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Git and GitHub PR only. Live = merge commit reachable from `prodRef` (a tag or branch in config). Fly/Vercel detection belongs to c-073."
+        },
+        {
+          "at": "2026-10-11T22:16:17.580Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: we need some local git branch script/hook for this? or should ask user if cant be found?"
+        },
+        {
+          "at": "2026-10-11T22:16:27.789Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a card at review with an open PR, when the PR merges and `codeloop run` or `watch` runs, then the card is at staging with an event `actor: github`; when the `prodRef` tag moves past that commit, the card is live with no human event in between."
+        },
+        {
+          "at": "2026-10-11T22:17:23.511Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: interesting question - we should have the acceptance criteria matching (criteria is created at the start of the card)"
+        },
+        {
+          "at": "2026-10-11T22:17:31.142Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Polling via `gh pr view` in `run` and `watch`; a webhook is c-087/c-088 territory."
+        },
+        {
+          "at": "2026-10-11T22:17:34.621Z",
+          "actor": "owner",
+          "human": true,
+          "action": "unpark",
+          "stage": "research"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.851Z",
-      "updatedAt": "2026-10-11T21:01:58.228Z",
+      "updatedAt": "2026-10-11T22:17:34.621Z",
       "story": {
         "as": "founder",
         "can": "merge a pull request or deploy and see the card move on its own",
@@ -2283,10 +2330,7 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "human turns per card",
       "spec": "specs/062-the-board-follows-git",
-      "feature": "board-follows-git",
-      "gate": "proposal",
-      "awaiting": "owner",
-      "parked_from": "research"
+      "feature": "board-follows-git"
     },
     {
       "id": "c-063",
@@ -2497,7 +2541,7 @@
       "title": "The agent thinks before it builds",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a founder, I can read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec, so that I approve a decision and not a guess. Initiative: founder ships without ceremony · M · metric: first-pass verify",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The agent thinks before it builds",
@@ -2534,10 +2578,57 @@
           "action": "park",
           "stage": "research",
           "note": "reconciled 10-11: back to the plan; work continues under the new stories"
+        },
+        {
+          "at": "2026-10-11T22:27:20.703Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Split: this card = options plus `## Not building` (scope-cut) written into spec.md; whys and premortem are a child card. Both reuse c-063's inbox mechanism."
+        },
+        {
+          "at": "2026-10-11T22:27:22.112Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: trivial none; S scope-cut; M options and scope-cut; L/epic all four. Set with `when: size >= M` on the stage."
+        },
+        {
+          "at": "2026-10-11T22:27:22.872Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given an M card, when `run` reaches spec, then spec.md has `## Options` with three approaches and one explicitly rejected with a reason, and `## Not building` with at least two lines; `spec check` fails if either is missing."
+        },
+        {
+          "at": "2026-10-11T22:27:24.262Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Each option must name a file or wiki page it would touch; the rejected one must name its failure mode; premortem failure modes must become use case stubs under `usecases/` and that is what the check counts."
+        },
+        {
+          "at": "2026-10-11T22:27:27.500Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Read at the gate; only the options stage posts one inbox question (\"A, B or C? recommended B\")."
+        },
+        {
+          "at": "2026-10-11T22:38:10.792Z",
+          "actor": "owner",
+          "human": true,
+          "action": "unpark",
+          "stage": "research"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.370Z",
-      "updatedAt": "2026-10-11T21:01:58.515Z",
+      "updatedAt": "2026-10-11T22:38:10.792Z",
       "story": {
         "as": "founder",
         "can": "read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec",
@@ -2548,22 +2639,17 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "first-pass verify",
       "spec": "specs/066-the-agent-thinks-before-it-builds",
-      "feature": "agent-thinks-first",
-      "gate": "proposal",
-      "awaiting": "owner",
-      "parked_from": "research"
+      "feature": "agent-thinks-first"
     },
     {
       "id": "c-067",
       "title": "Research writes the first draft",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a founder, I can get a research page with sources and screenshots and a draft spec before I spend a minute, so that my time goes to deciding, not gathering. Initiative: founder ships without ceremony · M · metric: time to spec gate",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Research writes the first draft",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2582,10 +2668,58 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/067-research-writes-the-first-draft"
+        },
+        {
+          "at": "2026-10-11T22:27:30.593Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: At least three sources required; screenshots best-effort through Chrome MCP when present, otherwise a `screenshots: none` line; `wiki/competitors/` is read before any web search."
+        },
+        {
+          "at": "2026-10-11T22:27:31.816Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: On demand, and in the Monday plan run for the top five backlog cards only; not on every scan proposal (cost)."
+        },
+        {
+          "at": "2026-10-11T22:27:33.744Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a backlog card, when `codeloop research c-xxx`, then research.md has an `exists:` verdict and three sources with URLs, spec.md has story, acceptance and `## Not building`, and the card reaches the spec gate under 30 minutes on a dogfood card."
+        },
+        {
+          "at": "2026-10-11T22:27:34.695Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: One source must be a competitor page already in the wiki; research.md must answer unlock-vs-build with a path or URL; `check file` fails without both."
+        },
+        {
+          "at": "2026-10-11T22:27:37.440Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Park it with one inbox question \"close? recommended yes\"; never auto-close."
+        },
+        {
+          "at": "2026-10-11T22:38:30.939Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research",
+          "note": "this is a P1"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.496Z",
-      "updatedAt": "2026-10-07T19:13:59.860Z",
+      "updatedAt": "2026-10-11T22:38:30.939Z",
       "story": {
         "as": "founder",
         "can": "get a research page with sources and screenshots and a draft spec before I spend a minute",
@@ -2627,10 +2761,50 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/068-nothing-ships-that-the-plan-did-not-ask"
+        },
+        {
+          "at": "2026-10-11T22:34:19.492Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Here: `check diff` and `--strict`; `## Not building` is written by c-066 and only required by this card's check."
+        },
+        {
+          "at": "2026-10-11T22:34:23.209Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Both: a changed file must be in `plan.md files:` or named by a task; a new package.json dep must appear under plan `deps:`; the test count from the runner summary must not drop."
+        },
+        {
+          "at": "2026-10-11T22:35:29.885Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: should be flexible - if there is a good evidence that files were needed let them be. What is more important is code quality and reducing the waste - i.e. minimum changes that are not impacting existing users."
+        },
+        {
+          "at": "2026-10-11T22:36:31.841Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: make it flexible per plan - if plan can show what files are needed great. If implementation produces a few more or less but work is done as acceptance criteria - allow flexibility based on case."
+        },
+        {
+          "at": "2026-10-11T22:36:39.303Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Runner JSON (`vitest --reporter=json`); a plugin may override with `checks/test-count`."
         }
       ],
       "createdAt": "2026-10-07T18:01:32.624Z",
-      "updatedAt": "2026-10-07T19:13:59.991Z",
+      "updatedAt": "2026-10-11T22:36:39.303Z",
       "story": {
         "as": "founder",
         "can": "trust that every file, dependency and task traces to an acceptance line",
@@ -2672,10 +2846,50 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/069-rules-that-enforce-themselves"
+        },
+        {
+          "at": "2026-10-11T22:26:44.814Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Core mechanism with codeloop's own rules.md as the first user; plugin rules arrive with c-075."
+        },
+        {
+          "at": "2026-10-11T22:26:58.697Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: A fenced `check:` line under the rule; exit 0 passes; the first output line is the finding. No DSL."
+        },
+        {
+          "at": "2026-10-11T22:26:59.412Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a rule \"no console.log in src\" with a grep check, when the build done-check runs on a tree with one offender, then `next` fails naming the rule and file; removing the line passes."
+        },
+        {
+          "at": "2026-10-11T22:27:01.038Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: 10 seconds per check, run in parallel; a check failing twice on a clean tree is auto-demoted to advice and a gotcha entry is written."
+        },
+        {
+          "at": "2026-10-11T22:27:02.441Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: No; the promoted rule shows `check: none` so the gap is visible, and the next card touching that area adds one."
         }
       ],
       "createdAt": "2026-10-07T18:01:32.756Z",
-      "updatedAt": "2026-10-07T19:14:00.175Z",
+      "updatedAt": "2026-10-11T22:27:02.441Z",
       "story": {
         "as": "founder",
         "can": "attach a check to a rule and have the build fail when it is broken",
@@ -2779,10 +2993,50 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/071-proof-that-tests-can-fail"
+        },
+        {
+          "at": "2026-10-11T22:27:57.652Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Yes: use case stubs per acceptance line for api and cli, mutate on by default in the verify done-check; the Playwright UI runner is a child card."
+        },
+        {
+          "at": "2026-10-11T22:27:58.401Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Revert the card branch's diff in a temp worktree and rerun; any use case that still passes is \"cannot fail\" (exit 4)."
+        },
+        {
+          "at": "2026-10-11T22:27:59.644Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a card with two acceptance lines and use cases, when `verify --mutate`, then a use case that passes without the fix fails verify with exit 4 naming the line, and evidence/verify.md shows pass plus mutate-fail per line."
+        },
+        {
+          "at": "2026-10-11T22:28:00.197Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Five-minute cap; over the cap writes `mutate: skipped (time)` and the local gate note shows it so Dean can refuse."
+        },
+        {
+          "at": "2026-10-11T22:28:01.425Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Core owns `usecases/<nnn>/` and the ids; the plugin owns the runner per layer."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.008Z",
-      "updatedAt": "2026-10-07T19:14:00.453Z",
+      "updatedAt": "2026-10-11T22:28:01.425Z",
       "story": {
         "as": "founder",
         "can": "see every acceptance line proven through API, CLI and UI and proven to fail without the fix",
@@ -2824,10 +3078,18 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/072-lane-changes-are-judged-against-real-his"
+        },
+        {
+          "at": "2026-10-11T22:36:42.032Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Replay is the story; the `--due` tag fix and `adopt` merge are plumbing tasks under it, not acceptance lines."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.134Z",
-      "updatedAt": "2026-10-07T19:14:00.586Z",
+      "updatedAt": "2026-10-11T22:36:42.032Z",
       "story": {
         "as": "founder",
         "can": "change a lane and see it replayed on finished cards at their own commits",
@@ -2869,10 +3131,42 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/073-deploy-with-a-guard-and-a-smoke-test"
+        },
+        {
+          "at": "2026-10-11T22:28:59.320Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: fly and vercel are one of the several possible systems that people can have - these shouldnt be hardcoded rather see if user can create their own script via claude or map it somehow"
+        },
+        {
+          "at": "2026-10-11T22:29:07.226Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Health, one authed request, host assert; the headless DOM and zero-console-errors check only when the plugin detects a frontend."
+        },
+        {
+          "at": "2026-10-11T22:29:08.452Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a card at the prod gate, when `approve`, then prod.md has the deploy log and `result: pass` from the smoke and the card is live; a failed smoke leaves `result: fail`, the card stays at live-stage, and no second deploy runs."
+        },
+        {
+          "at": "2026-10-11T22:30:31.557Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: deploy should be dependant on user. Lets not overengineer."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.262Z",
-      "updatedAt": "2026-10-07T19:14:00.709Z",
+      "updatedAt": "2026-10-11T22:30:31.557Z",
       "story": {
         "as": "founder",
         "can": "click approve and see the deploy, the smoke test and the card move to live",
@@ -2935,12 +3229,10 @@
       "title": "Add a plugin and codeloop uses it",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a dev, I can drop a plugin folder in my repo or install one from npm or the catalog, so that my stack's rules and checks run without touching core. Initiative: any stack, same loop · L · metric: plugins installed",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Add a plugin and codeloop uses it",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2959,10 +3251,57 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/075-add-a-plugin-and-codeloop-uses-it"
+        },
+        {
+          "at": "2026-10-11T22:33:55.657Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Yes: `plugin.yaml` shape, `detect`, loading from `.codeloop/plugins/` and `~/.codeloop/plugins/` here; npm is a child card; the catalog is c-087."
+        },
+        {
+          "at": "2026-10-11T22:33:57.011Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: A `backend-nestjs` stub with one rule and one check, loaded by codeloop's own repo; the full plugin is c-080."
+        },
+        {
+          "at": "2026-10-11T22:33:57.468Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a plugin folder with plugin.yaml and one check, when `init` runs in a repo matching `detect`, then `brief` for the build stage lists the plugin's rules and the build done-check runs its check; a repo not matching loads nothing."
+        },
+        {
+          "at": "2026-10-11T22:33:58.098Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Load `specialist` and `stage`; declare `lane` and `integration` in the schema but do not load them until a card needs one."
+        },
+        {
+          "at": "2026-10-11T22:33:59.530Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Error at init naming both; `plugins.prefer:` in config resolves it."
+        },
+        {
+          "at": "2026-10-11T22:37:41.249Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
         }
       ],
       "createdAt": "2026-10-07T18:01:33.521Z",
-      "updatedAt": "2026-10-07T19:14:00.948Z",
+      "updatedAt": "2026-10-11T22:37:41.249Z",
       "story": {
         "as": "dev",
         "can": "drop a plugin folder in my repo or install one from npm or the catalog",
@@ -2980,12 +3319,10 @@
       "title": "Lanes use the skills I already have",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a dev, I can run init and see each stage mapped to my own skill and my own test command, so that nothing generic replaces what I built. Initiative: any stack, same loop · M · metric: stages mapped to adopted skills",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Lanes use the skills I already have",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -3004,10 +3341,57 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/076-lanes-use-the-skills-i-already-have"
+        },
+        {
+          "at": "2026-10-11T22:34:03.130Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Mapping and detection only; a stage with no match prints `skill: generic` and writes a gotcha."
+        },
+        {
+          "at": "2026-10-11T22:34:09.119Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: In order: plugin `detect`, then an adopted skill whose name or description matches the stage id, then generic; print the table and post one inbox question only when two skills match."
+        },
+        {
+          "at": "2026-10-11T22:34:10.109Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given chanl-platform with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body."
+        },
+        {
+          "at": "2026-10-11T22:34:10.928Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Accept it; init is per repo, the brief prints the skill verbatim, and the test command comes from package.json or the Makefile."
+        },
+        {
+          "at": "2026-10-11T22:34:12.503Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Merge; `--reset` overwrites."
+        },
+        {
+          "at": "2026-10-11T22:37:16.766Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
         }
       ],
       "createdAt": "2026-10-07T18:01:33.651Z",
-      "updatedAt": "2026-10-07T19:14:01.072Z",
+      "updatedAt": "2026-10-11T22:37:16.766Z",
       "story": {
         "as": "dev",
         "can": "run init and see each stage mapped to my own skill and my own test command",
@@ -3049,10 +3433,50 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/077-mocks-are-real-pages"
+        },
+        {
+          "at": "2026-10-11T22:31:02.110Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Route-in-app replaces the HTML template where the plugin detects Next plus shadcn; the current `mock` template stays for repos with no app."
+        },
+        {
+          "at": "2026-10-11T22:31:05.946Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: `mock: /mocks/<nnn>` in spec.md; `serve` links it and the local gate note carries a screenshot."
+        },
+        {
+          "at": "2026-10-11T22:31:16.860Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given chanl-admin, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold."
+        },
+        {
+          "at": "2026-10-11T22:31:38.377Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: `docs/screens.md`: route, components, card; the mock stage appends a row; the check fails on a new route without one."
+        },
+        {
+          "at": "2026-10-11T22:31:39.484Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: The `/mocks` route group is gated by `NEXT_PUBLIC_MOCKS=1` and the deploy check fails if it is set in prod env."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.778Z",
-      "updatedAt": "2026-10-07T19:14:01.190Z",
+      "updatedAt": "2026-10-11T22:31:39.484Z",
       "story": {
         "as": "founder",
         "can": "click a mock inside the app built from real components",
@@ -3094,10 +3518,50 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/078-screens-match-the-design-system-every-ti"
+        },
+        {
+          "at": "2026-10-11T22:31:46.587Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q1: Four checks: no raw colour, at most three weights, nothing under `components/ui/` edited, new components import from `components/shared` or the registry. \"Search the registry first\" stays advice."
+        },
+        {
+          "at": "2026-10-11T22:32:20.148Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: codeloop itself has a ui - we can prove it here."
+        },
+        {
+          "at": "2026-10-11T22:32:27.510Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Given a diff adding `color: #333`, when the build done-check runs, then it fails naming file:line and rule; the existing chanl-admin tree reports N violations as a number in the wiki, not a failure."
+        },
+        {
+          "at": "2026-10-11T22:33:10.666Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: can we strive to reduce a few violations per run? or card fix? and not create more?"
+        },
+        {
+          "at": "2026-10-11T22:33:22.551Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Copy the rules; move chanl paths into plugin config (`shared_dir`, `ui_dir`)."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.904Z",
-      "updatedAt": "2026-10-07T19:14:01.316Z",
+      "updatedAt": "2026-10-11T22:33:22.551Z",
       "story": {
         "as": "founder",
         "can": "trust that every screen uses the tokens, weights and shared components, because anything off-system fails the check",
@@ -3393,14 +3857,16 @@
       "title": "Install codeloop the way any skill installs",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "spec",
       "description": "As a dev, I can run one skills command and pick plugins from a catalog, so that trying codeloop takes a minute. Initiative: any stack, same loop · S · metric: installs",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Install codeloop the way any skill installs",
-      "gate": "proposal",
-      "awaiting": "owner",
-      "retries": {},
-      "evidence": [],
+      "retries": {
+        "research": 1
+      },
+      "evidence": [
+        "specs/084-install-codeloop-the-way-any-skill-insta/research.md"
+      ],
       "events": [
         {
           "at": "2026-10-07T18:01:34.688Z",
@@ -3417,10 +3883,101 @@
           "action": "spec",
           "stage": "proposed",
           "note": "specs/084-install-codeloop-the-way-any-skill-insta"
+        },
+        {
+          "at": "2026-10-11T22:23:39.822Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-11T22:23:42.900Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q1: Layout and `skills add` here; catalog browsing out."
+        },
+        {
+          "at": "2026-10-11T22:23:54.084Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q2: Skill files plus a setup step that prints or runs `npm i -g codeloop` with confirmation; no silent global install."
+        },
+        {
+          "at": "2026-10-11T22:24:18.201Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q3: Given a clean repo, when `npx skills add <org>/codeloop`, then `.claude/skills/codeloop/` exists, `codeloop init` runs from it, the stopwatch reads under one minute, and the site install page shows the same command."
+        },
+        {
+          "at": "2026-10-11T22:24:28.041Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q4: Pin to the current layout with a fixture test and keep `npm i -g codeloop` as the documented fallback."
+        },
+        {
+          "at": "2026-10-11T22:24:40.893Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "research",
+          "note": "Q5: Claude Code and Codex (render exists); Cursor is advice only."
+        },
+        {
+          "at": "2026-10-11T22:24:45.799Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/084-install-codeloop-the-way-any-skill-insta/research.md is missing: \"verdict:\""
+        },
+        {
+          "at": "2026-10-11T22:24:58.184Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "claude",
+          "log": ".codeloop/state/agent-runs/c-084-research-1.log"
+        },
+        {
+          "at": "2026-10-11T22:26:08.979Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "claude",
+          "exit": 0,
+          "durationMs": 70795,
+          "log": ".codeloop/state/agent-runs/c-084-research-1.log"
+        },
+        {
+          "at": "2026-10-11T22:26:08.979Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-11T22:26:08.979Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/install-codeloop-the-way-any-skill-insta.md"
         }
       ],
       "createdAt": "2026-10-07T18:01:34.688Z",
-      "updatedAt": "2026-10-07T19:14:02.061Z",
+      "updatedAt": "2026-10-11T22:26:08.979Z",
       "story": {
         "as": "dev",
         "can": "run one skills command and pick plugins from a catalog",
@@ -3431,7 +3988,10 @@
       "initiative": "any-stack-same-loop",
       "metric": "installs",
       "spec": "specs/084-install-codeloop-the-way-any-skill-insta",
-      "feature": "install-and-import"
+      "feature": "install-and-import",
+      "failures": {
+        "research": "7d1e1e4cf7219c41f78d32acfa61b54e740c87d5"
+      }
     },
     {
       "id": "c-085",
@@ -3946,7 +4506,8 @@
       "laneVersion": 1,
       "stage": "review",
       "retries": {
-        "verify": 2
+        "verify": 2,
+        "review": 1
       },
       "evidence": [
         "evidence/097/verify.md",
@@ -4090,13 +4651,22 @@
           "action": "advance",
           "stage": "verify",
           "note": "to review"
+        },
+        {
+          "at": "2026-10-11T22:20:00.926Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "review",
+          "note": "missing file: evidence/097/review.md"
         }
       ],
       "createdAt": "2026-10-11T21:02:17.534Z",
-      "updatedAt": "2026-10-11T22:10:21.162Z",
+      "updatedAt": "2026-10-11T22:20:00.926Z",
       "spec": "specs/097-one-board-shows-every-project-i-run",
       "failures": {
-        "verify": "99d9634d1279a5973c58f61c8b607c5fe7bd0194"
+        "verify": "99d9634d1279a5973c58f61c8b607c5fe7bd0194",
+        "review": "5a013c49508291c6816ac388f93a2c11973086ed"
       }
     },
     {
@@ -4213,9 +4783,11 @@
       "size": "L",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "spec",
+      "stage": "done",
       "description": "spec: docs/plans/codeloop/2026-10-11-board-plan-shipped.md; start at spec; absorbs c-059 backlog",
-      "retries": {},
+      "retries": {
+        "spec": 1
+      },
       "evidence": [
         "specs/100/research.md"
       ],
@@ -4249,10 +4821,76 @@
           "action": "decision",
           "stage": "research",
           "note": ".codeloop/wiki/decisions/i-see-work-in-action-the-plan-and-what-s.md"
+        },
+        {
+          "at": "2026-10-11T22:18:48.985Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "spec",
+          "note": "refused: specs/100/spec.md is missing"
+        },
+        {
+          "at": "2026-10-11T22:19:16.110Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "spec",
+          "note": "refused: specs/100/spec.md is missing"
+        },
+        {
+          "at": "2026-10-11T22:49:26.555Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "spec",
+          "note": "refused: specs/100/tasks.md is missing"
+        },
+        {
+          "at": "2026-10-11T22:49:26.555Z",
+          "actor": "engine",
+          "human": false,
+          "action": "stuck",
+          "stage": "spec",
+          "note": "refused: specs/100/tasks.md is missing"
+        },
+        {
+          "at": "2026-10-11T22:52:05.835Z",
+          "actor": "owner",
+          "human": true,
+          "action": "unstick",
+          "stage": "spec"
+        },
+        {
+          "at": "2026-10-11T22:52:05.995Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "spec",
+          "note": "  specs/100 is size L: split it into S or M children with `epic: <parent>` before the spec gate"
+        },
+        {
+          "at": "2026-10-11T22:59:00.212Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "spec",
+          "note": "split into 5 stories"
+        },
+        {
+          "at": "2026-10-11T22:59:00.258Z",
+          "actor": "owner",
+          "human": true,
+          "action": "split",
+          "stage": "done",
+          "note": "into c-108, c-109, c-110, c-111, c-112"
         }
       ],
       "createdAt": "2026-10-11T21:02:36.641Z",
-      "updatedAt": "2026-10-11T22:03:57.100Z"
+      "updatedAt": "2026-10-11T22:59:00.258Z",
+      "failures": {
+        "spec": "3f8cc4d43e0cbf40b2f7be0b814b5264e0f71b51"
+      }
     },
     {
       "id": "c-101",
@@ -4497,6 +5135,161 @@
       ],
       "createdAt": "2026-10-11T21:41:55.056Z",
       "updatedAt": "2026-10-11T21:41:55.056Z"
+    },
+    {
+      "id": "c-108",
+      "title": "The board by stage, with Needs you on top",
+      "split_from": "c-100",
+      "start_stage": "spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T22:59:00.217Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-11T22:59:00.223Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/108-the-board-by-stage-with-needs-you-on-top"
+        }
+      ],
+      "createdAt": "2026-10-11T22:59:00.217Z",
+      "updatedAt": "2026-10-11T22:59:00.223Z",
+      "spec": "specs/108-the-board-by-stage-with-needs-you-on-top"
+    },
+    {
+      "id": "c-109",
+      "title": "Up next fills itself from Plan, with its Settings section",
+      "split_from": "c-100",
+      "start_stage": "spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T22:59:00.228Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-11T22:59:00.235Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/109-up-next-fills-itself-from-plan-with-its"
+        }
+      ],
+      "createdAt": "2026-10-11T22:59:00.228Z",
+      "updatedAt": "2026-10-11T22:59:00.235Z",
+      "spec": "specs/109-up-next-fills-itself-from-plan-with-its"
+    },
+    {
+      "id": "c-110",
+      "title": "Plan replaces Initiatives and Roadmap",
+      "split_from": "c-100",
+      "start_stage": "spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T22:59:00.239Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-11T22:59:00.242Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/110-plan-replaces-initiatives-and-roadmap"
+        }
+      ],
+      "createdAt": "2026-10-11T22:59:00.239Z",
+      "updatedAt": "2026-10-11T22:59:00.242Z",
+      "spec": "specs/110-plan-replaces-initiatives-and-roadmap"
+    },
+    {
+      "id": "c-111",
+      "title": "Shipped groups done stories by release",
+      "split_from": "c-100",
+      "start_stage": "spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T22:59:00.246Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-11T22:59:00.248Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/111-shipped-groups-done-stories-by-release"
+        }
+      ],
+      "createdAt": "2026-10-11T22:59:00.246Z",
+      "updatedAt": "2026-10-11T22:59:00.248Z",
+      "spec": "specs/111-shipped-groups-done-stories-by-release"
+    },
+    {
+      "id": "c-112",
+      "title": "Search, links and bulk changes on the board and Plan",
+      "split_from": "c-100",
+      "start_stage": "spec",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T22:59:00.251Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-11T22:59:00.256Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/112-search-links-and-bulk-changes-on-the-boa"
+        }
+      ],
+      "createdAt": "2026-10-11T22:59:00.251Z",
+      "updatedAt": "2026-10-11T22:59:00.256Z",
+      "spec": "specs/112-search-links-and-bulk-changes-on-the-boa"
     }
   ]
 }
