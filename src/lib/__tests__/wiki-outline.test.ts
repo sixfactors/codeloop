@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { buildOutline, outlineSummary, REPO_FACTS_PATH, scanRepo, scanTopFolders, writeOutline } from '../wiki-outline.js';
+import { WIKI_DIR } from '../wiki.js';
 
 let dir: string;
 
@@ -140,21 +141,18 @@ describe('wiki-outline: scanning', () => {
     expect(prisma.find(e => e.name === 'Order')!.relations).toEqual([{ to: 'Customer', kind: 'one' }]);
   });
 
-  it('writes one runbook page per Makefile target, with its command', () => {
+  it('scans Makefile targets and npm scripts into repo-facts.json, for the architecture skill to write into runbooks/commands.md itself', () => {
     dir = expressMongooseRepo();
-    const pages = buildOutline(dir).filter(p => p.path.startsWith('.codeloop/wiki/runbooks/'));
-    expect(pages.map(p => p.title)).toEqual(['dev', 'test']);
-    const devPage = pages.find(p => p.title === 'dev')!;
-    expect(devPage.body).toContain('node server.js');
-    expect(devPage.body).toContain('(source: Makefile)');
+    const facts = scanRepo(dir);
+    expect(facts.makeTargets.map(t => t.name)).toEqual(['dev', 'test']);
+    expect(facts.makeTargets.find(t => t.name === 'dev')!.command).toContain('node server.js');
+    expect(facts.scripts).toEqual([{ name: 'test', command: 'vitest run', source: 'package.json' }]);
   });
 
-  it('marks facts that cannot be grounded in a file as assumption: lines', () => {
+  it('writes no page outside reference/: the scanner no longer seeds product/, runbooks/, decisions/, gotchas/, glossary.md or numbers/', () => {
     dir = mkdtempSync(join(tmpdir(), 'codeloop-outline-empty-'));
     const pages = buildOutline(dir);
-    const overview = pages.find(p => p.path.endsWith('product/overview.md'))!;
-    expect(overview.body).toContain('assumption: no README.md was found');
-    expect(overview.assumptions).toBeGreaterThan(0);
+    expect(pages.every(p => p.path.startsWith(`${WIKI_DIR}/reference/`))).toBe(true);
     const erd = pages.find(p => p.path.endsWith('erd.md'))!;
     expect(erd.body).toContain('assumption: no Prisma, Mongoose, SQLAlchemy or TypeORM schema files were found');
   });
@@ -202,17 +200,16 @@ describe('wiki-outline: writing', () => {
     expect(readFileSync(stackPath, 'utf-8')).not.toContain('Hand-edited.');
   });
 
-  it('wiki build refreshes only reference pages and keeps hand edits elsewhere', () => {
+  it('wiki build refreshes only reference pages and keeps a hand-written page elsewhere untouched', () => {
     dir = expressMongooseRepo();
     writeOutline(dir);
     const stackPath = join(dir, '.codeloop/wiki/reference/stack.md');
-    const glossaryPath = join(dir, '.codeloop/wiki/glossary.md');
-    expect(existsSync(glossaryPath)).toBe(true);
+    const startHerePath = join(dir, '.codeloop/wiki/start-here.md');
+    write(dir, '.codeloop/wiki/start-here.md', '# Start here\n\nHand-written.\n');
     writeFileSync(stackPath, readFileSync(stackPath, 'utf-8') + '\nStale.\n');
-    writeFileSync(glossaryPath, readFileSync(glossaryPath, 'utf-8') + '\nHand-edited.\n');
     writeOutline(dir, { forceUnder: '.codeloop/wiki/reference/' });
     expect(readFileSync(stackPath, 'utf-8')).not.toContain('Stale.');
-    expect(readFileSync(glossaryPath, 'utf-8')).toContain('Hand-edited.');
+    expect(readFileSync(startHerePath, 'utf-8')).toContain('Hand-written.');
   });
 
   it('writes .codeloop/state/repo-facts.json with the scanned facts and the top-level source folders', () => {

@@ -101,6 +101,29 @@ deploy:
     expect(issues.some(i => i.includes('deploy.staging.command is empty'))).toBe(true);
   });
 
+  it('flags a wiki.sections entry missing a folder or a title', () => {
+    mkdirSync(join(tmpDir, '.codeloop'), { recursive: true });
+    writeFileSync(join(tmpDir, '.codeloop/config.yaml'), `
+project:
+  name: test
+scopes:
+  all:
+    paths: ["**/*"]
+quality_checks:
+  all:
+    - name: Lint
+      command: "npm run lint"
+wiki:
+  sections:
+    - title: Playbooks
+    - folder: decisions-extra
+`);
+
+    const issues = validateConfig(tmpDir);
+    expect(issues.some(i => i.includes('wiki.sections[0]') && i.includes('folder'))).toBe(true);
+    expect(issues.some(i => i.includes('wiki.sections[1]') && i.includes('title'))).toBe(true);
+  });
+
   it('passes on valid config', () => {
     mkdirSync(join(tmpDir, '.codeloop'), { recursive: true });
     writeFileSync(join(tmpDir, '.codeloop/config.yaml'), `

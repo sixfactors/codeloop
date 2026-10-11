@@ -8,9 +8,9 @@ import { CARD_FACETS } from '@/lib/types';
 import type { NewCardInput, ProposalInput } from '@/lib/api';
 import { deriveInbox, deriveLanes, uniq } from '@/lib/cards';
 import { findCard, invalidateCardLists, invalidatePageLists, patchCard, patchPage, removePage } from '@/lib/live-cache';
-import { cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, isMissing, pageQueryOptions, pagesQueryOptions, QK } from '@/lib/queries';
+import { cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, isMissing, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
 
-export { CARD_PAGE_SIZE, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, inboxSince, INBOX_LIMIT, isConflict, isMissing, normaliseCardsQuery, PAGE_SIZE, pageQueryOptions, pagesQueryOptions, QK } from '@/lib/queries';
+export { CARD_PAGE_SIZE, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, inboxSince, INBOX_LIMIT, isConflict, isMissing, normaliseCardsQuery, PAGE_SIZE, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
 
 /**
  * Cards matching the query, without event logs: the first page (CARD_PAGE_SIZE rows, prefetched by
@@ -144,6 +144,8 @@ export function usePages(p: PagesQuery = {}, enabled = true) {
 }
 
 export const usePage = (path: string) => useQuery({ ...pageQueryOptions(path), enabled: Boolean(path) });
+/** The wiki shape with page counts: section order, titles, purpose, computed by the server. The home page and sidebar read this instead of grouping the full page list themselves. */
+export const useWikiShape = () => useQuery(wikiShapeQueryOptions());
 export const useEvidence = (nnn: string) =>
   useQuery({ queryKey: QK.evidence(nnn), queryFn: () => api.evidence(nnn), enabled: Boolean(nnn), retry: false });
 export const useArtifacts = () => useQuery({ queryKey: QK.artifacts, queryFn: api.artifacts, retry: false });

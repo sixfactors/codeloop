@@ -22,10 +22,10 @@ import { WikiSearch } from '@/components/shared/wiki/wiki-search';
 import { WikiPageView } from '@/components/shared/wiki/wiki-page-view';
 import { WikiPageEditor } from '@/components/shared/wiki/wiki-page-editor';
 import { WikiNewPageDialog } from '@/components/shared/wiki/wiki-new-page-dialog';
-import { isMissing, useCards, usePages } from '@/hooks/use-api';
+import { isMissing, useCards, usePage, usePages, useWikiShape } from '@/hooks/use-api';
 import { token } from '@/lib/api';
 import { routes } from '@/lib/routes';
-import { folderLabel, pageFolder } from '@/lib/wiki';
+import { folderLabel, pageFolder, WIKI_ROOT } from '@/lib/wiki';
 
 const RAIL_KEY = 'codeloop-wiki-rail';
 const readRail = () => { try { const v = Number(localStorage.getItem(RAIL_KEY)); return v >= 200 && v <= 600 ? v : 260; } catch { return 260; } };
@@ -39,6 +39,8 @@ export function WikiBrowser({ path }: { path: string }) {
   const editing = sp.get('edit') === '1';
   const pages = usePages();
   const cards = useCards();
+  const shape = useWikiShape();
+  const startHere = usePage(`${WIKI_ROOT}/start-here.md`);
   const canEdit = cards.payload?.owner !== false;
   // One layout at a time: rendering the content in both a hidden phone column and the desktop
   // panel would mount two editors, two ⌘S listeners and two PUTs (the second one a 409).
@@ -73,7 +75,7 @@ export function WikiBrowser({ path }: { path: string }) {
   ) : q ? (
     <WikiSearch q={q} onQueryChange={setQuery} />
   ) : (
-    <WikiHome pages={pages.pages} loading={pages.isLoading} onNew={canEdit ? () => setNewOpen(true) : undefined} />
+    <WikiHome pages={pages.pages} shape={shape.data ?? []} startHere={startHere.data} loading={pages.isLoading || shape.isLoading} onNew={canEdit ? () => setNewOpen(true) : undefined} />
   );
 
   // The editor needs the whole width; reading gets a measured column.

@@ -148,10 +148,47 @@ It cannot judge whether the explanation is good, only that it was not invented.
 codeloop wiki build
 ```
 
-Refreshes the facts and reference pages, starts a card titled "Explain the architecture" in the
-one-stage `wiki` lane, and runs it. `--agent <name>` picks a preset, `--no-run` only refreshes
-the facts and creates the card. The `wiki` lane names `claude-sonnet` as its own agent (a preset
-`codeloop init` writes beside `claude`, running the same CLI with `--model sonnet`), so the bulk
-writing runs on a cheaper model unless `--agent` says otherwise; a lane's own `agent:` is preferred
-over `agents.default` whenever the run does not name one itself. The system-design artifact for a
-single story draws the same views for one change; the architecture pages are the standing picture.
+Moves scanner filler into `reference/legacy/` first (`codeloop wiki migrate`), then refreshes the
+facts and reference pages, starts a card titled "Explain the architecture" in the one-stage `wiki`
+lane, and runs it. `--agent <name>` picks a preset, `--no-run` only runs the migrate and refresh and
+creates the card. The `wiki` lane names `claude-sonnet` as its own agent (a preset `codeloop init`
+writes beside `claude`, running the same CLI with `--model sonnet`), so the bulk writing runs on a
+cheaper model unless `--agent` says otherwise; a lane's own `agent:` is preferred over
+`agents.default` whenever the run does not name one itself. The system-design artifact for a single
+story draws the same views for one change; the architecture pages are the standing picture.
+
+## The one wiki shape
+
+codeloop owns the folders a wiki can have. A user adds one only by naming it in `wiki.sections` in
+`.codeloop/config.yaml`; nothing else creates a new top-level folder.
+
+| Section | Folder or file | Answers | Written by |
+|---|---|---|---|
+| Start here | `start-here.md` | What is this, how do I run it, the three real common tasks | The architecture skill, checked |
+| How it works | `architecture/` | The five pages above | The architecture skill, checked |
+| What bites | `gotchas/` | Mistakes, scoped to files | `wiki capture`, the Stop hook, agents |
+| Why | `decisions/` | Why it is built this way | The research stage, `wiki capture --kind decision` |
+| Commands | `runbooks/commands.md` | Every script and make target: what it is for, when to run it | The architecture skill, checked |
+| Competitors | `competitors/` | Only when the user added one | `wiki competitor add` |
+| Reference | `reference/` | Scanner output, generated, collapsed at the bottom | `wiki init --from-repo`, `wiki build` |
+
+Planning records stay as files where the store keeps them (`initiatives/`, `epics/`, `features/`,
+`cards/`) but are hidden from the wiki nav: the board's own screens show them. `numbers/` is the
+one exception that stays hidden only while it is empty; once the analyze workflow writes a page
+with real data into it, it shows.
+
+Three rules keep the shape honest:
+
+- The scanner writes only `reference/` and `.codeloop/state/repo-facts.json`. It no longer seeds
+  the glossary, a product overview, numbers, or one runbook page per script; a repo scanned before
+  this rule carries that filler still.
+- `codeloop wiki lint` refuses a page sitting in a folder that is neither in the shape nor in
+  `wiki.sections`, and reports (without refusing) any page still carrying scanner filler, an
+  `assumption:` or `no-data:` line, or a per-script runbook.
+- `codeloop wiki migrate [--dry-run]` moves that filler into `reference/legacy/<same path>`,
+  printing every move and never deleting anything. `codeloop wiki build` runs it first, so an older
+  scan's filler never survives a refresh.
+
+The wiki home renders `start-here.md`, then the sections above in order with their page counts,
+server-computed so the page never groups the raw list itself. An empty section does not render;
+reference renders last, collapsed. The sidebar tree follows the same order and titles.

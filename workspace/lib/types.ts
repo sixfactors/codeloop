@@ -43,10 +43,11 @@ import type {
   Stats,
   Task,
   WikiPage,
+  WikiShapeCount,
 } from '@protoboxai/codeloop/sdk';
 
 export { CARD_FACETS } from '@protoboxai/codeloop/sdk';
-export type { CardEvent, Config, LiveEvent, PagesQuery, PageWrite, Question, Stats, Task };
+export type { CardEvent, Config, LiveEvent, PagesQuery, PageWrite, Question, Stats, Task, WikiShapeCount };
 export type { CardsQuery, InboxQuery };
 export type CardFacet = CardFilterKey;
 

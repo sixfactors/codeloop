@@ -92,6 +92,19 @@ A fresh visit must not crash before a session exists.
 - tested by: \`src/__tests__/login.test.ts\`
 `;
 
+const START_HERE = `# Start here
+
+This system logs a user in and serves their session. Run \`npm test\` to check it, or \`make dev\` to run it.
+`;
+
+const COMMANDS = `# Commands
+
+| Command | What it does |
+|---|---|
+| \`npm test\` | Runs the test suite |
+| \`make dev\` | Starts the dev server |
+`;
+
 /** A fixture that passes every rule: five pages, real paths, one top folder named, in range tables and diagrams. */
 function passingFixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'codeloop-arch-check-'));
@@ -99,12 +112,16 @@ function passingFixture(): string {
   write(root, 'src/login.ts', 'export function login() {}\n');
   write(root, 'src/schema.ts', 'export interface User { id: string }\n');
   write(root, 'src/__tests__/login.test.ts', 'test("login", () => {});\n');
+  write(root, 'package.json', JSON.stringify({ name: 'fixture', scripts: { test: 'vitest run' } }));
+  write(root, 'Makefile', ['dev:', '\tnode server.js', ''].join('\n'));
   write(root, '.codeloop/state/repo-facts.json', JSON.stringify({ topFolders: ['src'] }));
   write(root, '.codeloop/wiki/architecture/overview.md', OVERVIEW);
   write(root, '.codeloop/wiki/architecture/flows.md', FLOWS);
   write(root, '.codeloop/wiki/architecture/data-model.md', DATA_MODEL);
   write(root, '.codeloop/wiki/architecture/change-map.md', CHANGE_MAP);
   write(root, '.codeloop/wiki/architecture/invariants.md', INVARIANTS);
+  write(root, '.codeloop/wiki/start-here.md', START_HERE);
+  write(root, '.codeloop/wiki/runbooks/commands.md', COMMANDS);
   return root;
 }
 
@@ -203,6 +220,20 @@ describe('check architecture', () => {
     dir = mkdtempSync(join(tmpdir(), 'codeloop-arch-empty-'));
     const problems = checkArchitecture(dir);
     expect(problems.length).toBeGreaterThan(0);
-    expect(problems.every(p => /^(overview|flows|data-model|change-map|invariants)\.md:/.test(p))).toBe(true);
+    expect(problems.every(p => /^(overview|flows|data-model|change-map|invariants|start-here|runbooks\/commands)\.md:/.test(p))).toBe(true);
+  });
+
+  it('fails when start-here.md names a command that is not a real binary, npm script, make target or codeloop subcommand', () => {
+    dir = passingFixture();
+    writeFileSync(join(dir, '.codeloop/wiki/start-here.md'), `${START_HERE}\nAlso run \`npm run does-not-exist\`.\n`);
+    const problems = checkArchitecture(dir);
+    expect(problems).toContainEqual(expect.stringContaining('npm run does-not-exist'));
+  });
+
+  it('fails when runbooks/commands.md leaves out a real npm script or make target', () => {
+    dir = passingFixture();
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'fixture', scripts: { test: 'vitest run', build: 'tsc' } }));
+    const problems = checkArchitecture(dir);
+    expect(problems).toContainEqual(expect.stringContaining('npm run build'));
   });
 });

@@ -30,7 +30,7 @@ import { inject, lintWiki, listPages, WIKI_DIR, type Page as WikiEntry } from '.
 export type { Inbox } from './inbox.js';
 export type { Question } from './interview.js';
 export type { Stats } from './stats.js';
-export type { Page as WikiEntry } from './wiki.js';
+export type { LintResult, Page as WikiEntry } from './wiki.js';
 export type { RunRecord, RunView } from './runs.js';
 export type { ProjectDetection } from './detect.js';
 export type { AdoptResult } from './skills.js';
@@ -555,10 +555,21 @@ export const wikiOutline = (projectDir: string): WikiOutlineSummary[] => wikiOut
 export const writeWikiOutline = (projectDir: string, opts: { force?: boolean } = {}): WikiOutlineWriteResult => writeWikiOutlineLib(projectDir, opts);
 export type { WikiOutlineSummary, WikiOutlineWriteResult };
 
+// --- wiki migrate: move scanner filler into reference/legacy/, never deleting -----------------
+import { migrateWikiFiller, wikiShape as wikiShapeLib, type MigrateResult as WikiMigrateResult, type WikiShapeCount } from './wiki.js';
+/** `wiki migrate [--dry-run]`: writes the project's files, so this is local-only, like `writeWikiOutline`. */
+export const migrateWiki = (projectDir: string, opts: { dryRun?: boolean } = {}): WikiMigrateResult => migrateWikiFiller(projectDir, opts);
+export type { WikiMigrateResult };
+
+/** The wiki shape with page counts, for the home page and sidebar: one server read, pre-joined, instead of the UI grouping the raw page list itself. */
+export const wikiShape = (projectDir: string): WikiShapeCount[] => wikiShapeLib(projectDir);
+export type { WikiShapeCount };
+
 // --- wiki build: refresh facts, start a card in the `wiki` lane, run it -------------------------
 import { runDueWithAgent, type RunResult } from './run.js';
 
 export interface WikiBuildResult {
+  migrated: WikiMigrateResult;
   facts: WikiOutlineWriteResult;
   card: Card;
   hint: string;
@@ -567,20 +578,22 @@ export interface WikiBuildResult {
 }
 
 /**
- * `codeloop wiki build`: refreshes `.codeloop/wiki/reference/` and `.codeloop/state/repo-facts.json`
+ * `codeloop wiki build`: moves scanner filler into `reference/legacy/` first (`codeloop wiki
+ * migrate`), then refreshes `.codeloop/wiki/reference/` and `.codeloop/state/repo-facts.json`
  * (never `.codeloop/wiki/architecture/`, which only the architecture skill writes), starts a card
  * in the `wiki` lane, and, unless `opts.run` is false, runs it the same way `codeloop run --agent
  * --card <id>` would: `runDueWithAgent` with `filter.card` set to this one card alone, so the
  * lane's own `agent:` preference (or `agents.default`) decides which preset does the writing.
  */
 export async function buildWiki(projectDir: string, opts: { agent?: string; run?: boolean } = {}, who?: Role): Promise<WikiBuildResult> {
-  // Only the scanner's own reference pages are refreshed; product, glossary and the rest may carry
-  // hand edits, so they are written once and left alone.
+  const migrated = migrateWikiFiller(projectDir);
+  // Only the scanner's own reference pages are refreshed; hand-written pages elsewhere are written
+  // once and left alone.
   const facts = writeWikiOutlineLib(projectDir, { forceUnder: `${WIKI_DIR}/reference/` });
   const { card, hint } = newCard(projectDir, { lane: 'wiki', title: 'Explain the architecture' }, who ?? 'agent');
-  if (opts.run === false) return { facts, card, hint };
+  if (opts.run === false) return { migrated, facts, card, hint };
   const run = await runDueWithAgent(projectDir, { name: opts.agent }, undefined, { card: card.id });
-  return { facts, card: findCard(readCards(projectDir).cards, card.id), hint, run };
+  return { migrated, facts, card: findCard(readCards(projectDir).cards, card.id), hint, run };
 }
 
 // --- skill eval: `codeloop skill eval`, replaying a skill's fixtures against a headless agent ---

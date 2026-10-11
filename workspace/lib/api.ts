@@ -3,7 +3,7 @@
 // internal address (`codeloop serve` sets it), and the public env var is only for a build served
 // from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { AdvanceReport, Artifact, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature } from './types';
+import type { AdvanceReport, Artifact, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 
 export type { NewCardInput, ProposalInput };
@@ -77,6 +77,8 @@ export const api = {
     return { pages, next: nextCursor ?? undefined, total };
   },
   page: async (path: string): Promise<Page> => missing(await client().pages.get(path), `page ${path}`),
+  /** The wiki shape with page counts, pre-joined server side: section order, titles, purpose and which ones have pages at all. */
+  wikiShape: (): Promise<WikiShapeCount[]> => client().wiki.shape(),
   // 201 on create, 200 on update, 409 when expectVersion is stale (ApiError carries the message).
   savePage: async (path: string, write: PageWrite): Promise<Page> => (await client().pages.put(path, write)).page,
   deletePage: async (path: string) => ({ ok: await client().pages.delete(path) }),

@@ -94,7 +94,7 @@ function getKnowledgeStats(projectDir: string, filename: string): KnowledgeStats
 
 const KNOWN_TOP_LEVEL_KEYS = new Set([
   'project', 'scopes', 'quality_checks', 'diff_scan', 'test', 'deploy',
-  'debug', 'commit', 'codeloop', 'watch', 'gates', 'capacity', 'verify',
+  'debug', 'commit', 'codeloop', 'watch', 'gates', 'capacity', 'verify', 'wiki',
 ]);
 
 const COMMON_TYPOS: Record<string, string> = {
@@ -195,6 +195,18 @@ export function validateConfig(projectDir: string): string[] {
   // test
   if (config.test && config.test.command === '') {
     issues.push('test.command is empty, /test will try to auto-detect');
+  }
+
+  // wiki.sections: the only way a user adds a section to the wiki shape (docs/plans/codeloop/2026-10-10-wiki-schema.md)
+  if (config.wiki?.sections !== undefined) {
+    if (!Array.isArray(config.wiki.sections)) {
+      issues.push('wiki.sections must be a list of { folder, title }');
+    } else {
+      config.wiki.sections.forEach((s: any, i: number) => {
+        if (!s?.folder) issues.push(`wiki.sections[${i}] has no folder`);
+        if (!s?.title) issues.push(`wiki.sections[${i}] has no title`);
+      });
+    }
   }
 
   return issues;

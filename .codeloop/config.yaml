@@ -6,7 +6,7 @@ agents:
   default: claude
   claude-sonnet:
     cmd: "claude -p --model sonnet --permission-mode acceptEdits < {brief}"
-    timeout_minutes: 20
+    timeout_minutes: 30
     max_runs_per_day: 50
   claude:
     cmd: "claude -p --permission-mode acceptEdits < {brief}"

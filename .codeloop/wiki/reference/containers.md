@@ -11,7 +11,7 @@ flowchart TB
   subgraph L0["runtime"]
     N0["Node.js"]
   end
-  API["59 routes"]
+  API["60 routes"]
   N0 -. calls .-> API
 ```
 

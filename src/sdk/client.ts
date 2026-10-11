@@ -30,6 +30,7 @@ import type {
   IndexedInitiative,
   InitiativeTree,
   Lane,
+  LintResult,
   LiveEvent,
   NewCardInput,
   PageWrite,
@@ -53,9 +54,11 @@ import type {
   Stats,
   WikiBuildResult,
   WikiEntry,
+  WikiMigrateResult,
   WikiOutlineSummary,
   WikiOutlineWriteResult,
   WikiPage,
+  WikiShapeCount,
 } from './types.js';
 
 /** A card as `GET /api/cards/:id` serves it: the indexed copy with its event log. */
@@ -148,11 +151,15 @@ export interface Transport {
   events(signal?: AbortSignal): AsyncIterable<LiveEvent>;
   wikiEntries(): Promise<WikiEntry[]>;
   wikiInject(files: string[]): Promise<WikiEntry[]>;
-  wikiLint(): Promise<{ broken: string[]; stale: string[]; duplicates: string[] }>;
+  wikiLint(): Promise<LintResult>;
   /** The outline `wiki init --from-repo` would write: page paths, titles, fact/assumption counts, whether each already exists. Local only. */
   wikiOutline(): Promise<WikiOutlineSummary[]>;
   /** Writes the outline's pages; skips any that already exist unless `force`. Local only. */
   writeWikiOutline(opts?: { force?: boolean }): Promise<WikiOutlineWriteResult>;
+  /** Moves scanner filler into `reference/legacy/`, never deleting it. Local only. */
+  migrateWiki(opts?: { dryRun?: boolean }): Promise<WikiMigrateResult>;
+  /** The shape with page counts: every section in spec order, empty ones left out. Local only. */
+  wikiShape(): Promise<WikiShapeCount[]>;
   /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
   buildWiki(opts?: { agent?: string; run?: boolean }, roleOpts?: RoleOption): Promise<WikiBuildResult>;
   close(): Promise<void>;
@@ -275,6 +282,10 @@ export class CodeloopClient {
     outline: () => this.transport.wikiOutline(),
     /** `wiki init --from-repo --write`: seeds the pages the outline listed. */
     writeOutline: (opts?: { force?: boolean }) => this.transport.writeWikiOutline(opts),
+    /** `wiki migrate`: moves scanner filler into `reference/legacy/`, never deleting it. */
+    migrate: (opts?: { dryRun?: boolean }) => this.transport.migrateWiki(opts),
+    /** The shape with page counts, pre-joined for the home page and sidebar. */
+    shape: () => this.transport.wikiShape(),
     /** `wiki build`: refreshes the facts, starts a card in the `wiki` lane, and runs it unless `run: false`. */
     build: (opts?: { agent?: string; run?: boolean }, roleOpts?: RoleOption) => this.transport.buildWiki(opts, roleOpts),
   };

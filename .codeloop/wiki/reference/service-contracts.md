@@ -55,6 +55,7 @@ title: Service contracts
 | GET | /api/wiki/lint | source: src/lib/server.ts |
 | GET | /api/wiki/outline | source: src/lib/server.ts |
 | POST | /api/wiki/outline | source: src/lib/server.ts |
+| GET | /api/wiki/shape | source: src/lib/server.ts |
 | POST | /api/shape | source: src/lib/server.ts |
 | POST | /api/cards | source: src/lib/server.ts |
 | GET | /mocks/* | source: src/lib/server.ts |

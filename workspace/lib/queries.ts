@@ -54,6 +54,7 @@ export const QK = {
   run: (runId: string) => ['runs', runId] as const,
   features: ['features'] as const,
   setup: ['setup'] as const,
+  wikiShape: ['wiki-shape'] as const,
 };
 
 export const isMissing = (err: unknown) => err instanceof ApiError && err.status === 404;
@@ -120,3 +121,6 @@ export const cardQueryOptions = (id: string, qc?: QueryClient) => ({
 });
 
 export const pageQueryOptions = (path: string) => ({ queryKey: QK.page(path), queryFn: () => api.page(path), retry: false });
+
+/** The wiki shape with page counts: one request, server-computed, instead of the wiki home/sidebar grouping the full page list. */
+export const wikiShapeQueryOptions = () => ({ queryKey: QK.wikiShape, queryFn: api.wikiShape, retry: false });

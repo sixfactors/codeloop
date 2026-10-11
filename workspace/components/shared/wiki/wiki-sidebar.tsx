@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { VIRTUAL_THRESHOLD } from '@/components/shared/virtual-list';
+import { useWikiShape } from '@/hooks/use-api';
 import { buildTree, folderIcon, type TreeFolder } from '@/lib/wiki';
 import { routes } from '@/lib/routes';
 import type { PageSummary } from '@/lib/types';
@@ -54,7 +55,8 @@ export function WikiSidebar({ pages, loading }: { pages: PageSummary[]; loading?
   const current = pathname.replace(/^\/wiki\/?/, '').replace(/\/$/, '');
   const currentId = useMemo(() => { try { return current.split('/').map(decodeURIComponent).join('/'); } catch { return current; } }, [current]);
   const [filter, setFilter] = useState('');
-  const tree = useMemo(() => buildTree(pages, filter), [pages, filter]);
+  const shape = useWikiShape();
+  const tree = useMemo(() => buildTree(pages, shape.data ?? [], filter), [pages, shape.data, filter]);
   const [open, setOpenState] = useState<Record<string, boolean>>(() => openFolders);
   const setOpen = (fn: (o: Record<string, boolean>) => Record<string, boolean>) => setOpenState((o) => (openFolders = fn(o)));
 
@@ -98,7 +100,7 @@ export function WikiSidebar({ pages, loading }: { pages: PageSummary[]; loading?
           data-testid="wiki-filter"
         />
       </div>
-      {loading ? (
+      {loading || shape.isLoading ? (
         <div className="flex flex-col gap-2 px-2" aria-busy="true">{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
       ) : tree.length === 0 ? (
         <EmptyState compact icon={BookOpen} title={filter ? 'No page matches' : 'No pages yet'} description={filter ? 'Try fewer letters.' : 'Pages under .codeloop/wiki appear here. New page starts one.'} />

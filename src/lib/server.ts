@@ -345,6 +345,8 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
     const body = await c.req.json<{ force?: boolean }>().catch(() => ({}) as { force?: boolean });
     return c.json(services.writeWikiOutline(projectDir, { force: !!body.force }));
   }));
+  // The shape with page counts: the home page and sidebar render this, not a client-side grouping of /api/pages.
+  app.get('/api/wiki/shape', handled(async c => c.json({ shape: services.wikiShape(projectDir) })));
 
   // Starts the shape workflow: a problem statement, not a story, so no title check runs.
   app.post('/api/shape', writing(async c => {

@@ -55,14 +55,26 @@ wikiCommand
 
 wikiCommand
   .command('lint')
-  .description('Report broken links (exit 1), stale pages and duplicate titles')
+  .description('Report broken links, stale pages, duplicate titles and scanner filler (exit 1 on a broken link or a page in an unknown folder)')
   .action(guard(async () => {
-    const { broken, stale, duplicates } = await client().wiki.lint();
+    const { broken, stale, duplicates, unknownFolder, filler } = await client().wiki.lint();
     broken.forEach(b => console.error(chalk.red(`  broken: ${b}`)));
+    unknownFolder.forEach(u => console.error(chalk.red(`  unknown folder: ${u}`)));
     stale.forEach(s => console.log(chalk.yellow(`  stale: ${s}`)));
     duplicates.forEach(d => console.log(chalk.yellow(`  duplicate: ${d}`)));
-    if (broken.length) process.exit(1);
-    console.log(`  wiki ok${stale.length + duplicates.length ? ` (${stale.length} stale, ${duplicates.length} duplicate)` : ''}`);
+    filler.forEach(f => console.log(chalk.yellow(`  filler: ${f}`)));
+    if (broken.length || unknownFolder.length) process.exit(1);
+    console.log(`  wiki ok${stale.length + duplicates.length + filler.length ? ` (${stale.length} stale, ${duplicates.length} duplicate, ${filler.length} filler)` : ''}`);
+  }));
+
+wikiCommand
+  .command('migrate')
+  .description('Move scanner filler (assumption:/no-data: pages, per-script runbooks, the generated glossary/overview) into reference/legacy/, never deleting it; `wiki build` runs this first')
+  .option('--dry-run', 'Print what would move without moving it', false)
+  .action(guard(async (opts: { dryRun?: boolean }) => {
+    const result = await client().wiki.migrate({ dryRun: opts.dryRun });
+    result.moved.forEach(m => console.log(`  ${result.dryRun ? chalk.yellow('would move') : chalk.green('moved')}  ${m.from} -> ${m.to}`));
+    console.log(result.moved.length ? `  ${result.moved.length} page(s)${result.dryRun ? ' would move' : ' moved'}` : '  nothing to migrate');
   }));
 
 wikiCommand
@@ -101,11 +113,12 @@ wikiCommand
 
 wikiCommand
   .command('build')
-  .description('Refresh .codeloop/wiki/reference/ and repo-facts.json, start a card titled "Explain the architecture" in the wiki lane, then run it (--agent picks a preset; --no-run only creates the card)')
+  .description('Run `wiki migrate`, refresh .codeloop/wiki/reference/ and repo-facts.json, start a card titled "Explain the architecture" in the wiki lane, then run it (--agent picks a preset; --no-run only creates the card)')
   .option('--agent <name>', "Agent preset to run with; default is the wiki lane's own agent, else agents.default")
   .option('--no-run', 'Only refresh the facts and create the card; do not run the agent')
   .action(guard(async (opts: { agent?: string; run?: boolean }) => {
     const result = await client().wiki.build({ agent: opts.agent, run: opts.run });
+    console.log(`  migrate: ${result.migrated.moved.length} filler page(s) moved to reference/legacy/`);
     console.log(`  facts: ${result.facts.written.length} written, ${result.facts.skipped.length} skipped`);
     console.log(`  created ${result.card.id} in ${result.card.lane} at stage ${result.card.stage}`);
     if (result.run) {

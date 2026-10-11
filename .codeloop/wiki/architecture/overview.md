@@ -1,62 +1,68 @@
 # Overview
 
-codeloop is a CLI and local board that runs AI coding agents through lanes: ordered stages, each with a shell check that must exit 0, and optional gates where a named person approves. The CLI, a Next.js board and an MCP server all drive one engine that stores cards in `.codeloop/cards.json`. Agents do the work in a stage; the engine alone decides whether a card moves. A separate small service publishes skills to a registry.
+codeloop is a CLI and local board that moves work cards through lanes. A lane is a YAML list of stages; each stage names a skill, an output file and a `done.cmd`. The engine advances a card only when that command exits 0, parks it at a gate for a named approver (owner, reviewer or agent), and appends every action to the card's events. `codeloop run --agent` starts a headless agent per stage, but the engine, not the agent, decides whether the stage passed. The README says "a lane engine with a board"; the code agrees, and the knowledge files from `docs/how-it-works.md` (gotchas, rules) now live in the wiki under `.codeloop/wiki/`.
 
 ```mermaid
 flowchart TB
-  subgraph Peers["peers: how people and hosts reach the engine"]
-    Cmd["commands: Commander wiring and exit codes"]
-    Board["workspace: Next.js board"]
-    Kanban["ui: older static kanban"]
-    Watch["watch: file and commit signals"]
+  subgraph Surfaces["surfaces: people and agents"]
+    Cmd["Commands: commander wiring, exit codes"]
+    Wsp["Workspace: Next app, the board"]
   end
-  subgraph Sdk["sdk: one client, two transports"]
-    Client["client and transports"]
+  subgraph Access["access: one client, two transports"]
+    Sdk["Sdk: http or in-process"]
+    Srv["Server: Hono API, token, ETags"]
   end
-  subgraph Api["api: Hono routes, token and ETags"]
-    Server["server"]
+  subgraph Core["core: src/lib"]
+    Svc["Services: one function per capability"]
+    Eng["Engine: create, advance, approve, reject"]
+    Run["Runner: due lanes, agent start"]
+    Cards["Cards: cards.json, compare-and-swap"]
+    Idx["Index: in-memory read model"]
   end
-  subgraph Engine["lib: engine, services, index, store"]
-    Services["services"]
-    Eng["engine"]
+  subgraph Side["side systems"]
+    Wch["Watch: file and git signals"]
+    Reg["Registry: skill install client, talks to registry-api"]
   end
-  subgraph Reg["registry: skill packaging"]
-    Skills["skill schema, lockfile"]
-    RegApi["registry-api: publish and fetch skills"]
-  end
-  Cmd --> Client
-  Board --> Client
-  Client -->|http| Server
-  Client -->|local| Services
-  Server --> Services
-  Services --> Eng
-  Watch --> Eng
-  Cmd --> Skills
-  Skills --> RegApi
+  Cmd --> Sdk
+  Wsp --> Sdk
+  Sdk --> Srv
+  Sdk --> Svc
+  Srv --> Svc
+  Svc --> Eng
+  Svc --> Idx
+  Run --> Eng
+  Eng --> Cards
   click Cmd "src/commands/card.ts"
-  click Board "workspace/lib/api.ts"
-  click Kanban "ui/app/page.tsx"
-  click Watch "src/watch/index.ts"
-  click Client "src/sdk/client.ts"
-  click Server "src/lib/server.ts"
-  click Services "src/lib/services.ts"
+  click Sdk "src/sdk/client.ts"
+  click Srv "src/lib/server.ts"
+  click Svc "src/lib/services.ts"
   click Eng "src/lib/engine.ts"
-  click Skills "src/registry/index.ts"
-  click RegApi "registry-api/lib/db.ts"
+  click Run "src/lib/run.ts"
+  click Cards "src/lib/cards.ts"
+  click Idx "src/lib/index/index.ts"
+  click Wch "src/watch/index.ts"
+  click Reg "src/registry/index.ts"
 ```
 
-| Folder | Purpose | Depends on |
-|---|---|---|
-| `src/lib` | The engine: cards, lanes, gates, agent runs, wiki, the project index and store drivers; `src/lib/services.ts` is the one surface callers use. | none above it |
-| `src/commands` | One Commander file per CLI command; prints, sets exit codes. Most call the SDK; engine-internal ones are listed in `src/__tests__/layering.test.ts`. | `src/sdk`, `src/lib` |
-| `src/sdk` | `CodeloopClient` over an http or a local transport, plus the types every caller shares. | `src/lib` (local only) |
-| `src/registry` | Parses, scans and locks skill packages for `codeloop install` and `publish`. | none |
-| `src/watch` | `codeloop watch`: turns file changes, commits and idle time into warnings. | `src/lib` |
-| `src/__tests__` | Cross-layer tests: the import rule between commands and lib, and every `--help`. | `src/commands` |
-| `workspace` | The board the owner opens: inbox, cards, roadmap, wiki, stats. Static-built, served by `codeloop serve`. | `src/sdk` over http |
-| `ui` | The first kanban board, still served when `--ui` or `dist/ui` is given. | the API |
-| `registry-api` | Next.js routes and a Postgres schema behind the skill registry. | none |
-| `scripts` | End-to-end proofs, the demo week, and the workspace build for the package. | `dist/` |
-| `site` | The docs and marketing site, generated command pages included. | none |
+| Name | Folder | Purpose | Depends on |
+|---|---|---|---|
+| Entry | `src` | `src/index.ts` parses the tree `src/program.ts` builds | Commands |
+| Commands | `src/commands` | One file per subcommand: arguments, printing, exit codes | Sdk, Engine (exempt files only) |
+| Core | `src/lib` | Services, Server, Engine, Runner (starts the headless Agent), Cards, Index, lanes, wiki, store | itself |
+| Sdk | `src/sdk` | `CodeloopClient` over an http or in-process transport | Server, Services |
+| Tests | `src/__tests__` | `src/__tests__/layering.test.ts` and `src/__tests__/help.test.ts`, the two rules that span folders | Commands |
+| Watch | `src/watch` | Turns file, commit and idle signals into trigger events | Core |
+| Registry | `src/registry` | Installs skills; `src/registry/security.ts` blocks eval-like patterns | Registry API |
+| Workspace | `workspace` | The board app, served inside `codeloop serve` on one port | Sdk |
+| Ui | `ui` | Static kanban from the first release; served only if no workspace build exists | Server |
+| Registry API | `registry-api` | Skill registry: three routes over Postgres | none in this repo |
+| Scripts | `scripts` | Build packaging, e2e proofs, benchmarks | built CLI |
+| Site | `site` | Docs and marketing site; `site/scripts/gen-commands.mjs` builds the command reference | none |
 
-Differences from the README: none found.
+Left out: `src/__tests__/integration` (two older board tests, no architecture of their own).
+
+## Sharp edges
+
+- `src/commands/*` may not import `src/lib` except the files listed in `src/__tests__/layering.test.ts`; most command files are on that list with a reason, so the rule covers only the migrated ones (from `docs/architecture.md`).
+- `src/index.ts` registers `skillCommand` itself rather than in `src/program.ts`, so `src/lib/architecture-check.ts` keeps a literal subcommand list that must be edited by hand when a command is added (source: comment above `CODELOOP_SUBCOMMANDS`).
+- `ui/` is built by `npm run build:ui` into `dist/ui` and is never used when `dist/workspace` exists (`src/commands/serve.ts:119`).

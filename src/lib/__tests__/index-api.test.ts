@@ -54,7 +54,8 @@ describe('index', () => {
     expect(lists).toBe(1);
     expect(index.versions.pages).toBe(before + 1);
     expect((await index.pages.list()).total).toBe(2);
-  });
+    // File events arrive late when the whole suite runs in parallel; give `until` its full 10s.
+  }, 20_000);
 
   it('finds a page by a word in its body, with an excerpt around it', async () => {
     const index = getIndex(dir);

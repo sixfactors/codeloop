@@ -5,8 +5,8 @@
  * explanation is good, only that it is not invented, not bloated and not scanner leftovers.
  */
 import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { REPO_FACTS_PATH } from './wiki-outline.js';
+import { delimiter, join } from 'path';
+import { scanMakefile, scanNpmScripts, REPO_FACTS_PATH } from './wiki-outline.js';
 import { WIKI_DIR } from './wiki.js';
 
 const MAX_PAGE_LINES = 150;
@@ -196,6 +196,93 @@ function checkInvariants(page: string, projectDir: string, text: string): string
   return problems;
 }
 
+// Mirrors every `program.addCommand(...)` in src/program.ts plus the one `skillCommand` added
+// straight onto the program in src/index.ts. Kept as a literal list rather than importing
+// program.ts: that module imports commands/check.ts, which imports this file, so a static import
+// the other way would be a load-time cycle.
+const CODELOOP_SUBCOMMANDS = new Set([
+  'init', 'update', 'status', 'serve', 'store', 'watch',
+  'lane', 'card', 'start', 'shape', 'next', 'approve', 'reject', 'inbox', 'feature', 'epic',
+  'initiative', 'ask', 'answer', 'run', 'brief', 'schedule', 'adopt', 'check', 'pack', 'spec',
+  'mock', 'mocks', 'artifact', 'artifacts', 'scan', 'task', 'import', 'verify', 'stats', 'wiki',
+  'learn', 'render', 'mcp', 'gate', 'config', 'cloud', 'guard', 'presence', 'whoami',
+  'install', 'search', 'list', 'remove', 'publish', 'login', 'skill',
+]);
+
+function hasNpmScript(projectDir: string, name: string | undefined): boolean {
+  return !!name && scanNpmScripts(projectDir).some(s => s.name === name);
+}
+
+function hasMakeTarget(projectDir: string, name: string | undefined): boolean {
+  return !!name && scanMakefile(projectDir).some(t => t.name === name);
+}
+
+/** A `which`-like lookup, from disk against `process.env.PATH`, so no subprocess is spawned to judge a command. */
+function onPath(bin: string): boolean {
+  const dirs = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  const exts = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
+  return dirs.some(dir => exts.some(ext => existsSync(join(dir, `${bin}${ext}`))));
+}
+
+/**
+ * True when `cmd` is a real thing to run: a `codeloop` subcommand, `npm run`/`pnpm`/`yarn` against a
+ * script that exists in package.json, a `make` target that exists in the Makefile, `node`/`bash`/`sh`
+ * against a file that exists, or a binary findable on PATH. This is what rule 8 holds every
+ * backticked command in `start-here.md` and `runbooks/commands.md` to.
+ */
+function isRealCommand(projectDir: string, cmd: string): boolean {
+  const tokens = cmd.trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const [bin, ...rest] = tokens;
+  if (bin === 'codeloop') return tokens.length === 1 || CODELOOP_SUBCOMMANDS.has(rest[0]) || rest[0].startsWith('-');
+  if (bin === 'npm') return hasNpmScript(projectDir, rest[0] === 'run' ? rest[1] : rest[0]); // `npm test`/`npm start` are real npm aliases for `npm run test`/`npm run start`
+  if (bin === 'pnpm' || bin === 'yarn') return hasNpmScript(projectDir, rest[0] === 'run' ? rest[1] : rest[0]);
+  if (bin === 'make') return hasMakeTarget(projectDir, rest[0]);
+  if (bin === 'node' || bin === 'bash' || bin === 'sh' || bin === 'python' || bin === 'python3') return rest[0] !== undefined && existsSync(join(projectDir, rest[0]));
+  return onPath(bin);
+}
+
+/** Every npm script and make target this repo has, each either named in `text` or covered by a "Left out:" line. */
+function checkCommandsCoverage(page: string, projectDir: string, text: string): string[] {
+  const problems: string[] = [];
+  const named = [...scanNpmScripts(projectDir).map(s => `npm run ${s.name}`), ...scanMakefile(projectDir).map(t => `make ${t.name}`)];
+  for (const cmd of named) {
+    const bareName = cmd.split(' ').pop()!;
+    const mentioned = text.includes(cmd) || text.includes(bareName);
+    const leftOut = new RegExp(`left out[^\\n]*${escapeRegExp(bareName)}`, 'i').test(text);
+    if (!mentioned && !leftOut) problems.push(`${page}: "${cmd}" is not named, and has no "left out" line`);
+  }
+  return problems;
+}
+
+/** Rule 8: start-here.md and runbooks/commands.md exist, every backticked command they show is real, and commands.md accounts for every script and make target. Paths in backticks (anything `looksLikePath` would flag) are not judged as commands. */
+function checkCommandPages(projectDir: string): string[] {
+  const problems: string[] = [];
+  const pages: { label: string; rel: string; checkCoverage?: boolean }[] = [
+    { label: 'start-here.md', rel: `${WIKI_DIR}/start-here.md` },
+    { label: 'runbooks/commands.md', rel: `${WIKI_DIR}/runbooks/commands.md`, checkCoverage: true },
+  ];
+  for (const page of pages) {
+    const full = join(projectDir, page.rel);
+    if (!existsSync(full)) {
+      problems.push(`${page.label}: missing (expected at ${page.rel})`);
+      continue;
+    }
+    const text = readFileSync(full, 'utf-8');
+    if (!text.trim()) {
+      problems.push(`${page.label}: is empty`);
+      continue;
+    }
+    for (const m of text.matchAll(/`([^`\n]+)`/g)) {
+      const cmd = m[1];
+      if (looksLikePath(stripLine(cmd))) continue;
+      if (!isRealCommand(projectDir, cmd)) problems.push(`${page.label}: command \`${cmd}\` is not a real binary, npm script, make target or codeloop subcommand`);
+    }
+    if (page.checkCoverage) problems.push(...checkCommandsCoverage(page.label, projectDir, text));
+  }
+  return problems;
+}
+
 export interface ArchitectureCheckOptions {
   /** The wiki's architecture folder, relative to the project root. Default `.codeloop/wiki/architecture`. */
   dir?: string;
@@ -280,6 +367,9 @@ export function checkArchitecture(projectDir: string, opts: ArchitectureCheckOpt
 
   // Rule 7: no scanner leftovers.
   for (const [page, text] of texts) problems.push(...scannerLeftovers(page, text));
+
+  // Rule 8 (docs/plans/codeloop/2026-10-10-wiki-schema.md): start-here.md and runbooks/commands.md.
+  problems.push(...checkCommandPages(projectDir));
 
   return problems;
 }

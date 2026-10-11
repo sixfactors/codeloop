@@ -238,6 +238,12 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     writeWikiOutline: async () => {
       throw new ApiError(501, 'wiki-outline writes the project files; use the local transport');
     },
+    migrateWiki: async () => {
+      throw new ApiError(501, 'wiki migrate writes the project files; use the local transport');
+    },
+    // Served, unlike the other wiki-outline operations: the home page and sidebar need it over
+    // http from `codeloop serve`, not only from a CLI process holding the local transport.
+    wikiShape: () => json<{ shape: Awaited<ReturnType<Transport['wikiShape']>> }>('/api/wiki/shape').then(b => b.shape),
     buildWiki: async () => {
       throw new ApiError(501, 'wiki build scans the project files and runs a local agent; use the local transport');
     },

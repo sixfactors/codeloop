@@ -2,15 +2,15 @@
 
 | To change | Edit | Then run |
 |---|---|---|
-| How a card moves, is approved or rejected | `src/lib/engine.ts` | `bash scripts/e2e-founder-loop.sh` |
-| What an agent is told for a stage | `src/lib/agent.ts` | `npm test -- agent` |
-| Which lanes are due on the schedule | `src/lib/run.ts` | `npm test -- agent` |
-| Add a capability to the board and CLI | `src/lib/services.ts` | `npm test -- sdk` |
-| Add or change an API route | `src/lib/server.ts` | `npm test -- server` |
-| A CLI command's flags or output | `src/commands/card.ts` | `npm test -- help` |
-| What the browser can call | `src/sdk/client.ts` | `npm test -- sdk` |
+| What a stage must pass before a card moves (its done.cmd) | `.codeloop/lanes/wiki.yaml` | `codeloop lane lint` |
+| The rules for advance, approve, reject or stuck | `src/lib/engine.ts` | `npm test -- lane-engine` |
+| How an agent is started, limited or timed out | `src/lib/agent.ts` | `npm test -- agent` |
+| Which cards a scheduled run picks up | `src/lib/run.ts` | `bash scripts/e2e-founder-loop.sh` |
+| A new capability on the board (service, route, SDK op) | `src/lib/services.ts` | `npm test -- sdk` |
+| A new route or its status code | `src/lib/server.ts` | `npm test -- server` |
+| A new CLI subcommand | `src/program.ts` | `npm test -- help` |
+| The brief an agent is given for a stage (buildBrief) | `src/lib/agent.ts` | `codeloop brief c-096` |
+| The architecture check's rules | `src/lib/architecture-check.ts` | `codeloop check architecture` |
 | A board screen | `workspace/lib/api.ts` | `npm run build:workspace` |
-| The lane file format or its lint | `src/lib/lane.ts` | `node dist/index.js lane lint` |
-| How wiki pages are written and linted | `src/lib/wiki.ts` | `npm test -- wiki` |
-| The architecture check | `src/lib/architecture-check.ts` | `node dist/index.js check architecture` |
-| Config keys | `src/lib/config.ts` | `npm test -- validate-config` |
+| The agent's skill for a wiki stage | `templates/skills/architecture/SKILL.md` | `codeloop skill eval architecture` |
+| Docs site content | `site/content/docs/concepts/wiki-and-learning.md` | `npm --prefix site run build` |

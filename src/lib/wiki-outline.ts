@@ -10,7 +10,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, dirname, join, relative } from 'path';
 import { parse as parseYaml } from 'yaml';
 import { detectProject } from './detect.js';
-import { slugify } from './spec.js';
 import { WIKI_DIR } from './wiki.js';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage', '.codeloop', 'out', '.turbo', 'vendor', '__pycache__', '.venv', 'venv', '.pytest_cache']);
@@ -219,6 +218,18 @@ export function scanScripts(repoDir: string): RunbookTarget[] {
     out.push({ name: f, command: `scripts/${f}`, source: `scripts/${f}` });
   }
   return out;
+}
+
+/** The root `package.json`'s `scripts`, so `commands.md` and `codeloop check architecture` can tell a real npm script from an invented one without re-reading package.json themselves. */
+export function scanNpmScripts(repoDir: string): RunbookTarget[] {
+  const file = join(repoDir, 'package.json');
+  if (!existsSync(file)) return [];
+  try {
+    const pkg = JSON.parse(readFileSync(file, 'utf-8')) as { scripts?: Record<string, string> };
+    return Object.entries(pkg.scripts ?? {}).map(([name, command]) => ({ name, command, source: 'package.json' }));
+  } catch {
+    return [];
+  }
 }
 
 export interface CiFact {
@@ -491,6 +502,8 @@ export interface RepoFacts {
   stack: StackFact[];
   makeTargets: RunbookTarget[];
   scriptTargets: RunbookTarget[];
+  /** The root package.json's npm scripts, so `commands.md` can name a real one. See `scanNpmScripts`. */
+  scripts: RunbookTarget[];
   ci: CiFact[];
   deploy: DeployFact[];
   routes: RouteFact[];
@@ -509,6 +522,7 @@ export function scanRepo(repoDir: string): RepoFacts {
     stack: scanStack(repoDir),
     makeTargets: scanMakefile(repoDir),
     scriptTargets: scanScripts(repoDir),
+    scripts: scanNpmScripts(repoDir),
     ci: scanWorkflows(repoDir),
     deploy: scanDeploy(repoDir),
     routes: scanRoutes(repoDir),
@@ -600,27 +614,6 @@ export interface OutlinePage {
 function mk(path: string, title: string, body: string): OutlinePage {
   const text = body.endsWith('\n') ? body : `${body}\n`;
   return { path, title, body: text, facts: (text.match(/source: /gi) ?? []).length, assumptions: (text.match(/^assumption:/gim) ?? []).length };
-}
-
-function pageOverview(facts: RepoFacts, repoName: string): OutlinePage {
-  const lines = ['---', `title: ${repoName} overview`, '---', '', `# ${repoName}`, ''];
-  if (facts.readme) lines.push(facts.readme.paragraph || `See ${facts.readme.path}.`, '', `(source: ${facts.readme.path})`, '');
-  else lines.push('assumption: no README.md was found; this project has no stated purpose yet.', '');
-  lines.push('## Who it is for', '');
-  lines.push('assumption: inferred from the stack and routes below, not stated in any doc.', '');
-  lines.push(facts.routes.length ? `This has an API surface (${facts.routes.length} routes found; source: route scan of src/services).` : 'assumption: no API routes were found; this may be a library or a frontend-only project.', '');
-  lines.push('## Three most common things', '');
-  // A "common thing" is a command a person types: prefer documented Makefile targets and the
-  // dev/test/build scripts; skip recipe internals (help banners, awk, shell loops).
-  const readable = (t: { name: string; command: string }) => !/awk|printf|\$\$|^@|^\s*#/.test(t.command) && t.command.length < 120;
-  const preferred = ['dev', 'start', 'test', 'build', 'lint', 'deploy', 'help'];
-  const common = [...facts.makeTargets, ...facts.scriptTargets]
-    .filter(readable)
-    .sort((a, b) => (preferred.indexOf(a.name) === -1 ? 99 : preferred.indexOf(a.name)) - (preferred.indexOf(b.name) === -1 ? 99 : preferred.indexOf(b.name)))
-    .slice(0, 3);
-  if (common.length) for (const t of common) lines.push(`- \`${t.name}\`: \`${t.command}\` (source: ${t.source})`);
-  else lines.push('assumption: no Makefile or scripts/ targets were found; these are guesses, not read from a runbook.');
-  return mk(`${WIKI_DIR}/product/overview.md`, `${repoName} overview`, lines.join('\n'));
 }
 
 // These raw inventories follow the C4 model: context (the system, its people and the systems
@@ -717,82 +710,17 @@ function pageDeploy(facts: RepoFacts): OutlinePage {
   return mk(`${WIKI_DIR}/reference/deploy.md`, 'Deploy', lines.join('\n'));
 }
 
-function pagesRunbooks(facts: RepoFacts): OutlinePage[] {
-  return [...facts.makeTargets, ...facts.scriptTargets].map(t => {
-    const lines = ['---', `title: ${t.name}`, '---', '', `# ${t.name}`, '', '```', t.command, '```', '', `(source: ${t.source})`];
-    return mk(`${WIKI_DIR}/runbooks/${slugify(t.name) || t.name.replace(/[^a-z0-9-]/gi, '-')}.md`, t.name, lines.join('\n'));
-  });
-}
-
-function pageDecisions(facts: RepoFacts): OutlinePage {
-  const lines = ['---', 'title: Decisions', '---', '', '# Commit scopes (last 300 commits)', ''];
-  if (facts.commitScopes.length) {
-    lines.push('| Scope | Commits | Source |', '|---|---|---|');
-    for (const s of facts.commitScopes) lines.push(`| ${s.scope} | ${s.count} | source: git log |`);
-  } else lines.push('assumption: no conventional-commit scopes were found in the last 300 commits.');
-  lines.push('', '## ADRs found', '');
-  if (facts.adrs.length) for (const a of facts.adrs) lines.push(`- ${a} (source: ${a})`);
-  else lines.push('assumption: no ADR folder (docs/decisions, docs/adr, adr/) was found.');
-  return mk(`${WIKI_DIR}/decisions/README.md`, 'Decisions', lines.join('\n'));
-}
-
-function pageGotchas(facts: RepoFacts): OutlinePage {
-  const lines = ['---', 'title: Gotcha hotspots', '---', '', '# TODO / FIXME hotspots', ''];
-  if (facts.todos.length) {
-    lines.push('| Area | Count | Source |', '|---|---|---|');
-    for (const t of facts.todos) lines.push(`| ${t.area} | ${t.count} | source: grep for TODO/FIXME |`);
-  } else lines.push('assumption: no TODO or FIXME comments were found.');
-  if (facts.codeowners.length) {
-    lines.push('', '## Owners', '');
-    for (const c of facts.codeowners) lines.push(`- ${c.pattern}: ${c.owners.join(', ')} (source: CODEOWNERS)`);
-  }
-  return mk(`${WIKI_DIR}/gotchas/README.md`, 'Gotcha hotspots', lines.join('\n'));
-}
-
-function pageGlossary(facts: RepoFacts): OutlinePage {
-  const terms = new Set<string>(facts.entities.map(e => e.name));
-  const prose = [facts.readme?.paragraph ?? '', ...facts.docs.map(d => d.paragraph)].join(' ');
-  const counts = new Map<string, number>();
-  for (const m of prose.matchAll(/\b([A-Z][a-zA-Z]{2,})\b/g)) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
-  for (const [term, n] of counts) if (n >= 2) terms.add(term);
-  const lines = ['---', 'title: Glossary', '---', '', '# Glossary', ''];
-  if (terms.size) for (const t of [...terms].sort()) lines.push(`- **${t}**, assumption: term found in schemas or repeated in docs; confirm its meaning.`);
-  else lines.push('assumption: no entity names or repeated capitalised terms were found.');
-  return mk(`${WIKI_DIR}/glossary.md`, 'Glossary', lines.join('\n'));
-}
-
-function pageNumbers(facts: RepoFacts): OutlinePage {
-  const lines = ['---', 'title: Numbers', '---', '', '# Metrics', ''];
-  if (facts.analyticsDeps.length) for (const d of facts.analyticsDeps) lines.push(`- ${d} dependency found (source: package.json)`);
-  else lines.push('no-data: no analytics dependency was found in package.json.');
-  return mk(`${WIKI_DIR}/numbers/README.md`, 'Numbers', lines.join('\n'));
-}
-
-function pageCompetitorsStub(): OutlinePage {
-  const lines = ['---', 'title: Competitors', '---', '', '# Competitors', '', 'assumption: no competitor research has been done yet. Run `codeloop wiki competitor add <name> --docs <url> --changelog <url>` to start one.'];
-  return mk(`${WIKI_DIR}/competitors/README.md`, 'Competitors', lines.join('\n'));
-}
-
-/** The pages `wiki init --from-repo` would write, in write order. Pure: reads the repo, writes nothing. */
+/**
+ * The pages `wiki init --from-repo` would write, in write order. Pure: reads the repo, writes
+ * nothing. Every page lands under `reference/`: the scanner no longer seeds `product/`, `runbooks/`,
+ * `decisions/`, `gotchas/`, `glossary.md` or `numbers/` (docs/plans/codeloop/2026-10-10-wiki-schema.md
+ * rule 1) - those are a person's or an agent's pages, and the scanner used to fill them with
+ * `assumption:`/`no-data:` filler that `codeloop wiki migrate` now cleans up from older runs.
+ */
 export function buildOutline(repoDir: string): OutlinePage[] {
   const facts = scanRepo(repoDir);
   const repoName = basename(repoDir);
-  return [
-    pageOverview(facts, repoName),
-    pageContext(facts, repoName),
-    pageContainers(facts),
-    pageStack(facts),
-    pageErd(facts),
-    pageContracts(facts),
-    pageDataFlows(facts),
-    pageDeploy(facts),
-    ...pagesRunbooks(facts),
-    pageDecisions(facts),
-    pageGotchas(facts),
-    pageGlossary(facts),
-    pageNumbers(facts),
-    pageCompetitorsStub(),
-  ];
+  return [pageContext(facts, repoName), pageContainers(facts), pageStack(facts), pageErd(facts), pageContracts(facts), pageDataFlows(facts), pageDeploy(facts)];
 }
 
 export interface OutlineSummary {

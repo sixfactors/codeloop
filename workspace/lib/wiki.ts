@@ -3,9 +3,9 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  AlertTriangle, BookOpen, Compass, FileText, Hash, Layers, Lightbulb, ListChecks, Scale, Swords, Target,
+  AlertTriangle, Archive, BookOpen, Boxes, Compass, FileText, Hash, Layers, Lightbulb, ListChecks, Scale, Swords, Target,
 } from 'lucide-react';
-import type { PageSummary } from './types';
+import type { PageSummary, WikiShapeCount } from './types';
 
 export const WIKI_ROOT = '.codeloop/wiki';
 
@@ -53,8 +53,18 @@ export const WIKI_FOLDERS: WikiFolder[] = [
     template: { frontmatter: { freq: 1, severity: 'warning' }, body: '## Trigger\n\n## What went wrong\n\n## Why\n\n## Fix\n\n' },
   },
   {
+    id: 'architecture', label: 'How it works', singular: 'Architecture page', icon: Boxes,
+    description: 'The five pages the architecture skill writes: overview, flows, data model, change map, invariants.',
+    template: { frontmatter: {}, body: '' },
+  },
+  {
     id: 'runbooks', label: 'Runbooks', singular: 'Runbook', icon: Compass,
     description: 'How to do an operational task, step by step.',
+    template: { frontmatter: {}, body: '' },
+  },
+  {
+    id: 'reference', label: 'Reference', singular: 'Reference page', icon: Archive,
+    description: 'Scanner output: facts, not explanation. Generated, collapsed at the bottom of the wiki.',
     template: { frontmatter: {}, body: '' },
   },
   {
@@ -147,22 +157,27 @@ export function headingsOf(body: string): TocItem[] {
   return items;
 }
 
-export interface TreeFolder { id: string; label: string; count: number; pages: PageSummary[] }
+export interface TreeFolder { id: string; label: string; count: number; pages: PageSummary[]; collapsed?: boolean }
 
-/** The sidebar tree: one folder per wiki folder that has pages, in WIKI_FOLDERS order, pages A–Z inside. Spec pages are left out. */
-export function buildTree(pages: PageSummary[], filter = ''): TreeFolder[] {
+/**
+ * The sidebar tree: one folder per section the server's wiki shape lists (GET /api/wiki/shape),
+ * in its order and titled as it says. A folder the shape left out - a storage folder the board
+ * owns, an empty section, or a raw `.codeloop/wiki/<x>` the shape does not recognize - never
+ * appears here: the server already decided visibility and order, so the sidebar does not
+ * recompute it from the raw page list. Spec pages are left out too.
+ */
+export function buildTree(pages: PageSummary[], shape: WikiShapeCount[], filter = ''): TreeFolder[] {
   const q = filter.trim().toLowerCase();
-  const groups = new Map<string, PageSummary[]>();
+  const byFolder = new Map<string, PageSummary[]>();
   for (const p of pages) {
     if (isSpec(p)) continue;
     if (q && !p.title.toLowerCase().includes(q) && !p.id.toLowerCase().includes(q)) continue;
     const f = pageFolder(p);
-    groups.set(f, [...(groups.get(f) ?? []), p]);
+    byFolder.set(f, [...(byFolder.get(f) ?? []), p]);
   }
-  const order = (f: string) => { const i = WIKI_FOLDERS.findIndex((w) => w.id === f); return i === -1 ? 99 : i; };
-  return [...groups.keys()]
-    .sort((a, b) => order(a) - order(b) || a.localeCompare(b))
-    .map((id) => ({ id, label: folderLabel(id), count: groups.get(id)!.length, pages: groups.get(id)!.sort((a, b) => a.title.localeCompare(b.title)) }));
+  return shape
+    .map((s) => ({ id: s.id, label: s.title, count: byFolder.get(s.id)?.length ?? 0, pages: (byFolder.get(s.id) ?? []).sort((a, b) => a.title.localeCompare(b.title)), collapsed: s.collapsed }))
+    .filter((f) => f.pages.length > 0);
 }
 
 /** A short window of body text around the first match of q, or the opening line. */
