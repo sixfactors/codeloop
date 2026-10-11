@@ -5,13 +5,15 @@
  * index-backed reads that take the server's ProjectIndex (what the board draws).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { dirname, join, resolve, sep } from 'path';
+import { homedir } from 'os';
+import { basename, dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
-import { DONE, DROPPED, findCard, inLane, readCards, RefusalError, type Card } from './cards.js';
+import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
+import { DONE, DROPPED, findCard, inLane, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
 import { advanceCard, createCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
-import { getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
+import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
 import { approveFlow, describeAdvance, nextHint, stageBrief, startCard } from './flow.js';
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
@@ -508,6 +510,42 @@ export const artifacts = async (index: ProjectIndex) => (await index.artifacts.l
 
 export const stats = async (index: ProjectIndex): Promise<Stats> => computeStats(await index.cards.all(), await index.lanes.list());
 
+/** What the board's "what next" panel shows: one state, with the data that state needs. */
+export type NextAction =
+  | { kind: 'empty' }
+  | { kind: 'waiting'; type: 'gate'; card: { id: string; title: string }; gate: string; awaiting: string }
+  | { kind: 'waiting'; type: 'question'; card: { id: string; title: string }; n: number; question: string; recommended?: string }
+  | { kind: 'running'; card: { id: string; title: string }; stage: string; since: string }
+  | { kind: 'idle'; card?: { id: string; title: string; band: Band } };
+
+/**
+ * Checked in order: no stories at all; a gate or question waiting on `role` (the oldest, highest-
+ * scored one); an agent run in progress; otherwise the best-band open story, if any.
+ */
+export async function nextAction(index: ProjectIndex, projectDir: string, role: Role): Promise<NextAction> {
+  const { total } = await index.cards.list({}, undefined, 1);
+  if (total === 0) return { kind: 'empty' };
+
+  const { items: waiting } = await index.cards.list({ needsMe: role, sort: 'score' }, undefined, 1);
+  const first = waiting[0];
+  if (first) {
+    const card = { id: first.id, title: first.title };
+    if (first.gate && first.awaiting === role) return { kind: 'waiting', type: 'gate', card, gate: first.gate, awaiting: first.awaiting };
+    const open = index.openQuestions(first.id)[0];
+    if (open) return { kind: 'waiting', type: 'question', card, n: open.n, question: open.question, recommended: open.recommended || undefined };
+  }
+
+  const running = findRunningRun(projectDir);
+  if (running) {
+    const card = await index.cards.get(running.cardId);
+    return { kind: 'running', card: { id: running.cardId, title: card?.title ?? running.cardId }, stage: running.stage, since: running.startedAt };
+  }
+
+  const { items } = await index.cards.list({ sort: 'score' }, undefined, 5000);
+  const top = items.find(c => c.stage !== DONE && c.stage !== DROPPED && c.stage !== PROPOSED && !c.gate && c.openQuestions === 0);
+  return { kind: 'idle', ...(top ? { card: { id: top.id, title: top.title, band: top.band } } : {}) };
+}
+
 // Anything that looks like a credential is left out of the public config, whatever config.yaml calls it.
 const SECRET = /key|token|secret|password/i;
 function withoutSecrets(value: unknown): unknown {
@@ -516,6 +554,32 @@ function withoutSecrets(value: unknown): unknown {
   return value;
 }
 export const publicConfig = async (store: Store): Promise<Config> => withoutSecrets(await store.config.all()) as Config;
+
+/** The board sign-in user, never the hash. */
+export const boardAuthUser = (projectDir: string): { user: string; isDefault: boolean } => {
+  const { user, isDefault } = readBoardAuth(projectDir);
+  return { user, isDefault };
+};
+
+/** What the app shell shows so two open boards never look the same: `project.name` from config, else the folder name; the path with the home directory shortened to `~`. */
+export async function projectIdentity(store: Store, projectDir: string): Promise<{ name: string; path: string }> {
+  const config = await store.config.all();
+  const configName = (config as { project?: { name?: string } }).project?.name;
+  const home = homedir();
+  const path = projectDir === home ? '~' : projectDir.startsWith(`${home}/`) ? `~${projectDir.slice(home.length)}` : projectDir;
+  return { name: configName?.trim() || basename(projectDir), path };
+}
+
+/**
+ * Changes the board's sign-in user and/or password from Settings: refused without the current
+ * password, so a signed-in-but-unattended tab cannot be used to lock the real owner out.
+ */
+export function changeBoardAuth(projectDir: string, input: { currentPassword: string; user?: string; newPassword?: string }): { user: string; isDefault: boolean } {
+  const current = readBoardAuth(projectDir);
+  if (!checkBoardPassword(current, input.currentPassword)) throw new RefusalError('current password is wrong');
+  const written = writeBoardAuth(projectDir, { user: input.user, password: input.newPassword });
+  return { user: written.user, isDefault: written.isDefault };
+}
 
 /** The page list carries no bodies; `q` is a full-text search and each hit carries an excerpt. */
 export async function listPagesIndexed(index: ProjectIndex, filter: { folder?: string; q?: string } = {}, cursor?: string, limit?: number) {

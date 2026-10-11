@@ -21,7 +21,7 @@ Waiting for you (1)
 Shipped (0)
 Numbers
   analyze    active 0  waiting 0  done 0  human turns/card -  first pass -
-  build      active 0  waiting 1  done 0  human turns/card 3.0  first pass -
+  build      active 0  waiting 1  done 0  human turns/card 5.0  first pass -
   deploy     active 0  waiting 0  done 0  human turns/card -  first pass -
   learn      active 0  waiting 0  done 0  human turns/card -  first pass -
   market     active 0  waiting 0  done 0  human turns/card -  first pass -

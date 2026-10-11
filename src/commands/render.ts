@@ -1,7 +1,9 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { createInterface } from 'readline';
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { readBoardAuth, writeBoardAuth } from '../lib/auth.js';
 import { loadConfig } from '../lib/config.js';
 import { RefusalError } from '../lib/engine.js';
 import { gateApproval } from '../lib/flow.js';
@@ -58,4 +60,25 @@ configCommand
     let value: unknown = loadConfig(process.cwd());
     for (const key of path.split('.')) value = (value as Record<string, unknown> | undefined)?.[key];
     if (value !== undefined && value !== null) console.log(typeof value === 'string' ? value : JSON.stringify(value));
+  }));
+
+function prompt(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => rl.question(question, answer => { rl.close(); resolve(answer); }));
+}
+
+configCommand
+  .command('board-password')
+  .description('Set the board sign-in user and password (.codeloop/local.yaml); refuses a non-loopback `codeloop serve` while the default is still in use')
+  .option('--user <name>', 'Sign-in username; unchanged if not given')
+  .action(guard(async (opts: { user?: string }) => {
+    const projectDir = process.cwd();
+    const current = readBoardAuth(projectDir);
+    console.log(chalk.dim(`  current user: ${current.user}${current.isDefault ? ' (default password still in use)' : ''}`));
+    const password = await prompt('New board password: ');
+    if (!password.trim()) throw new RefusalError('a password is required');
+    const confirm = await prompt('Confirm: ');
+    if (confirm !== password) throw new RefusalError('passwords did not match');
+    const written = writeBoardAuth(projectDir, { user: opts.user, password });
+    console.log(chalk.green(`  board sign-in set: user ${written.user}, password changed`));
   }));

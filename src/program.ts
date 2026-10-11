@@ -4,6 +4,7 @@ import { initCommand } from './commands/init.js';
 import { updateCommand } from './commands/update.js';
 import { statusCommand } from './commands/status.js';
 import { serveCommand } from './commands/serve.js';
+import { openCommand } from './commands/open.js';
 import { storeCommand } from './commands/store.js';
 import { watchCommand } from './commands/watch.js';
 import { installCommand } from './commands/install.js';
@@ -57,6 +58,7 @@ export function buildProgram(): Command {
   program.addCommand(updateCommand);
   program.addCommand(statusCommand);
   program.addCommand(serveCommand);
+  program.addCommand(openCommand);
   program.addCommand(storeCommand);
   program.addCommand(watchCommand);
 

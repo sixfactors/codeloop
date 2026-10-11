@@ -137,6 +137,32 @@ guardCommand
     console.log(`\`codeloop card activate ${top[0].id}\` to take the first; \`codeloop inbox\` for what waits on a person.`);
   });
 
+// Owner actions an assistant must never take in its own shell tool. The hook only fires for the
+// assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
+const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer)\b|--as[ =](owner|reviewer)\b/;
+
+guardCommand
+  .command('bash')
+  .description("PreToolUse hook for the assistant's shell tool: refuses `codeloop approve`, `reject`, `answer` and `--as owner|reviewer`, which are the person's to run")
+  .option('--format <format>', 'claude (exit 2 with a message) or cursor (beforeShellExecution JSON)', 'claude')
+  .action(async (opts: { format: string }) => {
+    const input = await readStdinJson();
+    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
+    const command = String(toolInput.command ?? input.command ?? '');
+    const hit = OWNER_ACTION.exec(command);
+    const message = hit
+      ? `codeloop: \`${hit[0].trim()}\` is the person's decision, not the assistant's. Ask them to run it themselves (type it with ! in this session, or in a terminal), or to approve it on the board.`
+      : '';
+    if (opts.format === 'cursor') {
+      console.log(JSON.stringify(hit ? { permission: 'deny', userMessage: message, agentMessage: message } : { permission: 'allow' }));
+      return;
+    }
+    if (hit) {
+      console.error(message);
+      process.exit(2);
+    }
+  });
+
 guardCommand
   .command('prompt')
   .description("UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)")

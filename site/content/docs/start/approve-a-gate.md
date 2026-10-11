@@ -17,7 +17,7 @@ codeloop reject c-001 "Name the file after the quarter, not the date" --as owner
 
 ```text
 c-001 rejected at spec; note recorded
-Next: redo with the /spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
+Next: redo with the spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
 ```
 
 After the redo, `codeloop next c-001` runs the check again and the card parks at the same gate.
@@ -31,12 +31,12 @@ codeloop approve c-001 --as owner
 ```text
 c-001 gate spec approved
 c-001 moved to build
-Next: run the /api skill, then `codeloop next c-001`.
+Next: run the api skill, then `codeloop next c-001`.
 ```
 
 An approval is an event on the card with the gate name, the role and the time. `approve` then advances the card once, so you do not need a separate `next`.
 
-The same two buttons are on the board: open the card from the Inbox page or the Cards view and the Gate panel shows who it is waiting on, the gate name, a note box, Approve and Reject. They work only when the server was started with `codeloop serve --owner`.
+The same two buttons are on the board: open the card from the Inbox page or the Cards view and the Gate panel shows who it is waiting on, the gate name, a note box, Approve and Reject. They work once you sign in (the board's own username and password, not your terminal login).
 
 ## Roles
 

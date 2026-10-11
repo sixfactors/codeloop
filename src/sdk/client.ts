@@ -33,6 +33,7 @@ import type {
   LintResult,
   LiveEvent,
   NewCardInput,
+  NextAction,
   PageWrite,
   PagesPayload,
   PagesQuery,
@@ -42,6 +43,7 @@ import type {
   Rice,
   RoleOption,
   RunRecord,
+  Session,
   RunStreamItem,
   RunView,
   ScoredRecord,
@@ -148,6 +150,16 @@ export interface Transport {
   evidence(nnn: string): Promise<EvidenceDetail | undefined>;
   stats(): Promise<Stats>;
   config(): Promise<Config>;
+  /** Owner mode, sign-in state, token validity, default-password notice, and the project. */
+  sessionInfo(): Promise<Session>;
+  /** Signs this browser in; the server sets the session cookie. Refused (401) on a wrong user or password. Local only: there is no browser session to establish. */
+  login(user: string, password: string): Promise<{ ok: true }>;
+  /** Clears this browser's session cookie. */
+  logout(): Promise<{ ok: true }>;
+  /** Settings' "Board sign-in" section. Refused (400) without the right current password. */
+  changeBoardAuth(input: { currentPassword: string; user?: string; newPassword?: string }): Promise<{ user: string; isDefault: boolean }>;
+  /** The one thing the board's first screen leads with: empty, waiting, running or idle. */
+  nextAction(): Promise<NextAction>;
   events(signal?: AbortSignal): AsyncIterable<LiveEvent>;
   wikiEntries(): Promise<WikiEntry[]>;
   wikiInject(files: string[]): Promise<WikiEntry[]>;
@@ -294,6 +306,15 @@ export class CodeloopClient {
   evidence = (nnn: string) => this.transport.evidence(nnn);
   stats = () => this.transport.stats();
   config = () => this.transport.config();
+  /** Owner mode, sign-in state and the project, for the app shell's read-only banner and header. */
+  session = () => this.transport.sessionInfo();
+  readonly auth = {
+    login: (user: string, password: string) => this.transport.login(user, password),
+    logout: () => this.transport.logout(),
+    changeBoardAuth: (input: { currentPassword: string; user?: string; newPassword?: string }) => this.transport.changeBoardAuth(input),
+  };
+  /** The board's "what next" panel: one state, with the data that state needs. */
+  next = () => this.transport.nextAction();
   /** A `hello` with the version counters, then one message per changed entity. */
   events = (signal?: AbortSignal) => this.transport.events(signal);
   close = () => this.transport.close();

@@ -11,6 +11,10 @@ import { loadLane, substitute } from './lane.js';
 import { resolveSpecDir, tickTask } from './spec.js';
 import { capture, inject } from './wiki.js';
 
+// The MCP server is how an assistant calls codeloop as a tool, so it acts as agent unless whoever
+// started it set CODELOOP_ROLE deliberately.
+const mcpRole = () => resolveRole(process.env.CODELOOP_ROLE ?? 'agent');
+
 function card(projectDir: string, id: string) {
   const found = findCard(readCards(projectDir).cards, id);
   const stage = found.stage === DONE ? undefined : loadLane(projectDir, found.lane).stages.find(s => s.id === found.stage);
@@ -54,10 +58,10 @@ export async function serveMcp(projectDir: string): Promise<void> {
     return { outcome: r.outcome, stage: r.card.stage, gate: r.card.gate, awaiting: r.card.awaiting, output: r.output, started: r.started.map(s => s.id) };
   });
   tool('approve', 'Approve the gate a card is waiting at, then advance it once. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string().optional() }, a => {
-    const r = approveFlow(projectDir, a.id, resolveRole(), a.note);
+    const r = approveFlow(projectDir, a.id, mcpRole(), a.note);
     return { approved: r.gate, stage: (r.advanced?.card ?? r.card).stage, outcome: r.advanced?.outcome };
   });
-  tool('reject', 'Reject the gate with a note. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string() }, a => rejectCard(projectDir, a.id, resolveRole(), a.note));
+  tool('reject', 'Reject the gate with a note. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string() }, a => rejectCard(projectDir, a.id, mcpRole(), a.note));
   tool('task_done', 'Tick a task in the card spec folder.', { ...id, task: z.string().describe('Task id, e.g. T003') }, a => {
     tickTask(projectDir, resolveSpecDir(projectDir, a.id), a.task);
     return { done: a.task };
@@ -67,9 +71,9 @@ export async function serveMcp(projectDir: string): Promise<void> {
 
   tool('brief', "The full stage brief for a card: skill, output, the check that must pass, feedback, wiki pages, rules. Same text `codeloop brief` prints.", id, a => buildBrief(projectDir, findCard(readCards(projectDir).cards, a.id)));
   tool('ask', `Ask the owner up to ${MAX_QUESTIONS} questions about a card; it waits in the inbox until answered.`, { ...id, questions: z.array(z.string()).min(1) }, a =>
-    addQuestions(projectDir, a.id, a.questions.map(q => ({ question: q })), resolveRole()));
+    addQuestions(projectDir, a.id, a.questions.map(q => ({ question: q })), mcpRole()));
   tool('answer', 'Answer a question on a card by number, with text or by accepting its recommended answer.', { ...id, n: z.number().int().min(1), text: z.string().optional(), accept: z.boolean().optional() }, a =>
-    writeAnswer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, resolveRole()));
+    writeAnswer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, mcpRole()));
   tool('check', "Runs the current stage's done check without moving the card; pass/fail plus the check's output.", id, a => {
     const found = findCard(readCards(projectDir).cards, a.id);
     const stage = found.stage === DONE ? undefined : loadLane(projectDir, found.lane).stages.find(s => s.id === found.stage);
@@ -78,7 +82,7 @@ export async function serveMcp(projectDir: string): Promise<void> {
     return result ?? { passed: null, output: `stage ${stage.id} waits for event "${stage.done?.event}", not a command` };
   });
   tool('propose', 'Propose a card in the inbox; it waits for the owner to promote it, and nothing starts it.', { lane: z.string(), title: z.string(), description: z.string().optional(), source: z.string().optional() }, a => {
-    const { card: proposed, created } = proposeCard(projectDir, { lane: a.lane, title: a.title, description: a.description, source: a.source, role: resolveRole() });
+    const { card: proposed, created } = proposeCard(projectDir, { lane: a.lane, title: a.title, description: a.description, source: a.source, role: mcpRole() });
     return { id: proposed.id, lane: proposed.lane, created };
   });
 

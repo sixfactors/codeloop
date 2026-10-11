@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { FieldRow } from '@/components/shared/field-row';
 import { InlineError } from '@/components/shared/inline-error';
 import { PageLayout } from '@/components/shared/page-layout';
-import { isMissing, useCards, useConfig, useSetupAdopt, useSetupDetect, useSetupStatus } from '@/hooks/use-api';
+import { isMissing, useCanWrite, useConfig, useSetupAdopt, useSetupDetect, useSetupStatus } from '@/hooks/use-api';
 import { AGENT_SNIPPET } from '@/lib/agent-snippet';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
@@ -65,8 +65,7 @@ const SKILL_DIRS = ['.claude/skills', '.claude/commands', '.cursor/commands', '.
 export default function SetupPage() {
   const status = useSetupStatus();
   const config = useConfig();
-  const { payload } = useCards();
-  const owner = Boolean(payload?.owner);
+  const { canWrite: owner, reason: readOnlyReason } = useCanWrite();
   const detect = useSetupDetect();
   const adopt = useSetupAdopt();
   const [picked, setPicked] = useState<Record<string, boolean>>({});
@@ -114,7 +113,7 @@ export default function SetupPage() {
             <CardContent className="flex flex-col gap-3">
               {detected ? <DetectResult d={detected} /> : <p className="text-sm text-muted-foreground">Nothing detected yet.</p>}
               {detect.error ? <InlineError title="Detect failed" error={detect.error} /> : null}
-              <Button size="sm" disabled={!owner || detect.isPending} onClick={() => detect.mutate(undefined, { onSuccess: () => toast.success('Detected') })} data-testid="setup-detect-run"><ScanSearch />{detect.isPending ? 'Detecting…' : detected ? 'Detect again' : 'Detect'}</Button>
+              <Button size="sm" disabled={!owner || detect.isPending} title={owner ? undefined : readOnlyReason} onClick={() => detect.mutate(undefined, { onSuccess: () => toast.success('Detected') })} data-testid="setup-detect-run"><ScanSearch />{detect.isPending ? 'Detecting…' : detected ? 'Detect again' : 'Detect'}</Button>
             </CardContent>
           </Card>
 
@@ -142,6 +141,7 @@ export default function SetupPage() {
               <Button
                 size="sm"
                 disabled={!owner || adopt.isPending}
+                title={owner ? undefined : readOnlyReason}
                 onClick={() => adopt.mutate({ from: chosen.length === SKILL_DIRS.length ? undefined : chosen }, { onSuccess: (r) => toast.success(`Indexed ${r.indexed} skills (${r.added} added)`) })}
                 data-testid="setup-adopt-run"
               >
@@ -170,7 +170,7 @@ export default function SetupPage() {
           </Card>
         </div>
       )}
-      {!owner && !missing ? <p className="mt-4 text-xs text-muted-foreground">Read only: the owner runs Detect and Adopt from their own board.</p> : null}
+      {!owner && !missing ? <p className="mt-4 text-xs text-muted-foreground">{readOnlyReason}</p> : null}
     </PageLayout>
   );
 }

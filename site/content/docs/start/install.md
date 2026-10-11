@@ -33,6 +33,13 @@ Initializing codeloop...
 
   + .mcp.json (codeloop mcp server)
   agents: configured for claude, so run --agent works now
+  + AGENTS.md (tells the assistant to work through codeloop)
+  + CLAUDE.md (tells the assistant to work through codeloop)
+  + 38 stage role files for the assistant
+  + .git/hooks/commit-msg
+  + .claude/settings.json
+  + pre-commit
+  + pre-push
   Created:
     + .claude/commands/design.md
     + .claude/commands/plan.md
@@ -113,11 +120,10 @@ Initializing codeloop...
 Done.
 
   10 lanes in .codeloop/lanes/, 63 skills indexed in .codeloop/skills.index.yaml.
-  codeloop serve opens the board in a browser.
 
-  Next, type:
-    codeloop start "<your feature>"
-    codeloop inbox
+  Next:
+    codeloop serve   opens the board; describe a problem there and codeloop turns it into stories
+    or codeloop shape "<the problem>" from here.
 ```
 
 ## What init writes

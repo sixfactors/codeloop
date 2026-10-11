@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
 import { Markdown } from '@/components/shared/markdown';
-import { isConflict, isMissing, useCardOutput, useCards, useSaveCardOutput } from '@/hooks/use-api';
+import { isConflict, isMissing, useCanWrite, useCardOutput, useSaveCardOutput } from '@/hooks/use-api';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -40,8 +40,7 @@ function readFile(file: File): Promise<string> {
 }
 
 export function CardOutputTab({ card }: { card: CardT }) {
-  const { payload } = useCards();
-  const owner = Boolean(payload?.owner);
+  const { canWrite: owner, reason: readOnlyReason } = useCanWrite();
   const { data, error, refetch } = useCardOutput(card.id);
   const save = useSaveCardOutput();
   const [base, setBase] = useState<CardOutput | null>(null);
@@ -128,8 +127,8 @@ export function CardOutputTab({ card }: { card: CardT }) {
         </div>
         <div className="flex items-center gap-2">
           <input ref={fileInput} type="file" accept={ACCEPT.join(',')} className="hidden" onChange={(e) => { void takeFile(e.target.files?.[0]); e.target.value = ''; }} data-testid="card-output-file" />
-          <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()} disabled={!owner}><FileUp />Load a file</Button>
-          <Button size="sm" onClick={() => void doSave()} disabled={!owner || save.isPending || !changed} data-testid="card-output-save"><Save />{save.isPending ? 'Saving…' : 'Save'}<kbd className="ml-1 hidden rounded border bg-muted px-1 font-mono text-[10px] sm:inline">⌘S</kbd></Button>
+          <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()} disabled={!owner} title={owner ? undefined : readOnlyReason}><FileUp />Load a file</Button>
+          <Button size="sm" onClick={() => void doSave()} disabled={!owner || save.isPending || !changed} title={owner ? undefined : readOnlyReason} data-testid="card-output-save"><Save />{save.isPending ? 'Saving…' : 'Save'}<kbd className="ml-1 hidden rounded border bg-muted px-1 font-mono text-[10px] sm:inline">⌘S</kbd></Button>
         </div>
       </div>
 
@@ -172,7 +171,7 @@ export function CardOutputTab({ card }: { card: CardT }) {
           </div>
         ) : null}
       </div>
-      {!owner ? <p className="text-xs text-muted-foreground">Read only: the owner saves from their own board.</p> : <p className="text-xs text-muted-foreground">Drag a .md or .txt file onto the editor to replace its text; nothing is written until Save.</p>}
+      {!owner ? <p className="text-xs text-muted-foreground">{readOnlyReason}</p> : <p className="text-xs text-muted-foreground">Drag a .md or .txt file onto the editor to replace its text; nothing is written until Save.</p>}
 
       {conflict?.server ? (
         <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">

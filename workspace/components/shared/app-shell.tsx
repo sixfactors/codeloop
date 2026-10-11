@@ -18,9 +18,10 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import dynamic from 'next/dynamic';
-import { useCardCount, useCards, useConfig, useInbox, useSetupStatus } from '@/hooks/use-api';
+import { useCardCount, useCards, useCanWrite, useConfig, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { routes } from '@/lib/routes';
 import { CommandPalette } from '@/components/shared/command-palette';
+import { ReadOnlyBanner } from '@/components/shared/read-only-banner';
 import { cn } from '@/lib/utils';
 
 // Toasts are rare; sonner is fetched after first paint.
@@ -132,14 +133,20 @@ function SetupGate({ pathname }: { pathname: string }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '';
   // Counts come from the server (the inbox totals and one filtered count), not from a walk over the cards.
-  const { payload, total } = useCards();
+  const { total } = useCards();
+  const { canWrite } = useCanWrite();
+  const session = useSession();
   const config = useConfig();
   const inbox = useInbox();
   const gates = inbox.data?.needsYou.total ?? 0;
   const questions = inbox.data?.questions.total ?? 0;
   const backlog = useCardCount({ stage: ['proposed'] }).data ?? 0;
   const cfg = config.data as { product?: string; name?: string } | undefined;
-  const product = String(cfg?.product ?? cfg?.name ?? 'codeloop');
+  const project = session.data?.project;
+  const product = project?.name ?? String(cfg?.product ?? cfg?.name ?? 'codeloop');
+
+  // The tab title names the project, not just "codeloop", so two boards in two tabs are told apart.
+  React.useEffect(() => { if (project?.name) document.title = `${project.name} · codeloop`; }, [project?.name]);
 
   const indicators: Record<string, React.ReactNode> = {
     inbox: gates + questions > 0 ? <CountBadge value={gates + questions} tone="attention" /> : null,
@@ -160,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
               <SquareTerminal className="size-4" strokeWidth={1.5} />
             </span>
-            <span className="truncate text-lg font-semibold tracking-tight group-data-[collapsible=icon]:hidden">{product}</span>
+            <span className="truncate text-lg font-semibold tracking-tight group-data-[collapsible=icon]:hidden" title={project?.path} data-testid="shell-project-name">{product}</span>
           </Link>
         </SidebarHeader>
 
@@ -190,7 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-medium">{payload?.owner ? 'Owner' : 'Read only'}</span>
+              <span className="truncate font-medium">{canWrite ? 'Owner' : 'Read only'}</span>
               <span className="truncate text-xs text-muted-foreground tabular-nums">{total} stories</span>
             </div>
             <ThemeToggle />
@@ -205,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden sm:block"><span className="text-muted-foreground">{product}</span></BreadcrumbItem>
+              <BreadcrumbItem className="hidden sm:block"><span className="text-muted-foreground" title={project?.path}>{product}</span></BreadcrumbItem>
               <BreadcrumbItem><BreadcrumbPage>{sectionFor(pathname)}</BreadcrumbPage></BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -213,6 +220,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <CommandPalette />
           </div>
         </header>
+        <ReadOnlyBanner />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </SidebarInset>
       <Toaster position="bottom-right" />

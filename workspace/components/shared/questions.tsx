@@ -7,11 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAnswer, useQuestions } from '@/hooks/use-api';
+import { useAnswer, useCanWrite, useQuestions } from '@/hooks/use-api';
 import type { Question } from '@/lib/types';
 
 function QuestionRow({ cardId, q }: { cardId: string; q: Question }) {
   const answer = useAnswer();
+  const { canWrite, reason } = useCanWrite();
   const [text, setText] = useState('');
   const [typing, setTyping] = useState(false);
   const answered = Boolean(q.answer);
@@ -30,18 +31,18 @@ function QuestionRow({ cardId, q }: { cardId: string; q: Question }) {
         <ItemActions className="flex-col items-stretch gap-2">
           {typing ? (
             <>
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Your answer" rows={3} aria-label={`Answer to question ${q.n}`} />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Your answer" rows={3} aria-label={`Answer to question ${q.n}`} disabled={!canWrite} />
               <div className="flex gap-2">
-                <Button size="sm" disabled={!text.trim() || answer.isPending} onClick={() => answer.mutate({ id: cardId, n: q.n, body: { text: text.trim() } }, { onSuccess: () => { setText(''); setTyping(false); } })}>Send</Button>
+                <Button size="sm" disabled={!canWrite || !text.trim() || answer.isPending} title={canWrite ? undefined : reason} onClick={() => answer.mutate({ id: cardId, n: q.n, body: { text: text.trim() } }, { onSuccess: () => { setText(''); setTyping(false); } })}>Send</Button>
                 <Button size="sm" variant="ghost" onClick={() => setTyping(false)}>Cancel</Button>
               </div>
             </>
           ) : (
             <div className="flex flex-wrap gap-2">
               {q.recommended ? (
-                <Button size="sm" disabled={answer.isPending} onClick={() => answer.mutate({ id: cardId, n: q.n, body: { accept: true } })}><Check />Accept</Button>
+                <Button size="sm" disabled={!canWrite || answer.isPending} title={canWrite ? undefined : reason} onClick={() => answer.mutate({ id: cardId, n: q.n, body: { accept: true } })} data-testid="question-accept"><Check />Accept</Button>
               ) : null}
-              <Button size="sm" variant="outline" onClick={() => setTyping(true)}><MessageSquare />Answer</Button>
+              <Button size="sm" variant="outline" disabled={!canWrite} title={canWrite ? undefined : reason} onClick={() => setTyping(true)} data-testid="question-answer"><MessageSquare />Answer</Button>
             </div>
           )}
           {answer.error ? <p className="text-xs text-destructive">{(answer.error as Error).message}</p> : null}

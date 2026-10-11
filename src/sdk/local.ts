@@ -117,6 +117,19 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     evidence: nnn => services.evidenceDetail(projectDir, stored(), nnn),
     stats: () => services.stats(indexed()),
     config: () => services.publicConfig(stored()),
+    // Local has no token and no read-only mode: the role decides owner, and there is no wrong token to fail.
+    // No browser, no session, no token to be wrong: a terminal session is always itself.
+    sessionInfo: async () => ({
+      owner: role() === 'owner',
+      signedIn: true,
+      tokenValid: true,
+      defaultPassword: services.boardAuthUser(projectDir).isDefault,
+      project: await services.projectIdentity(stored(), projectDir),
+    }),
+    login: async () => ({ ok: true }),
+    logout: async () => ({ ok: true }),
+    changeBoardAuth: async input => services.changeBoardAuth(projectDir, input),
+    nextAction: () => services.nextAction(indexed(), projectDir, role()),
     events,
     wikiEntries: async () => services.wikiEntries(projectDir),
     wikiInject: async files => services.wikiInject(projectDir, files),

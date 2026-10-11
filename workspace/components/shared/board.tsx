@@ -27,7 +27,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EMPTY_SEARCH, SearchAndFilter, type FacetDef, type SearchAndFilterValue } from '@/components/shared/search-and-filter';
 import { SavedViewTabs } from '@/components/shared/saved-view-tabs';
 import { UsageBar } from '@/components/shared/usage-bar';
-import { useCardColumn, useCardCount, useCardFacets, useCards, useInbox, useLanes, useTriage } from '@/hooks/use-api';
+import { useCardColumn, useCardCount, useCardFacets, useCards, useInbox, useLanes, useNextAction, useTriage } from '@/hooks/use-api';
+import { ShapeStarter } from '@/components/shared/shape-starter';
 import { backlogQuery, laneColumns, toQuery, type ColumnSpec } from '@/lib/board-columns';
 import { DONE_STAGE_IDS, isShipped } from '@/lib/cards';
 import { BANDS, BOARD_FACETS, type BoardFacet, type Card as CardT, type CardsQuery, type Lane } from '@/lib/types';
@@ -185,6 +186,7 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
   const triage = useTriage();
   const facets = useCardFacets(NO_CARDS);
   const { payload } = useCards();
+  const next = useNextAction();
   const inbox = useInbox();
   const needsYou = inbox.data?.needsYou.total;
   const matching = useCardCount(base);
@@ -285,9 +287,13 @@ export function Board({ initial = EMPTY_SEARCH }: { initial?: SearchAndFilterVal
       />
 
       {empty ? (
-        Object.keys(filters.facets).length || filters.q
-          ? <EmptyState icon={Kanban} title="No stories match" description="Clear the search or a filter and the board fills back in." action={{ label: 'Reset filters', onClick: () => setFilters(EMPTY_SEARCH) }} />
-          : <EmptyState icon={Kanban} title="No stories yet" description="Make the first one here, or from the terminal with `codeloop start` or `codeloop card propose`." action={{ label: 'New story', onClick: () => setCreating(true) }} />
+        Object.keys(filters.facets).length || filters.q ? (
+          <EmptyState icon={Kanban} title="No stories match" description="Clear the search or a filter and the board fills back in." action={{ label: 'Reset filters', onClick: () => setFilters(EMPTY_SEARCH) }} />
+        ) : next.data?.kind === 'empty' ? (
+          <ShapeStarter onCreated={setOpen} onNewStory={() => setCreating(true)} />
+        ) : (
+          <EmptyState icon={Kanban} title="No stories yet" description="Make the first one here, or from the terminal with `codeloop start` or `codeloop card propose`." action={{ label: 'New story', onClick: () => setCreating(true) }} />
+        )
       ) : (
         <div className={cn('flex flex-col gap-6 transition-opacity duration-200', pending && 'opacity-60')} aria-busy={pending}>
           {/* Backlog: proposals wait here until someone promotes or drops them. A collapsible strip,

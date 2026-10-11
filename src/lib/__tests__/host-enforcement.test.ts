@@ -132,6 +132,30 @@ describe('guard edit (PreToolUse hook)', () => {
   });
 });
 
+describe('guard bash (assistant shell tool hook)', () => {
+  const call = (command: string, format?: string) =>
+    cli(['guard', 'bash', ...(format ? ['--format', format] : [])], { input: JSON.stringify({ tool_input: { command } }) });
+
+  it('refuses owner actions the assistant tries to run, and says who should run them', () => {
+    for (const command of ['codeloop approve c-5', 'cd x && codeloop reject c-5 "no"', 'codeloop answer c-5 1 --accept', 'codeloop next c-5 --as owner']) {
+      const r = call(command);
+      expect(r.status, command).toBe(2);
+      expect(r.stderr).toMatch(/person's decision/);
+    }
+  });
+
+  it('lets ordinary commands through, including agent-safe codeloop ones', () => {
+    for (const command of ['npm test', 'codeloop brief c-5', 'codeloop next c-5', 'codeloop ask c-5 --file q.md', 'git commit -m "approve the copy"']) {
+      expect(call(command).status, command).toBe(0);
+    }
+  });
+
+  it('answers Cursor in its beforeShellExecution format', () => {
+    expect(JSON.parse(call('codeloop approve c-5', 'cursor').stdout)).toMatchObject({ permission: 'deny' });
+    expect(JSON.parse(call('npm test', 'cursor').stdout)).toEqual({ permission: 'allow' });
+  });
+});
+
 describe('guard prompt (UserPromptSubmit hook)', () => {
   it('prints the active card, its stage and its open-question count', () => {
     writeCard('c-5', 'spec');

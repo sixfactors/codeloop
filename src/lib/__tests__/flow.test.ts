@@ -43,14 +43,24 @@ afterEach(() => {
 });
 
 describe('role default', () => {
-  it('is owner at a terminal and agent when piped; the flag and CODELOOP_ROLE override both', () => {
+  it('is the person by default, with or without a terminal; the flag and CODELOOP_ROLE override it', () => {
     delete process.env.CODELOOP_ROLE;
-    expect(resolveRole(undefined, true)).toBe('owner');
-    expect(resolveRole(undefined, false)).toBe('agent');
-    expect(resolveRole('agent', true)).toBe('agent');
+    expect(resolveRole(undefined)).toBe('owner');
+    expect(resolveRole('agent')).toBe('agent');
     process.env.CODELOOP_ROLE = 'reviewer';
-    expect(resolveRole(undefined, true)).toBe('reviewer');
-    expect(resolveRole('owner', false)).toBe('owner');
+    expect(resolveRole(undefined)).toBe('reviewer');
+    expect(resolveRole('owner')).toBe('owner');
+  });
+
+  it('is agent in a process `run --agent` started, and refuses owner there', () => {
+    delete process.env.CODELOOP_ROLE;
+    process.env.CODELOOP_AGENT_RUN = 'claude';
+    try {
+      expect(resolveRole(undefined)).toBe('agent');
+      expect(() => resolveRole('owner')).toThrow(/acts as agent/);
+    } finally {
+      delete process.env.CODELOOP_AGENT_RUN;
+    }
   });
 });
 
@@ -93,7 +103,7 @@ describe('next line', () => {
 
     const { lines, exitCode } = describeAdvance(dir, advanceCard(dir, 'c-1'));
     expect(exitCode).toBe(2);
-    expect(lines.at(-1)).toBe('Next: the check failed. The /design skill produces out/c-1.md. Then `codeloop next c-1`.');
+    expect(lines.at(-1)).toBe('Next: the check failed. The design skill produces out/c-1.md. Then `codeloop next c-1`.');
   });
 });
 

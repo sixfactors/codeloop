@@ -1,4 +1,5 @@
 import { Hono, type Context } from 'hono';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { streamSSE } from 'hono/streaming';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { existsSync, readFileSync, statSync } from 'fs';
@@ -13,6 +14,7 @@ import {
   type AddTaskInput,
   type Task,
 } from './board.js';
+import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
 import { getIndex, type Diff, type ProjectIndex } from './index/index.js';
 import { readInboxSeen } from './inbox.js';
@@ -42,14 +44,19 @@ const int = (value: string | null | undefined) => (value ? parseInt(value, 10) |
 /**
  * The HTTP face of the service layer: every route parses the request, calls one function in
  * services.ts and shapes the status. `owner` is set only by `codeloop serve --owner`. Without it
- * the board is read-only for cards. With it, approve and reject still need the start-up token
- * like every other write.
+ * the board is read-only for cards. With it, a write still needs the signed-in session cookie
+ * (a person, from `/api/session/login`) or the start-up token header (an agent or the SDK).
  */
 export function createApp(projectDir: string, uiDir?: string, opts: { owner?: boolean; token?: string; anyHost?: boolean; store?: Store } = {}) {
   const app = new Hono();
   const store = opts.store ?? openStore(projectDir);
   const token = opts.token ?? randomBytes(24).toString('hex');
+  // host-only (no Domain attribute) and kept only in this process's memory, so a restart signs
+  // every browser back out — there is nothing on disk for a stolen laptop to replay.
+  const SESSION_COOKIE = 'codeloop_session';
+  const sessions = new Set<string>();
   const sameToken = (given: string | undefined) => !!given && given.length === token.length && timingSafeEqual(Buffer.from(given), Buffer.from(token));
+  const signedIn = (c: Context) => { const sid = getCookie(c, SESSION_COOKIE); return !!sid && sessions.has(sid); };
   const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
   const sameHost = (origin: string, host: string) => {
     try {
@@ -59,10 +66,12 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
     }
   };
 
-  // There is no login, so the server protects itself three ways. It answers only to a loopback
-  // host name (a rebound DNS name cannot read the board). It sends no CORS headers, so other
-  // origins cannot read responses. And every write needs the token printed at start-up, a JSON
-  // content type, and no foreign Origin, which a page on another site cannot provide.
+  // The server protects itself four ways. It answers only to a loopback host name (a rebound DNS
+  // name cannot read the board), unless told otherwise with a real password already set. It sends
+  // no CORS headers, so other origins cannot read responses. Signing in or logging out needs
+  // neither a session nor a token — that would be circular — but every other write needs one of
+  // them, a JSON content type, and no foreign Origin, which a page on another site cannot provide
+  // (SameSite=Strict on the session cookie backs this up: a cross-site request does not carry it).
   app.use('*', async (c, next) => {
     const host = c.req.header('host') ?? new URL(c.req.url).host;
     if (!opts.anyHost && !LOOPBACK.has(host.replace(/:\d+$/, ''))) return c.json({ error: `this board answers only on localhost, not ${host}` }, 403);
@@ -70,7 +79,9 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
 
     const origin = c.req.header('origin');
     if (origin && !sameHost(origin, host)) return c.json({ error: 'cross-origin requests are not accepted' }, 403);
-    if (!sameToken(c.req.header('x-codeloop-token'))) return c.json({ error: 'missing or wrong token: open the URL that `codeloop serve` printed' }, 403);
+    const path = new URL(c.req.url).pathname;
+    if (path === '/api/session/login' || path === '/api/session/logout') return next();
+    if (!sameToken(c.req.header('x-codeloop-token')) && !signedIn(c)) return c.json({ error: 'missing or wrong token: sign in, or run `codeloop open` in this repo for a link that can' }, 403);
     if (c.req.method !== 'DELETE' && !(c.req.header('content-type') ?? '').startsWith('application/json')) return c.json({ error: 'content type must be application/json' }, 415);
     return next();
   });
@@ -112,7 +123,7 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
   const query = (c: Context) => new URL(c.req.url).searchParams;
   const pageId = (c: Context) => decodeURIComponent(c.req.path.replace(/^\/api\/pages\//, ''));
   const notFound = (c: Context, what: string) => c.json({ error: `${what} not found` }, 404);
-  const readOnly = (c: Context, what: string) => c.json({ error: `read-only: start the server with \`codeloop serve --owner\` to ${what} from the board` }, 403);
+  const readOnly = (c: Context, what: string) => c.json({ error: `read-only: this server was started without --owner; signing in would not change that. Restart it to ${what} from the board.` }, 403);
 
   // A read: the engine's refusals are 400, or 404 when they say "not found".
   const handled = (fn: (c: Context) => Promise<Response>) => async (c: Context) => {
@@ -334,6 +345,43 @@ export function createApp(projectDir: string, uiDir?: string, opts: { owner?: bo
   app.get('/api/artifacts', handled(async c => cached(c, etag('artifacts', v.artifacts), async () => ({ artifacts: await services.artifacts(index) }))));
   app.get('/api/stats', handled(async c => cached(c, etag('stats', v.cards, v.lanes), () => services.stats(index))));
   app.get('/api/config', handled(async c => c.json({ config: await services.publicConfig(store) })));
+
+  // What the app shell gates writes on: whether this server grants owner rights at all, whether
+  // this browser is signed in, whether this request's own token header is the one `codeloop
+  // serve` printed, and whether the board is still on the default password (Settings' notice).
+  // A GET carries no token header by default (reads stay open without one), so the client sends
+  // it explicitly for this one call; the session cookie rides along on every request as usual.
+  app.get('/api/session', async c => c.json({
+    owner,
+    signedIn: signedIn(c),
+    tokenValid: sameToken(c.req.header('x-codeloop-token')),
+    defaultPassword: readBoardAuth(projectDir).isDefault,
+    project: await services.projectIdentity(store, projectDir),
+  }));
+  // Sign-in and sign-out need neither a session nor a token (see the middleware above); every
+  // other route under /api/session is a write that does.
+  app.post('/api/session/login', async c => {
+    const body = await json(c, { user: undefined as string | undefined, password: undefined as string | undefined });
+    const auth = readBoardAuth(projectDir);
+    if (body.user !== auth.user || !checkBoardPassword(auth, body.password ?? '')) return c.json({ error: 'wrong username or password' }, 401);
+    const sid = randomBytes(24).toString('hex');
+    sessions.add(sid);
+    setCookie(c, SESSION_COOKIE, sid, { httpOnly: true, sameSite: 'Strict', path: '/' });
+    return c.json({ ok: true });
+  });
+  app.post('/api/session/logout', c => {
+    const sid = getCookie(c, SESSION_COOKIE);
+    if (sid) sessions.delete(sid);
+    deleteCookie(c, SESSION_COOKIE, { path: '/' });
+    return c.json({ ok: true });
+  });
+  // Settings' "Board sign-in" section: refused without the current password (services.ts).
+  app.post('/api/settings/board-auth', writing(async c => {
+    const body = await json(c, { currentPassword: '', user: undefined as string | undefined, newPassword: undefined as string | undefined });
+    return c.json(services.changeBoardAuth(projectDir, { currentPassword: body.currentPassword, user: body.user, newPassword: body.newPassword }));
+  }));
+  // "What should I do right now": the one thing the board's first screen leads with.
+  app.get('/api/next', handled(async c => c.json(await services.nextAction(index, projectDir, role))));
 
   // The wiki pages the engine injects before a stage, as `codeloop wiki list|inject|lint` read them.
   app.get('/api/wiki/entries', handled(async c => c.json({ entries: services.wikiEntries(projectDir) })));

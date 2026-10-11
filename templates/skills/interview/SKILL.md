@@ -49,10 +49,13 @@ take by just saying so. Bad work asks five questions whose answers are already o
 4. Give every question a `recommended:` answer, your best default. The owner may not reply before
    the card needs to move; the recommended answer is what gets taken on `--accept`, and a question
    with no recommended answer has nothing an owner in a hurry can accept.
-5. Write them in one file, not one at a time: `codeloop ask {id} --file <path>`, where `<path>` is a
-   markdown file with the `## Qn` blocks (see `template.md`). One call keeps the numbering clean.
-6. Wait for answers. Read them back with `codeloop card show {id}` or by reading
-   `specs/{id}/interview.md` directly, `writeAnswer` records each as a human event on the card.
+5. Write the `## Qn` blocks straight into this stage's output file, the path the brief names
+   (`specs/{id}/interview.md` for a build story, `shape/{id}/interview.md` for a shaping story).
+   codeloop reads the questions from that file: the board and the inbox show them as soon as it is
+   saved, with nothing else to run. To add questions to a file that already has some, use
+   `codeloop ask {id} --file <path>`, which numbers on from the last.
+6. Wait for answers. Read them back with `codeloop card show {id}` or from the same output file;
+   each answer is recorded as a human event on the card.
 7. Fold every answered question into `spec.md` before the spec stage starts. An answer that never
    reaches `spec.md` was pointless to ask, the spec stage reads `spec.md`, not `interview.md`.
 8. An unanswered question blocks nothing by itself, but the field it was asked about stays a guess
@@ -91,8 +94,8 @@ real size or a shortcut, so it earns the fifth slot.
 
 ## Template
 
-See `template.md`, the bare `## Q<n>` / `recommended:` / `answer:` block, ready for
-`codeloop ask {id} --file`.
+See `template.md`, the bare `## Q<n>` / `recommended:` / `answer:` block, written into the stage's
+output file.
 
 ## Checklist
 

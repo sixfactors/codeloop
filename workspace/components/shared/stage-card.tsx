@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { AttributeCard } from '@/components/shared/record-layout';
 import { FieldRow } from '@/components/shared/field-row';
 import { RunLogPane } from '@/components/shared/run-log-pane';
-import { isMissing, useAdvance, useCardShow, useCards, useConfig, useRunStage, useSetupStatus } from '@/hooks/use-api';
+import { isMissing, useAdvance, useCanWrite, useCardShow, useConfig, useRunStage, useSetupStatus } from '@/hooks/use-api';
 import { isDropped, isProposed, isShipped } from '@/lib/cards';
 import { toast } from '@/lib/toast';
 import type { AdvanceReport, Card as CardT } from '@/lib/types';
@@ -55,8 +55,7 @@ function CheckReport({ report, onDismiss }: { report: AdvanceReport; onDismiss: 
 }
 
 export function StageCard({ card }: { card: CardT }) {
-  const { payload } = useCards();
-  const owner = Boolean(payload?.owner);
+  const { canWrite: owner, reason: readOnlyReason } = useCanWrite();
   const show = useCardShow(card.id);
   const setup = useSetupStatus();
   const config = useConfig();
@@ -78,8 +77,8 @@ export function StageCard({ card }: { card: CardT }) {
   // Agent configured: setup status says so, or the config carries an agents block.
   const names = setup.data ? setup.data.agents : agentNames(config.data);
   const agentConfigured = setup.data ? setup.data.agentsConfigured > 0 : names.length > 0;
-  const runReason = !owner ? 'Only the owner runs a stage' : runRouteMissing ? 'POST /api/cards/:id/run is not served yet' : !agentConfigured ? 'No agent configured. Settings › Agents shows the lines to add to .codeloop/config.yaml.' : undefined;
-  const checkReason = !owner ? 'Only the owner runs the check' : undefined;
+  const runReason = !owner ? readOnlyReason : runRouteMissing ? 'POST /api/cards/:id/run is not served yet' : !agentConfigured ? 'No agent configured. Settings › Agents shows the lines to add to .codeloop/config.yaml.' : undefined;
+  const checkReason = !owner ? readOnlyReason : undefined;
 
   const runCheck = () =>
     advance.mutate(
@@ -122,7 +121,7 @@ export function StageCard({ card }: { card: CardT }) {
           </Why>
         </div>
       ) : (
-        <p className="mt-3 text-xs text-muted-foreground">Read only: the owner runs the check and the stage from their own board.</p>
+        <p className="mt-3 text-xs text-muted-foreground">{readOnlyReason}</p>
       )}
       {runReason && owner ? <p className="mt-2 text-xs text-muted-foreground" data-testid="run-stage-reason">{runReason}</p> : null}
       {report ? <CheckReport report={report} onDismiss={() => setReport(null)} /> : null}

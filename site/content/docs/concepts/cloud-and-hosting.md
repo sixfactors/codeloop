@@ -17,15 +17,16 @@ codeloop serve --bg --open
 codeloop serve --stop
 ```
 
-A local web board on port 4040 showing the same cards, inbox, lanes, evidence, mocks and questions the CLI shows. It binds `127.0.0.1`, answers only to a localhost host name, sends no CORS headers, and needs a token printed at start-up, a JSON content type and a same-origin request for every write. There is no login.
+A local web board on port 4040 showing the same cards, inbox, lanes, evidence, mocks and questions the CLI shows. It binds `127.0.0.1`, answers only to a localhost host name, sends no CORS headers, and needs a same-origin request and a JSON content type for every write. Approve, Reject and every other write need you signed in — a username and password in `.codeloop/local.yaml` (default `owner` / `codeloop`; change it with `codeloop config board-password`). `codeloop open` reopens the board for this project without retyping the address. A script or an agent calling the API directly still authenticates with the token `codeloop serve` prints, sent as `x-codeloop-token`.
 
 | Flag | Use |
 |---|---|
 | `-p, --port <port>` | Port, default 4040. |
 | `--bg`, `--stop` | Run in the background; stop it. |
 | `--open` | Open the browser after starting. |
-| `--owner` | Allow Approve and Reject from the board, for whoever has the URL with its token. |
-| `--host <host>` | Listen on another address. Anything but the default exposes the board to the network. |
+| `--owner` | Allow writes from the board at all. On localhost this is already the default; required on a non-loopback `--host`. |
+| `--read-only` | Disable writes even on localhost. |
+| `--host <host>` | Listen on another address. Anything but the default exposes the board to the network — refused while the board still uses the default password. |
 
 `codeloop watch` watches the project for file saves, commits, test and build results and pushes them to the board; `--with-serve` starts both.
 

@@ -67,7 +67,7 @@ codeloop start "ACME-412: add CSV export" \
 
 ```text
 created c-001 in build at stage research for ACME-412 (specs/001-add-csv-export/)
-Next: run the /design skill to write specs/001-add-csv-export/research.md, then `codeloop next c-001`.
+Next: run the design skill to write specs/001-add-csv-export/research.md, then `codeloop next c-001`.
 ```
 
 ```sh
@@ -129,7 +129,7 @@ codeloop card new contract "Invoices API matches its OpenAPI file" \
 ```text
   9 lanes ok
 created c-001 in contract at stage contract (specs/001-invoices-api-matches-its-openapi-file/)
-Next: run the /api-contract skill to write specs/001-invoices-api-matches-its-openapi-file/contract.md, then `codeloop next c-001`.
+Next: run the api-contract skill to write specs/001-invoices-api-matches-its-openapi-file/contract.md, then `codeloop next c-001`.
 ```
 
 `codeloop brief c-001` prints the stage brief an agent gets: the check command, then your command's text verbatim under `## Skill: api-contract`, then the rules (write only the output file, never approve or advance). A command you add later is picked up by `codeloop adopt`, which rebuilds the index. [Lanes](/docs/concepts/lanes) has the lane file reference.

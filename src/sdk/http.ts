@@ -4,7 +4,7 @@
  * send the last ETag seen for the path and reuse the cached body on a 304.
  */
 import { ApiError, CodeloopClient, type AnswerInput, type AskInput, type CardWithEvents, type Transport } from './client.js';
-import { CARD_FACETS, type CardListFilter, type CardsQuery, type InboxQuery, type LiveEvent, type NewCardInput, type PageWrite, type PagesQuery, type ProposalInput, type RoleOption, type RunRecord, type RunStreamItem } from './types.js';
+import { CARD_FACETS, type CardListFilter, type CardsQuery, type InboxQuery, type LiveEvent, type NewCardInput, type PageWrite, type PagesQuery, type ProposalInput, type RoleOption, type RunRecord, type RunStreamItem, type Session } from './types.js';
 
 export interface HttpOptions {
   /** `http://127.0.0.1:4040`; empty for same-origin in a browser. */
@@ -228,6 +228,17 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     evidence: nnn => missing(json(`/api/evidence/${encodeURIComponent(nnn)}`)),
     stats: () => json('/api/stats'),
     config: () => json<{ config: Awaited<ReturnType<Transport['config']>> }>('/api/config').then(b => b.config),
+    // The only GET that sends the token: the server reads it to say whether THIS request could
+    // write, which the default GET headers (token only on a write) would never carry.
+    sessionInfo: async (): Promise<Session> => {
+      const res = await doFetch(`${base}/api/session`, { ...extra(), headers: { 'x-codeloop-token': token() } });
+      if (!res.ok) throw new ApiError(res.status, `session check failed (${res.status})`);
+      return res.json();
+    },
+    nextAction: () => json('/api/next'),
+    login: (user, password) => post('/api/session/login', { user, password }),
+    logout: () => post('/api/session/logout', {}),
+    changeBoardAuth: input => post('/api/settings/board-auth', input),
     events,
     wikiEntries: () => json<{ entries: Awaited<ReturnType<Transport['wikiEntries']>> }>('/api/wiki/entries').then(b => b.entries),
     wikiInject: files => json<{ entries: Awaited<ReturnType<Transport['wikiInject']>> }>(`/api/wiki/inject?${files.map(f => `file=${encodeURIComponent(f)}`).join('&')}`).then(b => b.entries),

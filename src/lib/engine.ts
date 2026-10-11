@@ -41,8 +41,13 @@ export function loadEngineConfig(projectDir: string): EngineConfig {
  * `--as`, then CODELOOP_ROLE, then the terminal: a person typing at a TTY is the owner, anything
  * piped or spawned (an agent, CI, the MCP server) is an agent.
  */
-export function resolveRole(flag?: string, tty: boolean = Boolean(process.stdin.isTTY)): Role {
-  const role = flag ?? process.env.CODELOOP_ROLE ?? (tty ? 'owner' : 'agent');
+// A person and their assistant share one account and one shell, so the environment cannot tell them
+// apart (a `!` command typed in a Claude Code session has no TTY, exactly like the assistant's own
+// tool call). The default is therefore the person. The assistant is kept out where its actions
+// actually pass: `run --agent` marks the processes it starts (CODELOOP_AGENT_RUN), the MCP server
+// acts as agent, and the `guard bash` hook refuses owner actions in the assistant's shell tool.
+export function resolveRole(flag?: string): Role {
+  const role = flag ?? process.env.CODELOOP_ROLE ?? (process.env.CODELOOP_AGENT_RUN ? 'agent' : 'owner');
   if (role !== 'owner' && role !== 'reviewer' && role !== 'agent') {
     throw new RefusalError(`unknown role "${role}" (owner, reviewer or agent)`);
   }
@@ -562,7 +567,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   const before = findCard(file.cards, ref);
   const id = before.id;
   if (!before.gate) throw new RefusalError(`card ${id} is not waiting at a gate`);
-  if (role !== before.awaiting) throw new RefusalError(`gate "${before.gate}" needs ${before.awaiting}; ${role} cannot approve it`);
+  if (role !== before.awaiting) throw new RefusalError(`gate "${before.gate}" needs ${before.awaiting}; ${role} cannot approve it${role === 'agent' ? `. If you are the ${before.awaiting}, run it yourself in a terminal (or with \`--as ${before.awaiting}\`), or approve it on the board` : ''}`);
 
   const now = opts.now ?? clock();
   const { gate, awaiting: _awaiting, ...rest } = before;

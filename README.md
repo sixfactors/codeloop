@@ -12,10 +12,10 @@ Node 20 or newer, a git repository, and Claude Code, Cursor or Codex.
 npm install -g @protoboxai/codeloop
 cd your-project
 codeloop init --tools claude
-codeloop serve --owner --open
+codeloop serve --open
 ```
 
-`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve --owner` prints a URL with a token and opens the board; Approve and Reject on the board work only with `--owner`. The first card comes from the board's New story button or from the terminal:
+`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve` opens the board on localhost, where Approve and Reject work once you sign in (default `owner` / `codeloop` — change it with `codeloop config board-password` before sharing the board). Lost the browser tab? `codeloop open` reopens it. The first card comes from the board's New story button or from the terminal:
 
 ```sh
 codeloop start "Download every invoice as one CSV" \
@@ -24,7 +24,7 @@ codeloop start "Download every invoice as one CSV" \
 
 ```text
 created c-002 in build at stage research (specs/002-download-every-invoice-as-one-csv/)
-Next: run the /research skill to write specs/002-download-every-invoice-as-one-csv/research.md, then `codeloop next c-002`.
+Next: run the research skill to write specs/002-download-every-invoice-as-one-csv/research.md, then `codeloop next c-002`.
 ```
 
 Every command ends with a `Next:` line naming the skill, the file and the command that moves the card. Already have a repo with CI, tickets and your own slash commands? Read [You already have a project](https://codeloop.protobox.ai/docs/start/already-have-a-project).
@@ -60,7 +60,7 @@ codeloop approve c-002 --as owner
 ```text
 c-002 gate spec approved
 c-002 moved to build
-Next: run the /api skill, then `codeloop next c-002`.
+Next: run the api skill, then `codeloop next c-002`.
 ```
 
 `--as` is only needed outside a terminal; a person at a terminal is the owner. A gate marked `outward` (live, prod, publish) stops before the stage runs, so nothing is released until you approve. Rejecting keeps the card in its stage and puts your note in the next brief.

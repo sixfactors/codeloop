@@ -3,7 +3,7 @@
 // internal address (`codeloop serve` sets it), and the public env var is only for a build served
 // from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { AdvanceReport, Artifact, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
+import type { AdvanceReport, Artifact, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 
 export type { NewCardInput, ProposalInput };
@@ -18,12 +18,18 @@ function base(): string {
 }
 
 // `codeloop serve` prints a URL carrying a token; every write sends it back. Kept for the tab's
-// lifetime so a reload or an in-app link without the query string still works.
+// lifetime so a reload or an in-app link without the query string still works. The first request
+// that carries it (GET /api/session, fired on mount) makes the server set a cookie good for this
+// host, so `?token=` is dropped from the address bar right away: it would otherwise stay visible
+// (and copy-pasteable) for no further benefit once that cookie exists.
 export function token(): string {
   if (typeof window === 'undefined') return '';
-  const fromUrl = new URLSearchParams(window.location.search).get('token');
+  const url = new URL(window.location.href);
+  const fromUrl = url.searchParams.get('token');
   if (fromUrl) {
     try { window.sessionStorage.setItem('codeloop-token', fromUrl); } catch { /* private window */ }
+    url.searchParams.delete('token');
+    try { window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`); } catch { /* non-browser test environment */ }
     return fromUrl;
   }
   try { return window.sessionStorage.getItem('codeloop-token') ?? ''; } catch { return ''; }
@@ -88,10 +94,19 @@ export const api = {
   inbox: (q: InboxQuery = {}): Promise<InboxPayload> => client().inbox.get(q),
   stats: (): Promise<Stats> => client().stats(),
   config: (): Promise<Config> => client().config(),
+  /** Owner mode, sign-in state, token validity, the default-password notice, and the project. */
+  session: (): Promise<Session> => client().session(),
+  /** The one thing the board's first screen leads with. */
+  next: (): Promise<NextAction> => client().next(),
+  login: (user: string, password: string) => client().auth.login(user, password),
+  logout: () => client().auth.logout(),
+  changeBoardAuth: (input: { currentPassword: string; user?: string; newPassword?: string }) => client().auth.changeBoardAuth(input),
 
   /** A card started in its lane (owner) or proposed into the backlog; the engine's story check refuses a mechanism title. */
   newCard: (input: NewCardInput) => client().cards.new(input),
   proposeCard: (input: ProposalInput) => client().cards.propose(input),
+  /** Starts the shape workflow from a problem statement: brief → interview → breakdown → rank. */
+  shapeProblem: (problem: string) => client().cards.shape(problem),
   decide: (id: string, action: 'approve' | 'reject', note?: string) =>
     action === 'approve' ? client().cards.approve(id, { note }) : client().cards.reject(id, note ?? ''),
   answer: (id: string, n: number, body: { text: string } | { accept: true }) => client().questions.answer(id, n, body),

@@ -104,7 +104,7 @@ codeloop card new deliverable-review "Send the AI governance deck to the client 
 
 ```text
 created c-001 in deliverable-review at stage intake
-Next: run the /manage skill to write review/c-001/draft.md, then `codeloop next c-001`.
+Next: run the manage skill to write review/c-001/draft.md, then `codeloop next c-001`.
 ```
 
 ## 5. Intake: put the draft in the card
@@ -127,7 +127,7 @@ codeloop next c-001
 
 ```text
 c-001 moved to review
-Next: run the /deloitte-language-review skill to write review/c-001/rewrite.md, then `codeloop next c-001`.
+Next: run the deloitte-language-review skill to write review/c-001/rewrite.md, then `codeloop next c-001`.
 ```
 
 `next` runs one stage's check and moves the card one step. The intake check passed, so the card is now at review. A second `next` before the skill has run shows what the review check wants:
@@ -225,14 +225,14 @@ codeloop reject c-001 "numbers on slide 2 still unsourced" --as owner
 
 ```text
 c-001 rejected at sent; note recorded
-Next: redo with the /ship skill to write review/c-001/sent.md, then `codeloop next c-001`.
+Next: redo with the ship skill to write review/c-001/sent.md, then `codeloop next c-001`.
 ```
 
 A rejection keeps the card at the gate and puts your note in the brief for that stage. It does not send the card back to the review stage. To redo the review, run the skill again on the draft, overwrite `review/c-001/rewrite.md`, and approve when it is right. Sending a rejection back to the stage before the gate is on the list; it is not in this version.
 
 The `sent` stage then expects `review/c-001/sent.md` with a `sent:` line (date, channel, who). Write it when the deck has gone, run `codeloop next c-001`, and the card is done. `codeloop stats --lane deliverable-review` then counts it as done and reports human turns, cycle time and the first-pass rate at the send gate. The lane's `metric:` line names what you measure; the number itself is not computed by `stats` in this version.
 
-The same works from the board: `codeloop serve --owner` opens the card with Approve and Reject buttons and the rewrite one click away.
+The same works from the board: `codeloop serve` opens the card, and once you sign in, Approve and Reject buttons put the rewrite one click away.
 
 ## What this gives you
 

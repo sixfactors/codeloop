@@ -52,7 +52,7 @@ printf 'lanes:\n  auto_start: true\n' >> .codeloop/config.yaml
 
 # --- a fresh repo is usable straight after init --------------------------------------------
 expect 0 "init wrote the skills index" test -s .codeloop/skills.index.yaml
-expect 0 "init ends by saying what to type next" sh -c "codeloop init --tools claude --starter generic | grep -q 'codeloop start \"<your feature>\"'"
+expect 0 "init ends by saying what to type next" sh -c "codeloop init --tools claude --starter generic | grep -q 'codeloop shape'"
 # init wrote a real agents: block for whichever tool is on this machine's PATH; strip it so the
 # rest of this project's steps keep testing the no-agent path (POST run with no agent configured).
 perl -0777 -pi -e 's/^agents:\n(?:[ \t].*\n)*//m' .codeloop/config.yaml
@@ -119,12 +119,12 @@ YAML
 expect 0 "lane lint passes on the e2e lanes" codeloop lane lint
 
 # --- build card: checks, spec gate, permissions --------------------------------------------
-expect 0 "start creates the card, its spec folder and a Next line" sh -c "codeloop start 'Add CSV export' | tee start.out | grep -q '^Next: run the /design skill to write specs/001-add-csv-export/research.md, then .codeloop next c-001.'"
+expect 0 "start creates the card, its spec folder and a Next line" sh -c "codeloop start 'Add CSV export' | tee start.out | grep -q '^Next: run the design skill to write specs/001-add-csv-export/research.md, then .codeloop next c-001.'"
 expect 0 "spec new on an existing spec folder changes nothing" sh -c "codeloop spec new c-001 | grep -q '(0 files created)'"
 S=specs/001-add-csv-export
 expect 0 "spec folder has four files and is recorded on the card" sh -c "test -f $S/research.md -a -f $S/spec.md -a -f $S/plan.md -a -f $S/tasks.md && codeloop card show c-001 --json | grep -q '\"spec\": \"$S\"'"
 expect 2 "next with no id uses the one active card; the check fails" codeloop next
-expect 0 "the failed check ends with what is missing, the skill and the retry command" sh -c "codeloop next 1 | tail -1 | grep -q '^Next: .*research.md is missing.*The /design skill produces.*codeloop next c-001'"
+expect 0 "the failed check ends with what is missing, the skill and the retry command" sh -c "codeloop next 1 | tail -1 | grep -q '^Next: .*research.md is missing.*The design skill produces.*codeloop next c-001'"
 echo "verdict: build it" >> $S/research.md
 expect 0 "next accepts the bare number and moves research to spec" codeloop next 001
 expect 2 "spec check refuses the unfilled template" codeloop spec check 001
@@ -140,7 +140,7 @@ expect 0 "advance parks the card on the spec gate" codeloop card advance c-001
 json "card is parked on gate spec awaiting owner" "d.stage==='spec' && d.gate==='spec' && d.awaiting==='owner'" codeloop card show c-001 --json
 expect 2 "a parked card cannot advance" codeloop card advance c-001
 expect 2 "agent approve is refused" codeloop card approve c-001 --as agent
-expect 2 "approve with no role is refused" codeloop card approve c-001
+expect 2 "approve as the agent is refused" codeloop card approve c-001 --as agent
 expect 0 "at the gate the Next line says to approve" sh -c "codeloop card show C-001 | tail -1 | grep -q 'codeloop approve c-001'"
 expect 0 "owner approve also advances the card" sh -c "codeloop approve 1 --as owner | grep -q 'c-001 moved to ship'"
 json "card is at ship after the approval" "d.stage==='ship' && !d.gate" codeloop card show c-001 --json
@@ -216,7 +216,7 @@ expect 2 "agent promote is refused" codeloop lane promote market-draft-1 --as ag
 expect 0 "owner promote" codeloop lane promote market-draft-1 --as owner
 expect 0 "lane show reports version 2" sh -c "codeloop lane show market | grep -q '^version: 2'"
 expect 0 "previous version kept in .history" test -f .codeloop/lanes/.history/market.v1.yaml
-expect 2 "lane rollback is refused for an agent" codeloop lane rollback market
+expect 2 "lane rollback is refused for an agent" codeloop lane rollback market --as agent
 expect 0 "lane rollback as owner" codeloop lane rollback market --as owner
 expect 0 "lane show reports version 1 again" sh -c "codeloop lane show market | grep -q '^version: 1'"
 
@@ -364,29 +364,36 @@ json_lines() { node -e "const l=require('fs').readFileSync(0,'utf8').trim().spli
 expect 0 "mcp tools/list returns the tools over stdio" bash -c "$(declare -f mcp json_lines); mcp '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | json_lines 'd.result.tools.length>=14 && d.result.tools.some(t=>t.name===\"get_card\") && d.result.tools.some(t=>t.name===\"brief\")'"
 expect 0 "mcp get_card returns the card" bash -c "$(declare -f mcp json_lines); mcp '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"get_card\",\"arguments\":{\"id\":\"c-001\"}}}' | json_lines 'JSON.parse(d.result.content[0].text).id===\"c-001\"'"
 
-# --- board: cards on the web, approve only with --owner ------------------------------------
+# --- board: cards on the web, approve only when not read-only ------------------------------
 # http <wanted status> <url> [method] [json body]: prints the body, fails on another status.
 http() { node -e "const [want,u,m,b]=process.argv.slice(1); fetch(u,{method:m||'GET',headers:{'content-type':process.env.CTYPE||'application/json','x-codeloop-token':process.env.TOKEN||'',...(process.env.ORIGIN?{origin:process.env.ORIGIN}:{})},body:b}).then(async r=>{console.log(await r.text()); process.exit(r.status===Number(want)?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})" "$@"; }
 up() { for _ in 1 2 3 4 5 6 7 8 9 10; do http 200 "$1/api/cards" > /dev/null 2>&1 && return 0; sleep 0.5; done; return 1; }
-rm -f .codeloop/board.json
+rm -f .codeloop/board.json .codeloop/state/serve.json
 RO=$((20000 + RANDOM % 10000)); OW=$((RO + 1))
-codeloop serve --port $RO > serve-ro.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+# --read-only: on loopback, owner is the default, so the read-only case needs the flag now.
+codeloop serve --port $RO --read-only > serve-ro.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 codeloop serve --port $OW --owner > serve-owner.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
-expect 0 "serve starts with no board.json" up "http://127.0.0.1:$RO"
+expect 0 "serve --read-only starts" up "http://127.0.0.1:$RO"
 expect 0 "serve --owner starts" up "http://127.0.0.1:$OW"
-RO_TOKEN=$(grep -o 'token=[a-f0-9]*' serve-ro.log | head -1 | cut -d= -f2)
-OW_TOKEN=$(grep -o 'token=[a-f0-9]*' serve-owner.log | head -1 | cut -d= -f2)
-expect 0 "serve prints a URL with a token and listens on 127.0.0.1" sh -c "test -n '$OW_TOKEN' && grep -q 'http://127.0.0.1:$OW/?token=' serve-owner.log"
+RO_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-ro.log | head -1)
+OW_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-owner.log | head -1)
+expect 0 "serve prints a plain URL (no token) and the API token separately" sh -c "test -n '$OW_TOKEN' && grep -q 'http://127.0.0.1:$OW/' serve-owner.log && ! grep -q '?token=' serve-owner.log"
 # as <token> <origin> <content-type> <wanted status> <url> [method] [body]
 as() { TOKEN="$1" ORIGIN="$2" CTYPE="$3" http "${@:4}"; }
 expect 0 "the board page loads" bash -c "$(declare -f http); http 200 http://127.0.0.1:$RO/ | grep -Eq 'Codeloop (Board|workspace)'"
 json "/api/cards returns cards, lanes and the inbox summary" "d.cards.some(c=>c.id==='c-001') && d.lanes.some(l=>l.id==='market') && /waiting on you/.test(d.inbox.summary)" http 200 "http://127.0.0.1:$RO/api/cards"
+
+# --- /api/session: owner reflects how the server was started, tokenValid reflects THIS request's header ---
+json "read-only server: GET /api/session with no token says owner false" "d.owner===false && d.tokenValid===false" http 200 "http://127.0.0.1:$RO/api/session"
+json "owner server: GET /api/session with no token says owner true, tokenValid false (a stale or missing token still can't write)" "d.owner===true && d.tokenValid===false" http 200 "http://127.0.0.1:$OW/api/session"
+TOKEN="$OW_TOKEN" json "owner server: GET /api/session with the right token says tokenValid true" "d.owner===true && d.tokenValid===true" http 200 "http://127.0.0.1:$OW/api/session"
+
 codeloop start "ACME-7: Board approval" --lane market --id c-900 > /dev/null
 mkdir -p marketing/c-900 && echo "audience: founders" > marketing/c-900/brief.md && echo "claim: x" > marketing/c-900/blog.md
 codeloop next c-900 > /dev/null && codeloop next c-900 > /dev/null
 json "the card is waiting for you at the copy gate, with the ticket split off its title" "d.gate==='copy' && d.ticket==='ACME-7' && d.title==='Board approval'" codeloop card show c-900 --json
 json "the API serves the ticket" "d.card.ticket==='ACME-7'" http 200 "http://127.0.0.1:$OW/api/cards/c-900"
-expect 0 "approve from a board without --owner is refused with 403" as "$RO_TOKEN" "" "" 403 "http://127.0.0.1:$RO/api/cards/c-900/approve" POST '{}'
+expect 0 "approve from the read-only board is refused with 403" as "$RO_TOKEN" "" "" 403 "http://127.0.0.1:$RO/api/cards/c-900/approve" POST '{}'
 expect 0 "owner board: a POST with no token is refused with 403" as "" "" "" 403 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
 expect 0 "owner board: a POST from another origin is refused with 403, token or not" as "$OW_TOKEN" "https://evil.example" "" 403 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
 expect 0 "owner board: a text/plain POST is refused with 415" as "$OW_TOKEN" "" "text/plain" 415 "http://127.0.0.1:$OW/api/cards/c-900/approve" POST '{}'
@@ -408,6 +415,36 @@ expect 0 "the run stream replays the log and ends" bash -c "$(declare -f http); 
 json "the run parked the card at the copy gate again: its output changed after the approval" "d.stage==='draft' && d.gate==='copy' && d.events.at(-1).note.includes('changed since it was approved')" codeloop card show c-900 --json
 json "POST split makes siblings marked split_from" "d.cards.length===1 && d.cards[0].split_from==='c-900' && d.cards[0].lane==='market'" as "$OW_TOKEN" "" "" 201 "http://127.0.0.1:$OW/api/cards/c-900/split" POST '{"titles":["Board approval reminder"]}'
 json "GET setup status says the project is set up" "d.initialised===true && d.lanes===4 && d.skillsIndexed>0 && d.agentsConfigured===0" http 200 "http://127.0.0.1:$OW/api/setup/status"
+
+# --- owner by default on localhost, serve.json, codeloop open, re-running serve on a taken port ---
+# One dedicated server (not RO/OW, which both write the same project's serve.json and would race
+# each other for it) so every assertion below is about one process, unambiguously.
+DEF=$((OW + 1))
+codeloop serve --port $DEF > serve-default.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+expect 0 "serve with no flags starts" up "http://127.0.0.1:$DEF"
+DEF_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-default.log | head -1)
+TOKEN="$DEF_TOKEN" json "no --owner on loopback is still an owner session" "d.owner===true && d.tokenValid===true" http 200 "http://127.0.0.1:$DEF/api/session"
+expect 0 "approve succeeds on a server started with no flags at all" as "$DEF_TOKEN" "" "" 200 "http://127.0.0.1:$DEF/api/cards/c-900/approve" POST '{"note":"loopback owner default"}'
+json "serve.json on disk matches the server actually running" "d.port===$DEF && d.host==='127.0.0.1' && d.token==='$DEF_TOKEN' && d.owner===true" sh -c "node -e \"console.log(require('fs').readFileSync('.codeloop/state/serve.json','utf8'))\""
+OPEN_OUT=$(codeloop open 2>&1)
+expect 0 "codeloop open reprints the running server's URL" sh -c "echo \"$OPEN_OUT\" | grep -q \"http://127.0.0.1:$DEF/\""
+SECOND=$(codeloop serve --port $DEF 2>&1)
+expect 0 "a second serve on the same port prints the existing URL instead of failing" sh -c "echo \"$SECOND\" | grep -q 'already running' && echo \"$SECOND\" | grep -q \"http://127.0.0.1:$DEF/\""
+expect 0 "that second invocation did not touch the still-running server" up "http://127.0.0.1:$DEF"
+codeloop serve --stop > stop.log 2>&1
+expect 0 "serve --stop removes serve.json" sh -c "! test -f .codeloop/state/serve.json"
+expect 1 "serve --stop actually killed the process" up "http://127.0.0.1:$DEF"
+expect 0 "codeloop open after --stop says nothing is running" sh -c "codeloop open 2>&1 | grep -q 'No board is running'"
+
+# --- project discovery: serve (and open) walk up to the nearest .codeloop/, like git finds .git ---
+SUB=$((DEF + 1))
+mkdir -p "$PROJECT/deep/nested/folder"
+(cd "$PROJECT/deep/nested/folder" && exec codeloop serve --port $SUB) > "$WORK/serve-subfolder.log" 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+expect 0 "serve started from a subfolder answers" up "http://127.0.0.1:$SUB"
+json "serve from a subfolder serves the parent project's cards (c-001 lives at the project root)" "d.cards.some(c=>c.id==='c-001')" http 200 "http://127.0.0.1:$SUB/api/cards"
+SUB_OPEN=$(cd "$PROJECT/deep/nested/folder" && codeloop open 2>&1)
+expect 0 "codeloop open from the same subfolder finds the same server" sh -c "echo \"$SUB_OPEN\" | grep -q \"http://127.0.0.1:$SUB/\""
+(cd "$PROJECT/deep/nested/folder" && codeloop serve --stop) > "$WORK/stop-subfolder.log" 2>&1
 
 # --- pack ----------------------------------------------------------------------------------
 lane_skills=$(grep -h 'skill:' .codeloop/lanes/*.yaml | sed 's/.*skill: *//' | sort -u | wc -l | tr -d ' ')

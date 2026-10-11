@@ -5,7 +5,7 @@
  * either. The run goes on after the start returns; `getRun` and `streamRun` follow it.
  */
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { AGENT_RUNS_DIR, loadAgents, resolveAgent, type AgentConfig } from './agent.js';
 import { findCard, readCards, RefusalError, safeName } from './cards.js';
 import { clock } from './clock.js';
@@ -37,7 +37,9 @@ export interface RunRecord {
 export type RunView = Omit<RunRecord, 'logPath'> & { log: string };
 
 const recordPath = (projectDir: string, runId: string) => join(projectDir, AGENT_RUNS_DIR, `${safeName(runId, 'run id')}.json`);
+// Run ids are numbered per project, so one server holding several projects keys by project too.
 const pending = new Map<string, Promise<RunRecord>>();
+const pendingKey = (projectDir: string, runId: string) => `${resolve(projectDir)}\0${runId}`;
 
 function save(projectDir: string, record: RunRecord): RunRecord {
   mkdirSync(join(projectDir, AGENT_RUNS_DIR), { recursive: true });
@@ -97,10 +99,10 @@ export function startCardRun(projectDir: string, ref: string, opts: { agent?: st
     }
     final.endedAt = clock().toISOString();
     save(projectDir, final);
-    pending.delete(runId);
+    pending.delete(pendingKey(projectDir, runId));
     return final;
   })();
-  pending.set(runId, finished);
+  pending.set(pendingKey(projectDir, runId), finished);
   return { record, finished };
 }
 
@@ -132,9 +134,26 @@ export function getRun(projectDir: string, runId: string): RunView | undefined {
   return { ...rest, log: logTail(projectDir, record) };
 }
 
+/** The most recently started run still going, across every card; undefined when nothing is running. */
+export function findRunningRun(projectDir: string): RunRecord | undefined {
+  const dir = join(projectDir, AGENT_RUNS_DIR);
+  if (!existsSync(dir)) return undefined;
+  const running = readdirSync(dir)
+    .filter(f => f.endsWith('.json'))
+    .map(f => {
+      try {
+        return JSON.parse(readFileSync(join(dir, f), 'utf-8')) as RunRecord;
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((r): r is RunRecord => r?.status === 'running');
+  return running.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))[0];
+}
+
 /** Settles when the run has: the in-process promise when this process started it, else the record polled. */
 export async function waitRun(projectDir: string, runId: string): Promise<RunRecord> {
-  const own = pending.get(runId);
+  const own = pending.get(pendingKey(projectDir, runId));
   if (own) return own;
   for (;;) {
     const record = readRun(projectDir, runId);

@@ -74,7 +74,8 @@ export function nextHint(projectDir: string, card: Card, failure?: string): stri
   const stage = currentStage(projectDir, card);
   if (!stage) return 'Next: nothing left on this card. `codeloop inbox` shows what else is waiting.';
   const output = stage.output ? substitute(stage.output, card) : undefined;
-  const skill = stage.skill ? `the /${stage.skill} skill` : `the ${stage.id} stage`;
+  // Skills are not slash commands in every host; the brief carries the skill's text wherever it runs.
+  const skill = stage.skill ? `the ${stage.skill} skill` : `the ${stage.id} stage`;
 
   if (card.gate === 'stuck') return `Next: fix what the check reports${output ? ` in ${output}` : ''}, then \`codeloop approve ${card.id}\` to allow another try.${agentTrouble(card, stage)}`;
   if (card.gate && stage.gate?.outward) {

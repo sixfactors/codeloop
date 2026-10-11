@@ -55,6 +55,8 @@ export const QK = {
   features: ['features'] as const,
   setup: ['setup'] as const,
   wikiShape: ['wiki-shape'] as const,
+  session: ['session'] as const,
+  next: ['next'] as const,
 };
 
 export const isMissing = (err: unknown) => err instanceof ApiError && err.status === 404;

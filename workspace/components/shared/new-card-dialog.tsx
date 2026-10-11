@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCardFacets, useCards, useConfig, useCreateCard, useInitiatives, useLanes } from '@/hooks/use-api';
+import { useCanWrite, useCardFacets, useConfig, useCreateCard, useInitiatives, useLanes } from '@/hooks/use-api';
 import type { Card as CardT } from '@/lib/types';
 
 const SIZES = ['S', 'M', 'L'] as const;
@@ -31,9 +31,8 @@ export function NewCardDialog({ open, onOpenChange, onCreated }: { open: boolean
   const config = useConfig();
   const initiatives = useInitiatives();
   const facets = useCardFacets(NO_CARDS);
-  const { payload } = useCards();
   const create = useCreateCard();
-  const owner = Boolean(payload?.owner);
+  const { canWrite: owner, reason: readOnlyReason } = useCanWrite();
   const personas = useMemo(() => personasOf(config.data), [config.data]);
   const features = useMemo(() => (facets.feature ?? []).map((o) => o.value), [facets.feature]);
 
@@ -50,7 +49,7 @@ export function NewCardDialog({ open, onOpenChange, onCreated }: { open: boolean
 
   const laneIds = lanes.data.length ? lanes.data.map((l) => l.id) : ['build'];
   // The engine's story check needs all three story parts; the button waits for them.
-  const canSubmit = title.trim().length > 0 && persona.trim().length > 0 && can.trim().length > 0 && so.trim().length > 0 && !create.isPending;
+  const canSubmit = owner && title.trim().length > 0 && persona.trim().length > 0 && can.trim().length > 0 && so.trim().length > 0 && !create.isPending;
 
   const reset = () => { setTitle(''); setPersona(''); setCan(''); setSo(''); setSize('S'); setFeature(''); setInitiative(''); setStart(false); setRefusal(null); };
 
@@ -158,10 +157,11 @@ export function NewCardDialog({ open, onOpenChange, onCreated }: { open: boolean
               Start in {lane} now, skipping the backlog
             </label>
           ) : null}
+          {!owner ? <p className="text-xs text-muted-foreground" data-testid="new-card-readonly">{readOnlyReason}</p> : null}
           {refusal ? <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" data-testid="new-card-refusal">{refusal}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={!canSubmit} data-testid="new-card-create">{create.isPending ? 'Creating…' : start && owner ? 'Start story' : 'Propose story'}</Button>
+            <Button type="submit" disabled={!canSubmit} title={owner ? undefined : readOnlyReason} data-testid="new-card-create">{create.isPending ? 'Creating…' : start && owner ? 'Start story' : 'Propose story'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

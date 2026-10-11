@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { createInterface } from 'readline';
 import { existsSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import { detectProject, detectStack, type StackId } from '../lib/detect.js';
 import { installHostHooks } from '../lib/host-hooks.js';
+import { render } from '../lib/render.js';
 import { applyAgentsConfig, applyDetection, applyMcpConfig, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
@@ -156,6 +157,16 @@ export const initCommand = new Command('init')
     if (agentsResult.changed) console.log(chalk.dim(`  agents: configured for ${tools.filter(t => !agentsResult.skipped.includes(t)).join(', ')}, so run --agent works now`));
     for (const t of agentsResult.skipped) console.log(chalk.yellow(`  ~ agents.${t} skipped: cursor-agent is not on PATH`));
 
+    // The assistant only follows codeloop if its own instructions file says so, and the session hooks
+    // only run if they are installed: without both, a plain chat in this repo edits files directly.
+    const rendered = render(projectDir, tools);
+    const roleFiles = rendered.written.filter(f => f.includes('/agents/') || f.includes('/skills/codeloop-') || f.includes('/rules/codeloop-'));
+    for (const f of rendered.written.filter(f => !roleFiles.includes(f))) console.log(chalk.green(`  + ${f} (tells the assistant to work through codeloop)`));
+    if (roleFiles.length) console.log(chalk.green(`  + ${roleFiles.length} stage role files for the assistant`));
+    const hook = installHooks(projectDir);
+    if (hook.installed) console.log(chalk.green(`  + ${relative(projectDir, hook.path) || hook.path}`));
+    for (const h of installHostHooks(projectDir)) if (h.installed && h.reason !== 'unchanged') console.log(chalk.green(`  + ${h.name}`));
+
     // The shipped lanes name the skills just installed, so the index has to exist before lint or pack
     // can pass. An existing index is left alone: adopt replaces it, it does not merge.
     ensureSkillsIndex(projectDir, () => scanSkills(projectDir, defaultSkillDirs(projectDir)));
@@ -182,10 +193,9 @@ export const initCommand = new Command('init')
     console.log(chalk.bold('Done.'));
     console.log();
     console.log(`  ${lanes} lanes in ${chalk.cyan('.codeloop/lanes/')}, ${indexed} skills indexed in ${chalk.cyan(SKILLS_INDEX)}.`);
-    console.log(`  ${chalk.cyan('codeloop serve')} opens the board in a browser.`);
     console.log();
-    console.log('  Next, type:');
-    console.log(`    ${chalk.cyan('codeloop start "<your feature>"')}`);
-    console.log(`    ${chalk.cyan('codeloop inbox')}`);
+    console.log('  Next:');
+    console.log(`    ${chalk.cyan('codeloop serve')}   opens the board; describe a problem there and codeloop turns it into stories`);
+    console.log(`    or ${chalk.cyan('codeloop shape "<the problem>"')} from here.`);
     console.log();
   });

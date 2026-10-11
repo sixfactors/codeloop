@@ -28,7 +28,7 @@ import { Markdown } from '@/components/shared/markdown';
 import { StageCard } from '@/components/shared/stage-card';
 import { CardOutputTab } from '@/components/shared/card-output-tab';
 import { CardActionMenu } from '@/components/shared/card-action-menu';
-import { useCard, useCardFull, useDecide, useQuestions, isMissing } from '@/hooks/use-api';
+import { useCanWrite, useCard, useCardFull, useDecide, useQuestions, isMissing } from '@/hooks/use-api';
 import { mockUrl } from '@/lib/api';
 import { isGateWaiting } from '@/lib/cards';
 import { evidenceId, routes } from '@/lib/routes';
@@ -46,6 +46,7 @@ export function storyLine(card: CardT): string | undefined {
 /** The gate card: amber because a person is needed. Approve / Reject with an optional note. */
 function GateCard({ card }: { card: CardT }) {
   const decide = useDecide();
+  const { canWrite, reason } = useCanWrite();
   const [note, setNote] = useState('');
   if (!isGateWaiting(card) && !(card.gate || card.awaiting)) return null;
   const act = (action: 'approve' | 'reject') =>
@@ -58,11 +59,12 @@ function GateCard({ card }: { card: CardT }) {
       <FieldRow label="Waiting on" value={card.awaiting ?? 'owner'} icon={User} />
       <FieldRow label="Gate" value={card.gate} icon={Flag} />
       <div className="mt-3 flex flex-col gap-2">
-        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" />
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
         <div className="flex gap-2">
-          <Button size="sm" disabled={decide.isPending} onClick={() => act('approve')}><Check />Approve</Button>
-          <Button size="sm" variant="outline" disabled={decide.isPending} onClick={() => act('reject')}><X />Reject</Button>
+          <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />Approve</Button>
+          <Button size="sm" variant="outline" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('reject')} data-testid="gate-reject"><X />Reject</Button>
         </div>
+        {!canWrite ? <p className="text-xs text-muted-foreground">{reason}</p> : null}
       </div>
     </AttributeCard>
   );

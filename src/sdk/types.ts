@@ -29,6 +29,7 @@ export type {
   FeatureInput,
   LintResult,
   NewCardInput,
+  NextAction,
   PageWrite,
   ProposalInput,
   ScoredRecord,
@@ -45,6 +46,15 @@ export type {
   ProjectDetection,
   AdoptResult,
 } from '../lib/services.js';
+
+/** `GET /api/session`: owner mode, this browser's sign-in state, this request's token header, whether the board still uses the default password, and which project it is. */
+export interface Session {
+  owner: boolean;
+  signedIn: boolean;
+  tokenValid: boolean;
+  defaultPassword: boolean;
+  project: { name: string; path: string };
+}
 export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from '../lib/skill-eval.js';
 
 /** The counts `POST /api/setup/adopt` answers with; the entries themselves stay in the index file. */

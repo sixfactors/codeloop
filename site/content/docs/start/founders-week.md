@@ -56,7 +56,7 @@ The inbox has four things. The founder passes the triage batch, promotes the com
       c-001 done
   $ codeloop approve c-005
       c-005 promoted to plan/gather
-      Next: run the /reflect skill to write plan/c-005/signals.md, then `codeloop next c-005`.
+      Next: run the reflect skill to write plan/c-005/signals.md, then `codeloop next c-005`.
   $ codeloop reject c-002 "not this quarter"
       c-002 dropped; note recorded
 ```

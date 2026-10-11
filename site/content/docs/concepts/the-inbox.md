@@ -68,7 +68,7 @@ The market lane's copy gate at 0% is the number that produced a lane proposal th
 
 ## The same list on a board
 
-`codeloop serve` starts a local web board that reads the same cards and shows the same waiting list, with the card's spec, evidence, mock and questions beside it. `--owner` lets the person holding the URL approve and reject from the board. [Cloud and hosting](/docs/concepts/cloud-and-hosting) covers it.
+`codeloop serve` starts a local web board that reads the same cards and shows the same waiting list, with the card's spec, evidence, mock and questions beside it. Signing in lets you approve and reject from the board. [Cloud and hosting](/docs/concepts/cloud-and-hosting) covers it.
 
 ## Over MCP
 

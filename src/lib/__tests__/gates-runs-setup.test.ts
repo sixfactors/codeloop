@@ -403,3 +403,29 @@ describe('API: setup', () => {
     await http.close();
   });
 });
+
+describe('runs in two projects held by one server', () => {
+  it('waiting on a run id returns that project\'s run, not the same id in another project', async () => {
+    const { startCardRun, waitRun } = await import('../runs.js');
+    const make = (check: string): string => {
+      const root = mkdtempSync(join(tmpdir(), 'codeloop-two-projects-'));
+      mkdirSync(join(root, '.codeloop/lanes'), { recursive: true });
+      writeFileSync(join(root, '.codeloop/lanes/build.yaml'), `id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: one\n    done: { cmd: "${check}" }\n  - id: two\n    done: { cmd: "false" }\n`);
+      createCard(root, { lane: 'build', title: 'Same id in both projects', id: 'c-001' });
+      return root;
+    };
+    const passes = make('true');
+    const fails = make('false');
+    try {
+      const b = startCardRun(fails, 'c-001');
+      const a = startCardRun(passes, 'c-001');
+      expect(a.record.runId).toBe(b.record.runId);
+      const [fromFails, fromPasses] = await Promise.all([waitRun(fails, b.record.runId), waitRun(passes, a.record.runId)]);
+      expect(fromFails.outcome).not.toBe(fromPasses.outcome);
+      expect(fromPasses.outcome).toBe('moved');
+    } finally {
+      rmSync(passes, { recursive: true, force: true });
+      rmSync(fails, { recursive: true, force: true });
+    }
+  });
+});

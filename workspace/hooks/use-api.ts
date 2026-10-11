@@ -134,6 +134,19 @@ export function useCreateCard() {
   });
 }
 
+/** Starts the shape workflow from a problem statement. Lists, counts and the next panel refetch. */
+export function useShapeProblem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (problem: string) => api.shapeProblem(problem),
+    onSuccess: async () => {
+      await invalidateCardLists(qc);
+      void qc.invalidateQueries({ queryKey: ['inbox'] });
+      void qc.invalidateQueries({ queryKey: QK.next });
+    },
+  });
+}
+
 /** Every page summary matching the params, walked to the end like useCards with `all`. */
 export function usePages(p: PagesQuery = {}, enabled = true) {
   const result = useInfiniteQuery({ ...pagesQueryOptions(p), retry: false, enabled });
@@ -152,6 +165,56 @@ export const useArtifacts = () => useQuery({ queryKey: QK.artifacts, queryFn: ap
 export const useStats = () => useQuery({ queryKey: QK.stats, queryFn: api.stats, retry: false });
 export const useConfig = () => useQuery({ queryKey: QK.config, queryFn: api.config, retry: false });
 
+/** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. */
+export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: false, staleTime: 5_000, refetchInterval: 15_000 });
+
+/** Why a write control is disabled; the same text for every one of them, so a reader learns it once. */
+export const SIGN_IN_REASON = 'Sign in to answer and approve.';
+export const READ_ONLY_REASON = 'This board was started read-only. Nobody can answer or approve from it.';
+
+/**
+ * Whether THIS browser can write: the server grants owner rights at all, and this browser is
+ * either signed in or carries the API token. Every write control reads this, not the owner flag
+ * alone, so an unsigned-in visitor sees a disabled button instead of a 403 on click.
+ */
+export function useCanWrite() {
+  const session = useSession();
+  const owner = Boolean(session.data?.owner);
+  const authenticated = Boolean(session.data?.signedIn || session.data?.tokenValid);
+  const canWrite = owner && authenticated;
+  const reason = canWrite ? undefined : !owner ? READ_ONLY_REASON : SIGN_IN_REASON;
+  return { canWrite, reason, needsSignIn: owner && !authenticated, session: session.data, isLoading: session.isLoading };
+}
+
+/** The board's "what next" panel: one state, with the data that state needs. */
+export const useNextAction = () => useQuery({ queryKey: QK.next, queryFn: api.next, retry: false });
+
+/** Signs this browser in; refetches the session on success so every write control re-enables at once. */
+export function useLogin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ user, password }: { user: string; password: string }) => api.login(user, password),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.session }),
+  });
+}
+
+export function useLogout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.logout(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.session }),
+  });
+}
+
+/** Settings' "Board sign-in" section: change user and/or password, current password required. */
+export function useChangeBoardAuth() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; user?: string; newPassword?: string }) => api.changeBoardAuth(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.session }),
+  });
+}
+
 /** After a write, refresh that one card and patch it into every list; the live stream does the same for other tabs. */
 export async function refreshCard(qc: QueryClient, id: string) {
   try {
@@ -169,6 +232,8 @@ export async function refreshCard(qc: QueryClient, id: string) {
   // A write moves cards between lists and columns: the inbox and the counts are refetched, not patched.
   void qc.invalidateQueries({ queryKey: ['inbox'] });
   void qc.invalidateQueries({ queryKey: ['cards'], predicate: (query) => query.queryKey.at(-1) === 'count' });
+  // The write may have resolved what the "what next" panel was waiting on.
+  void qc.invalidateQueries({ queryKey: QK.next });
 }
 
 export function useDecide() {

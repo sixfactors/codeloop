@@ -17,7 +17,7 @@ codeloop start "Export invoices as CSV" \
 
 ```text
 created c-001 in build at stage research (specs/001-export-invoices-as-csv/)
-Next: run the /research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
+Next: run the research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
 ```
 
 Every command ends with a `Next:` line. It names the skill to run, the file to write and the command that moves the card on.
@@ -40,9 +40,9 @@ codeloop card show c-001
   output: specs/001-export-invoices-as-csv/research.md
   check:  codeloop check research c-001 --min-sources 3
 
-  2026-10-09T20:36:54.098Z  agent    create research
-  2026-10-09T20:36:54.101Z  agent    spec research: specs/001-export-invoices-as-csv
-Next: run the /research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
+  2026-10-09T20:36:54.098Z  owner    create research
+  2026-10-09T20:36:54.101Z  owner    spec research: specs/001-export-invoices-as-csv
+Next: run the research skill to write specs/001-export-invoices-as-csv/research.md, then `codeloop next c-001`.
 ```
 
 The card knows its stage, the skill for that stage, the file the stage must produce and the command that judges it. Every action on a card is appended to its event list.
@@ -59,7 +59,7 @@ codeloop next c-001
 specs/001-export-invoices-as-csv/research.md has no line starting with "verdict:"
 specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
 c-001 failed the research check (1 so far)
-Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`). The /research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
+Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`). The research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
 ```
 
 The failure is counted. After the lane's `retries` (three in every shipped lane) the card parks as stuck and shows up in the inbox for you.
@@ -81,7 +81,7 @@ codeloop next c-001
 
 ```text
 c-001 moved to interview
-Next: run the /interview skill to write specs/001-export-invoices-as-csv/interview.md, then `codeloop next c-001`.
+Next: run the interview skill to write specs/001-export-invoices-as-csv/interview.md, then `codeloop next c-001`.
 ```
 
 ## Answer the interview
@@ -123,7 +123,7 @@ codeloop next c-001
   Q2 answered: Number, date, customer, gross, status
   Q3 answered: A download from the invoices list; no email, no scheduled export.
 c-001 moved to mock
-Next: run the /mock skill, then `codeloop next c-001`.
+Next: run the mock skill, then `codeloop next c-001`.
 ```
 
 The answers live in `interview.md` next to the research, and the spec stage's brief carries them, so the agent that writes the spec reads what you decided.
@@ -146,7 +146,7 @@ codeloop next c-001
 
 ```text
 c-001 moved to spec
-Next: run the /spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
+Next: run the spec skill to write specs/001-export-invoices-as-csv/tasks.md, then `codeloop next c-001`.
 c-001 is waiting for you at spec (gate spec, owner approves)
 Next: read specs/001-export-invoices-as-csv/tasks.md, then `codeloop approve c-001`, or `codeloop reject c-001 "<what to change>"`.
 ```

@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Bot, BookOpen, Plus, Rocket, Settings, Trash2, Users } from 'lucide-react';
+import { Bot, BookOpen, KeyRound, Plus, Rocket, Settings, Trash2, Users } from 'lucide-react';
 import { PageLayout } from '@/components/shared/page-layout';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { isMissing, useCards, useConfig, useDeletePage, useLanes, usePages, useSavePage } from '@/hooks/use-api';
+import { isMissing, useCanWrite, useChangeBoardAuth, useConfig, useDeletePage, useLanes, usePages, useSavePage, useSession } from '@/hooks/use-api';
 import { AGENT_SNIPPET } from '@/lib/agent-snippet';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
@@ -125,6 +125,63 @@ function PersonasCard({ owner }: { owner: boolean }) {
   );
 }
 
+/** Change who signs in to this board and with what password; refused without the current one. */
+function BoardSignInCard() {
+  const session = useSession();
+  const change = useChangeBoardAuth();
+  const [user, setUser] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const canSubmit = currentPassword.length > 0 && (user.trim().length > 0 || newPassword.length > 0) && !change.isPending;
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    setRefusal(null);
+    try {
+      const result = await change.mutateAsync({ currentPassword, user: user.trim() || undefined, newPassword: newPassword || undefined });
+      toast.success(`Board sign-in updated: user ${result.user}`);
+      setCurrentPassword(''); setNewPassword(''); setUser('');
+    } catch (e) {
+      setRefusal(e instanceof Error ? e.message : 'Could not change the board sign-in');
+    }
+  };
+
+  return (
+    <Card data-testid="settings-board-signin">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><KeyRound className="size-4 text-muted-foreground" />Board sign-in</CardTitle>
+        <CardDescription>Who can answer and approve from the board. The current password is required to change either field.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {session.data?.defaultPassword ? (
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-foreground dark:text-warning" data-testid="default-password-notice">
+            You are using the default password. Set a real one below before sharing this board.
+          </p>
+        ) : null}
+        <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="board-signin-form">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="board-current-password">Current password</Label>
+            <Input id="board-current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" data-testid="board-current-password" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="board-user">New username <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <Input id="board-user" value={user} onChange={(e) => setUser(e.target.value)} placeholder="owner" data-testid="board-user" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="board-new-password">New password <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <Input id="board-new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" data-testid="board-new-password" />
+          </div>
+          {refusal ? <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-2" role="alert" data-testid="board-signin-refusal">{refusal}</p> : null}
+          <div className="sm:col-span-2">
+            <Button type="submit" size="sm" disabled={!canSubmit} data-testid="board-signin-save">{change.isPending ? 'Saving…' : 'Save'}</Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AgentsCard() {
   const config = useConfig();
   const agents = (config.data as { agents?: Record<string, unknown> } | undefined)?.agents;
@@ -167,8 +224,7 @@ function AgentsCard() {
 export default function SettingsPage() {
   const lanes = useLanes();
   const config = useConfig();
-  const { payload } = useCards();
-  const owner = Boolean(payload?.owner);
+  const { canWrite: owner } = useCanWrite();
   const cfg = (config.data ?? {}) as Record<string, unknown>;
   const shown = Object.entries(cfg).filter(([k]) => k !== 'agents' && k !== 'personas');
   return (
@@ -199,6 +255,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
       <PersonasCard owner={owner} />
+      <BoardSignInCard />
       <AgentsCard />
       <Card>
         <CardHeader><CardTitle>Project</CardTitle><CardDescription>The rest of .codeloop/config.yaml as the server reads it.</CardDescription></CardHeader>

@@ -186,7 +186,7 @@ echo "INFO  UI under test: $UI ($(grep -o 'Workspace app: .*\|Static board: .*\|
 
 run_browser() { # run_browser <flow> <label>
   local flow=$1 label=$2 got=0
-  node "$ROOT/scripts/first-user/browser.mjs" "$flow" "$BASE" "$TOKEN" "$UI" c-002 > "$WORK/$flow.out" 2>&1 || got=$?
+  node "$ROOT/scripts/first-user/browser.mjs" "$flow" "$BASE" "owner:codeloop" "$UI" c-002 > "$WORK/$flow.out" 2>&1 || got=$?
   while IFS= read -r line; do
     case "$line" in
       "STEP PASS "*) ok "$label: ${line#STEP PASS }" ;;

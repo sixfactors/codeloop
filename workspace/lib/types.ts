@@ -33,11 +33,13 @@ import type {
   Lane as SdkLane,
   LaneNumbers as SdkLaneNumbers,
   LiveEvent,
+  NextAction,
   Paged2,
   PagesQuery,
   PageWrite,
   Question,
   Rice,
+  Session,
   Stage,
   StoryRow,
   Stats,
@@ -47,7 +49,7 @@ import type {
 } from '@protoboxai/codeloop/sdk';
 
 export { CARD_FACETS } from '@protoboxai/codeloop/sdk';
-export type { CardEvent, Config, LiveEvent, PagesQuery, PageWrite, Question, Stats, Task, WikiShapeCount };
+export type { CardEvent, Config, LiveEvent, NextAction, PagesQuery, PageWrite, Question, Session, Stats, Task, WikiShapeCount };
 export type { CardsQuery, InboxQuery };
 export type CardFacet = CardFilterKey;
 

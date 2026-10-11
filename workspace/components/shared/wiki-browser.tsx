@@ -38,9 +38,14 @@ export function WikiBrowser({ path }: { path: string }) {
   const q = sp.get('q') ?? '';
   const editing = sp.get('edit') === '1';
   const pages = usePages();
-  const cards = useCards();
   const shape = useWikiShape();
   const startHere = usePage(`${WIKI_ROOT}/start-here.md`);
+  // Structural (mounts the editor vs the viewer): the server-computed owner flag, not the
+  // token-dependent canWrite. canWrite is unknowable during SSR (the token lives in the
+  // browser), so gating the component TREE on it mismatches every server-rendered pass for
+  // this route against the client's already-resolved state (React error #418). The editor
+  // itself still disables Save on an invalid token (wiki-page-editor.tsx, via useCanWrite).
+  const cards = useCards();
   const canEdit = cards.payload?.owner !== false;
   // One layout at a time: rendering the content in both a hidden phone column and the desktop
   // panel would mount two editors, two ⌘S listeners and two PUTs (the second one a 409).

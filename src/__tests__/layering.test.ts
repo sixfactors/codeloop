@@ -24,6 +24,7 @@ const EXEMPT_FILES: Record<string, string> = {
   'list.ts': 'skill registry',
   'login.ts': 'skill registry',
   'mock.ts': 'mock scaffolding writes docs/mocks',
+  'open.ts': 'reads serve.json and opens a browser; host-local like serve.ts, no SDK operation',
   'pack.ts': 'skill packaging',
   'publish.ts': 'skill registry',
   'remove.ts': 'skill registry',
