@@ -45,7 +45,7 @@ const reject = async (id: string, note: string | undefined, opts: { as?: string;
   if (result.card.stage !== DROPPED) print(result);
 };
 
-const ROLE = ['--as <role>', 'owner | reviewer | agent (default: owner at a terminal, agent otherwise)'] as const;
+const ROLE = ['--as <role>', 'owner | reviewer | agent (default: owner; agent inside an agent run)'] as const;
 
 // The story standard's fields (docs/story-standard.md), the same on new, propose and start.
 function storyOptions(command: Command): Command {

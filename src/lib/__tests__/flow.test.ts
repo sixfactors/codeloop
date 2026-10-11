@@ -177,22 +177,41 @@ describe('refusals', () => {
 describe('split, done and drop free lane slots without leaving duplicates', () => {
   const STAGES = `  - id: one\n    done: { cmd: "false" }\n`;
 
-  it('split refuses up front when the children do not fit, and makes none', async () => {
+  it('split never asks for more slots: the first child takes the parent\'s, the rest wait in Up next', async () => {
     const { splitCard } = await import('../services.js');
     lane('build', STAGES, 'wip: 2\n');
     createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
     createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' });
-    expect(() => splitCard(dir, 'c-002', ['Export my todos as a CSV file', 'Export my todos as a JSON file', 'Export my todos as a PDF file'], 'owner')).toThrow(/needs 3 slots/);
-    expect(readCards(dir).cards.map(c => c.id)).toEqual(['c-001', 'c-002']);
+    const { cards } = splitCard(dir, 'c-002', ['Export my todos as a CSV file', 'Export my todos as a JSON file', 'Export my todos as a PDF file'], 'owner');
+    expect(cards.map(c => c.stage)).toEqual(['one', 'queued', 'queued']);
+    expect(cards.every(c => c.split_from === 'c-002')).toBe(true);
+    expect(readCards(dir).cards.find(c => c.id === 'c-002')?.stage).toBe('done');
+    // Run again from the start: no duplicates, because the parent is already done.
+    expect(() => splitCard(dir, 'c-002', ['Export my todos as a CSV file'], 'owner')).toThrow();
+    expect(readCards(dir).cards).toHaveLength(5);
   });
 
-  it('split counts the parent as freed, makes every child and ends the parent', async () => {
+  it('split children resume at the parent\'s stage, and a queued child is promoted there when a slot opens', async () => {
     const { splitCard } = await import('../services.js');
-    lane('build', STAGES, 'wip: 2\n');
+    const { promoteQueued, closeCard } = await import('../engine.js');
+    lane('build', `  - id: one\n    done: { cmd: "true" }\n  - id: two\n    done: { cmd: "false" }\n`, 'wip: 1\n');
     createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-001' });
+    advanceCard(dir, 'c-001');
     const { cards } = splitCard(dir, 'c-001', ['Export my todos as a CSV file', 'Export my todos as a JSON file'], 'owner');
-    expect(cards.map(c => c.title)).toEqual(['Export my todos as a CSV file', 'Export my todos as a JSON file']);
-    expect(readCards(dir).cards.find(c => c.id === 'c-001')?.stage).toBe('done');
+    expect(cards.map(c => c.stage)).toEqual(['two', 'queued']);
+    expect(promoteQueued(dir)).toEqual([]);
+    closeCard(dir, cards[0].id, 'owner', 'done');
+    expect(promoteQueued(dir).map(c => [c.id, c.stage])).toEqual([[cards[1].id, 'two']]);
+  });
+
+  it('a story waiting at a gate does not keep a queued story out', async () => {
+    const { queueCard, promoteQueued } = await import('../engine.js');
+    lane('build', `  - id: one\n    done: { cmd: "true" }\n    gate: { name: copy, approver: owner }\n  - id: two\n    done: { cmd: "false" }\n`, 'wip: 1\n');
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    advanceCard(dir, 'c-001');
+    expect(readCards(dir).cards[0].gate).toBe('copy');
+    queueCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' });
+    expect(promoteQueued(dir).map(c => c.id)).toEqual(['c-002']);
   });
 
   it('done and drop are the owner\'s, free the slot, and drop needs a reason', async () => {

@@ -414,14 +414,15 @@ export function parkStuck(projectDir: string, opts: Clock = {}): string[] {
 }
 
 /** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */
-export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock = {}): Card {
-  if (role === 'agent') throw new RefusalError('starting a card past the first stage is the owner\'s decision');
+export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean } = {}): Card {
+  // A split carries its parent's stage over; the decision was the split, which any role may make.
+  if (role === 'agent' && !opts.structural) throw new RefusalError('starting a card past the first stage is the owner\'s decision');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
   const now = opts.now ?? clock();
-  const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }
@@ -497,16 +498,17 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
       if (opts.lane && c.lane !== opts.lane) return false;
       if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
       const lane = loadLane(projectDir, c.lane);
-      const active = file.cards.filter(x => x.lane === c.lane && inLane(x)).length;
+      const active = file.cards.filter(x => x.lane === c.lane && workable(x)).length;
       return lane.wip === undefined || active < lane.wip;
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
+    const entry = lane.stages.find(s => s.id === ready.start_stage) ?? lane.stages[0];
     const card: Card = {
       ...ready,
-      stage: lane.stages[0].id,
+      stage: entry.id,
       laneVersion: lane.version,
-      events: [...ready.events, event(now, 'engine', 'promote', lane.stages[0].id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`)],
+      events: [...ready.events, event(now, 'engine', 'promote', entry.id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`)],
       updatedAt: now.toISOString(),
     };
     parkIfOutward(card, lane, now);

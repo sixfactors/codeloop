@@ -50,6 +50,8 @@ export interface CardExtras {
   split_from?: string;
   /** The card this one is queued behind: it holds no lane slot until that card reaches `done`. */
   after?: string;
+  /** The stage a queued card enters when promoted; split children resume at their parent's stage. */
+  start_stage?: string;
 }
 
 export interface Card extends StoryFields, CardExtras {

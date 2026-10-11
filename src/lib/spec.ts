@@ -89,7 +89,7 @@ export function checkSpec(projectDir: string, dir: string): string[] {
   const errors: string[] = [];
   // An L is three days or more: the standard says split it before it passes the spec gate.
   const card = readCards(projectDir).cards.find(c => c.spec === dir);
-  if (card?.size === 'L' || specSize(projectDir, dir) === 'L') errors.push(`${card?.id ?? dir} is size L: split it into S or M children with \`epic: ${card?.id ?? '<parent>'}\` before the spec gate`);
+  if (card?.size === 'L' || specSize(projectDir, dir) === 'L') errors.push(`${card?.id ?? dir} is size L: split it into S or M stories before the spec gate: \`codeloop card split ${card?.id ?? '<id>'} "<first story>" "<second story>"\``);
   // The story standard's shape, each as its own named failure so an agent can fix the one line.
   const spec = read(projectDir, dir, 'spec.md');
   const field = (name: string) => spec.split('\n').find(l => l.startsWith(`${name}:`))?.slice(name.length + 1).replace(/<!--.*?-->/g, '').trim();

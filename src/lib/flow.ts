@@ -3,7 +3,7 @@ import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFiel
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
 
-const usesSpec = (lane: Lane) => lane.stages.some(s => `${s.output ?? ''} ${s.done?.cmd ?? ''}`.includes('{spec}') || s.done?.cmd?.includes('codeloop spec check'));
+export const usesSpec = (lane: Lane) => lane.stages.some(s => `${s.output ?? ''} ${s.done?.cmd ?? ''}`.includes('{spec}') || s.done?.cmd?.includes('codeloop spec check'));
 
 /** Creates the card and, for a lane whose stages work in a spec folder, the folder too. */
 export function startCard(projectDir: string, input: { lane: string; title: string; id?: string; role?: Role; fields?: CardFields }): Card {

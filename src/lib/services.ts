@@ -9,19 +9,19 @@ import { homedir } from 'os';
 import { basename, dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
-import { DONE, DROPPED, findCard, inLane, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
+import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
-import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
+import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, queueCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
 import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
-import { approveFlow, describeAdvance, nextHint, stageBrief, startCard } from './flow.js';
+import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec } from './flow.js';
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
 import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { MOCKS_DIR } from './mock.js';
-import { readTasks, type Task } from './spec.js';
+import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
 import { computeStats, type Stats } from './stats.js';
 import { listFilter, migrateStories, storyFields, type StoryFlags } from './story.js';
@@ -274,18 +274,34 @@ export function splitCard(projectDir: string, ref: string, titles: string[], who
   if (!clean.length) throw new RefusalError('titles (one per new card) are required');
   // Every title is checked before any card is made, so a bad third title does not leave two behind.
   for (const t of clean) storyFields(splitTicket(t).title, {});
-  // All children fit, counting the parent's slot as freed, or none is made: a split that stops
-  // halfway leaves duplicates behind when it is run again.
+  if (from.stage === DONE || from.stage === DROPPED) throw new RefusalError(`card ${from.id} is already ${from.stage}`);
   const lane = loadLane(projectDir, from.lane);
-  assertRoomInLane(readCards(projectDir).cards, lane, clean.length, [from.id]);
+  const role = who ?? 'agent';
+  const resume = inLane(from) ? from.stage : undefined;
+  // The parent's slot passes to the first child and the rest wait in Up next holding none, so a
+  // split never needs room the lane does not have. A lane already over its limit queues all of them.
+  let firstStarts = resume !== undefined;
+  if (firstStarts) {
+    try { assertRoomInLane(readCards(projectDir).cards, lane, 1, [from.id]); } catch { firstStarts = false; }
+  }
   const inherited = { initiative: from.initiative, epic: from.epic, feature: from.feature, metric: from.metric };
-  if (inLane(from)) closeCardLib(projectDir, from.id, who ?? 'agent', 'done', `split into ${clean.length} stories`, { structural: true });
-  const cards = clean.map(t => {
+  if (inLane(from)) closeCardLib(projectDir, from.id, role, 'done', `split into ${clean.length} stories`, { structural: true });
+  const parentResearch = from.spec ? join(projectDir, from.spec, 'research.md') : undefined;
+  const cards = clean.map((t, i) => {
     const { title, ticket } = splitTicket(t);
-    return startCard(projectDir, { lane: from.lane, title, role: who ?? 'agent', fields: { ...storyFields(title, inherited), ...(ticket ?? from.ticket ? { ticket: ticket ?? from.ticket } : {}), split_from: from.id } });
+    const fields = { ...storyFields(title, inherited), ...(ticket ?? from.ticket ? { ticket: ticket ?? from.ticket } : {}), split_from: from.id, ...(resume ? { start_stage: resume } : {}) };
+    let card = i === 0 && firstStarts ? createCard(projectDir, { lane: from.lane, title, role, fields }) : queueCard(projectDir, { lane: from.lane, title, role, fields });
+    if (card.stage !== QUEUED && resume && card.stage !== resume) card = placeCardLib(projectDir, card.id, resume, role, { structural: true, note: `split from ${from.id} at ${resume}` });
+    if (usesSpec(lane)) {
+      const { dir } = newSpec(projectDir, card.id, role);
+      // Research was done once for the parent; each child starts from it instead of a blank page.
+      if (parentResearch && existsSync(parentResearch)) writeFileSync(join(projectDir, dir, 'research.md'), readFileSync(parentResearch, 'utf-8'));
+      card = findCard(readCards(projectDir).cards, card.id);
+    }
+    return card;
   });
-  recordEvent(projectDir, from.id, () => ({ action: 'split', actor: who ?? 'agent', human: who === 'owner' || who === 'reviewer', note: `into ${cards.map(c => c.id).join(', ')}` }));
-  return { from, cards, hints: cards.map(c => nextHint(projectDir, c)) };
+  recordEvent(projectDir, from.id, () => ({ action: 'split', actor: role, human: who === 'owner' || who === 'reviewer', note: `into ${cards.map(c => c.id).join(', ')}` }));
+  return { from, cards, hints: cards.map(c => (c.stage === QUEUED ? `Next: ${c.id} waits in Up next and starts when a slot opens.` : nextHint(projectDir, c))) };
 }
 
 // --- setup: what init detects, the skills index, where the project stands -------------------

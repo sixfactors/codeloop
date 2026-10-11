@@ -64,7 +64,7 @@ describe('story standard', () => {
     write(`${SPEC}/tasks.md`, read(`${SPEC}/tasks.md`) + '\n- [ ] T001 [US1] [api] Export endpoint\n');
     expect(checkSpec(dir, SPEC)).toEqual([]);
     write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^size:.*$/m, 'size: L'));
-    expect(checkSpec(dir, SPEC)).toEqual(['c-001 is size L: split it into S or M children with `epic: c-001` before the spec gate']);
+    expect(checkSpec(dir, SPEC)).toEqual(['c-001 is size L: split it into S or M stories before the spec gate: `codeloop card split c-001 "<first story>" "<second story>"`']);
   });
 
   it('list hides dropped proposals unless --all, and filters on the story fields', () => {
