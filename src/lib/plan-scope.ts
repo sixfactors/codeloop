@@ -1,7 +1,7 @@
 import { loadConfig } from './config.js';
 import { existsSync, readFileSync } from 'fs';
 import { isAbsolute, join, relative } from 'path';
-import type { Card } from './cards.js';
+import { cardKey, type Card } from './cards.js';
 
 /**
  * The `## Files` list in a card's plan.md, one path per `- ` line. Undefined when the section is
@@ -59,4 +59,18 @@ function globToRegExp(glob: string): RegExp {
     else out += SPECIAL.includes(c) ? `\\${c}` : c;
   }
   return new RegExp(`^${out}$`);
+}
+
+/**
+ * Paths the plan check never governs: anything outside the repo (a session's scratch notes), the
+ * codeloop folder itself, and the story's own working papers (its spec folder, evidence, use cases).
+ * The plan lists the source files a story changes, not where its author drafts.
+ */
+export function outsidePlanScope(projectDir: string, card: Card, path: string): boolean {
+  const abs = isAbsolute(path) ? path : join(projectDir, path);
+  const rel = relative(projectDir, abs);
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) return rel !== '';
+  const nnn = cardKey(card);
+  const own = ['.codeloop/', `evidence/${nnn}/`, `usecases/${nnn}/`, `shape/${card.id}/`, ...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : [])];
+  return own.some(prefix => rel === prefix.slice(0, -1) || rel.startsWith(prefix));
 }

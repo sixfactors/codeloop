@@ -16,7 +16,11 @@ export const verifyCommand = new Command('verify')
   .action(guard(async (ref: string, opts: { mutate?: boolean; env?: string; record: boolean }) => {
     const result = await verify(process.cwd(), ref, opts);
     if (result.problem) console.error(chalk.red(`  ${result.problem}`));
-    result.missing.forEach(us => console.error(chalk.red(`  acceptance line ${us} has no use case in usecases/`)));
+    result.missing.forEach(us => console.error(chalk.red(`  acceptance line ${us} has no use case: add a file in ${result.usecaseDir}/ whose \`accept:\` is ${us}`)));
+    if (result.missing.length) {
+      const n = result.usecaseDir?.split('/').pop() ?? 'nnn';
+      console.error(chalk.dim(`  for example ${result.usecaseDir}/uc-${n}-01.yaml:\n    id: uc-${n}-01\n    accept: ${result.missing[0]}\n    failure_mode: "what breaks if this is wrong"\n    layers:\n      cli: { run: "npm test -- <the test>", expect: { exit: 0 } }`));
+    }
     for (const c of result.cases) {
       console.log(`  ${c.pass ? chalk.green('pass') : chalk.red('FAIL')} ${c.id} (${c.accept}) ${c.layers.map(l => l.layer).join(', ') || 'no runnable layer'}`);
       c.layers.filter(l => !l.pass).forEach(l => console.error(chalk.dim(l.output.split('\n').map(x => `      ${x}`).join('\n'))));

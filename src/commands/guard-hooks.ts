@@ -9,7 +9,7 @@ import { findCard, inLane, readCards, type Card } from '../lib/cards.js';
 import { listCards } from '../lib/services.js';
 import { resolveRole } from '../lib/engine.js';
 import { openQuestions } from '../lib/interview.js';
-import { isSharedPath, pathInPlan, planFiles } from '../lib/plan-scope.js';
+import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
 import { cardCommand } from './card.js';
 import { guard } from './guard.js';
 
@@ -84,6 +84,7 @@ guardCommand
       process.exit(2);
     }
     if (!path) return;
+    if (outsidePlanScope(projectDir, card, path)) return;
     // Another live session's card claims the files its plan lists: refused here, naming that card,
     // so two sessions in one repo never edit the same file from different stories.
     for (const other of isSharedPath(projectDir, path) ? [] : activeSessions(projectDir)) {

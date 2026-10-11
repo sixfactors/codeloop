@@ -44,6 +44,25 @@ describe('verify', () => {
     expect(existsSync(join(dir, 'evidence/001/verify.md'))).toBe(false);
   });
 
+  it('names where the missing use case goes', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    const result = await verify(dir, '001');
+    expect(result.usecaseDir).toBe('usecases/001');
+  });
+
+  it('rewrites only its own block of verify.md and keeps what a person added', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+    await verify(dir, '001');
+    const file = join(dir, 'evidence/001/verify.md');
+    writeFileSync(file, readFileSync(file, 'utf-8') + '\n## Clean export run\n\nran on a fresh clone: pass\n');
+    await verify(dir, '001');
+    const text = readFileSync(file, 'utf-8');
+    expect(text).toContain('## Clean export run');
+    expect(text.match(/codeloop verify: start/g)).toHaveLength(1);
+    expect(text).toContain('result: pass');
+  });
+
   it('records a failing use case as evidence on the card and exits 1', async () => {
     write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - { id: verify, done: { cmd: "true" } }\n');
     createCard(dir, { lane: 'build', title: 't', id: 'c-1' });

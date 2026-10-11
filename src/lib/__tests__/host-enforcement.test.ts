@@ -113,6 +113,16 @@ describe('guard edit (PreToolUse hook)', () => {
     expect(cli(['guard', 'edit', 'src/also/ok.ts']).status).toBe(0);
   });
 
+  it('never governs paths outside the repo, the codeloop folder, or the story\'s own working papers', () => {
+    writeCard('c-2', 'build', { spec: 'specs/c-2' });
+    write('specs/c-2/plan.md', '# c-2 plan\n\n## Files\n\n- src/allowed.ts\n');
+    setActiveCard(dir, 'c-2');
+    for (const p of [join(tmpdir(), 'scratch', 'notes.md'), '.codeloop/wiki/gotchas/x.md', 'specs/c-2/research.md', 'evidence/002/verify.md', 'usecases/002/uc-002-01.yaml']) {
+      expect(cli(['guard', 'edit', p]).status, p).toBe(0);
+    }
+    expect(cli(['guard', 'edit', 'src/other.ts']).status).toBe(2);
+  });
+
   it('only warns, and exits 0, when the plan has no `## Files` list yet', () => {
     writeCard('c-3', 'spec', { spec: 'specs/c-3' });
     write('specs/c-3/plan.md', '# c-3 plan\n\n## Files\n\n');

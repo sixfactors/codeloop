@@ -37,23 +37,31 @@ take by just saying so. Bad work asks five questions whose answers are already o
 ## Procedure
 
 1. Read the card and its research verdict: `codeloop card show {id}`.
-2. Draft `spec.md`'s fields in your head, story, feature, size, metric, done_when, acceptance.
-   Mark every field where more than one answer is plausible.
-3. For each uncertain field, write one question in one of four categories:
-   - **scope**, what is and isn't in this card (feeds "Not building")
-   - **acceptance**, what proves it, in which layer (feeds the `USn` lines)
-   - **risk**, the riskiest assumption, and what guards it (feeds "Failure modes")
-   - **boundary**, where this card's slice ends and the next one starts (feeds `size` and split)
-   A fifth question outside these four is allowed only when it would otherwise block every other
-   answer (e.g. "which of two conflicting docs is current").
-4. Give every question a `recommended:` answer, your best default. The owner may not reply before
-   the card needs to move; the recommended answer is what gets taken on `--accept`, and a question
-   with no recommended answer has nothing an owner in a hurry can accept.
+2. Scan the story for gaps, category by category, and mark each clear, partial or missing:
+   scope and out of scope; who it is for; the data it touches and its states; the user flow
+   including empty, error and loading states; quality targets (speed, scale, reliability,
+   security, privacy); integrations and their failure modes; edge cases (concurrent edits,
+   limits, bad input); constraints and rejected alternatives; terminology; and how done is
+   proven (each acceptance line testable). A domain implication the story ignores (auth
+   silent on security, payments silent on refunds) is a gap: flag it, never invent the answer.
+3. Rank the gaps by impact times uncertainty and keep at most five questions. Drop any whose
+   answer would not change the build, the tests or the user's experience, and any about how
+   to implement (that is the spec and build stages' job).
+4. Write each question the same way:
+   - a full question ending in `?`, readable on its own (never a label like "Acceptance matrix"),
+   - one plain sentence on why it matters,
+   - `recommended:` the option you would take and why, in one or two sentences,
+   - two to five mutually exclusive options, or a short answer of at most five words.
+   In a chat with the person, ask **one question at a time** and wait; never show the queue.
+   Headless, write all of them to the output file and stop.
 5. Write the `## Qn` blocks straight into this stage's output file, the path the brief names
    (`specs/{id}/interview.md` for a build story, `shape/{id}/interview.md` for a shaping story).
    codeloop reads the questions from that file: the board and the inbox show them as soon as it is
    saved, with nothing else to run. To add questions to a file that already has some, use
    `codeloop ask {id} --file <path>`, which numbers on from the last.
+5b. As each answer lands, record it on the story the same moment (it becomes a decisions-log
+   line), and update the spec field it settles. Anything decided without the person's
+   confirmation is an `assumption:` line; anything still open is an `open question:` line.
 6. Wait for answers. Read them back with `codeloop card show {id}` or from the same output file;
    each answer is recorded as a human event on the card.
 7. Fold every answered question into `spec.md` before the spec stage starts. An answer that never

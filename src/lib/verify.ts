@@ -27,10 +27,15 @@ export interface LayerResult {
   output: string;
 }
 
+export const VERIFY_START = '<!-- codeloop verify: start -->';
+export const VERIFY_END = '<!-- codeloop verify: end -->';
+
 export interface VerifyResult {
   exitCode: number;
   sha: string;
   missing: string[];
+  /** Where this card's use cases live, so a refusal can name the file to add. */
+  usecaseDir?: string;
   cases: { id: string; accept: string; pass: boolean; layers: LayerResult[] }[];
   vacuous: string[];
   mutate?: string;
@@ -137,7 +142,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   const acceptance = readAcceptance(projectDir, resolveSpecDir(projectDir, ref));
   const cases = loadUseCases(projectDir, nnn);
   const sha = git(projectDir, ['rev-parse', 'HEAD']);
-  const result: VerifyResult = { exitCode: 0, sha, missing: acceptance.filter(us => !cases.some(uc => uc.accept === us)), cases: [], vacuous: [] };
+  const result: VerifyResult = { exitCode: 0, sha, usecaseDir: `usecases/${nnn}`, missing: acceptance.filter(us => !cases.some(uc => uc.accept === us)), cases: [], vacuous: [] };
   // Nothing to check is not a pass: no acceptance lines or no use cases must stop the stage.
   if (acceptance.length === 0) return { ...result, exitCode: 2, problem: `the spec for ${ref} has no acceptance lines (\`- US1 Given ...\`), so there is nothing to verify` };
   if (result.missing.length) return { ...result, exitCode: 2 };
@@ -157,7 +162,14 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
 
   const passed = result.cases.every(c => c.pass);
   const rows = result.cases.map(c => `| ${c.id} | ${c.accept} | ${c.layers.map(l => `${l.layer} ${l.pass ? 'pass' : 'FAIL'}`).join(', ') || 'no runnable layer'} |`);
-  writeFileSync(join(out, 'verify.md'), [`# Verify ${ref}`, '', `result: ${passed ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, ''].join('\n'));
+  // Only the marked block is rewritten: what a person adds to verify.md outside it (a clean-export
+  // run, a table of guards) survives every later verify.
+  const block = [VERIFY_START, `# Verify ${ref}`, '', `result: ${passed ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, VERIFY_END].join('\n');
+  const file = join(out, 'verify.md');
+  const before = existsSync(file) ? readFileSync(file, 'utf-8') : '';
+  const at = before.indexOf(VERIFY_START), end = before.indexOf(VERIFY_END);
+  const kept = at >= 0 && end > at ? before.slice(0, at) + block + before.slice(end + VERIFY_END.length) : `${block}\n${before ? `\n${before}` : ''}`;
+  writeFileSync(file, kept.endsWith('\n') ? kept : `${kept}\n`);
   if (card && opts.record !== false) {
     annotateCard(projectDir, card.id, { evidence: `evidence/${nnn}/verify.md` }, 'verify', { note: `result: ${passed ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
   }
