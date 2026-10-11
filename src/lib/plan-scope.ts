@@ -20,14 +20,30 @@ export function planFiles(projectDir: string, card: Card): string[] | undefined 
   const files = [...text.matchAll(/^## Files[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/gm)]
     .flatMap(m => m[1].split('\n'))
     .map(line => /^-\s+(.+)$/.exec(line.trim())?.[1]?.trim())
+    .map(entry => (entry ? planEntryPath(entry) : undefined))
     .filter((f): f is string => Boolean(f));
   return files.length ? files : undefined;
 }
 
-/** True when `path` (absolute under the project, or already relative to it) is inside one of `files`. */
+/**
+ * The path in one `## Files` line. Plans write paths as code (`` `src/a.ts` ``) and often follow
+ * them with a note (`(new)`, `: why`), so a literal comparison never matched a planned file.
+ */
+function planEntryPath(entry: string): string | undefined {
+  const quoted = /^`([^`]+)`/.exec(entry);
+  const raw = quoted ? quoted[1] : entry.split(/\s+|:\s/)[0];
+  const path = raw.trim().replace(/^\.\//, '').replace(/[:,;]$/, '');
+  return path || undefined;
+}
+
+/** True when `path` (absolute under the project, or already relative to it) is inside one of `files`: an exact path, a folder, or a glob. */
 export function pathInPlan(projectDir: string, files: string[], path: string): boolean {
-  const rel = isAbsolute(path) ? relative(projectDir, path) : path;
-  return files.some(f => rel === f || rel.startsWith(`${f}/`) || f.startsWith(`${rel}/`));
+  const rel = (isAbsolute(path) ? relative(projectDir, path) : path).replace(/^\.\//, '');
+  return files.some(entry => {
+    const f = entry.replace(/\/$/, '');
+    if (/[*?]/.test(f)) return globToRegExp(f).test(rel);
+    return rel === f || rel.startsWith(`${f}/`) || f.startsWith(`${rel}/`);
+  });
 }
 
 /**
