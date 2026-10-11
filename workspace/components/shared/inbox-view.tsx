@@ -46,15 +46,19 @@ function toInboxQuery(f: SearchAndFilterValue): Omit<InboxQuery, 'shippedSince'>
 
 const waitedSince = (c: InboxCard) => c.since ?? c.first ?? c.updatedAt ?? '';
 
-/** Score descending, then the longest wait first; the server's order already, re-applied to the rows on the page. */
-function rank(cards: InboxCard[]): InboxCard[] {
+/**
+ * Score descending, then the longest wait first; the server's order already, re-applied to the
+ * rows on the page. Exported for the hub home, which groups gates the same way across every
+ * project, not just this one.
+ */
+export function rank(cards: InboxCard[]): InboxCard[] {
   return cards.map((c, i) => [c, i] as const)
     .sort(([a, ai], [b, bi]) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || waitedSince(a).localeCompare(waitedSince(b)) || ai - bi)
     .map(([c]) => c);
 }
 
-type Group = { band: Band | 'none'; label: string; cards: InboxCard[] };
-function groupByBand(cards: InboxCard[]): Group[] {
+export type Group = { band: Band | 'none'; label: string; cards: InboxCard[] };
+export function groupByBand(cards: InboxCard[]): Group[] {
   const groups: Group[] = [...BANDS.map((b) => ({ band: b, label: BAND_LABEL[b], cards: [] as InboxCard[] })), { band: 'none', label: 'Unranked', cards: [] }];
   for (const c of cards) (groups.find((g) => g.band === (c.band ?? 'none')) ?? groups[groups.length - 1]).cards.push(c);
   return groups.filter((g) => g.cards.length);

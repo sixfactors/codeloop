@@ -4,12 +4,12 @@ import { hostname } from 'os';
 import { join } from 'path';
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { getActiveCard, setActiveCard } from '../lib/active-card.js';
+import { activeSessions, clearActiveCard, currentSession, getActiveCard, setActiveCard } from '../lib/active-card.js';
 import { findCard, inLane, readCards, type Card } from '../lib/cards.js';
 import { listCards } from '../lib/services.js';
 import { resolveRole } from '../lib/engine.js';
 import { openQuestions } from '../lib/interview.js';
-import { pathInPlan, planFiles } from '../lib/plan-scope.js';
+import { isSharedPath, pathInPlan, planFiles } from '../lib/plan-scope.js';
 import { cardCommand } from './card.js';
 import { guard } from './guard.js';
 
@@ -55,8 +55,9 @@ cardCommand
   .description('Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this')
   .action(guard(async (id: string) => {
     const card = findCard(readCards(process.cwd()).cards, id);
-    setActiveCard(process.cwd(), card.id);
-    console.log(`  active card: ${card.id}  ${card.title}`);
+    const session = currentSession();
+    setActiveCard(process.cwd(), card.id, session);
+    console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
   }));
 
 export const guardCommand = new Command('guard').description('Hooks that enforce the codeloop protocol regardless of what the chat says');
@@ -69,7 +70,8 @@ guardCommand
     const input = await readStdinJson();
     const toolInput = input.tool_input as { file_path?: string; path?: string } | undefined;
     const path = pathArg ?? toolInput?.file_path ?? toolInput?.path;
-    const activeId = getActiveCard(projectDir);
+    const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    const activeId = getActiveCard(projectDir, session);
     if (!activeId) {
       console.error(chalk.red('codeloop: no active card for this repo, `codeloop start "<title>"` or `codeloop card activate <id>` first'));
       process.exit(2);
@@ -82,6 +84,18 @@ guardCommand
       process.exit(2);
     }
     if (!path) return;
+    // Another live session's card claims the files its plan lists: refused here, naming that card,
+    // so two sessions in one repo never edit the same file from different stories.
+    for (const other of isSharedPath(projectDir, path) ? [] : activeSessions(projectDir)) {
+      if (other.session === session || other.card === card.id) continue;
+      let theirs;
+      try { theirs = findCard(readCards(projectDir).cards, other.card); } catch { continue; }
+      const leased = planFiles(projectDir, theirs);
+      if (leased && pathInPlan(projectDir, leased, path)) {
+        console.error(chalk.red(`codeloop: ${path} belongs to ${theirs.id} (${theirs.title}), which another session is working. Pick another file, or wait for it to finish.`));
+        process.exit(2);
+      }
+    }
     const files = planFiles(projectDir, card);
     if (!files) {
       console.error(chalk.yellow(`codeloop: ${card.id} has no \`## Files\` list in its plan.md yet; not enforced`));
@@ -113,7 +127,8 @@ guardCommand
   .action(async () => {
     const projectDir = process.cwd();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
-    const activeId = getActiveCard(projectDir);
+    const input = await readStdinJson();
+    const activeId = getActiveCard(projectDir, currentSession(typeof input.session_id === 'string' ? input.session_id : undefined));
     if (activeId) {
       let card;
       try {
@@ -165,12 +180,21 @@ guardCommand
   });
 
 guardCommand
+  .command('release')
+  .description("SessionEnd hook: releases this session's active story, so its files are free for other sessions")
+  .action(async () => {
+    const input = await readStdinJson();
+    const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    if (session) clearActiveCard(process.cwd(), session);
+  });
+
+guardCommand
   .command('prompt')
   .description("UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)")
   .action(async () => {
     const projectDir = process.cwd();
     const input = await readStdinJson();
-    const activeId = getActiveCard(projectDir);
+    const activeId = getActiveCard(projectDir, currentSession(typeof input.session_id === 'string' ? input.session_id : undefined));
     if (!activeId) {
       // A repo with open stories and none active: the board's priority order decides what a session
       // works on, not the chat. Exit 2 blocks the prompt and shows the list. A repo with no stories

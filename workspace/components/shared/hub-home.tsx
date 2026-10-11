@@ -1,98 +1,206 @@
 'use client';
 
 // The hub's own `/`: every registered project, and what needs a person across all of them, in one
-// server-computed response each (hub.ts's /api/hub/projects and /api/hub/needs-you). No project is
-// selected here, so this never goes through the project-scoped card/board components — switching
-// into one is a plain link, a full navigation, never client-side routing.
+// server-computed response each (hub.ts's /api/hub/projects — now carrying each project's own
+// active/waiting/stuck counts — and /api/hub/needs-you). No project is selected here, so this
+// never goes through the project-scoped card/board components; switching into one is a plain
+// link, a full navigation, never client-side routing, same as the rest of the hub (see
+// components/shared/project-switcher.tsx).
+//
+// Renders inside the same AppShell as every other page (components/shared/app-shell.tsx picks a
+// "Projects" sidebar instead of "Work"/"Knowledge" when there is no project in scope) — this page
+// is the shell's body, not a separate layout.
 
+import { useMemo } from 'react';
+import { AlertCircle, Boxes, CheckCircle2, HelpCircle, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Boxes, HelpCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
+import { EntityCard } from '@/components/shared/entity-card';
 import { PageLayout } from '@/components/shared/page-layout';
-import { api, type HubNeedsYou, type ListedProject } from '@/lib/api';
+import { PageSkeleton } from '@/components/shared/page-skeleton';
+import { AttributeCard } from '@/components/shared/record-layout';
+import { FieldRow } from '@/components/shared/field-row';
+import { MetaChip } from '@/components/shared/meta-chip';
+import { BAND_LABEL, BandChip } from '@/components/shared/band-chip';
+import { ToneBadge } from '@/components/shared/board-card';
+import { groupByBand, rank } from '@/components/shared/inbox-view';
+import { api, type HubGateItem, type HubNeedsYou, type HubQuestionItem, type ListedProject } from '@/lib/api';
+
+/** Per project, in one "Needs you" card: more than this and the rest collapse to a count, the
+ * same long-tail treatment as proposals — a project with many open questions should not push
+ * every other project off the screen. */
+const QUESTIONS_SHOWN = 6;
+
+/** One registered project's share of the hub-wide needs-you feed: real gates (grouped by band,
+ * same as a single project's own inbox), proposals collapsed to a count (the long tail — a busy
+ * backlog can run to dozens, next to a handful of real gates), and open questions. */
+interface ProjectNeeds {
+  project: string;
+  projectName: string;
+  gates: HubGateItem[];
+  proposals: number;
+  questions: HubQuestionItem[];
+}
+
+function groupNeedsByProject(data: HubNeedsYou): ProjectNeeds[] {
+  const byProject = new Map<string, ProjectNeeds>();
+  const groupFor = (id: string, name: string) => {
+    let g = byProject.get(id);
+    if (!g) { g = { project: id, projectName: name, gates: [], proposals: 0, questions: [] }; byProject.set(id, g); }
+    return g;
+  };
+  for (const gate of data.gates) {
+    const g = groupFor(gate.project, gate.projectName);
+    if (gate.gate === 'proposal') g.proposals += 1;
+    else g.gates.push(gate);
+  }
+  for (const q of data.questions) groupFor(q.project, q.projectName).questions.push(q);
+  // Busiest project first: the one needing the most attention leads.
+  return [...byProject.values()].sort((a, b) => (b.gates.length + b.proposals + b.questions.length) - (a.gates.length + a.proposals + a.questions.length));
+}
 
 export function HubHome() {
   const projects = useQuery({ queryKey: ['hub', 'projects'], queryFn: api.hub.projects, retry: false });
   const needsYou = useQuery({ queryKey: ['hub', 'needs-you'], queryFn: api.hub.needsYou, retry: false });
 
   const known = (projects.data ?? []).filter((p) => !p.missing);
+  const missingCount = (projects.data ?? []).filter((p) => p.missing).length;
+  const loading = projects.isLoading || needsYou.isLoading;
+  const groups = useMemo(() => (needsYou.data ? groupNeedsByProject(needsYou.data) : []), [needsYou.data]);
 
   return (
     <PageLayout icon={Boxes} title="Codeloop" description="Every registered project, on one board.">
       <div className="flex flex-col gap-6">
-        <NeedsYouSection needsYou={needsYou.data} loading={needsYou.isLoading} />
-        <section>
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">Projects</h3>
-          {projects.isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : known.length === 0 ? (
-            <EmptyState icon={Boxes} title="No projects registered yet" description="Run codeloop serve or codeloop init in a project to add it here." />
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {known.map((p) => <ProjectCard key={p.id} project={p} gateCount={countFor(needsYou.data, p.id)} />)}
-            </div>
-          )}
-          {(projects.data ?? []).some((p) => p.missing) && (
-            <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <AlertCircle className="size-3.5" /> {(projects.data ?? []).filter((p) => p.missing).length} registered project{(projects.data ?? []).filter((p) => p.missing).length === 1 ? '' : 's'} no longer on disk — <code>codeloop projects remove &lt;id&gt;</code> drops one.
-            </p>
-          )}
-        </section>
+        {loading ? (
+          <PageSkeleton statCards={0} showToolbar={false} tableRows={3} />
+        ) : known.length === 0 ? (
+          <EmptyState icon={Boxes} title="No projects registered yet" description="Run codeloop serve or codeloop init in a project to add it here." />
+        ) : (
+          <>
+            <section>
+              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Projects</h3>
+              <ProjectGrid projects={known} />
+              {missingCount > 0 && (
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <AlertCircle className="size-3.5" /> {missingCount} registered project{missingCount === 1 ? '' : 's'} no longer on disk. <code>codeloop projects remove &lt;id&gt;</code> drops one.
+                </p>
+              )}
+            </section>
+            <section>
+              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Needs you</h3>
+              {groups.length === 0 ? (
+                <EmptyState compact icon={CheckCircle2} title="Nothing needs you" description="A gate, a proposal or a question waiting in any project shows up here." />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {groups.map((g) => <ProjectNeedsCard key={g.project} group={g} />)}
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </PageLayout>
   );
 }
 
-function countFor(needsYou: HubNeedsYou | undefined, projectId: string): number {
-  if (!needsYou) return 0;
-  return needsYou.gates.filter((g) => g.project === projectId).length + needsYou.questions.filter((q) => q.project === projectId).length;
-}
-
-function ProjectCard({ project, gateCount }: { project: ListedProject; gateCount: number }) {
+function ProjectGrid({ projects }: { projects: ListedProject[] }) {
   return (
-    <a href={`/p/${encodeURIComponent(project.id)}/`} className="block">
-      <Card className="transition-colors hover:border-primary/40">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-2">
-            <span className="truncate">{project.name}</span>
-            {gateCount > 0 && <Badge variant="secondary">{gateCount} waiting</Badge>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="truncate text-xs text-muted-foreground">{project.path}</p>
-        </CardContent>
-      </Card>
-    </a>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {projects.map((p) => (
+        <a key={p.id} href={`/p/${encodeURIComponent(p.id)}/`} className="block" data-testid={`project-card-${p.id}`}>
+          <EntityCard
+            name={p.name}
+            description={p.path}
+            icon={Boxes}
+            className="h-full transition hover:border-primary/40 hover:shadow-md"
+            footer={
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3">
+                <MetaChip label="Active" value={String(p.counts?.active ?? 0)} />
+                <MetaChip label="Waiting" value={String(p.counts?.waitingOnYou ?? 0)} tone={p.counts?.waitingOnYou ? 'warn' : 'default'} />
+                <MetaChip label="Stuck" value={String(p.counts?.stuck ?? 0)} tone={p.counts?.stuck ? 'bad' : 'default'} />
+              </div>
+            }
+          />
+        </a>
+      ))}
+    </div>
   );
 }
 
-function NeedsYouSection({ needsYou, loading }: { needsYou: HubNeedsYou | undefined; loading: boolean }) {
-  const gates = needsYou?.gates ?? [];
-  const questions = needsYou?.questions ?? [];
-  if (loading) return null;
-  if (gates.length === 0 && questions.length === 0) return null;
+/** One project's rail card in the "Needs you" list: gates grouped by band exactly as a project's
+ * own inbox groups them (components/shared/inbox-view.tsx), each row linking into that project's
+ * real card page — a full navigation, so the Answer/Approve controls there are the real ones, not
+ * a copy built for the hub. */
+function ProjectNeedsCard({ group }: { group: ProjectNeeds }) {
+  const ranked = rank(group.gates);
+  const bands = groupByBand(ranked);
+  const cardHref = (id: string) => `/p/${encodeURIComponent(group.project)}/cards/${encodeURIComponent(id)}/`;
+
   return (
-    <section>
-      <h3 className="mb-3 text-sm font-medium text-muted-foreground">Needs you</h3>
-      <div className="flex flex-col gap-2">
-        {gates.map((g) => (
-          <a key={`${g.project}-${g.id}`} href={`/p/${encodeURIComponent(g.project)}/cards/${encodeURIComponent(g.id)}/`} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-sm transition-colors hover:border-primary/40">
-            <Badge variant="outline">{g.projectName}</Badge>
-            <span className="truncate font-medium">{g.title}</span>
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground">gate: {g.gate}</span>
-          </a>
+    <AttributeCard
+      title={group.projectName}
+      icon={Lock}
+      testId={`hub-needs-${group.project}`}
+      action={
+        <Button size="xs" variant="outline" nativeButton={false} render={<a href={`/p/${encodeURIComponent(group.project)}/inbox/`} />}>
+          Open inbox
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {bands.map((g) => (
+          <section key={g.band}>
+            <div className="flex items-center gap-2 border-b-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              {g.band === 'none' ? <span>Unranked</span> : <><BandChip band={g.band} /><span className="normal-case tracking-normal">{BAND_LABEL[g.band].split(' · ')[1]}</span></>}
+              <b className="font-semibold text-foreground tabular-nums">{g.cards.length}</b>
+            </div>
+            {g.cards.map((c) => (
+              <FieldRow
+                key={c.id}
+                label={c.id}
+                value={<a href={cardHref(c.id)} className="truncate text-left hover:underline">{c.title}</a>}
+                adornment={
+                  <span className="flex items-center gap-1.5">
+                    {c.feature ? <MetaChip label="Feature" value={c.feature} className="hidden max-w-[10rem] lg:inline-flex [&>span:last-child]:truncate" /> : null}
+                    {typeof c.score === 'number' ? <span className="text-xs text-muted-foreground tabular-nums">{c.score}</span> : null}
+                    <ToneBadge card={c} />
+                    <Button size="xs" nativeButton={false} render={<a href={cardHref(c.id)} />}>Review</Button>
+                  </span>
+                }
+                testId={`hub-gate-row-${c.id}`}
+              />
+            ))}
+          </section>
         ))}
-        {questions.map((q) => (
-          <a key={`${q.project}-${q.id}`} href={`/p/${encodeURIComponent(q.project)}/cards/${encodeURIComponent(q.id)}/`} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-sm transition-colors hover:border-primary/40">
-            <Badge variant="outline">{q.projectName}</Badge>
-            <HelpCircle className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate font-medium">{q.title}</span>
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground">{q.open} open question{q.open === 1 ? '' : 's'}</span>
-          </a>
-        ))}
+
+        {group.proposals > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {group.proposals} proposal{group.proposals === 1 ? '' : 's'} waiting.{' '}
+            <a className="underline" href={`/p/${encodeURIComponent(group.project)}/inbox/`}>Review backlog</a>
+          </p>
+        )}
+
+        {group.questions.length > 0 && (
+          <div className="flex flex-col gap-1.5 border-t pt-2">
+            {group.questions.slice(0, QUESTIONS_SHOWN).map((q) => (
+              <FieldRow
+                key={q.id}
+                icon={HelpCircle}
+                label={q.id}
+                value={<a href={cardHref(q.id)} className="truncate text-left hover:underline">{q.title}</a>}
+                adornment={<span className="text-xs text-muted-foreground">{q.open} open question{q.open === 1 ? '' : 's'}</span>}
+              />
+            ))}
+            {group.questions.length > QUESTIONS_SHOWN && (
+              <p className="text-xs text-muted-foreground">
+                {group.questions.length - QUESTIONS_SHOWN} more {group.questions.length - QUESTIONS_SHOWN === 1 ? 'story has' : 'stories have'} questions.{' '}
+                <a className="underline" href={`/p/${encodeURIComponent(group.project)}/inbox/`}>Open inbox</a>
+              </p>
+            )}
+          </div>
+        )}
       </div>
-    </section>
+    </AttributeCard>
   );
 }

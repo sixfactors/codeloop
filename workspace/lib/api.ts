@@ -4,7 +4,7 @@
 // component reaches the API's internal address (`codeloop serve`/`codeloop hub` set it), and the
 // public env var is only for a build served from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { AdvanceReport, Artifact, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
+import type { AdvanceReport, Artifact, Band, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 import { currentProjectBrowser, currentProjectServer, hubModeBrowser, hubModeServer } from './project';
 
@@ -198,6 +198,8 @@ export interface ListedProject {
   path: string;
   addedAt: string;
   missing: boolean;
+  /** Computed server-side (hub.ts, from the project's own inbox report); absent when the project failed to read. */
+  counts?: { active: number; waitingOnYou: number; stuck: number };
 }
 export interface HubGateItem {
   id: string;
@@ -206,6 +208,11 @@ export interface HubGateItem {
   stage: string;
   gate: string;
   awaiting?: string;
+  /** From the project's own inbox report (services.inboxReport), same as a card in its board's inbox. */
+  band?: Band;
+  score?: number;
+  feature?: string;
+  since?: string;
   project: string;
   projectName: string;
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export CODELOOP_HOME="${CODELOOP_HOME:-$(mktemp -d)}"  # keep test projects out of ~/.codeloop/projects.json
 # Playwright proof of the sign-in model, in the style of scripts/first-user/browser.mjs (raw
 # Playwright borrowed from another checkout, STEP PASS/FAIL lines): a visitor sees the Accept
 # button disabled, signs in with the default board password, and the same button then answers

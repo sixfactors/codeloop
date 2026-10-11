@@ -44,7 +44,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <QueryProvider>
           <ProjectProvider project={project} hub={hub}>
             {atHubHome ? (
-              children
+              // No project to prefetch cards/config for; the shell's own hub-scoped queries
+              // (the project list, needs-you) run client-side, same as the hub home body.
+              <AppShell>{children}</AppShell>
             ) : (
               <HydrationBoundary state={dehydrated(qc)}>
                 <AppShell>{children}</AppShell>

@@ -1,5 +1,5 @@
 {
-  "version": 277,
+  "version": 281,
   "cards": [
     {
       "id": "CL-001",
@@ -4216,6 +4216,126 @@
       ],
       "createdAt": "2026-10-11T21:16:52.663Z",
       "updatedAt": "2026-10-11T21:16:52.663Z"
+    },
+    {
+      "id": "c-104",
+      "title": "Every story carries its own proof",
+      "story": {
+        "as": "founder",
+        "can": "see each story's tests, reviews and commits on the story itself",
+        "so": "a green story can be trusted without re-checking"
+      },
+      "persona": "founder",
+      "size": "L",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "plan: chanl-platform docs/plans/codeloop/2026-10-11-story-carries-its-proof.md; ops-ai found 3 of 5 accepted commits defective",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:33:49.496Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:33:49.496Z",
+      "updatedAt": "2026-10-11T21:33:49.496Z"
+    },
+    {
+      "id": "c-105",
+      "title": "Rules act on my stories when things happen",
+      "story": {
+        "as": "founder",
+        "can": "set rules and get notified when a story needs me",
+        "so": "nothing waits unseen and routine follow-ups happen on their own"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "plan: chanl-platform docs/plans/codeloop/2026-10-11-jira-features.md (automation, notifications, watchers, mentions)",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:41:54.721Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:41:54.721Z",
+      "updatedAt": "2026-10-11T21:41:54.721Z"
+    },
+    {
+      "id": "c-106",
+      "title": "Reports show where work flows and where it waits",
+      "story": {
+        "as": "founder",
+        "can": "see cumulative flow, cycle time, throughput and a timeline",
+        "so": "I find the bottleneck before it costs a week"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "plan: docs/plans/codeloop/2026-10-11-jira-features.md (reports, timeline)",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:41:54.888Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:41:54.888Z",
+      "updatedAt": "2026-10-11T21:41:54.888Z"
+    },
+    {
+      "id": "c-107",
+      "title": "Bring my Jira work into codeloop",
+      "story": {
+        "as": "founder",
+        "can": "import my Jira project and keep it in sync",
+        "so": "trying codeloop costs nothing and my team can keep Jira"
+      },
+      "persona": "founder",
+      "size": "L",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "plan: docs/plans/codeloop/2026-10-11-jira-features.md; mapping in 2026-10-09-agent-control-and-jira.md",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:41:55.056Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:41:55.056Z",
+      "updatedAt": "2026-10-11T21:41:55.056Z"
     }
   ]
 }

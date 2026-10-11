@@ -97,7 +97,10 @@ cardCommand
       return;
     }
     console.log(line(card));
-    if (card.story) console.log(`  As a ${card.story.as}, I can ${card.story.can}, so that ${card.story.so}.`);
+    // Printed only when the story fields are really there: a card without them, or with a `story`
+    // value of another shape, prints no sentence rather than "As a undefined".
+    const st = card.story as { as?: string; can?: string; so?: string } | undefined;
+    if (st && typeof st === 'object' && st.as && st.can && st.so) console.log(`  As a ${st.as}, I can ${st.can}, so that ${st.so}.`);
     const facts = [card.ticket && `ticket ${card.ticket}`, card.split_from && `split from ${card.split_from}`, card.size && `size ${card.size}`, card.points !== undefined && `${card.points} pts`, card.initiative && `initiative ${card.initiative}`, card.epic && `epic ${card.epic}`, card.feature && `feature ${card.feature}`, card.effort !== undefined && `effort ${card.effort}w`, card.metric && `metric ${card.metric}`].filter(Boolean);
     if (facts.length) console.log(chalk.dim(`  ${facts.join(' · ')}`));
     if (card.description) console.log(card.description.split('\n').map(l => `  ${l}`).join('\n'));

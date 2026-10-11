@@ -10,7 +10,8 @@ export default defineConfig({
     globalSetup: './vitest.global-setup.ts',
     // Every CLI the tests spawn inherits this, so `init` and `serve` register throwaway projects in a
     // temp registry, never in the person's ~/.codeloop/projects.json.
-    env: { CODELOOP_HOME: join(tmpdir(), `codeloop-test-home-${process.pid}`) },
+    // Session ids are cleared so a test run inside an agent session behaves like one outside it.
+    env: { CODELOOP_HOME: join(tmpdir(), `codeloop-test-home-${process.pid}`), CLAUDE_CODE_SESSION_ID: '', CURSOR_SESSION_ID: '' },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

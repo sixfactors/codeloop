@@ -9,7 +9,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, BookOpen, Images, Inbox, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { BarChart3, BookOpen, Boxes, Home, Images, Inbox, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
@@ -21,6 +22,7 @@ import dynamic from 'next/dynamic';
 import { useCardCount, useCards, useCanWrite, useConfig, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { useProject, useRoutes } from '@/components/providers/project-provider';
 import { routesFor, type Routes } from '@/lib/routes';
+import { api, type HubNeedsYou, type ListedProject } from '@/lib/api';
 import { CommandPalette } from '@/components/shared/command-palette';
 import { ProjectSwitcher } from '@/components/shared/project-switcher';
 import { ReadOnlyBanner } from '@/components/shared/read-only-banner';
@@ -85,6 +87,51 @@ function navGroups(routes: Routes): NavGroup[] {
 
 function secondaryNav(routes: Routes): NavItem[] {
   return [{ id: 'settings', title: 'Settings', url: routes.settings, matchUrl: MATCH.settings, icon: Settings }];
+}
+
+/** How many of a project's gates + questions are waiting on a person; the same number the hub home's own cards show. */
+function needsYouCount(needsYou: HubNeedsYou | undefined, projectId: string): number {
+  if (!needsYou) return 0;
+  return needsYou.gates.filter((g) => g.project === projectId).length + needsYou.questions.filter((q) => q.project === projectId).length;
+}
+
+/** The hub home's own nav: no board to scope to, so "Work"/"Knowledge" are replaced by every
+ * registered project (a plain link, full navigation — see hub-home.tsx) plus a way back home. */
+function HubNavGroups({ pathname, projects, needsYou }: { pathname: string; projects?: ListedProject[]; needsYou?: HubNeedsYou }) {
+  const known = (projects ?? []).filter((p) => !p.missing);
+  return (
+    <>
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton isActive={pathname === '/'} tooltip="Home" render={<Link href="/" data-testid="sidebar-nav-home" />}>
+                <Home strokeWidth={1.5} />
+                <span className="flex-1 truncate">Home</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+      <SidebarGroup className="mt-0.5">
+        <SidebarGroupLabel>Projects</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {known.map((p) => (
+              <SidebarMenuItem key={p.id}>
+                <SidebarMenuButton tooltip={p.name} render={<a href={`/p/${encodeURIComponent(p.id)}/`} data-testid={`sidebar-nav-project-${p.id}`} />}>
+                  <Boxes strokeWidth={1.5} />
+                  <span className="flex-1 truncate">{p.name}</span>
+                  <CountBadge value={needsYouCount(needsYou, p.id)} tone="attention" />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+            {known.length === 0 ? <p className="px-2 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">No projects yet.</p> : null}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </>
+  );
 }
 
 function isActive(item: NavItem, pathname: string): boolean {
@@ -178,24 +225,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // on both passes.
   const { hub: hubMode, project: projectId } = useProject();
   const pathname = React.useMemo(() => withoutProjectPrefix(rawPathname, projectId), [rawPathname, projectId]);
+  // The hub's own home page (no project in the URL): no board to shell, so the project-scoped
+  // queries below are disabled rather than fired against routes that don't exist without one
+  // (hub.ts defines /api/hub/* and /api/p/:id/*, nothing at the bare paths).
+  const atHubHome = hubMode && !projectId;
   const routes = useRoutes();
   const groups = React.useMemo(() => navGroups(routes), [routes]);
   const secondary = React.useMemo(() => secondaryNav(routes), [routes]);
   // Counts come from the server (the inbox totals and one filtered count), not from a walk over the cards.
-  const { total } = useCards();
+  const { total } = useCards({}, { enabled: !atHubHome });
   const { canWrite } = useCanWrite();
   const session = useSession();
-  const config = useConfig();
-  const inbox = useInbox();
+  const config = useConfig(!atHubHome);
+  const inbox = useInbox({}, !atHubHome);
   const gates = inbox.data?.needsYou.total ?? 0;
   const questions = inbox.data?.questions.total ?? 0;
-  const backlog = useCardCount({ stage: ['proposed'] }).data ?? 0;
+  const backlog = useCardCount({ stage: ['proposed'] }, !atHubHome).data ?? 0;
+  const hubProjects = useQuery({ queryKey: ['hub', 'projects'], queryFn: api.hub.projects, retry: false, enabled: atHubHome });
+  const hubNeedsYou = useQuery({ queryKey: ['hub', 'needs-you'], queryFn: api.hub.needsYou, retry: false, enabled: atHubHome });
+  const knownProjects = (hubProjects.data ?? []).filter((p) => !p.missing);
   const cfg = config.data as { product?: string; name?: string } | undefined;
   const project = session.data?.project;
-  const product = project?.name ?? String(cfg?.product ?? cfg?.name ?? 'codeloop');
+  const product = atHubHome ? 'Codeloop' : project?.name ?? String(cfg?.product ?? cfg?.name ?? 'codeloop');
 
   // The tab title names the project, not just "codeloop", so two boards in two tabs are told apart.
-  React.useEffect(() => { if (project?.name) document.title = `${project.name} · codeloop`; }, [project?.name]);
+  React.useEffect(() => { document.title = !atHubHome && project?.name ? `${project.name} · codeloop` : 'Codeloop'; }, [project?.name, atHubHome]);
 
   const indicators: Record<string, React.ReactNode> = {
     inbox: gates + questions > 0 ? <CountBadge value={gates + questions} tone="attention" /> : null,
@@ -204,12 +258,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <SetupGate pathname={rawPathname} />
+      {!atHubHome && <SetupGate pathname={rawPathname} />}
       <Sidebar collapsible="icon">
         {/* A masthead, then destinations. The brand is not a menu row: it does not hover like one. */}
         <SidebarHeader className="gap-3 px-2 pt-3 pb-4">
           <Link
-            href={routes.board}
+            href={atHubHome ? '/' : routes.board}
             data-testid="sidebar-logo"
             className="flex items-center gap-2 rounded-md outline-hidden focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center"
           >
@@ -222,18 +276,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* 12px between groups, matching the chanl-admin rail. */}
         <SidebarContent className="gap-0 [&>[data-sidebar=group]:not(:first-child)]:pt-0.5">
-          {groups.map((group, i) => (
-            <SidebarGroup key={group.label ?? `group-${i}`} className={i > 0 ? 'mt-0.5' : undefined}>
-              {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <NavRow key={item.id} item={item} pathname={pathname} indicator={indicators[item.id]} />
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
+          {atHubHome ? (
+            <HubNavGroups pathname={pathname} projects={hubProjects.data} needsYou={hubNeedsYou.data} />
+          ) : (
+            groups.map((group, i) => (
+              <SidebarGroup key={group.label ?? `group-${i}`} className={i > 0 ? 'mt-0.5' : undefined}>
+                {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => (
+                      <NavRow key={item.id} item={item} pathname={pathname} indicator={indicators[item.id]} />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))
+          )}
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -247,7 +305,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate font-medium">{canWrite ? 'Owner' : 'Read only'}</span>
-              <span className="truncate text-xs text-muted-foreground tabular-nums">{total} stories</span>
+              <span className="truncate text-xs text-muted-foreground tabular-nums">
+                {atHubHome ? `${knownProjects.length} project${knownProjects.length === 1 ? '' : 's'}` : `${total} stories`}
+              </span>
             </div>
             <ThemeToggle />
           </div>
@@ -262,9 +322,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:block">
-                {hubMode ? <ProjectSwitcher currentName={product} /> : <span className="text-muted-foreground" title={project?.path}>{product}</span>}
+                {atHubHome ? (
+                  <span className="text-muted-foreground" data-testid="hub-breadcrumb-root">All projects</span>
+                ) : hubMode ? (
+                  <ProjectSwitcher currentName={product} />
+                ) : (
+                  <span className="text-muted-foreground" title={project?.path}>{product}</span>
+                )}
               </BreadcrumbItem>
-              <BreadcrumbItem><BreadcrumbPage>{sectionFor(pathname, groups, secondary)}</BreadcrumbPage></BreadcrumbItem>
+              <BreadcrumbItem><BreadcrumbPage>{atHubHome ? 'Home' : sectionFor(pathname, groups, secondary)}</BreadcrumbPage></BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex items-center gap-2">

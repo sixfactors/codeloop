@@ -8,6 +8,9 @@
     "sessionEnd": [
       {
         "command": "codeloop presence end"
+      },
+      {
+        "command": "codeloop guard release"
       }
     ],
     "subagentStart": [

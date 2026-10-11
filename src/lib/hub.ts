@@ -130,7 +130,24 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
     return ctx.app.fetch(forwarded);
   });
 
-  app.get('/api/hub/projects', c => c.json({ projects: listProjects() }));
+  // Each known project's own numbers, computed here from its files (services.inboxReport), the
+  // same source /api/hub/needs-you reads — never walked client-side, so a 5k-card project costs
+  // the hub home page the same as a 5-card one. A project that fails to read (not a codeloop
+  // project, or unreadable right now) is listed without counts, not dropped from the list.
+  app.get('/api/hub/projects', c => {
+    const projects = listProjects().map(p => {
+      if (p.missing) return p;
+      try {
+        const report = services.inboxReport(p.path);
+        const active = report.numbers.reduce((n, l) => n + l.active, 0);
+        const stuck = report.needs_you.filter(g => g.gate === 'stuck').length;
+        return { ...p, counts: { active, waitingOnYou: report.needs_you.length + report.questions.length, stuck } };
+      } catch {
+        return p;
+      }
+    });
+    return c.json({ projects });
+  });
 
   // "Needs you" across every registered, existing project in one response, each item labelled with
   // its project: computed from each project's own files directly (services.inboxReport), not from

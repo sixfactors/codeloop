@@ -17,10 +17,11 @@ export { CARD_PAGE_SIZE, cardCountQueryOptions, cardQueryOptions, cardsQueryOpti
  * the layout for the empty query) unless `all` is set, which walks every page in the background.
  * `payload` carries the owner flag, lanes and inbox summary from the first page.
  */
-export function useCards(q: CardsQuery = {}, opts: { all?: boolean } = {}) {
-  const result = useInfiniteQuery(cardsQueryOptions(q));
+export function useCards(q: CardsQuery = {}, opts: { all?: boolean; enabled?: boolean } = {}) {
+  const enabled = opts.enabled ?? true;
+  const result = useInfiniteQuery({ ...cardsQueryOptions(q), enabled });
   const { hasNextPage, isFetching, fetchNextPage } = result;
-  const walk = opts.all === true;
+  const walk = opts.all === true && enabled;
   // Several screens share one list; cancelRefetch: false lets their calls collapse into one request.
   useEffect(() => { if (walk && hasNextPage && !isFetching) void fetchNextPage({ cancelRefetch: false }); }, [walk, hasNextPage, isFetching, fetchNextPage]);
   const cards = useMemo(() => result.data?.pages.flatMap((p) => p.cards) ?? [], [result.data]);
@@ -53,10 +54,10 @@ export function useCardFacets(fallback: Card[]): Facets {
   }, [q.data, fallback]);
 }
 
-export function useLanes() {
-  const lanes = useQuery({ queryKey: QK.lanes, queryFn: api.lanes, retry: false });
+export function useLanes(enabled = true) {
+  const lanes = useQuery({ queryKey: QK.lanes, queryFn: api.lanes, retry: false, enabled });
   // The first page of cards carries the lanes too; nothing here walks the list.
-  const cards = useCards();
+  const cards = useCards({}, { enabled });
   const data: Lane[] = useMemo(() => deriveLanes(cards.cards, lanes.data?.length ? lanes.data : cards.payload?.lanes), [cards.cards, cards.payload?.lanes, lanes.data]);
   return { data, isLoading: cards.isLoading && lanes.isLoading, fromApi: Boolean(lanes.data?.length) };
 }
@@ -64,13 +65,14 @@ export function useLanes() {
 /**
  * The inbox from GET /api/inbox: three lists of at most INBOX_LIMIT rows and the per-lane numbers.
  * On a server without the route the same shape is derived from the full card list, which is the
- * only time the client walks every page.
+ * only time the client walks every page. `enabled` disables all of it (main query, fallback walk
+ * and lanes) — for a caller with no project in scope, e.g. the hub home shell.
  */
-export function useInbox(q: InboxQuery = {}) {
-  const result = useQuery(inboxQueryOptions(q));
-  const missing = Boolean(result.error) && isMissing(result.error);
-  const fallback = useCards({ limit: 200 }, { all: missing });
-  const lanes = useLanes();
+export function useInbox(q: InboxQuery = {}, enabled = true) {
+  const result = useQuery({ ...inboxQueryOptions(q), enabled });
+  const missing = enabled && Boolean(result.error) && isMissing(result.error);
+  const fallback = useCards({ limit: 200 }, { all: missing, enabled });
+  const lanes = useLanes(enabled);
   const data = useMemo<InboxPayload | undefined>(() => {
     if (result.data) return result.data;
     if (!missing || !fallback.complete) return undefined;
@@ -163,7 +165,7 @@ export const useEvidence = (nnn: string) =>
   useQuery({ queryKey: QK.evidence(nnn), queryFn: () => api.evidence(nnn), enabled: Boolean(nnn), retry: false });
 export const useArtifacts = () => useQuery({ queryKey: QK.artifacts, queryFn: api.artifacts, retry: false });
 export const useStats = () => useQuery({ queryKey: QK.stats, queryFn: api.stats, retry: false });
-export const useConfig = () => useQuery({ queryKey: QK.config, queryFn: api.config, retry: false });
+export const useConfig = (enabled = true) => useQuery({ queryKey: QK.config, queryFn: api.config, retry: false, enabled });
 
 /** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. */
 export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: false, staleTime: 5_000, refetchInterval: 15_000 });

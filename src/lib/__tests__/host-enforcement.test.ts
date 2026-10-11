@@ -109,6 +109,8 @@ describe('guard edit (PreToolUse hook)', () => {
 
     const inside = cli(['guard', 'edit', 'src/allowed.ts']);
     expect(inside.status).toBe(0);
+    // The second file in the list counts too, not only the first.
+    expect(cli(['guard', 'edit', 'src/also/ok.ts']).status).toBe(0);
   });
 
   it('only warns, and exits 0, when the plan has no `## Files` list yet', () => {
@@ -129,6 +131,70 @@ describe('guard edit (PreToolUse hook)', () => {
     const result = cli(['guard', 'edit'], { input: JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: 'src/elsewhere.ts' } }) });
     expect(result.status).toBe(2);
     expect(result.stderr).toMatch(/outside c-4's plan/);
+  });
+});
+
+describe('a story per session', () => {
+  const now = new Date().toISOString();
+  const twoCards = () => {
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: ['c-1', 'c-2'].map(id => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage: 'spec', spec: `specs/${id}`, retries: {}, evidence: [], events: [], createdAt: now, updatedAt: now })) }, null, 2));
+    write('specs/c-1/plan.md', '# plan\n\n## Files\n\n- src/one.ts\n');
+    write('specs/c-2/plan.md', '# plan\n\n## Files\n\n- src/two.ts\n');
+  };
+  const edit = (session: string, file: string) => cli(['guard', 'edit'], { input: JSON.stringify({ session_id: session, tool_name: 'Edit', tool_input: { file_path: file } }) });
+
+  it('two sessions activate different stories and each guard reads its own', () => {
+    twoCards();
+    expect(cli(['card', 'activate', 'c-1'], { env: { CLAUDE_CODE_SESSION_ID: 's-a' } }).status).toBe(0);
+    expect(cli(['card', 'activate', 'c-2'], { env: { CLAUDE_CODE_SESSION_ID: 's-b' } }).status).toBe(0);
+    expect(edit('s-a', 'src/one.ts').status).toBe(0);
+    expect(edit('s-b', 'src/two.ts').status).toBe(0);
+  });
+
+  it("refuses a file in another live session's story, naming that story", () => {
+    twoCards();
+    cli(['card', 'activate', 'c-1'], { env: { CLAUDE_CODE_SESSION_ID: 's-a' } });
+    cli(['card', 'activate', 'c-2'], { env: { CLAUDE_CODE_SESSION_ID: 's-b' } });
+    const r = edit('s-a', 'src/two.ts');
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/belongs to c-2/);
+  });
+
+  it("a session with no story of its own falls back to the repo's card, and release frees a session's story", () => {
+    twoCards();
+    setActiveCard(dir, 'c-1');
+    expect(edit('s-new', 'src/one.ts').status).toBe(0);
+    cli(['card', 'activate', 'c-2'], { env: { CLAUDE_CODE_SESSION_ID: 's-b' } });
+    expect(edit('s-a', 'src/two.ts').status).toBe(2);
+    cli(['guard', 'release'], { input: JSON.stringify({ session_id: 's-b' }) });
+    expect(edit('s-a', 'src/two.ts').stderr).not.toMatch(/belongs to/);
+  });
+});
+
+describe('shared paths are never leased', () => {
+  it('matches exact files, folders and globs from leases.shared', async () => {
+    const { isSharedPath } = await import('../plan-scope.js');
+    write('.codeloop/config.yaml', 'leases:\n  shared:\n    - docs/README.md\n    - make/*.mk\n    - "**/openapi.json"\n    - generated/\n');
+    expect(isSharedPath(dir, 'docs/README.md')).toBe(true);
+    expect(isSharedPath(dir, 'make/db.mk')).toBe(true);
+    expect(isSharedPath(dir, 'make/sub/db.mk')).toBe(false);
+    expect(isSharedPath(dir, 'services/auth/openapi.json')).toBe(true);
+    expect(isSharedPath(dir, 'openapi.json')).toBe(true);
+    expect(isSharedPath(dir, 'generated/x/y.ts')).toBe(true);
+    expect(isSharedPath(dir, 'src/one.ts')).toBe(false);
+  });
+
+  it("lets a session edit a shared file that another session's plan lists", () => {
+    const now = new Date().toISOString();
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: ['c-1', 'c-2'].map(id => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage: 'spec', spec: `specs/${id}`, retries: {}, evidence: [], events: [], createdAt: now, updatedAt: now })) }, null, 2));
+    write('specs/c-1/plan.md', '# plan\n\n## Files\n\n- src/one.ts\n- make/db.mk\n');
+    write('specs/c-2/plan.md', '# plan\n\n## Files\n\n- src/two.ts\n- make/db.mk\n');
+    write('.codeloop/config.yaml', 'leases:\n  shared:\n    - make/*.mk\n');
+    cli(['card', 'activate', 'c-1'], { env: { CLAUDE_CODE_SESSION_ID: 's-a' } });
+    cli(['card', 'activate', 'c-2'], { env: { CLAUDE_CODE_SESSION_ID: 's-b' } });
+    const r = cli(['guard', 'edit'], { input: JSON.stringify({ session_id: 's-a', tool_name: 'Edit', tool_input: { file_path: 'make/db.mk' } }) });
+    expect(r.stderr).not.toMatch(/belongs to/);
+    expect(r.status).toBe(0);
   });
 });
 
