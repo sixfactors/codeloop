@@ -238,6 +238,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     writeWikiOutline: async () => {
       throw new ApiError(501, 'wiki-outline writes the project files; use the local transport');
     },
+    buildWiki: async () => {
+      throw new ApiError(501, 'wiki build scans the project files and runs a local agent; use the local transport');
+    },
     close: async () => {
       etags.clear();
     },

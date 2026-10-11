@@ -51,6 +51,7 @@ import type {
   SplitResult,
   StageOutput,
   Stats,
+  WikiBuildResult,
   WikiEntry,
   WikiOutlineSummary,
   WikiOutlineWriteResult,
@@ -152,6 +153,8 @@ export interface Transport {
   wikiOutline(): Promise<WikiOutlineSummary[]>;
   /** Writes the outline's pages; skips any that already exist unless `force`. Local only. */
   writeWikiOutline(opts?: { force?: boolean }): Promise<WikiOutlineWriteResult>;
+  /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
+  buildWiki(opts?: { agent?: string; run?: boolean }, roleOpts?: RoleOption): Promise<WikiBuildResult>;
   close(): Promise<void>;
 }
 
@@ -272,6 +275,8 @@ export class CodeloopClient {
     outline: () => this.transport.wikiOutline(),
     /** `wiki init --from-repo --write`: seeds the pages the outline listed. */
     writeOutline: (opts?: { force?: boolean }) => this.transport.writeWikiOutline(opts),
+    /** `wiki build`: refreshes the facts, starts a card in the `wiki` lane, and runs it unless `run: false`. */
+    build: (opts?: { agent?: string; run?: boolean }, roleOpts?: RoleOption) => this.transport.buildWiki(opts, roleOpts),
   };
 
   artifacts = () => this.transport.artifacts();

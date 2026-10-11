@@ -1,5 +1,5 @@
 {
-  "version": 234,
+  "version": 238,
   "cards": [
     {
       "id": "CL-001",
@@ -3661,6 +3661,56 @@
       ],
       "createdAt": "2026-10-10T05:44:30.921Z",
       "updatedAt": "2026-10-10T05:44:30.921Z"
+    },
+    {
+      "id": "c-095",
+      "title": "Explain the architecture",
+      "lane": "wiki",
+      "laneVersion": 1,
+      "stage": "architecture",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T03:06:52.712Z",
+          "actor": "agent",
+          "human": false,
+          "action": "create",
+          "stage": "architecture"
+        },
+        {
+          "at": "2026-10-11T03:06:52.715Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "architecture",
+          "agent": "claude-sonnet",
+          "log": ".codeloop/state/agent-runs/c-095-architecture-1.log"
+        },
+        {
+          "at": "2026-10-11T03:07:53.311Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "architecture",
+          "agent": "claude-sonnet",
+          "exit": 0,
+          "durationMs": 60596,
+          "log": ".codeloop/state/agent-runs/c-095-architecture-1.log"
+        },
+        {
+          "at": "2026-10-11T03:07:53.311Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "architecture",
+          "note": "gate wiki (after the check passed)"
+        }
+      ],
+      "createdAt": "2026-10-11T03:06:52.712Z",
+      "updatedAt": "2026-10-11T03:07:53.311Z",
+      "gate": "wiki",
+      "awaiting": "owner"
     }
   ]
 }

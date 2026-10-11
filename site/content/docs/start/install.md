@@ -47,6 +47,9 @@ Initializing codeloop...
     + .claude/skills/api/SKILL.md
     + .claude/skills/api/checklist.md
     + .claude/skills/api/template.md
+    + .claude/skills/architecture/SKILL.md
+    + .claude/skills/architecture/checklist.md
+    + .claude/skills/architecture/template.md
     + .claude/skills/breakdown/SKILL.md
     + .claude/skills/breakdown/checklist.md
     + .claude/skills/breakdown/template.md
@@ -98,6 +101,7 @@ Initializing codeloop...
     + .codeloop/lanes/scan.yaml
     + .codeloop/lanes/shape.yaml
     + .codeloop/lanes/triage.yaml
+    + .codeloop/lanes/wiki.yaml
     + .codeloop/rules.md
     + .codeloop/gotchas.md
     + .codeloop/patterns.md
@@ -108,7 +112,7 @@ Initializing codeloop...
 
 Done.
 
-  9 lanes in .codeloop/lanes/, 62 skills indexed in .codeloop/skills.index.yaml.
+  10 lanes in .codeloop/lanes/, 63 skills indexed in .codeloop/skills.index.yaml.
   codeloop serve opens the board in a browser.
 
   Next, type:
@@ -120,12 +124,12 @@ Done.
 
 | Path | What it is | Overwritten by `update`? |
 |---|---|---|
-| `.codeloop/lanes/*.yaml` | The nine lanes. Each one is a list of stages with a check command and, where you want to decide, a gate. | No |
+| `.codeloop/lanes/*.yaml` | The ten lanes. Each one is a list of stages with a check command and, where you want to decide, a gate. | No |
 | `.codeloop/config.yaml` | Project name, scopes, quality checks, agents, deploy commands. | No |
 | `.codeloop/rules.md`, `gotchas.md`, `patterns.md`, `principles.md` | Knowledge the agents read and the learn loop writes. | No |
 | `.codeloop/board.json` | The board the web UI reads. | No |
 | `.claude/commands/*.md` | Ten commands: design, plan, manage, test, commit, qa, deploy, debug, reflect, ship. The cron lanes name them. | Yes, when the version changes |
-| `.claude/skills/<name>/` | Fifteen stage skills, each a `SKILL.md` with its procedure, a `template.md` and a `checklist.md`: brief, breakdown, research, interview, mock, spec, api, sdk, ui, test-design, verify, review, release, system-design, workflow. The build and shape lanes name one per stage. | Yes, when the version changes |
+| `.claude/skills/<name>/` | Sixteen stage skills, each a `SKILL.md` with its procedure, a `template.md` and a `checklist.md`: brief, breakdown, research, interview, mock, spec, api, sdk, ui, test-design, verify, review, release, system-design, workflow, architecture. The build, shape and wiki lanes name one per stage. | Yes, when the version changes |
 | `.codeloop/skills.index.yaml` | Index of the skills and commands that exist in the repo, so lanes can name them. Gitignored. | Rebuilt |
 
 The `init` flags:
@@ -154,9 +158,10 @@ codeloop lane list
   scan       v1  scan  cron 0 7 * * MON
   shape      v1  brief → interview → breakdown → rank  manual
   triage     v1  capture → classify → dedupe → file  cron 0 20 * * *
+  wiki       v1  architecture  manual
 ```
 
-`codeloop lane lint` exits 2 if any lane file is malformed. On a fresh install it prints `9 lanes ok`.
+`codeloop lane lint` exits 2 if any lane file is malformed. On a fresh install it prints `10 lanes ok`.
 
 ## Update later
 

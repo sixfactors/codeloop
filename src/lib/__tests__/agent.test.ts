@@ -71,6 +71,28 @@ describe('no agent configured', () => {
   });
 });
 
+describe('lane agent preference', () => {
+  it('resolveAgent prefers the lane agent over the default, and falls back to the default when the lane names an unconfigured preset', () => {
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake: { cmd: "touch fake-ran" }\n  fake-sonnet: { cmd: "touch sonnet-ran" }\n');
+    expect(resolveAgent(dir, undefined, 'fake-sonnet').name).toBe('fake-sonnet');
+    expect(resolveAgent(dir, undefined, 'not-configured').name).toBe('fake');
+    expect(resolveAgent(dir, undefined).name).toBe('fake');
+    // A CLI-named agent always wins over the lane's own preference.
+    expect(resolveAgent(dir, 'fake', 'fake-sonnet').name).toBe('fake');
+  });
+
+  it('run --agent with no name runs a lane on its own agent preset instead of agents.default', async () => {
+    lane('wiki', TWO_STAGES, 'agent: fake-sonnet\n');
+    write('.codeloop/config.yaml', `agents:\n  default: fake\n  fake: { cmd: ${JSON.stringify(WRITES_OUTPUT)} }\n  fake-sonnet: { cmd: ${JSON.stringify(WRITES_OUTPUT)} }\n`);
+    createCard(dir, { lane: 'wiki', title: 'a', id: 'c-001' });
+
+    const result = await runDueWithAgent(dir, {});
+    expect(result.advanced).toEqual([{ id: 'c-001', outcome: 'done' }]);
+    const runs = card('c-001').events.filter(e => e.action === 'agent-run');
+    expect(runs.map(e => e.agent)).toEqual(['fake-sonnet', 'fake-sonnet']);
+  });
+});
+
 describe('brief', () => {
   it('carries the skill body, the check, the latest rejection note and the wiki pages in scope', () => {
     lane('market', GATED_THEN_PUBLIC);

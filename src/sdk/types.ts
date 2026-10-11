@@ -31,6 +31,7 @@ export type {
   PageWrite,
   ProposalInput,
   ScoredRecord,
+  WikiBuildResult,
   WikiEntry,
   WikiOutlineSummary,
   WikiOutlineWriteResult,

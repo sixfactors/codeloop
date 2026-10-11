@@ -555,6 +555,34 @@ export const wikiOutline = (projectDir: string): WikiOutlineSummary[] => wikiOut
 export const writeWikiOutline = (projectDir: string, opts: { force?: boolean } = {}): WikiOutlineWriteResult => writeWikiOutlineLib(projectDir, opts);
 export type { WikiOutlineSummary, WikiOutlineWriteResult };
 
+// --- wiki build: refresh facts, start a card in the `wiki` lane, run it -------------------------
+import { runDueWithAgent, type RunResult } from './run.js';
+
+export interface WikiBuildResult {
+  facts: WikiOutlineWriteResult;
+  card: Card;
+  hint: string;
+  /** Absent when `--no-run` left the card for the owner to run by hand. */
+  run?: RunResult;
+}
+
+/**
+ * `codeloop wiki build`: refreshes `.codeloop/wiki/reference/` and `.codeloop/state/repo-facts.json`
+ * (never `.codeloop/wiki/architecture/`, which only the architecture skill writes), starts a card
+ * in the `wiki` lane, and, unless `opts.run` is false, runs it the same way `codeloop run --agent
+ * --card <id>` would: `runDueWithAgent` with `filter.card` set to this one card alone, so the
+ * lane's own `agent:` preference (or `agents.default`) decides which preset does the writing.
+ */
+export async function buildWiki(projectDir: string, opts: { agent?: string; run?: boolean } = {}, who?: Role): Promise<WikiBuildResult> {
+  // Only the scanner's own reference pages are refreshed; product, glossary and the rest may carry
+  // hand edits, so they are written once and left alone.
+  const facts = writeWikiOutlineLib(projectDir, { forceUnder: `${WIKI_DIR}/reference/` });
+  const { card, hint } = newCard(projectDir, { lane: 'wiki', title: 'Explain the architecture' }, who ?? 'agent');
+  if (opts.run === false) return { facts, card, hint };
+  const run = await runDueWithAgent(projectDir, { name: opts.agent }, undefined, { card: card.id });
+  return { facts, card: findCard(readCards(projectDir).cards, card.id), hint, run };
+}
+
 // --- skill eval: `codeloop skill eval`, replaying a skill's fixtures against a headless agent ---
 export { listSkillNames, loadSkillDef, runSkillEval } from './skill-eval.js';
 export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from './skill-eval.js';

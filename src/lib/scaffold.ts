@@ -343,12 +343,23 @@ export function applyAgentsConfig(projectDir: string, tools: ToolId[]): { change
     `  default: ${selected[0]}`,
     ...selected.flatMap(t => {
       const onPath = commandOnPath(AGENT_BINARY[t]);
-      return [
+      const lines = [
         `  ${t}:`,
         `    cmd: ${JSON.stringify(agentCmd(t, onPath))}${onPath ? '' : `  # ${t} was not found on PATH`}`,
         `    timeout_minutes: ${AGENT_TIMEOUT_MINUTES}`,
         `    max_runs_per_day: ${AGENT_MAX_RUNS_PER_DAY}`,
       ];
+      // Beside the full `claude` preset: a cheaper model for the bulk writing a lane like `wiki`
+      // hands off (src/commands/wiki.ts), named so a lane's `agent:` key can ask for it by name.
+      if (t === 'claude') {
+        lines.push(
+          '  claude-sonnet:',
+          `    cmd: ${JSON.stringify('claude -p --model sonnet --permission-mode acceptEdits < {brief}')}${onPath ? '' : '  # claude was not found on PATH'}`,
+          `    timeout_minutes: ${AGENT_TIMEOUT_MINUTES}`,
+          `    max_runs_per_day: ${AGENT_MAX_RUNS_PER_DAY}`,
+        );
+      }
+      return lines;
     }),
   ];
   writeFileSync(configPath, insertAgentsBlock(text, lines.join('\n')));

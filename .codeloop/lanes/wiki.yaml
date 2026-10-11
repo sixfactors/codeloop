@@ -1,0 +1,12 @@
+id: wiki
+version: 1
+metric: { name: architecture_pages_passing, source: cards }
+trigger: { manual: true }
+retries: 3
+agent: claude-sonnet
+stages:
+  - id: architecture
+    skill: architecture
+    output: ".codeloop/wiki/architecture/overview.md"
+    done: { cmd: "codeloop check architecture" }
+    gate: { name: wiki, approver: owner }

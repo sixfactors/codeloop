@@ -1,7 +1,7 @@
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
-import { AGENT_RUNS_DIR, briefPath, buildBrief, runAgent, type AgentConfig } from './agent.js';
+import { AGENT_RUNS_DIR, briefPath, buildBrief, resolveAgent, runAgent, type AgentConfig } from './agent.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { advanceCard, awaitsApproval, createCard, loadEngineConfig, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
@@ -177,6 +177,10 @@ export interface CardTurn {
   busy?: boolean;
 }
 
+/** `name` empty: the caller (`runDueWithAgent`) resolves per the card's own lane preference instead of one agent fixed for every card in the run. */
+export type AgentWanted = { name?: string };
+
+/** `agent` is already resolved: `evalFixture` and `startCardRun` build their own, outside any lane. */
 export async function workCard(projectDir: string, id: string, stage: string, agent: AgentConfig | null, now: Date, logFile?: string): Promise<CardTurn> {
   const turn: CardTurn = { advanced: { id, outcome: 'refused' } };
   try {
@@ -212,12 +216,16 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
 /** `runDue`, with an agent started first on each card whose stage check does not pass yet. Each
  *  card's stage keeps advancing until its own check stops it: a failed check, a gate, stuck, done,
  *  the agent's max_runs_per_day, or the safety cap. */
-export async function runDueWithAgent(projectDir: string, agent: AgentConfig, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
+export async function runDueWithAgent(projectDir: string, wanted: AgentWanted, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
   const file = join(projectDir, LAST_RUN);
   const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
   promoteQueued(projectDir, { now, lane: filter.lane });
 
-  for (const { id, stage } of active(projectDir, filter)) {
+  for (const { id, stage, lane: laneId } of active(projectDir, filter)) {
+    // Resolved once per card, from that card's own lane: a lane naming its own `agent:` preset
+    // (src/commands/wiki.ts's `wiki` lane, for instance) is not forced onto every other lane's
+    // cards in the same run.
+    const agent = resolveAgent(projectDir, wanted.name, loadLane(projectDir, laneId).agent);
     let current = stage;
     let turn: CardTurn = { advanced: { id, outcome: 'refused' } };
     for (let i = 0; i < MAX_ADVANCES_PER_CARD; i++) {
@@ -233,13 +241,14 @@ export async function runDueWithAgent(projectDir: string, agent: AgentConfig, no
 }
 
 /** What a run would do, for `--dry-run`. Nothing is started, checked or written. */
-export function planRun(projectDir: string, agent: AgentConfig | null, now: Date = clock(), filter: RunFilter = {}): string[] {
+export function planRun(projectDir: string, wanted: AgentWanted | null, now: Date = clock(), filter: RunFilter = {}): string[] {
   const { cards } = readCards(projectDir);
   let planned = 0;
   return active(projectDir, filter).map(card => {
     const lane = loadLane(projectDir, card.lane);
     const stage = lane.stages.find(s => s.id === card.stage);
-    if (!agent || !stage?.done?.cmd) return `${card.id}: would run the ${card.stage} check and move the card if it passes`;
+    if (!wanted || !stage?.done?.cmd) return `${card.id}: would run the ${card.stage} check and move the card if it passes`;
+    const agent = resolveAgent(projectDir, wanted.name, lane.agent);
     const reason = awaitsApproval(card, stage)
       ? `${stage.id} is a public step that has not been approved`
       : running(card, agent, now)

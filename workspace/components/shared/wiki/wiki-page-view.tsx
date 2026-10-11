@@ -15,6 +15,12 @@ import { InlineError } from '@/components/shared/inline-error';
 // skeleton on every client navigation until its chunk arrives. Every wiki page needs it anyway;
 // only the editor stays lazy.
 import WikiMarkdown from './wiki-markdown';
+
+// The page header already shows the title, so a body that opens with the same `# Title` would print it twice.
+function withoutTitleHeading(body: string, title: string): string {
+  const m = /^\s*#\s+(.+)\n/.exec(body);
+  return m && m[1].trim().toLowerCase() === title.trim().toLowerCase() ? body.slice(m[0].length) : body;
+}
 import { WikiToc } from './wiki-toc';
 import { isMissing, usePage, usePages, useSavePage } from '@/hooks/use-api';
 import { routes } from '@/lib/routes';
@@ -104,7 +110,7 @@ export function WikiPageView({ path, onEdit, canEdit }: { path: string; onEdit: 
               </dl>
             ) : null}
           </header>
-          {data.body.trim() ? <WikiMarkdown>{data.body}</WikiMarkdown> : (
+          {data.body.trim() ? <WikiMarkdown>{withoutTitleHeading(data.body, data.title)}</WikiMarkdown> : (
             <p className="text-sm text-muted-foreground">This page has no body yet.{canEdit ? <> <button type="button" className="underline" onClick={onEdit}>Write one.</button></> : null}</p>
           )}
           <Backlinks page={data} />

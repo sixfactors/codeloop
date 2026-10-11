@@ -29,6 +29,8 @@ export interface Lane {
   trigger?: { on?: string; lane?: string; cron?: string; manual?: boolean };
   wip?: number;
   retries: number;
+  /** The agent preset (a key under `agents:` in config.yaml) this lane's stages run on, when `run --agent`/`card run` names none itself. Falls back to `agents.default` with no error when this preset is not configured. */
+  agent?: string;
   stages: Stage[];
   /** `start`: a simple follow-on card in another lane. `queue`: a shape breakdown's epic of stories (see src/lib/shape.ts). Both opt-in via `lanes.auto_start`, except `queue`, which always runs: the owner already approved the exact list of stories it makes. */
   on_done?: { start?: string; queue?: string };

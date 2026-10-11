@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { loadAgents, resolveAgent } from '../lib/agent.js';
 import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
-import { planRun, runDue, runDueWithAgent } from '../lib/run.js';
+import { planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
 import { guard } from './guard.js';
 
 interface RunOptions {
@@ -29,17 +29,20 @@ export const runCommand = new Command('run')
     const projectDir = process.cwd();
     const now = opts.now ? new Date(opts.now) : clock();
     if (Number.isNaN(now.getTime())) throw new RefusalError(`--now "${opts.now}" is not a date`);
-    const wanted = opts.agent ?? loadAgents(projectDir).runByDefault;
-    const agent = wanted ? resolveAgent(projectDir, wanted === true ? undefined : wanted) : null;
+    const requested = opts.agent ?? loadAgents(projectDir).runByDefault;
+    const wanted: AgentWanted | null = requested ? { name: requested === true ? undefined : requested } : null;
+    // Validated here, against no particular lane, so `--agent` with nothing configured (or a
+    // name nobody set up) is refused at once rather than only when a card happens to be active.
+    if (wanted) resolveAgent(projectDir, wanted.name);
     if (opts.lane && opts.card) throw new RefusalError('--lane and --card do not combine; name one');
     const filter = { lane: opts.lane, card: opts.card };
     if (opts.dryRun) {
-      const plan = planRun(projectDir, agent, now, filter);
+      const plan = planRun(projectDir, wanted, now, filter);
       plan.forEach(l => console.log(`  ${l}`));
       console.log(`  dry run: nothing was started (${plan.length} ${plan.length === 1 ? 'card' : 'cards'} not waiting for you)`);
       return;
     }
-    const result = agent ? await runDueWithAgent(projectDir, agent, now, filter) : runDue(projectDir, now, filter);
+    const result = wanted ? await runDueWithAgent(projectDir, wanted, now, filter) : runDue(projectDir, now, filter);
     if (opts.json) {
       console.log(JSON.stringify(result, null, 2));
       return;

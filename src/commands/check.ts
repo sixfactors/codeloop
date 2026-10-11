@@ -8,6 +8,7 @@ import { readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
+import { checkArchitecture } from '../lib/architecture-check.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
 export function fileProblem(path: string, has: string[]): string | null {
@@ -111,6 +112,19 @@ checkCommand
   .description("Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on")
   .option('--ranked', 'Also require a `rice:` part on every story')
   .action((card: string, opts: { ranked?: boolean }) => failing(() => checkBreakdown(process.cwd(), card, { ranked: !!opts.ranked }).errors)());
+
+checkCommand
+  .command('architecture')
+  .description('Exit 1 unless the five architecture pages exist, name only real paths, cover every top-level folder, stay inside the noise limits, and carry no scanner leftovers')
+  .option('--dir <wikiDir>', 'The architecture folder, relative to the project root', '.codeloop/wiki/architecture')
+  .action((opts: { dir: string }) => {
+    const problems = checkArchitecture(process.cwd(), { dir: opts.dir });
+    if (problems.length) {
+      problems.forEach(p => console.error(p));
+      process.exit(1);
+    }
+    console.log('architecture check passed');
+  });
 
 checkCommand
   .command('questions <card>')

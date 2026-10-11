@@ -123,6 +123,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     wikiLint: async () => services.wikiLint(projectDir),
     wikiOutline: async () => services.wikiOutline(projectDir),
     writeWikiOutline: async (opts = {}) => services.writeWikiOutline(projectDir, opts),
+    buildWiki: async (opts = {}, roleOpts) => services.buildWiki(projectDir, opts, role(roleOpts)),
     close: async () => {
       if (index) await closeIndex(projectDir);
       if (store && !options.store) await store.close();

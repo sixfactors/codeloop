@@ -99,6 +99,24 @@ wikiCommand
     console.log(`  ${summary.length} pages, ${assumptions} assumption line(s) total (dry run; pass --write to create)`);
   }));
 
+wikiCommand
+  .command('build')
+  .description('Refresh .codeloop/wiki/reference/ and repo-facts.json, start a card titled "Explain the architecture" in the wiki lane, then run it (--agent picks a preset; --no-run only creates the card)')
+  .option('--agent <name>', "Agent preset to run with; default is the wiki lane's own agent, else agents.default")
+  .option('--no-run', 'Only refresh the facts and create the card; do not run the agent')
+  .action(guard(async (opts: { agent?: string; run?: boolean }) => {
+    const result = await client().wiki.build({ agent: opts.agent, run: opts.run });
+    console.log(`  facts: ${result.facts.written.length} written, ${result.facts.skipped.length} skipped`);
+    console.log(`  created ${result.card.id} in ${result.card.lane} at stage ${result.card.stage}`);
+    if (result.run) {
+      result.run.agents?.forEach(a =>
+        console.log(a.started ? `  ${a.id}: agent ${a.agent} ran ${a.stage} (${a.exit === 0 ? 'exit 0' : a.exit === null ? 'killed' : `exit ${a.exit}`})` : `  ${a.id}: agent ${a.agent} not started: ${a.reason}`),
+      );
+      result.run.advanced.forEach(a => console.log(`  ${a.id}: ${a.outcome}${a.note ? ` (${a.note})` : ''}`));
+    }
+    console.log(chalk.cyan(result.hint));
+  }));
+
 const competitorCommand = wikiCommand.command('competitor').description('One wiki page per competitor: links at the top, findings from each research stage below');
 
 competitorCommand

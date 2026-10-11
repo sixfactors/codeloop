@@ -47,11 +47,18 @@ export function loadAgents(projectDir: string): AgentsConfig {
   return { agents, default: raw.agents?.default, runByDefault: raw.run?.agent === true };
 }
 
-export function resolveAgent(projectDir: string, name?: string): AgentConfig {
+/**
+ * `name` is what the caller (a CLI flag, an API call) asked for by name; naming one that is not
+ * configured is always a refusal. `laneAgent` is the lane's own `agent:` preference, used only
+ * when `name` is empty: a lane naming a preset nobody configured falls back to `agents.default`
+ * with no error, since that lane's own board should not break a run because a model preset is
+ * missing on this machine.
+ */
+export function resolveAgent(projectDir: string, name?: string, laneAgent?: string): AgentConfig {
   const config = loadAgents(projectDir);
   const names = Object.keys(config.agents);
   if (names.length === 0) throw new RefusalError('no agent is configured; add `agents:` to .codeloop/config.yaml (the starter config has presets for claude and codex)');
-  const wanted = name ?? config.default ?? (names.length === 1 ? names[0] : undefined);
+  const wanted = name ?? (laneAgent && config.agents[laneAgent] ? laneAgent : undefined) ?? config.default ?? (names.length === 1 ? names[0] : undefined);
   if (!wanted) throw new RefusalError(`several agents are configured (${names.join(', ')}); name one or set agents.default`);
   const agent = config.agents[wanted];
   if (!agent) throw new RefusalError(`agent "${wanted}" is not in .codeloop/config.yaml (configured: ${names.join(', ')})`);
@@ -86,6 +93,20 @@ function skillWikiFolders(projectDir: string, name: string): string[] {
     if (m && !folders.includes(m[1])) folders.push(m[1]);
   }
   return folders;
+}
+
+// A literal `.codeloop/state/*.json` input line (not a glob the agent can list itself, unlike the
+// wiki folders above): inlined whole into the brief, same line-by-line read as skillWikiFolders.
+function skillStateFiles(projectDir: string, name: string): string[] {
+  const text = skillFile(projectDir, name);
+  if (!text) return [];
+  const block = /^inputs:\s*\n((?:[ \t]+-.*\n?)+)/m.exec(text)?.[1] ?? '';
+  const files: string[] = [];
+  for (const line of block.split('\n')) {
+    const m = /^[ \t]+-\s*(\.codeloop\/state\/[\w.-]+\.json)\s*$/.exec(line);
+    if (m && !files.includes(m[1])) files.push(m[1]);
+  }
+  return files;
 }
 
 // The stage output, what is already in the card's spec folder, and the paths its open tasks name.
@@ -147,6 +168,13 @@ export function buildBrief(projectDir: string, card: Card): string {
   if (stage.skill) {
     const body = skillBody(projectDir, stage.skill);
     lines.push(`## Skill: ${stage.skill}`, '', body ?? `The skill's text is not in ${SKILLS_INDEX}; use the /${stage.skill} skill if your tool has it.`, '');
+  }
+
+  if (stage.skill) {
+    for (const file of skillStateFiles(projectDir, stage.skill)) {
+      const full = join(projectDir, file);
+      if (existsSync(full)) lines.push(`## ${file}`, '', '```json', readFileSync(full, 'utf-8').trim(), '```', '');
+    }
   }
 
   const pages = inject(projectDir, filesInScope(projectDir, card, stage.output));

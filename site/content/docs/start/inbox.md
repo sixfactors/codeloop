@@ -29,6 +29,7 @@ Numbers
   scan       active 0  waiting 0  done 0  human turns/card -  first pass -
   shape      active 0  waiting 0  done 0  human turns/card -  first pass -
   triage     active 0  waiting 0  done 0  human turns/card -  first pass -
+  wiki       active 0  waiting 0  done 0  human turns/card -  first pass -
 ```
 
 ## How to read it

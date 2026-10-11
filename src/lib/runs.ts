@@ -58,7 +58,7 @@ export function startCardRun(projectDir: string, ref: string, opts: { agent?: st
   const stage = lane.stages.find(s => s.id === card.stage);
   if (!stage) throw new RefusalError(`card ${card.id} is ${card.stage}; nothing to run`);
   if (card.gate) throw new RefusalError(`card ${card.id} is waiting for you at gate "${card.gate}" (${card.awaiting} approves); approve or reject it first`);
-  const agent: AgentConfig | null = opts.agent || Object.keys(loadAgents(projectDir).agents).length ? resolveAgent(projectDir, opts.agent) : null;
+  const agent: AgentConfig | null = opts.agent || Object.keys(loadAgents(projectDir).agents).length ? resolveAgent(projectDir, opts.agent, lane.agent) : null;
   const now = opts.now ?? clock();
 
   const dir = join(projectDir, AGENT_RUNS_DIR);

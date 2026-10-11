@@ -521,6 +521,74 @@ export function scanRepo(repoDir: string): RepoFacts {
   };
 }
 
+const SOURCE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rb|java|kt|rs|c|cc|cpp|h|hpp|cs|php|swift)$/;
+
+function hasSourceFile(dir: string): boolean {
+  const stack = [dir];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    let entries;
+    try {
+      entries = readdirSync(cur, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        if (SKIP_DIRS.has(e.name) || e.name.startsWith('.')) continue;
+        stack.push(join(cur, e.name));
+      } else if (SOURCE_FILE.test(e.name)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * The folders the architecture skill must account for: top-level, non-dot, non-dependency
+ * directories that hold at least one source file, plus `src/`'s own first-level subfolders when
+ * `src/` exists (a monorepo's layers usually live one level deeper than the repo root).
+ */
+export function scanTopFolders(repoDir: string): string[] {
+  let entries;
+  try {
+    entries = readdirSync(repoDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const top = entries
+    .filter(e => e.isDirectory() && !e.name.startsWith('.') && !SKIP_DIRS.has(e.name))
+    .map(e => e.name)
+    .filter(name => hasSourceFile(join(repoDir, name)))
+    .sort();
+  const srcDir = join(repoDir, 'src');
+  if (!existsSync(srcDir)) return top;
+  const subs = readdirSync(srcDir, { withFileTypes: true })
+    .filter(e => e.isDirectory() && !e.name.startsWith('.') && !SKIP_DIRS.has(e.name))
+    .map(e => `src/${e.name}`)
+    .sort();
+  return [...new Set([...top, ...subs])].sort();
+}
+
+export const REPO_FACTS_PATH = '.codeloop/state/repo-facts.json';
+
+export type RepoFactsFile = RepoFacts & { topFolders: string[] };
+
+/** `scanRepo` plus the top-level folders, as the architecture skill's brief reads it from disk. Pure: reads the repo, writes nothing. */
+export function buildRepoFacts(repoDir: string): RepoFactsFile {
+  return { ...scanRepo(repoDir), topFolders: scanTopFolders(repoDir) };
+}
+
+/** Refreshes `.codeloop/state/repo-facts.json`. Always overwritten: it is scanner state, not a page a person edits. */
+export function writeRepoFacts(repoDir: string): RepoFactsFile {
+  const facts = buildRepoFacts(repoDir);
+  const full = join(repoDir, REPO_FACTS_PATH);
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, `${JSON.stringify(facts, null, 2)}\n`);
+  return facts;
+}
+
 export interface OutlinePage {
   path: string;
   title: string;
@@ -555,9 +623,12 @@ function pageOverview(facts: RepoFacts, repoName: string): OutlinePage {
   return mk(`${WIKI_DIR}/product/overview.md`, `${repoName} overview`, lines.join('\n'));
 }
 
-// The architecture folder follows the C4 model: context (the system, its people and the systems
+// These raw inventories follow the C4 model: context (the system, its people and the systems
 // around it), containers (the deployable layers and what runs where), then data, flows and deploy.
-// Each page is one diagram and one table; the diagram is a mermaid fence the wiki renders.
+// Each page is one diagram and one table; the diagram is a mermaid fence the wiki renders. They
+// land under wiki/reference/, not wiki/architecture/: they are scanner output, not the explained
+// five pages the architecture skill writes from them (see architecture-check.ts and
+// templates/skills/architecture/).
 const mermaidId = (text: string) => text.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'x';
 
 function pageContext(facts: RepoFacts, repoName: string): OutlinePage {
@@ -570,7 +641,7 @@ function pageContext(facts: RepoFacts, repoName: string): OutlinePage {
   lines.push('```', '', '| Who or what | Role | Source |', '|---|---|---|', '| User | assumption: the persona is inferred, not stated | - |');
   for (const t of external) lines.push(`| ${t} | hosting | source: ${facts.deploy.find(d => d.target === t)?.source ?? '-'} |`);
   if (!external.length) lines.push('| (no external systems found) | assumption: no deploy config names one | - |');
-  return mk(`${WIKI_DIR}/architecture/context.md`, 'Context', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/context.md`, 'Context', lines.join('\n'));
 }
 
 function pageContainers(facts: RepoFacts): OutlinePage {
@@ -590,7 +661,7 @@ function pageContainers(facts: RepoFacts): OutlinePage {
     lines.push('| Layer | Tech | Where | Source |', '|---|---|---|---|');
     for (const s of facts.stack) lines.push(`| ${s.layer} | ${s.tech} | ${s.where} | source: ${s.source} |`);
   } else lines.push('assumption: no manifest was found, so no layers could be drawn.');
-  return mk(`${WIKI_DIR}/architecture/containers.md`, 'Containers', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/containers.md`, 'Containers', lines.join('\n'));
 }
 
 function pageStack(facts: RepoFacts): OutlinePage {
@@ -599,7 +670,7 @@ function pageStack(facts: RepoFacts): OutlinePage {
     lines.push('| Layer | Tech | Where | Source |', '|---|---|---|---|');
     for (const s of facts.stack) lines.push(`| ${s.layer} | ${s.tech} | ${s.where} | source: ${s.source} |`);
   } else lines.push('assumption: no package.json, pyproject.toml, requirements.txt or go.mod was found; stack is unknown.');
-  return mk(`${WIKI_DIR}/architecture/stack.md`, 'Stack', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/stack.md`, 'Stack', lines.join('\n'));
 }
 
 function pageErd(facts: RepoFacts): OutlinePage {
@@ -610,7 +681,7 @@ function pageErd(facts: RepoFacts): OutlinePage {
     lines.push('```', '', '| Entity | Fields | Source |', '|---|---|---|');
     for (const e of facts.entities) lines.push(`| ${e.name} | ${e.fields.join(', ') || '-'} | source: ${e.source} |`);
   } else lines.push('assumption: no Prisma, Mongoose, SQLAlchemy or TypeORM schema files were found; no ERD could be drawn.');
-  return mk(`${WIKI_DIR}/architecture/erd.md`, 'ERD', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/erd.md`, 'ERD', lines.join('\n'));
 }
 
 function pageContracts(facts: RepoFacts): OutlinePage {
@@ -619,7 +690,7 @@ function pageContracts(facts: RepoFacts): OutlinePage {
     lines.push('| Method | Path | Handler file |', '|---|---|---|');
     for (const r of facts.routes) lines.push(`| ${r.method} | ${r.path} | source: ${r.file} |`);
   } else lines.push('assumption: no route handlers (Express, Nest, Next route handlers, FastAPI) were found.');
-  return mk(`${WIKI_DIR}/architecture/service-contracts.md`, 'Service contracts', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/service-contracts.md`, 'Service contracts', lines.join('\n'));
 }
 
 function pageDataFlows(facts: RepoFacts): OutlinePage {
@@ -627,7 +698,7 @@ function pageDataFlows(facts: RepoFacts): OutlinePage {
   const top = facts.routes.slice(0, 3);
   if (!top.length) lines.push('assumption: no routes were found, so no flow could be inferred.');
   for (const r of top) lines.push(`## ${r.method} ${r.path}`, '', '```mermaid', 'sequenceDiagram', `  Client->>API: ${r.method} ${r.path}`, '  API->>DB: query/update', '  DB-->>API: result', '  API-->>Client: response', '```', '');
-  return mk(`${WIKI_DIR}/architecture/data-flows.md`, 'Data flows', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/data-flows.md`, 'Data flows', lines.join('\n'));
 }
 
 function pageDeploy(facts: RepoFacts): OutlinePage {
@@ -643,7 +714,7 @@ function pageDeploy(facts: RepoFacts): OutlinePage {
     lines.push('', '## CI', '');
     for (const c of facts.ci) lines.push(`- ${c.name ?? c.file}: ${c.steps.length} steps (source: ${c.file})`);
   }
-  return mk(`${WIKI_DIR}/architecture/deploy.md`, 'Deploy', lines.join('\n'));
+  return mk(`${WIKI_DIR}/reference/deploy.md`, 'Deploy', lines.join('\n'));
 }
 
 function pagesRunbooks(facts: RepoFacts): OutlinePage[] {
@@ -743,12 +814,15 @@ export interface WriteOutlineResult {
   assumptions: number;
 }
 
-/** `--write`: writes every page that does not already exist (or all of them, with `force`). */
-export function writeOutline(repoDir: string, opts: { force?: boolean } = {}): WriteOutlineResult {
+/** `--write`: writes every page that does not already exist (or all of them, with `force`), and always refreshes `.codeloop/state/repo-facts.json`. */
+export function writeOutline(repoDir: string, opts: { force?: boolean; forceUnder?: string } = {}): WriteOutlineResult {
   const result: WriteOutlineResult = { written: [], skipped: [], assumptions: 0 };
+  writeRepoFacts(repoDir);
+  result.written.push(REPO_FACTS_PATH);
   for (const page of buildOutline(repoDir)) {
     const full = join(repoDir, page.path);
-    if (existsSync(full) && !opts.force) {
+    const overwrite = opts.force || (opts.forceUnder !== undefined && page.path.startsWith(opts.forceUnder));
+    if (existsSync(full) && !overwrite) {
       result.skipped.push(page.path);
       continue;
     }

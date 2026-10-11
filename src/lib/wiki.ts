@@ -71,7 +71,8 @@ function writePage(projectDir: string, page: Page): void {
 // instead of each carrying its own copy of the rule.
 export const TOPICS: { folder: string; holds: string; writtenBy: string }[] = [
   { folder: 'product/', holds: 'What the product is, who it is for, the pain each feature answers', writtenBy: '`wiki init --from-repo`; people on the board' },
-  { folder: 'architecture/', holds: 'C4 pages: context, containers (layers), stack, ERD, service contracts, data flows (sequences), deploy; each one diagram and one table', writtenBy: '`wiki init --from-repo`; the api, sdk and ui stages keep it current' },
+  { folder: 'architecture/', holds: 'Five pages written by the architecture skill from .codeloop/state/repo-facts.json and wiki/reference/: overview, flows, data-model, change-map, invariants. `codeloop check architecture` judges them', writtenBy: '`codeloop wiki build`, the architecture skill' },
+  { folder: 'reference/', holds: 'Scanner inventories: C4 context, containers (layers), stack, ERD, service contracts, data flows (sequences), deploy; each one diagram and one table, facts only, no explanation', writtenBy: '`wiki init --from-repo`, `codeloop wiki build`' },
   { folder: 'competitors/', holds: 'One page per competitor: docs and changelog URLs, findings per story', writtenBy: '`wiki competitor add`; the research stage on pass; the scan workflow' },
   { folder: 'decisions/', holds: 'Verdict, exists call, pain and options per story; architectural decisions', writtenBy: 'The research stage on pass; `wiki capture --kind decision`' },
   { folder: 'gotchas/', holds: 'A mistake and how to avoid it, scoped to files; frequency raises severity', writtenBy: '`wiki capture`; the Stop hook; agents after a stage' },

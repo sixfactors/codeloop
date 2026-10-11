@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import { buildOutline, outlineSummary, scanRepo, writeOutline } from '../wiki-outline.js';
+import { buildOutline, outlineSummary, REPO_FACTS_PATH, scanRepo, scanTopFolders, writeOutline } from '../wiki-outline.js';
 
 let dir: string;
 
@@ -169,13 +169,14 @@ describe('wiki-outline: writing', () => {
     expect(existsSync(join(dir, '.codeloop'))).toBe(false);
   });
 
-  it('writes the C4 context and containers pages with a mermaid diagram each', () => {
+  it('writes the C4 context and containers pages under reference/, not architecture/, with a mermaid diagram each', () => {
     dir = expressMongooseRepo();
     writeOutline(dir);
-    const context = readFileSync(join(dir, '.codeloop/wiki/architecture/context.md'), 'utf-8');
+    expect(existsSync(join(dir, '.codeloop/wiki/architecture'))).toBe(false);
+    const context = readFileSync(join(dir, '.codeloop/wiki/reference/context.md'), 'utf-8');
     expect(context).toContain('```mermaid\nC4Context');
     expect(context).toMatch(/System\(sys, "/);
-    const containers = readFileSync(join(dir, '.codeloop/wiki/architecture/containers.md'), 'utf-8');
+    const containers = readFileSync(join(dir, '.codeloop/wiki/reference/containers.md'), 'utf-8');
     expect(containers).toContain('```mermaid\nflowchart TB');
     expect(containers).toMatch(/subgraph L0\["/);
     expect(containers.slice(0, containers.indexOf('```', containers.indexOf('flowchart TB')))).not.toContain('package manager');
@@ -187,17 +188,41 @@ describe('wiki-outline: writing', () => {
     const first = writeOutline(dir);
     expect(first.skipped).toEqual([]);
     expect(first.written.length).toBeGreaterThan(0);
-    const stackPath = join(dir, '.codeloop/wiki/architecture/stack.md');
+    const stackPath = join(dir, '.codeloop/wiki/reference/stack.md');
     expect(existsSync(stackPath)).toBe(true);
 
     writeFileSync(stackPath, readFileSync(stackPath, 'utf-8') + '\nHand-edited.\n');
     const second = writeOutline(dir);
-    expect(second.written).toEqual([]);
-    expect(second.skipped).toEqual(expect.arrayContaining(['.codeloop/wiki/architecture/stack.md']));
+    expect(second.written).toEqual([REPO_FACTS_PATH]);
+    expect(second.skipped).toEqual(expect.arrayContaining(['.codeloop/wiki/reference/stack.md']));
     expect(readFileSync(stackPath, 'utf-8')).toContain('Hand-edited.');
 
     const forced = writeOutline(dir, { force: true });
     expect(forced.skipped).toEqual([]);
     expect(readFileSync(stackPath, 'utf-8')).not.toContain('Hand-edited.');
+  });
+
+  it('wiki build refreshes only reference pages and keeps hand edits elsewhere', () => {
+    dir = expressMongooseRepo();
+    writeOutline(dir);
+    const stackPath = join(dir, '.codeloop/wiki/reference/stack.md');
+    const glossaryPath = join(dir, '.codeloop/wiki/glossary.md');
+    expect(existsSync(glossaryPath)).toBe(true);
+    writeFileSync(stackPath, readFileSync(stackPath, 'utf-8') + '\nStale.\n');
+    writeFileSync(glossaryPath, readFileSync(glossaryPath, 'utf-8') + '\nHand-edited.\n');
+    writeOutline(dir, { forceUnder: '.codeloop/wiki/reference/' });
+    expect(readFileSync(stackPath, 'utf-8')).not.toContain('Stale.');
+    expect(readFileSync(glossaryPath, 'utf-8')).toContain('Hand-edited.');
+  });
+
+  it('writes .codeloop/state/repo-facts.json with the scanned facts and the top-level source folders', () => {
+    dir = expressMongooseRepo();
+    writeOutline(dir);
+    const factsPath = join(dir, REPO_FACTS_PATH);
+    expect(existsSync(factsPath)).toBe(true);
+    const facts = JSON.parse(readFileSync(factsPath, 'utf-8'));
+    expect(facts.stack.map((s: { tech: string }) => s.tech)).toEqual(expect.arrayContaining(['Node.js', 'express', 'mongoose']));
+    expect(facts.topFolders).toEqual(expect.arrayContaining(['src']));
+    expect(scanTopFolders(dir)).toEqual(expect.arrayContaining(['src']));
   });
 });

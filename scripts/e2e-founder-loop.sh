@@ -45,7 +45,7 @@ cards_in() { codeloop card list --json | node -e "const d=JSON.parse(require('fs
 
 # --- init installs the shipped lanes -------------------------------------------------------
 expect 0 "init runs" codeloop init --tools claude --starter generic
-expect 0 "init installed the 9 shipped lanes" test "$(lane_count)" = 9
+expect 0 "init installed the 10 shipped lanes" test "$(lane_count)" = 10
 expect 0 "the shipped build lane has on_done commented out" sh -c "grep -q '^# on_done: { start: market }' .codeloop/lanes/build.yaml"
 # on_done is opt-in; the e2e lanes below rely on it.
 printf 'lanes:\n  auto_start: true\n' >> .codeloop/config.yaml

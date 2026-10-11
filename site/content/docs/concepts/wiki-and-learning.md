@@ -118,6 +118,40 @@ The lane is now version 2. Version 1 is kept, and `codeloop lane rollback market
 | A rule | `.codeloop/rules.md` | Promoted at frequency 10, or written by hand |
 | A change to how work flows | `.codeloop/lanes/<id>.yaml`, new version | The owner, after a green eval |
 
-## Architecture pages follow C4
+## Facts, then the five pages that explain them
 
-`codeloop wiki init --from-repo` seeds `wiki/architecture/` in the shape of the C4 model: `context.md` (the system, its users and the systems around it), `containers.md` (the deployable layers, top to bottom, each naming its technology), then `stack.md`, `erd.md`, `service-contracts.md`, `data-flows.md` (one sequence diagram per flow) and `deploy.md` (environments as a diagram and a table). Every diagram is a ```mermaid fence, and the wiki renders those fences as diagrams, in light and dark. A line that cannot be grounded in a file says `assumption:` so a person knows what to confirm. The system-design artifact for a story draws the same views for one change; the wiki pages are the standing picture the api, sdk and ui stages keep current.
+Facts and explanation are two different jobs, written by two different things.
+
+`codeloop wiki init --from-repo` (and `codeloop wiki build`, below) scans the repo and writes two
+things nobody has to read as prose: `.codeloop/state/repo-facts.json` (the stack, routes,
+entities, Makefile targets, CI, deploy targets, and `topFolders`, the top-level source
+directories) and the raw C4-shaped inventories under `wiki/reference/`: `context.md`,
+`containers.md`, `stack.md`, `erd.md`, `service-contracts.md`, `data-flows.md`, `deploy.md`. Every
+diagram is a ```mermaid fence, and the wiki renders those as diagrams, in light and dark. A line
+that cannot be grounded in a file says `assumption:` so a person knows what to confirm.
+
+The architecture skill reads those facts, reads the actual code, and writes the five pages a new
+engineer would want under `wiki/architecture/`: `overview.md` (what the parts are and how they
+stack, as a layered flowchart over real folders), `flows.md` (2 to 4 sequence diagrams of the main
+journeys), `data-model.md` (an ER diagram of the entities that matter), `change-map.md` ("to
+change X, edit Y, then run Z") and `invariants.md` (what must stay true, each rule naming the file
+that enforces it and the test that proves it). `wiki/reference/` is facts; `wiki/architecture/` is
+judgment, and only the architecture skill writes it.
+
+`codeloop check architecture` judges the five pages mechanically: every path they name has to
+exist, every top-level folder from `repo-facts.json` has to be named or explicitly left out, pages
+and tables and diagrams stay inside noise limits, sequence participants match the overview's
+names, and no scanner leftovers (a bare count like "59 routes" used as a label) survive into them.
+It cannot judge whether the explanation is good, only that it was not invented.
+
+```sh
+codeloop wiki build
+```
+
+Refreshes the facts and reference pages, starts a card titled "Explain the architecture" in the
+one-stage `wiki` lane, and runs it. `--agent <name>` picks a preset, `--no-run` only refreshes
+the facts and creates the card. The `wiki` lane names `claude-sonnet` as its own agent (a preset
+`codeloop init` writes beside `claude`, running the same CLI with `--model sonnet`), so the bulk
+writing runs on a cheaper model unless `--agent` says otherwise; a lane's own `agent:` is preferred
+over `agents.default` whenever the run does not name one itself. The system-design artifact for a
+single story draws the same views for one change; the architecture pages are the standing picture.

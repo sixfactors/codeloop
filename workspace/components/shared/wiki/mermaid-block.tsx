@@ -5,6 +5,7 @@
 // to parse shows the error and the source instead of nothing, so a typo in a page is visible.
 import { useEffect, useId, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 let seq = 0;
 
@@ -43,5 +44,20 @@ export function MermaidBlock({ chart }: { chart: string }) {
     );
   }
   if (!svg) return <pre className="not-prose my-4 overflow-x-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground" aria-busy="true">{chart}</pre>;
-  return <div className="not-prose my-4 overflow-x-auto [&_svg]:mx-auto [&_svg]:max-w-full" data-mermaid dangerouslySetInnerHTML={{ __html: svg }} />;
+  // Fitted to the column so the page reads at a glance; a click opens it at full size, where a wide
+  // layered diagram is legible.
+  return (
+    <Dialog>
+      <DialogTrigger
+        title="Open the diagram at full size"
+        className="not-prose my-4 block w-full cursor-zoom-in rounded-lg border bg-card p-4 text-left [&_svg]:mx-auto [&_svg]:max-w-full"
+        data-mermaid
+        render={<button type="button" dangerouslySetInnerHTML={{ __html: svg }} />}
+      />
+      <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-auto sm:max-w-[95vw]">
+        <DialogTitle className="sr-only">Diagram</DialogTitle>
+        <div className="[&_svg]:mx-auto [&_svg]:!max-w-none" dangerouslySetInnerHTML={{ __html: svg }} />
+      </DialogContent>
+    </Dialog>
+  );
 }
