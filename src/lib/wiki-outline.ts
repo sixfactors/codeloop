@@ -555,6 +555,44 @@ function pageOverview(facts: RepoFacts, repoName: string): OutlinePage {
   return mk(`${WIKI_DIR}/product/overview.md`, `${repoName} overview`, lines.join('\n'));
 }
 
+// The architecture folder follows the C4 model: context (the system, its people and the systems
+// around it), containers (the deployable layers and what runs where), then data, flows and deploy.
+// Each page is one diagram and one table; the diagram is a mermaid fence the wiki renders.
+const mermaidId = (text: string) => text.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'x';
+
+function pageContext(facts: RepoFacts, repoName: string): OutlinePage {
+  const external = facts.deploy.map(d => d.target).filter((t, i, a) => a.indexOf(t) === i).slice(0, 4);
+  const lines = ['---', 'title: Context', '---', '', '# System context', '', 'C4 level 1: the system as one box, the people who use it and the systems it talks to.', ''];
+  lines.push('```mermaid', 'C4Context', `  title ${repoName} in context`, `  Person(user, "User", "assumption: the persona is not named in any doc")`, `  System(sys, "${repoName}", "${facts.readme?.title ?? 'what it does is not stated in a README'}")`);
+  for (const t of external) lines.push(`  System_Ext(${mermaidId(t)}, "${t}", "hosting, from the deploy config")`);
+  lines.push('  Rel(user, sys, "uses")');
+  for (const t of external) lines.push(`  Rel(sys, ${mermaidId(t)}, "deploys to")`);
+  lines.push('```', '', '| Who or what | Role | Source |', '|---|---|---|', '| User | assumption: the persona is inferred, not stated | - |');
+  for (const t of external) lines.push(`| ${t} | hosting | source: ${facts.deploy.find(d => d.target === t)?.source ?? '-'} |`);
+  if (!external.length) lines.push('| (no external systems found) | assumption: no deploy config names one | - |');
+  return mk(`${WIKI_DIR}/architecture/context.md`, 'Context', lines.join('\n'));
+}
+
+function pageContainers(facts: RepoFacts): OutlinePage {
+  const lines = ['---', 'title: Containers', '---', '', '# Containers and layers', '', 'C4 level 2: the deployable pieces, as layers from the user down to the data. Each box names its technology; a box with no technology is a gap to fill.', ''];
+  const layers: Record<string, string[]> = {};
+  for (const s of facts.stack) (layers[s.layer] ??= []).push(s.tech);
+  const order = ['frontend framework', 'UI kit', 'API framework', 'API layer', 'backend framework', 'framework', 'runtime', 'ORM', 'database', 'queue', 'cache'];
+  // Package managers, test runners and linters are tooling, not layers a request passes through.
+  const names = Object.keys(layers).filter(l => !/package manager|tooling|test framework|linter|formatter|bundler/i.test(l)).sort((a, b) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)));
+  if (names.length) {
+    lines.push('```mermaid', 'flowchart TB');
+    names.forEach((layer, i) => lines.push(`  subgraph L${i}["${layer}"]`, `    N${i}["${layers[layer].slice(0, 4).join(', ')}"]`, '  end'));
+    for (let i = 0; i + 1 < names.length; i++) lines.push(`  N${i} --> N${i + 1}`);
+    if (facts.routes.length) lines.push(`  API["${facts.routes.length} routes"]`, `  N0 -. calls .-> API`);
+    if (facts.entities.length) lines.push(`  DATA[("${facts.entities.length} entities")]`, `  N${names.length - 1} --> DATA`);
+    lines.push('```', '');
+    lines.push('| Layer | Tech | Where | Source |', '|---|---|---|---|');
+    for (const s of facts.stack) lines.push(`| ${s.layer} | ${s.tech} | ${s.where} | source: ${s.source} |`);
+  } else lines.push('assumption: no manifest was found, so no layers could be drawn.');
+  return mk(`${WIKI_DIR}/architecture/containers.md`, 'Containers', lines.join('\n'));
+}
+
 function pageStack(facts: RepoFacts): OutlinePage {
   const lines = ['---', 'title: Stack', '---', '', '# Stack', ''];
   if (facts.stack.length) {
@@ -595,6 +633,9 @@ function pageDataFlows(facts: RepoFacts): OutlinePage {
 function pageDeploy(facts: RepoFacts): OutlinePage {
   const lines = ['---', 'title: Deploy', '---', '', '# Environments', ''];
   if (facts.deploy.length) {
+    lines.push('```mermaid', 'flowchart LR', '  dev["developer machine"]');
+    facts.deploy.forEach((d, i) => lines.push(`  T${i}["${d.target}"]`, `  dev -- "${d.how.replace(/"/g, "'").slice(0, 40)}" --> T${i}`));
+    lines.push('```', '');
     lines.push('| Target | How | Source |', '|---|---|---|');
     for (const d of facts.deploy) lines.push(`| ${d.target} | ${d.how} | source: ${d.source} |`);
   } else lines.push('assumption: no docker-compose.yml, fly.toml or vercel.json was found; deploy mechanism is unknown.');
@@ -667,6 +708,8 @@ export function buildOutline(repoDir: string): OutlinePage[] {
   const repoName = basename(repoDir);
   return [
     pageOverview(facts, repoName),
+    pageContext(facts, repoName),
+    pageContainers(facts),
     pageStack(facts),
     pageErd(facts),
     pageContracts(facts),

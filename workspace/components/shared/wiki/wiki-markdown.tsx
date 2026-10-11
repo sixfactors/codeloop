@@ -16,6 +16,7 @@ import { AlertTriangle, Info, OctagonAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { MermaidBlock } from './mermaid-block';
 
 type Tag = { children?: ReactNode; title?: string; type?: string; href?: string; node?: unknown };
 
@@ -55,7 +56,21 @@ const CUSTOM = {
   ),
 };
 
+// react-markdown wraps a fence as <pre><code class="language-x">; a mermaid fence becomes a
+// diagram here, every other fence keeps the default <pre>.
+function mermaidSource(children: ReactNode): string | null {
+  const child = Array.isArray(children) ? children[0] : children;
+  const props = (child as { props?: { className?: string; children?: ReactNode } } | null)?.props;
+  if (!props || !/\blanguage-mermaid\b/.test(props.className ?? '')) return null;
+  const text = Array.isArray(props.children) ? props.children.join('') : props.children;
+  return typeof text === 'string' ? text : null;
+}
+
 const components: Components = {
+  pre: ({ children, node: _node, ...rest }: ComponentProps<'pre'> & { node?: unknown }) => {
+    const chart = mermaidSource(children);
+    return chart !== null ? <MermaidBlock chart={chart} /> : <pre {...rest}>{children}</pre>;
+  },
   a: ({ href, children, node: _node, ...rest }: ComponentProps<'a'> & { node?: unknown }) => {
     const h = href ?? '';
     // Relative links between wiki files (../gotchas/x.md) stay inside the app.

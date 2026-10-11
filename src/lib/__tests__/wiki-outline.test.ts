@@ -169,6 +169,19 @@ describe('wiki-outline: writing', () => {
     expect(existsSync(join(dir, '.codeloop'))).toBe(false);
   });
 
+  it('writes the C4 context and containers pages with a mermaid diagram each', () => {
+    dir = expressMongooseRepo();
+    writeOutline(dir);
+    const context = readFileSync(join(dir, '.codeloop/wiki/architecture/context.md'), 'utf-8');
+    expect(context).toContain('```mermaid\nC4Context');
+    expect(context).toMatch(/System\(sys, "/);
+    const containers = readFileSync(join(dir, '.codeloop/wiki/architecture/containers.md'), 'utf-8');
+    expect(containers).toContain('```mermaid\nflowchart TB');
+    expect(containers).toMatch(/subgraph L0\["/);
+    expect(containers.slice(0, containers.indexOf('```', containers.indexOf('flowchart TB')))).not.toContain('package manager');
+    expect(containers).toContain('| Layer | Tech | Where | Source |');
+  });
+
   it('writes every page on first run, then skips existing pages unless --force', () => {
     dir = expressMongooseRepo();
     const first = writeOutline(dir);

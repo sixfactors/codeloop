@@ -117,3 +117,7 @@ The lane is now version 2. Version 1 is kept, and `codeloop lane rollback market
 | A fact about the code | `.codeloop/wiki/` | Nobody; it is advice until frequency makes it critical |
 | A rule | `.codeloop/rules.md` | Promoted at frequency 10, or written by hand |
 | A change to how work flows | `.codeloop/lanes/<id>.yaml`, new version | The owner, after a green eval |
+
+## Architecture pages follow C4
+
+`codeloop wiki init --from-repo` seeds `wiki/architecture/` in the shape of the C4 model: `context.md` (the system, its users and the systems around it), `containers.md` (the deployable layers, top to bottom, each naming its technology), then `stack.md`, `erd.md`, `service-contracts.md`, `data-flows.md` (one sequence diagram per flow) and `deploy.md` (environments as a diagram and a table). Every diagram is a ```mermaid fence, and the wiki renders those fences as diagrams, in light and dark. A line that cannot be grounded in a file says `assumption:` so a person knows what to confirm. The system-design artifact for a story draws the same views for one change; the wiki pages are the standing picture the api, sdk and ui stages keep current.
