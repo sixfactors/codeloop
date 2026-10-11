@@ -198,8 +198,12 @@ export interface ListedProject {
   path: string;
   addedAt: string;
   missing: boolean;
-  /** Computed server-side (hub.ts, from the project's own inbox report); absent when the project failed to read. */
-  counts?: { active: number; waitingOnYou: number; stuck: number };
+  /**
+   * Computed server-side (hub.ts, from the project's own inbox report); absent when the project
+   * failed to read. `waitingOnYou` and `storiesWithQuestions` are the same two numbers everywhere
+   * they appear — the hub's project grid, its sidebar, and a single project's own inbox page.
+   */
+  counts?: { active: number; waitingOnYou: number; storiesWithQuestions: number; stuck: number };
 }
 export interface HubGateItem {
   id: string;

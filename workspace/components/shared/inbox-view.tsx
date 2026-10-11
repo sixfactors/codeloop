@@ -115,7 +115,6 @@ export function InboxView() {
 
   const asking = data.questions;
   const shipped = data.shipped;
-  const openQuestions = asking.cards.reduce((n, c) => n + (c.openQuestions ?? 0), 0);
   const more = (list: { cards: unknown[]; total: number }) => Math.max(0, list.total - list.cards.length);
   // The search box narrows the rows on the page by title or id; the facets go to the server.
   const q = filters.q.trim().toLowerCase();
@@ -128,16 +127,20 @@ export function InboxView() {
         <RecordStatRow
           testId="inbox-stats"
           stats={[
-            { label: 'Gates waiting', value: data.needsYou.total },
-            // The sum is exact when every asking card is in the list; past the cap it is a floor and the card count is shown instead.
-            { label: 'Open questions', value: asking.total > asking.cards.length ? asking.total : openQuestions },
+            // Two numbers with one meaning each everywhere they're shown (the hub's project grid
+            // and sidebar read the same pair from the server, see src/lib/hub.ts): a story is
+            // "waiting on you" once, no matter how many gate types it could match, and `asking.total`
+            // already counts stories with a question, not the open questions on them, so it needs
+            // no further reduction here.
+            { label: 'Waiting on you', value: data.needsYou.total },
+            { label: 'Stories with questions', value: asking.total },
             { label: 'Shipped this week', value: shipped.total },
             { label: 'Backlog', value: backlog.data ?? 0 },
           ]}
         />
 
         <AttributeCard
-          title="Gates waiting"
+          title="Waiting on you"
           icon={Lock}
           testId="inbox-gates"
           action={ranked.length > TOP || all ? (

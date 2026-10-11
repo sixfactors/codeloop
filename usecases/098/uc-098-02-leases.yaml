@@ -1,0 +1,5 @@
+id: uc-098-02
+accept: US2
+failure_mode: "two sessions edit the same file, or a shared file blocks every story"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/host-enforcement.test.ts -t 'refuses a file|shared'", expect: { exit: 0 } }

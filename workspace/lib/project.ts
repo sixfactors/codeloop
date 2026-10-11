@@ -41,6 +41,15 @@ export function currentProjectBrowser(): string | undefined {
   return m ? decodeURIComponent(m[1]) : undefined;
 }
 
+/**
+ * `/p/<id>` alone cannot tell the hub's own home page ("/") apart from a standalone board's root
+ * — neither has that prefix — so this also reads a `data-codeloop-hub` attribute the root layout
+ * sets on `<html>` from the same server-resolved header `hubModeServer()` reads. It is plain HTML,
+ * present before hydration, so api.ts's session/login/logout (which can run before any component
+ * has mounted) see the right answer on the very first call, not just once the URL has a project in it.
+ */
 export function hubModeBrowser(): boolean {
-  return typeof window !== 'undefined' && window.location.pathname.startsWith('/p/');
+  if (typeof window === 'undefined') return false;
+  if (document.documentElement.hasAttribute('data-codeloop-hub')) return true;
+  return window.location.pathname.startsWith('/p/');
 }

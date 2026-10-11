@@ -1,0 +1,5 @@
+id: uc-098-03
+accept: US3
+failure_mode: "sessions started before the release are blocked, or an ended session keeps its lease"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/host-enforcement.test.ts -t 'falls back'", expect: { exit: 0 } }

@@ -1,0 +1,5 @@
+id: uc-098-01
+accept: US1
+failure_mode: "one session's activate switches off another's story"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/host-enforcement.test.ts -t 'two sessions activate'", expect: { exit: 0 } }

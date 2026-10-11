@@ -232,6 +232,16 @@ cardCommand
   .action(guard(reject));
 
 cardCommand
+  .command('place <id> <stage>')
+  .description('Move a story to the stage its work has really reached (the owner decides); its checks run from there')
+  .option(...ROLE)
+  .action(guard(async (id: string, stage: string, opts: { as?: string }) => {
+    const { card, hint } = await client().cards.place(id, stage, { as: opts.as });
+    console.log(`${card.id} is at ${card.stage}`);
+    console.log(chalk.cyan(hint));
+  }));
+
+cardCommand
   .command('park <id> [note]')
   .description('Move an active card back to your inbox, keeping its stage; frees its lane slot. Approving it later returns it to that stage')
   .option(...ROLE)

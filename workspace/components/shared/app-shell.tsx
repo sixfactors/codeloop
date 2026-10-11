@@ -22,7 +22,7 @@ import dynamic from 'next/dynamic';
 import { useCardCount, useCards, useCanWrite, useConfig, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { useProject, useRoutes } from '@/components/providers/project-provider';
 import { routesFor, type Routes } from '@/lib/routes';
-import { api, type HubNeedsYou, type ListedProject } from '@/lib/api';
+import { api, type ListedProject } from '@/lib/api';
 import { CommandPalette } from '@/components/shared/command-palette';
 import { ProjectSwitcher } from '@/components/shared/project-switcher';
 import { ReadOnlyBanner } from '@/components/shared/read-only-banner';
@@ -89,15 +89,12 @@ function secondaryNav(routes: Routes): NavItem[] {
   return [{ id: 'settings', title: 'Settings', url: routes.settings, matchUrl: MATCH.settings, icon: Settings }];
 }
 
-/** How many of a project's gates + questions are waiting on a person; the same number the hub home's own cards show. */
-function needsYouCount(needsYou: HubNeedsYou | undefined, projectId: string): number {
-  if (!needsYou) return 0;
-  return needsYou.gates.filter((g) => g.project === projectId).length + needsYou.questions.filter((q) => q.project === projectId).length;
-}
-
 /** The hub home's own nav: no board to scope to, so "Work"/"Knowledge" are replaced by every
- * registered project (a plain link, full navigation — see hub-home.tsx) plus a way back home. */
-function HubNavGroups({ pathname, projects, needsYou }: { pathname: string; projects?: ListedProject[]; needsYou?: HubNeedsYou }) {
+ * registered project (a plain link, full navigation — see hub-home.tsx) plus a way back home.
+ * Each row's badge is `counts.waitingOnYou`, the same number (and the same server computation,
+ * src/lib/hub.ts) the project grid card shows — one definition of "waiting", not a second one
+ * added up from the gates+questions feed. */
+function HubNavGroups({ pathname, projects }: { pathname: string; projects?: ListedProject[] }) {
   const known = (projects ?? []).filter((p) => !p.missing);
   return (
     <>
@@ -122,7 +119,7 @@ function HubNavGroups({ pathname, projects, needsYou }: { pathname: string; proj
                 <SidebarMenuButton tooltip={p.name} render={<a href={`/p/${encodeURIComponent(p.id)}/`} data-testid={`sidebar-nav-project-${p.id}`} />}>
                   <Boxes strokeWidth={1.5} />
                   <span className="flex-1 truncate">{p.name}</span>
-                  <CountBadge value={needsYouCount(needsYou, p.id)} tone="attention" />
+                  <CountBadge value={p.counts?.waitingOnYou ?? 0} tone="attention" />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -242,7 +239,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const questions = inbox.data?.questions.total ?? 0;
   const backlog = useCardCount({ stage: ['proposed'] }, !atHubHome).data ?? 0;
   const hubProjects = useQuery({ queryKey: ['hub', 'projects'], queryFn: api.hub.projects, retry: false, enabled: atHubHome });
-  const hubNeedsYou = useQuery({ queryKey: ['hub', 'needs-you'], queryFn: api.hub.needsYou, retry: false, enabled: atHubHome });
   const knownProjects = (hubProjects.data ?? []).filter((p) => !p.missing);
   const cfg = config.data as { product?: string; name?: string } | undefined;
   const project = session.data?.project;
@@ -277,7 +273,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* 12px between groups, matching the chanl-admin rail. */}
         <SidebarContent className="gap-0 [&>[data-sidebar=group]:not(:first-child)]:pt-0.5">
           {atHubHome ? (
-            <HubNavGroups pathname={pathname} projects={hubProjects.data} needsYou={hubNeedsYou.data} />
+            <HubNavGroups pathname={pathname} projects={hubProjects.data} />
           ) : (
             groups.map((group, i) => (
               <SidebarGroup key={group.label ?? `group-${i}`} className={i > 0 ? 'mt-0.5' : undefined}>
@@ -292,13 +288,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SidebarGroup>
             ))
           )}
-          <SidebarGroup className="mt-auto">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {secondary.map((item) => <NavRow key={item.id} item={item} pathname={pathname} />)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {/* Settings is a project's own page (lanes, personas, board auth) — nothing to show it
+              for at the hub home, where there's no project to configure. No hub-level settings
+              page exists yet, so this stays off rather than linking somewhere that degrades. */}
+          {!atHubHome && (
+            <SidebarGroup className="mt-auto">
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {secondary.map((item) => <NavRow key={item.id} item={item} pathname={pathname} />)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
 
         <SidebarFooter>

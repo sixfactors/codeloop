@@ -36,7 +36,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     ]);
   }
   return (
-    <html lang="en" suppressHydrationWarning>
+    // data-codeloop-hub: plain HTML, present at hydration, so lib/project.ts's hubModeBrowser()
+    // (api.ts's session/login/logout) knows this is the hub even on "/", which carries no
+    // `/p/<id>` prefix to parse. See that function's comment for why the URL alone can't tell.
+    <html lang="en" suppressHydrationWarning {...(hub ? { 'data-codeloop-hub': '' } : {})}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

@@ -72,6 +72,19 @@ export function AttributeCard({
   );
 }
 
+/** The same icon + text-base title row AttributeCard's header uses, without the card chrome —
+ * for a page-level section divider whose content is already its own card or set of cards (e.g.
+ * the hub home's "Projects" grid and "Needs you" list), where a further wrapping Card would nest
+ * card-in-card. Keeps every section heading the same weight instead of a bare muted label. */
+export function SectionHeading({ title, icon: Icon, className }: { title: React.ReactNode; icon?: LucideIcon; className?: string }) {
+  return (
+    <div className={cn('mb-3 flex items-center gap-2 text-base font-medium', className)}>
+      {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+      {title}
+    </div>
+  );
+}
+
 export interface RecordStat {
   label: string;
   value: React.ReactNode;

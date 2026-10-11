@@ -1,5 +1,5 @@
 {
-  "version": 281,
+  "version": 300,
   "cards": [
     {
       "id": "CL-001",
@@ -1920,7 +1920,7 @@
       "title": "Small fixes skip the ceremony",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "research",
       "description": "As a founder, I can start a one-line fix and watch it go straight to build and verify, so that the pipeline matches the size of the work. Initiative: founder ships without ceremony · M · metric: cycle time, trivial cards",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Small fixes skip the ceremony",
@@ -1965,10 +1965,49 @@
           "action": "park",
           "stage": "research",
           "note": "reconciled 10-11: back to the plan; work continues under the new stories"
+        },
+        {
+          "at": "2026-10-11T22:04:55.210Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q2: Agent proposes `size:` in the investigate stage; founder can override with `card new --size`; a trivial sizing is shown in the local gate note (\"size: trivial, skipped research/spec\") so Dean sees it once."
+        },
+        {
+          "at": "2026-10-11T22:05:05.456Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q3: Dogfood on a real one-line fix in codeloop. Given a card sized trivial, when `codeloop run`, then no research.md or spec.md exists, events show create -> build -> verify in one run, and `codeloop stats` shows trivial cycle time under one hour."
+        },
+        {
+          "at": "2026-10-11T22:05:38.886Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q4: Hard cap: trivial = at most 3 files and 50 changed lines, enforced by `check diff` at verify; over the cap the card is re-sized to S and parked at the spec gate."
+        },
+        {
+          "at": "2026-10-11T22:05:43.410Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "proposed",
+          "note": "Q5: Add `trivial` as a fourth size (one row in the story standard); stages carry `when: size >= S` in build.yaml."
+        },
+        {
+          "at": "2026-10-11T22:06:27.565Z",
+          "actor": "owner",
+          "human": true,
+          "action": "unpark",
+          "stage": "research"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.339Z",
-      "updatedAt": "2026-10-11T21:01:57.946Z",
+      "updatedAt": "2026-10-11T22:06:27.565Z",
       "story": {
         "as": "founder",
         "can": "start a one-line fix and watch it go straight to build and verify",
@@ -1979,10 +2018,7 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "cycle time, trivial cards",
       "spec": "specs/058-small-fixes-skip-the-ceremony",
-      "feature": "right-sized-cards",
-      "gate": "proposal",
-      "awaiting": "owner",
-      "parked_from": "research"
+      "feature": "right-sized-cards"
     },
     {
       "id": "c-059",
@@ -3908,11 +3944,12 @@
       "size": "M",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "verify",
+      "stage": "review",
       "retries": {
         "verify": 2
       },
       "evidence": [
+        "evidence/097/verify.md",
         "evidence/097/verify.md"
       ],
       "events": [
@@ -3978,16 +4015,89 @@
           "action": "park",
           "stage": "verify",
           "note": "gate local (after the check passed)"
+        },
+        {
+          "at": "2026-10-11T21:56:22.040Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "verify",
+          "note": "gate local",
+          "fingerprint": "c7fe29d763659ff23133d33c22f8611794d982e7"
+        },
+        {
+          "at": "2026-10-11T21:56:37.937Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at 2c39d92"
+        },
+        {
+          "at": "2026-10-11T21:56:22.062Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (the output or the check changed since it was approved)"
+        },
+        {
+          "at": "2026-10-11T22:09:56.059Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "verify",
+          "note": "gate local",
+          "fingerprint": "4d6bc42690c16bdf6ffbb0abfae861590bb651ee"
+        },
+        {
+          "at": "2026-10-11T22:10:12.636Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at e55ff3b"
+        },
+        {
+          "at": "2026-10-11T22:09:56.068Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (the output or the check changed since it was approved)"
+        },
+        {
+          "at": "2026-10-11T22:10:21.159Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "verify",
+          "note": "gate local",
+          "fingerprint": "48f2417f46e2778e29b6b44df88bf46cdde454e2"
+        },
+        {
+          "at": "2026-10-11T22:10:35.434Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at e55ff3b"
+        },
+        {
+          "at": "2026-10-11T22:10:21.162Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "verify",
+          "note": "to review"
         }
       ],
       "createdAt": "2026-10-11T21:02:17.534Z",
-      "updatedAt": "2026-10-11T21:15:42.829Z",
+      "updatedAt": "2026-10-11T22:10:21.162Z",
       "spec": "specs/097-one-board-shows-every-project-i-run",
       "failures": {
         "verify": "99d9634d1279a5973c58f61c8b607c5fe7bd0194"
-      },
-      "gate": "local",
-      "awaiting": "owner"
+      }
     },
     {
       "id": "c-098",
@@ -4001,9 +4111,11 @@
       "size": "M",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "spec",
+      "stage": "verify",
       "retries": {},
-      "evidence": [],
+      "evidence": [
+        "evidence/098/verify.md"
+      ],
       "events": [
         {
           "at": "2026-10-11T21:02:17.694Z",
@@ -4027,11 +4139,37 @@
           "action": "place",
           "stage": "spec",
           "note": "started at spec: work already under way"
+        },
+        {
+          "at": "2026-10-11T22:08:02.655Z",
+          "actor": "owner",
+          "human": true,
+          "action": "place",
+          "stage": "verify",
+          "note": "started at verify: work already under way"
+        },
+        {
+          "at": "2026-10-11T22:08:12.389Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at e55ff3b"
+        },
+        {
+          "at": "2026-10-11T22:08:02.814Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (after the check passed)"
         }
       ],
       "createdAt": "2026-10-11T21:02:17.694Z",
-      "updatedAt": "2026-10-11T21:02:17.702Z",
-      "spec": "specs/098-two-sessions-work-side-by-side-without-b"
+      "updatedAt": "2026-10-11T22:08:02.814Z",
+      "spec": "specs/098-two-sessions-work-side-by-side-without-b",
+      "gate": "local",
+      "awaiting": "owner"
     },
     {
       "id": "c-099",
@@ -4075,12 +4213,12 @@
       "size": "L",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "proposed",
+      "stage": "spec",
       "description": "spec: docs/plans/codeloop/2026-10-11-board-plan-shipped.md; start at spec; absorbs c-059 backlog",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
-      "evidence": [],
+      "evidence": [
+        "specs/100/research.md"
+      ],
       "events": [
         {
           "at": "2026-10-11T21:02:36.641Z",
@@ -4088,10 +4226,33 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-11T22:02:52.526Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-11T22:03:57.100Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-11T22:03:57.100Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/i-see-work-in-action-the-plan-and-what-s.md"
         }
       ],
       "createdAt": "2026-10-11T21:02:36.641Z",
-      "updatedAt": "2026-10-11T21:02:36.641Z"
+      "updatedAt": "2026-10-11T22:03:57.100Z"
     },
     {
       "id": "c-101",

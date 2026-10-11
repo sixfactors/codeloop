@@ -6,6 +6,7 @@ import { api, eventsUrl } from '@/lib/api';
 import { QK, isMissing } from '@/hooks/use-api';
 import { invalidateCardLists, invalidatePageLists, patchCard, patchPage, removeCard, removePage } from '@/lib/live-cache';
 import type { LiveEvent } from '@/lib/types';
+import { currentProjectBrowser, hubModeBrowser } from '@/lib/project';
 
 // One SSE connection per tab. Each message names one entity; the cache is patched by id, so a card
 // moving costs one GET /api/cards/:id and no list refetch. The older stream (`cards` events with
@@ -16,6 +17,8 @@ export function useEvents() {
   const versions = useRef<Record<string, number | string> | null>(null);
 
   useEffect(() => {
+    // The hub's own home has no project stream; its lists refresh on an interval instead (hub-home).
+    if (hubModeBrowser() && !currentProjectBrowser()) return;
     let es: EventSource | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
