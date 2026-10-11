@@ -95,6 +95,9 @@ function getKnowledgeStats(projectDir: string, filename: string): KnowledgeStats
 const KNOWN_TOP_LEVEL_KEYS = new Set([
   'project', 'scopes', 'quality_checks', 'diff_scan', 'test', 'deploy',
   'debug', 'commit', 'codeloop', 'watch', 'gates', 'capacity', 'verify', 'wiki',
+  // Read by the engine, the agent runner, the board and the guards; listed so `status` does not
+  // call a working config wrong.
+  'agents', 'run', 'lanes', 'leases', 'board', 'personas', 'store', 'signals', 'workspace',
 ]);
 
 const COMMON_TYPOS: Record<string, string> = {

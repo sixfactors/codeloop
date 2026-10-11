@@ -145,3 +145,16 @@ commit:
     expect(issues).toEqual([]);
   });
 });
+
+describe('keys the code reads are not flagged', () => {
+  it('accepts agents, leases, lanes and the other keys codeloop reads', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'codeloop-validate-known-'));
+    try {
+      mkdirSync(join(dir, '.codeloop'), { recursive: true });
+      writeFileSync(join(dir, '.codeloop/config.yaml'), 'agents:\n  default: claude\nleases:\n  shared:\n    - make/db.mk\nlanes:\n  auto_start: true\nrun:\n  agent: false\n');
+      expect(validateConfig(dir).filter(w => w.includes('Unknown top-level key'))).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
