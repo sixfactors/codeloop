@@ -1,0 +1,5 @@
+id: uc-097-03
+accept: US3
+failure_mode: "a second serve starts a second hub, or standalone breaks"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/hub-cli.test.ts", expect: { exit: 0 } }

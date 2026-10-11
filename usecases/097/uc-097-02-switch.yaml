@@ -1,0 +1,5 @@
+id: uc-097-02
+accept: US2
+failure_mode: "switching projects shows the wrong project or errors on load"
+layers:
+  cli: { run: "bash scripts/playwright-hub-switch.sh", expect: { exit: 0, stdout: "PLAYWRIGHT HUB SWITCH PASS" } }

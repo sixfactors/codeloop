@@ -1,5 +1,5 @@
 {
-  "version": 269,
+  "version": 277,
   "cards": [
     {
       "id": "CL-001",
@@ -3909,8 +3909,12 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "verify",
-      "retries": {},
-      "evidence": [],
+      "retries": {
+        "verify": 2
+      },
+      "evidence": [
+        "evidence/097/verify.md"
+      ],
       "events": [
         {
           "at": "2026-10-11T21:02:17.534Z",
@@ -3934,11 +3938,56 @@
           "action": "place",
           "stage": "verify",
           "note": "started at verify: work already under way"
+        },
+        {
+          "at": "2026-10-11T21:14:55.199Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "verify",
+          "note": "  acceptance line US1 has no use case in usecases/"
+        },
+        {
+          "at": "2026-10-11T21:15:32.913Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: fail at 8a9316b"
+        },
+        {
+          "at": "2026-10-11T21:15:24.916Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "verify",
+          "note": "  pass uc-097-01 (US1) cli\n  FAIL uc-097-02 (US2) no runnable layer\n  pass uc-097-03 (US3) cli\n  result: fail (2/3 use cases, sha 8a9316b)"
+        },
+        {
+          "at": "2026-10-11T21:15:57.222Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at 8a9316b"
+        },
+        {
+          "at": "2026-10-11T21:15:42.829Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (after the check passed)"
         }
       ],
       "createdAt": "2026-10-11T21:02:17.534Z",
-      "updatedAt": "2026-10-11T21:02:17.544Z",
-      "spec": "specs/097-one-board-shows-every-project-i-run"
+      "updatedAt": "2026-10-11T21:15:42.829Z",
+      "spec": "specs/097-one-board-shows-every-project-i-run",
+      "failures": {
+        "verify": "99d9634d1279a5973c58f61c8b607c5fe7bd0194"
+      },
+      "gate": "local",
+      "awaiting": "owner"
     },
     {
       "id": "c-098",
@@ -4088,7 +4137,9 @@
       "laneVersion": 1,
       "stage": "verify",
       "retries": {},
-      "evidence": [],
+      "evidence": [
+        "evidence/102/verify.md"
+      ],
       "events": [
         {
           "at": "2026-10-11T21:02:50.737Z",
@@ -4112,11 +4163,59 @@
           "action": "place",
           "stage": "verify",
           "note": "started at verify: work already under way"
+        },
+        {
+          "at": "2026-10-11T21:16:38.413Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at 8a9316b"
+        },
+        {
+          "at": "2026-10-11T21:16:30.634Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (after the check passed)"
         }
       ],
       "createdAt": "2026-10-11T21:02:50.737Z",
-      "updatedAt": "2026-10-11T21:02:50.745Z",
-      "spec": "specs/102-finished-or-stuck-stories-stop-holding-s"
+      "updatedAt": "2026-10-11T21:16:30.634Z",
+      "spec": "specs/102-finished-or-stuck-stories-stop-holding-s",
+      "gate": "local",
+      "awaiting": "owner"
+    },
+    {
+      "id": "c-103",
+      "title": "Stuck stories never block new work",
+      "story": {
+        "as": "founder",
+        "can": "keep starting work while stories wait on me or sit stuck",
+        "so": "agents are never idle because of stale stories"
+      },
+      "persona": "founder",
+      "size": "S",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "Dean 10-11: the limit counts stories waiting at a gate or stuck; count only workable stories; park stuck ones after capacity.park_stuck_after_days",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:16:52.663Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:16:52.663Z",
+      "updatedAt": "2026-10-11T21:16:52.663Z"
     }
   ]
 }

@@ -4,7 +4,7 @@ import { dirname, join } from 'path';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, resolveAgent, runAgent, type AgentConfig } from './agent.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
-import { advanceCard, awaitsApproval, createCard, loadEngineConfig, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -77,6 +77,7 @@ export function runDue(projectDir: string, now: Date = clock(), filter: RunFilte
   // A queued story (shape's on_done.queue) is promoted into its lane's first stage here, not on
   // every advance: the owner's plan approval already covers the promotion, so it only needs a run.
   promoteQueued(projectDir, { now, lane: filter.lane });
+  parkStuck(projectDir, { now });
 
   for (const { id } of active(projectDir, filter)) {
     result.advanced.push(advanceUntilStop(projectDir, id, now));
@@ -118,7 +119,7 @@ function running(card: Card, agent: AgentConfig, now: Date): boolean {
 
 /** Why no agent may start for this card now, from the board as given. `planned` counts starts a dry run has already listed. */
 function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0): string | undefined {
-  const ahead = cards.filter(c => c.lane === lane.id && inLane(c)).findIndex(c => c.id === card.id);
+  const ahead = cards.filter(c => c.lane === lane.id && workable(c)).findIndex(c => c.id === card.id);
   if (lane.wip !== undefined && ahead >= lane.wip) return `lane ${lane.id} works on ${plural(lane.wip, 'card', 'cards')} at a time (wip); this one waits its turn`;
   const { gatesPerDay } = loadEngineConfig(projectDir);
   const parked = waitingOnOwner(cards);
@@ -220,6 +221,7 @@ export async function runDueWithAgent(projectDir: string, wanted: AgentWanted, n
   const file = join(projectDir, LAST_RUN);
   const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
   promoteQueued(projectDir, { now, lane: filter.lane });
+  parkStuck(projectDir, { now });
 
   for (const { id, stage, lane: laneId } of active(projectDir, filter)) {
     // Resolved once per card, from that card's own lane: a lane naming its own `agent:` preset

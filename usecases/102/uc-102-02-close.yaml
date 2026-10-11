@@ -1,0 +1,5 @@
+id: uc-102-02
+accept: US2
+failure_mode: "an agent ends a story the owner did not decide on"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/flow.test.ts -t 'done and drop'", expect: { exit: 0 } }

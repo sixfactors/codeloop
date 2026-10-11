@@ -206,3 +206,49 @@ describe('split, done and drop free lane slots without leaving duplicates', () =
     expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
   });
 });
+
+describe('park', () => {
+  it('park frees the slot and approving returns the story to the stage it left', async () => {
+    const { parkCard, approveCard } = await import('../engine.js');
+    lane('build', `  - id: one\n    done: { cmd: "true" }\n  - id: two\n    done: { cmd: "false" }\n`, 'wip: 1\n');
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    advanceCard(dir, 'c-001');
+    expect(readCards(dir).cards[0].stage).toBe('two');
+    expect(() => parkCard(dir, 'c-001', 'agent')).toThrow(/owner's decision/);
+    parkCard(dir, 'c-001', 'owner', 'stuck on research');
+    expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
+    const back = approveCard(dir, 'c-001', 'owner');
+    expect(back.stage).toBe('two');
+    expect(back.events.at(-1)?.action).toBe('unpark');
+  });
+});
+
+describe('what the lane limit counts', () => {
+  it('a story stuck or waiting at a gate does not hold a slot', () => {
+    lane('build', `  - id: one\n    done: { cmd: "false" }\n`, 'wip: 1\n');
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    const file = readCards(dir);
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify({ ...file, cards: file.cards.map(c => ({ ...c, gate: 'stuck', awaiting: 'owner' })) }, null, 2));
+    expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
+    expect(() => createCard(dir, { lane: 'build', title: 'Share a todo list', id: 'c-003' })).toThrow(/c-002/);
+  });
+
+  it('a run parks a story stuck longer than capacity.park_stuck_after_days, and not a newer one', async () => {
+    const { parkStuck } = await import('../engine.js');
+    write('.codeloop/config.yaml', 'capacity:\n  park_stuck_after_days: 2\n');
+    lane('build', `  - id: one\n    done: { cmd: "false" }\n`);
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' });
+    const file = readCards(dir);
+    const stuckAt = (iso: string) => ({ at: iso, actor: 'engine', human: false, action: 'stuck', stage: 'one' });
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify({ ...file, cards: [
+      { ...file.cards[0], gate: 'stuck', awaiting: 'owner', events: [...file.cards[0].events, stuckAt('2026-10-01T00:00:00.000Z')] },
+      { ...file.cards[1], gate: 'stuck', awaiting: 'owner', events: [...file.cards[1].events, stuckAt('2026-10-09T12:00:00.000Z')] },
+    ] }, null, 2));
+    expect(parkStuck(dir, { now: new Date('2026-10-10T00:00:00.000Z') })).toEqual(['c-001']);
+    const [a, b] = readCards(dir).cards;
+    expect(a.stage).toBe('proposed');
+    expect(a.parked_from).toBe('one');
+    expect(b.gate).toBe('stuck');
+  });
+});

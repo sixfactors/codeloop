@@ -1,27 +1,25 @@
 # c-102 spec: Finished or stuck stories stop holding slots
 
-<!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
-Story: As a <persona>, I can <what>, so that <pain relieved>.
+Story: As a founder, I can finish, drop, park or split a story without editing files, so that new work is never blocked by stale stories.
 
-feature: <capability this card is a slice of>
-initiative: <wiki/initiatives/<slug>.md>
-size: S | M | L          <!-- L cannot pass the spec gate unsplit; split with `codeloop card split` -->
-metric: <the one stage metric this card moves; no-data means instrument first>
-done_when: <a command that exits 0, or a screen a person opens. Never "all stories complete">
+feature: lane-capacity
+size: M
+metric: blocked_starts
+done_when: `npx vitest run src/lib/__tests__/flow.test.ts` exits 0
 
-<!-- One to five lines, outcome checks a user would notice, numbered US1..US5. Six means split. -->
 acceptance:
-- US1 Given <state>, when <action>, then <result>.
+- US1 Given a lane at its limit, when a story is split into children that do not fit, then nothing is created and the refusal names the stories holding the slots.
+- US2 Given a story whose work is finished or abandoned, when the owner runs `card done` or `card drop`, then its slot is free and the assistant cannot do it alone.
+- US3 Given a stuck story, when the owner parks it and later approves it, then it leaves the lane and returns to the stage it left.
 
-<!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
-screens:
+screens: none
 
 ## Not building
 
-<!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
--
+- Automatic parking of stuck stories after a timeout: next, with the change to what the limit counts.
 
 ## Failure modes
 
-<!-- The ways this can break in production. One use case per item. -->
--
+- A split stops halfway and leaves duplicates (US1).
+- An agent ends a story the owner did not decide on (US2).
+- A parked story comes back at the first stage and loses its progress (US3).

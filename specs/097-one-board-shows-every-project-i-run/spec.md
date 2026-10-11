@@ -1,27 +1,26 @@
 # c-097 spec: One board shows every project I run
 
-<!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
-Story: As a <persona>, I can <what>, so that <pain relieved>.
+Story: As a founder, I can see and act on every project from one board, so that I stop juggling servers and ports.
 
-feature: <capability this card is a slice of>
-initiative: <wiki/initiatives/<slug>.md>
-size: S | M | L          <!-- L cannot pass the spec gate unsplit; split with `codeloop card split` -->
-metric: <the one stage metric this card moves; no-data means instrument first>
-done_when: <a command that exits 0, or a screen a person opens. Never "all stories complete">
+feature: hub
+size: M
+metric: projects_per_board
+done_when: `bash scripts/playwright-hub-switch.sh` exits 0
 
-<!-- One to five lines, outcome checks a user would notice, numbered US1..US5. Six means split. -->
 acceptance:
-- US1 Given <state>, when <action>, then <result>.
+- US1 Given two registered projects with the same card ids, when both are written to in parallel through the hub, then each project's cards.json holds only its own changes.
+- US2 Given a person signed in once on the hub, when they switch from project A to project B, then B shows its own open question and no page error.
+- US3 Given a running hub, when `codeloop serve` runs in a second project, then the same hub registers it and `serve --standalone` still serves one project alone.
 
-<!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
-screens:
+screens: none
 
 ## Not building
 
-<!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
--
+- Start at login (`codeloop hub install`): optional, later.
 
 ## Failure modes
 
-<!-- The ways this can break in production. One use case per item. -->
--
+- Two projects' writes land in one cards.json (US1).
+- A cached response or live update from one project reaches another (US1).
+- Links rendered by the server point at the wrong project and the page errors on load (US2).
+- A second serve starts a second hub, or standalone mode breaks (US3).

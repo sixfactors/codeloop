@@ -1,0 +1,5 @@
+id: uc-102-03
+accept: US3
+failure_mode: "a parked story comes back at the first stage"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/flow.test.ts -t 'park'", expect: { exit: 0 } }

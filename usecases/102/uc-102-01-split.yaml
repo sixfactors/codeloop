@@ -1,0 +1,5 @@
+id: uc-102-01
+accept: US1
+failure_mode: "a split stops halfway and leaves duplicates"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/flow.test.ts -t 'split'", expect: { exit: 0 } }

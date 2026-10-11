@@ -24,6 +24,8 @@ export interface EngineConfig {
   gatesPerDay?: number;
   /** `lanes.auto_start: true`: a lane's `on_done.start` makes the follow-on card. Off, the line is only announced. */
   autoStart: boolean;
+  /** `capacity.park_stuck_after_days`: a story stuck this long is parked back to the inbox by the next run. */
+  parkStuckAfterDays?: number;
 }
 
 export type CardFields = StoryFields & CardExtras;
@@ -34,13 +36,10 @@ export function loadEngineConfig(projectDir: string): EngineConfig {
     gatesMode: raw.gates?.mode === 'trusted' ? 'trusted' : 'all',
     gatesPerDay: raw.capacity?.gates_per_day,
     autoStart: raw.lanes?.auto_start === true,
+    parkStuckAfterDays: typeof raw.capacity?.park_stuck_after_days === 'number' ? raw.capacity.park_stuck_after_days : undefined,
   };
 }
 
-/**
- * `--as`, then CODELOOP_ROLE, then the terminal: a person typing at a TTY is the owner, anything
- * piped or spawned (an agent, CI, the MCP server) is an agent.
- */
 // A person and their assistant share one account and one shell, so the environment cannot tell them
 // apart (a `!` command typed in a Claude Code session has no TTY, exactly like the assistant's own
 // tool call). The default is therefore the person. The assistant is kept out where its actions
@@ -337,9 +336,14 @@ export function proposeCard(
  * Refuses when `adding` more cards would put the lane over its wip, naming the cards that hold the
  * slots and the commands that free one, so the refusal is a way forward rather than a dead end.
  */
+/** In the lane and not waiting on a person: the stories a lane's wip counts. */
+export const workable = (c: Card) => inLane(c) && !c.gate;
+
 export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = []): void {
   if (lane.wip === undefined) return;
-  const holding = cards.filter(c => c.lane === lane.id && inLane(c) && !freeing.includes(c.id));
+  // Only stories an agent can work hold a slot: one waiting at a gate or stuck is waiting on the
+  // person, and that queue has its own cap (capacity.gates_per_day).
+  const holding = cards.filter(c => c.lane === lane.id && workable(c) && !freeing.includes(c.id));
   if (holding.length + adding <= lane.wip) return;
   const list = holding.map(c => `${c.id} (${c.stage}${c.gate ? `, ${c.gate}` : ''}) ${c.title}`).join('; ');
   throw new RefusalError(
@@ -384,6 +388,29 @@ export function parkCard(projectDir: string, id: string, role: Role, note?: stri
   const card: Card = { ...rest, stage: PROPOSED, gate: PROPOSAL_GATE, awaiting: 'owner', parked_from: before.stage, events: [...before.events, event(now, role, 'park', before.stage, note?.trim())], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
+}
+
+/**
+ * Parks every story stuck longer than `capacity.park_stuck_after_days`, so a story nobody is
+ * fixing goes back to the owner's inbox (with where it was) instead of sitting on the board.
+ * Run by `codeloop run`; returns the ids it parked.
+ */
+export function parkStuck(projectDir: string, opts: Clock = {}): string[] {
+  const days = loadEngineConfig(projectDir).parkStuckAfterDays;
+  if (days === undefined) return [];
+  const now = opts.now ?? clock();
+  const file = readCards(projectDir);
+  const parked: string[] = [];
+  const cards = file.cards.map(c => {
+    if (c.gate !== 'stuck' || !inLane(c)) return c;
+    const since = c.events.filter(e => e.action === 'stuck').at(-1)?.at ?? c.updatedAt;
+    if (now.getTime() - new Date(since).getTime() < days * 86_400_000) return c;
+    parked.push(c.id);
+    const { gate: _gate, awaiting: _awaiting, ...rest } = c;
+    return { ...rest, stage: PROPOSED, gate: PROPOSAL_GATE, awaiting: 'owner', parked_from: c.stage, events: [...c.events, event(now, 'engine', 'park', c.stage, `stuck for more than ${days} day${days === 1 ? '' : 's'}`)], updatedAt: now.toISOString() } as Card;
+  });
+  if (parked.length) writeCards(projectDir, file, cards);
+  return parked;
 }
 
 /** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */

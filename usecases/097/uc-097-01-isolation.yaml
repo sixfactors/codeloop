@@ -1,0 +1,5 @@
+id: uc-097-01
+accept: US1
+failure_mode: "two projects' data mix under parallel writes, caches or live updates"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/hub.test.ts", expect: { exit: 0 } }
