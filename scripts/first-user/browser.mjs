@@ -12,7 +12,7 @@ import { createRequire } from 'module';
 
 const [flow, base, creds, ui, cardId = 'c-002'] = process.argv.slice(2);
 const [signInUser, signInPassword] = (creds || 'owner:codeloop').split(':');
-const from = process.env.FIRST_USER_PLAYWRIGHT || '/Users/deangrover/Projects/chanl-v2/chanl-platform/package.json';
+const from = process.env.FIRST_USER_PLAYWRIGHT || new URL('../../package.json', import.meta.url).pathname;
 const { chromium } = createRequire(from)('playwright');
 
 let failed = 0;

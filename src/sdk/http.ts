@@ -15,6 +15,13 @@ export interface HttpOptions {
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
   /** Added to every request: a server render passes `{ cache: 'no-store', signal }`. A function is read per request. */
   init?: RequestInit | (() => RequestInit);
+  /**
+   * The hub's id for this project: every `/api/...` path is sent as `/api/p/<project>/...`
+   * instead, so the hub routes the request to this project's own context and no other. Omit it
+   * (or leave it empty) to talk to a standalone `codeloop serve`, whose routes are unprefixed. A
+   * function is read per request, so a browser client can follow the current page's project.
+   */
+  project?: string | (() => string | undefined);
 }
 
 const encode = (id: string) => id.split('/').map(encodeURIComponent).join('/');
@@ -50,8 +57,16 @@ export function httpTransport(options: HttpOptions = {}): Transport {
   const token = () => (typeof options.token === 'function' ? options.token() : options.token ?? '');
   const extra = () => (typeof options.init === 'function' ? options.init() : options.init ?? {});
   const etags = new Map<string, { etag: string; body: unknown }>();
+  // `/api/cards` -> `/api/p/<project>/cards`: the hub routes on that id, not on anything this
+  // client guesses from the path, so a project id that resolves to nothing is the hub's 404 to make,
+  // not this client's to swallow.
+  const scoped = (path: string): string => {
+    const project = typeof options.project === 'function' ? options.project() : options.project;
+    return project ? path.replace(/^\/api\//, `/api/p/${project}/`) : path;
+  };
 
-  async function send(path: string, init: RequestInit = {}): Promise<Response> {
+  async function send(rawPath: string, init: RequestInit = {}): Promise<Response> {
+    const path = scoped(rawPath);
     const headers = new Headers(init.headers);
     const method = (init.method ?? 'GET').toUpperCase();
     if (method !== 'GET' && method !== 'HEAD') {
@@ -76,7 +91,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     if (!(res.headers.get('content-type') ?? '').includes('json')) throw new ApiError(404, `No API route for ${path}`);
     const body = (await res.json()) as T;
     const etag = res.headers.get('etag');
-    if ((init.method ?? 'GET') === 'GET' && etag) etags.set(path, { etag, body });
+    // Same key send() reads back with: scoped() is deterministic for one client, so this and
+    // send()'s own lookup always agree on which project's cache entry a path refers to.
+    if ((init.method ?? 'GET') === 'GET' && etag) etags.set(scoped(path), { etag, body });
     return body;
   }
   const post = <T,>(path: string, body: unknown) => json<T>(path, { method: 'POST', body: JSON.stringify(body) });
@@ -91,7 +108,8 @@ export function httpTransport(options: HttpOptions = {}): Transport {
   const role = (opts?: RoleOption) => (opts?.as ? { as: opts.as } : {});
 
   // One SSE frame: its event name (default `message`) and its data lines joined.
-  async function* frames(path: string, signal?: AbortSignal): AsyncIterable<{ event: string; data: string }> {
+  async function* frames(rawPath: string, signal?: AbortSignal): AsyncIterable<{ event: string; data: string }> {
+    const path = scoped(rawPath);
     const res = await doFetch(`${base}${path}`, { ...extra(), signal, headers: { accept: 'text/event-stream' } });
     if (!res.ok || !res.body) throw new ApiError(res.status, `${path} stream failed (${res.status})`);
     const reader = res.body.getReader();
@@ -157,6 +175,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     },
     shapeProblem: (problem, opts) => post('/api/shape', { problem, ...role(opts) }),
     approveCard: (ref, opts = {}) => post<{ decision: Awaited<ReturnType<Transport['approveCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/approve`, { note: opts.note }).then(b => b.decision),
+    parkCard: (ref, note) => post<{ parked: Awaited<ReturnType<Transport['parkCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/park`, { note }).then(b => b.parked),
+    placeCard: (ref, stage) => post<{ placed: Awaited<ReturnType<Transport['placeCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/place`, { stage }).then(b => b.placed),
+    closeCard: (ref, outcome, note) => post<{ closed: Awaited<ReturnType<Transport['closeCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/close`, { outcome, note }).then(b => b.closed),
     rejectCard: (ref, note) => post<{ decision: Awaited<ReturnType<Transport['rejectCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/reject`, { note }).then(b => b.decision),
     brief: async ref => (await send(`/api/cards/${encodeURIComponent(ref)}/brief`)).text(),
     runCard: (ref, opts = {}) => post(`/api/cards/${encodeURIComponent(ref)}/run`, { agent: opts.agent }),
@@ -231,7 +252,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     // The only GET that sends the token: the server reads it to say whether THIS request could
     // write, which the default GET headers (token only on a write) would never carry.
     sessionInfo: async (): Promise<Session> => {
-      const res = await doFetch(`${base}/api/session`, { ...extra(), headers: { 'x-codeloop-token': token() } });
+      const res = await doFetch(`${base}${scoped('/api/session')}`, { ...extra(), headers: { 'x-codeloop-token': token() } });
       if (!res.ok) throw new ApiError(res.status, `session check failed (${res.status})`);
       return res.json();
     },

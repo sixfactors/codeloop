@@ -24,7 +24,7 @@ import { WikiPageEditor } from '@/components/shared/wiki/wiki-page-editor';
 import { WikiNewPageDialog } from '@/components/shared/wiki/wiki-new-page-dialog';
 import { isMissing, useCards, usePage, usePages, useWikiShape } from '@/hooks/use-api';
 import { token } from '@/lib/api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { folderLabel, pageFolder, WIKI_ROOT } from '@/lib/wiki';
 
 const RAIL_KEY = 'codeloop-wiki-rail';
@@ -34,6 +34,7 @@ type Crumb = { label: string; href?: string };
 
 export function WikiBrowser({ path }: { path: string }) {
   const router = useRouter();
+  const routes = useRoutes();
   const sp = useSearchParams();
   const q = sp.get('q') ?? '';
   const editing = sp.get('edit') === '1';

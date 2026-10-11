@@ -2,7 +2,7 @@ id: build
 version: 1
 metric: { name: cycle_time_days, source: cards, target: "<5" }
 trigger: { manual: true }
-wip: 2
+wip: 3
 retries: 3
 stages:
   - id: research

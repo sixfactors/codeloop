@@ -105,6 +105,41 @@ export function splitListener(api: NodeHandler, pages: NodeHandler, opts: { anyH
       res.end(JSON.stringify({ error: `this board answers only on localhost, not ${req.headers.host}` }));
       return;
     }
+    // Tells the shared root page which shell to render; see hubListener below for the hub's side
+    // of the same signal. workspace/lib/project.ts is the one place that reads it.
+    req.headers['x-codeloop-mode'] = 'standalone';
+    return pages(req, res);
+  };
+}
+
+/**
+ * One listener for the hub's port: `/api/...` (both `/api/hub/*` and `/api/p/:id/*`) to the hub's
+ * Hono app, everything else to the one shared Next build. `/p/<id>/...` is rewritten to the
+ * unprefixed route Next already has — `/p/acme/cards/c-1` becomes `/cards/c-1` — with the project
+ * id carried as a request header, `x-codeloop-project`, so any server component can read it via
+ * `next/headers` (workspace/lib/project.ts) no matter how deep it sits in the tree; `params` alone
+ * cannot reach that far without duplicating every route under its own `[projectId]` segment.
+ * `x-codeloop-mode: hub` plus the absence of that header is how the bare `/` renders the hub home
+ * instead of a board — there is no project to show one for.
+ */
+export function hubListener(api: NodeHandler, pages: NodeHandler, opts: { anyHost?: boolean; chunks?: NodeHandler } = {}): NodeHandler {
+  return (req, res) => {
+    const url = req.url ?? '/';
+    if (isApiPath(url)) return api(req, res);
+    if (opts.chunks && url.startsWith('/_next/static/')) return opts.chunks(req, res);
+    const host = (req.headers.host ?? '').replace(/:\d+$/, '');
+    if (!opts.anyHost && !LOOPBACK.has(host)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `this hub answers only on localhost, not ${req.headers.host}` }));
+      return;
+    }
+    req.headers['x-codeloop-mode'] = 'hub';
+    const match = url.match(/^\/p\/([^/?]+)((?:\/[^?]*)?)(\?.*)?$/);
+    if (match) {
+      const [, id, rest, qs] = match;
+      req.headers['x-codeloop-project'] = decodeURIComponent(id);
+      req.url = `${rest && rest !== '/' ? rest : '/'}${qs ?? ''}`;
+    }
     return pages(req, res);
   };
 }

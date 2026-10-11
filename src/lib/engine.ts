@@ -333,6 +333,72 @@ export function proposeCard(
   }
 }
 
+/**
+ * Refuses when `adding` more cards would put the lane over its wip, naming the cards that hold the
+ * slots and the commands that free one, so the refusal is a way forward rather than a dead end.
+ */
+export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = []): void {
+  if (lane.wip === undefined) return;
+  const holding = cards.filter(c => c.lane === lane.id && inLane(c) && !freeing.includes(c.id));
+  if (holding.length + adding <= lane.wip) return;
+  const list = holding.map(c => `${c.id} (${c.stage}${c.gate ? `, ${c.gate}` : ''}) ${c.title}`).join('; ');
+  throw new RefusalError(
+    `lane ${lane.id} works on ${lane.wip} card${lane.wip === 1 ? '' : 's'} at a time${adding > 1 ? `, this needs ${adding} slots,` : ''} and ${holding.length} ${holding.length === 1 ? 'holds a slot' : 'hold the slots'}: ${list || 'none'}. ` +
+      `Free one with \`codeloop card done <id>\` or \`codeloop card drop <id> "<why>"\`, or raise \`wip\` in .codeloop/lanes/${lane.id}.yaml.`,
+  );
+}
+
+/**
+ * Ends a card: `done` (its work is finished) or `dropped` (not doing it). Either frees its lane
+ * slot; stage, outputs and events are kept. Only the owner or reviewer may end a card.
+ */
+export function closeCard(projectDir: string, id: string, role: Role, outcome: 'done' | 'dropped', note?: string, opts: { structural?: boolean } & Clock = {}): Card {
+  if (!opts.structural && role === 'agent') throw new RefusalError(`ending a card is the owner's decision; ask them to run \`codeloop card ${outcome === 'done' ? 'done' : 'drop'} ${id}\``);
+  if (outcome === 'dropped' && !note?.trim()) throw new RefusalError('say why it is dropped: `codeloop card drop <id> "<why>"`');
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  if (!inLane(before) && before.stage !== PROPOSED && before.stage !== QUEUED) throw new RefusalError(`card ${before.id} is already ${before.stage}`);
+  const now = opts.now ?? clock();
+  const { gate: _gate, awaiting: _awaiting, ...rest } = before;
+  const card: Card = {
+    ...rest,
+    stage: outcome === 'done' ? DONE : DROPPED,
+    events: [...before.events, event(now, role, outcome === 'done' ? 'close' : 'drop', before.stage, note?.trim())],
+    updatedAt: now.toISOString(),
+  };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+/**
+ * Moves a card out of its lane and back to the owner's inbox as a proposal, keeping where it was:
+ * approving it returns it to that stage. Frees the lane slot a stuck or stale card was holding.
+ */
+export function parkCard(projectDir: string, id: string, role: Role, note?: string, opts: Clock = {}): Card {
+  if (role === 'agent') throw new RefusalError(`parking a card is the owner's decision; ask them to run \`codeloop card park ${id}\``);
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  if (!inLane(before)) throw new RefusalError(`card ${before.id} is ${before.stage}, not in a lane; only an active card can be parked`);
+  const now = opts.now ?? clock();
+  const { gate: _gate, awaiting: _awaiting, ...rest } = before;
+  const card: Card = { ...rest, stage: PROPOSED, gate: PROPOSAL_GATE, awaiting: 'owner', parked_from: before.stage, events: [...before.events, event(now, role, 'park', before.stage, note?.trim())], updatedAt: now.toISOString() };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+/** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */
+export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock = {}): Card {
+  if (role === 'agent') throw new RefusalError('starting a card past the first stage is the owner\'s decision');
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  const lane = loadLane(projectDir, before.lane);
+  if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
+  const now = opts.now ?? clock();
+  const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
 export function createCard(
   projectDir: string,
   input: { lane: string; title: string; id?: string; role?: Role; note?: string; fields?: CardFields } & Clock,
@@ -345,10 +411,7 @@ export function createCard(
   if (config.gatesPerDay !== undefined && parked >= config.gatesPerDay) {
     throw new RefusalError(`${parked} ${parked === 1 ? 'card is' : 'cards are'} waiting on you (capacity.gates_per_day is ${config.gatesPerDay}); clear the inbox before starting new work`);
   }
-  const active = file.cards.filter(c => c.lane === lane.id && inLane(c)).length;
-  if (lane.wip !== undefined && active >= lane.wip) {
-    throw new RefusalError(`lane ${lane.id} already has ${active} active cards (wip ${lane.wip})`);
-  }
+  assertRoomInLane(file.cards, lane, 1);
 
   const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note, input.fields);
   writeCards(projectDir, file, [...file.cards, card]);
@@ -575,9 +638,11 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   if (before.stage === PROPOSED) {
     // Not subject to wip: the owner chose this card. A run still works a lane `wip` cards at a time.
     const lane = loadLane(projectDir, before.lane);
-    card.stage = lane.stages[0].id;
+    const back = before.parked_from && lane.stages.some(s => s.id === before.parked_from) ? before.parked_from : undefined;
+    card.stage = back ?? lane.stages[0].id;
+    delete card.parked_from;
     card.laneVersion = lane.version;
-    card.events = [...before.events, event(now, role, 'promote', card.stage, opts.note)];
+    card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note)];
     parkIfOutward(card, lane, now);
   } else if (gate === 'stuck') {
     card.retries[card.stage] = 0;

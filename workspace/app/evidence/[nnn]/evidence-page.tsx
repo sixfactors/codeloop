@@ -10,10 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { isMissing, useEvidence } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 
 export function EvidencePage({ nnn }: { nnn: string }) {
   const real = nnn;
+  const routes = useRoutes();
   const ev = useEvidence(real);
   const crumbs = [{ label: 'Board', href: routes.board }, { label: `c-${real}`, href: routes.card(`c-${real}`) }, { label: 'Evidence' }];
 

@@ -149,4 +149,24 @@ describe('http transport: the UI path against the same services', () => {
     expect(viaHttp.spec?.dir).toBeUndefined();
     expect(new CodeloopClient(overHttp().client.transport).cards).toBeDefined();
   });
+
+  it('with a `project`, every call goes to /api/p/<project>/... (the hub\'s mount point) instead of /api/...', async () => {
+    const { app } = createApp(dir, undefined, { token: TOKEN, owner: true, apiBase: '/api/p/acme' });
+    const seen: string[] = [];
+    const client = createHttpClient({
+      token: TOKEN,
+      project: 'acme',
+      fetch: (input, init) => {
+        seen.push(String(input).split('?')[0]);
+        return app.request(input, init);
+      },
+    });
+    const made = await client.cards.new({ lane: 'market', title: 'Founders can share the roadmap' });
+    expect(made.card.id).toBe('c-001');
+    const read = await client.cards.get('c-001');
+    expect(read?.id).toBe('c-001');
+    expect(seen).toContain('/api/p/acme/cards');
+    expect(seen).toContain('/api/p/acme/cards/c-001');
+    expect(seen.some(p => !p.startsWith('/api/p/acme/'))).toBe(false);
+  });
 });

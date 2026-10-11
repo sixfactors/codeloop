@@ -9,6 +9,9 @@ import { createApp } from '../lib/server.js';
 import { getIndex } from '../lib/index/index.js';
 import { findWorkspaceBuild, loadNext, splitListener, staticChunks } from '../lib/next-server.js';
 import { findProjectRoot, openUrl, readServeState, removeServeState, serveStateAlive, serveUrl, writeServeState } from '../lib/serve-state.js';
+import { registerProject } from '../lib/hub-registry.js';
+import { hubUrl } from '../lib/hub-state.js';
+import { DEFAULT_HUB_PORT, ensureHubRunning } from './hub.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,10 +40,38 @@ export const serveCommand = new Command('serve')
   .option('--read-only', 'Disable Approve, Reject and other writes even on localhost')
   .option('--ui <dir>', 'Serve this static build instead of the workspace app (or set CODELOOP_UI_DIR)')
   .option('--host <host>', 'Address to listen on. Anything but the default exposes the board to the network', '127.0.0.1')
-  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean; owner?: boolean; readOnly?: boolean; host: string; ui?: string }) => {
+  .option('--standalone', 'Run this project\'s own single-process server instead of joining the hub')
+  .action(async (options: { port: string; bg?: boolean; stop?: boolean; open?: boolean; owner?: boolean; readOnly?: boolean; host: string; ui?: string; standalone?: boolean }) => {
     // Works from a subfolder, like git finds .git: walk up to the nearest .codeloop/.
     const projectDir = requireProjectDir();
     const port = parseInt(options.port, 10);
+
+    // The default: one hub for every project. Register this one, make sure the hub is up
+    // (starting it in the background if not), and point at this project's page there — no port of
+    // its own to remember. `--standalone` keeps today's one-process-per-project server, unchanged
+    // below.
+    if (!options.standalone && !options.stop) {
+      const project = registerProject(projectDir);
+      const hubHost = options.host === '0.0.0.0' ? '127.0.0.1' : options.host;
+      let state;
+      try {
+        state = await ensureHubRunning(Number.isFinite(port) ? port : DEFAULT_HUB_PORT, hubHost);
+      } catch (e) {
+        console.log(chalk.red(`  Could not start the hub: ${(e as Error).message}`));
+        process.exit(1);
+      }
+      const url = `${hubUrl(state)}/p/${project.id}/`;
+      console.log();
+      console.log(chalk.bold(`  Codeloop board: ${chalk.cyan(url)}`));
+      console.log(chalk.dim(`  "${project.name}" joined the hub; every other registered project is on the same board. codeloop hub --stop stops it.`));
+      console.log(chalk.dim('  codeloop serve --standalone runs this project alone instead, on its own port.'));
+      console.log();
+      if (options.open) openUrl(url);
+      // `ensureHubRunning`'s probe fetch() leaves a keep-alive socket pooled; without an explicit
+      // exit the process would sit waiting for undici to close it instead of returning control to
+      // the terminal, as every other request-based serve/open path here already does on success.
+      process.exit(0);
+    }
 
     // --stop: kill whichever server this project's state names (serve.json, or the legacy pid file).
     if (options.stop) {

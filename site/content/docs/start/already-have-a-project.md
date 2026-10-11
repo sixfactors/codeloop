@@ -58,7 +58,7 @@ There is no flag to skip one of the ten commands. Delete what you do not want af
 
 ## Tickets from Linear, Jira or GitHub
 
-A ticket-style prefix on the title is read as the ticket id, not refused — `codeloop card show` then prints `ticket ACME-412`:
+A ticket-style prefix on the title is read as the ticket id, not refused, and `codeloop card show` then prints `ticket ACME-412`:
 
 ```sh
 codeloop start "ACME-412: add CSV export" \
@@ -83,7 +83,7 @@ codeloop card show c-001
   check:  codeloop check research c-001 --min-sources 3
 ```
 
-The ticket id is stripped from the title and the spec folder name; `add CSV export` is what shows everywhere else. The refusal is still there for a mechanism in the title itself — `/`, a path, a function name — `--force` overrides that one. When the title already says what the user gets and the ticket id lives elsewhere (the tracker's own slug, say, not a prefix you want to keep), pass `--ticket`:
+The ticket id is stripped from the title and the spec folder name; `add CSV export` is what shows everywhere else. The refusal is still there for a mechanism in the title itself (`/`, a path, a function name); `--force` overrides that one. When the title already says what the user gets and the ticket id lives elsewhere (the tracker's own slug, say, not a prefix you want to keep), pass `--ticket`:
 
 ```sh
 codeloop card propose build "Rate-limit the invoices API" --ticket ACME-413 \

@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 import { HydrationBoundary } from '@tanstack/react-query';
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
+import { ProjectProvider } from '@/components/providers/project-provider';
 import { AppShell } from '@/components/shared/app-shell';
 import { api } from '@/lib/api';
 import { cardsQueryOptions, QK } from '@/lib/queries';
 import { dehydrated, getQueryClient } from '@/lib/query-server';
+import { currentProjectServer, hubModeServer } from '@/lib/project';
 
 export const metadata: Metadata = {
   title: 'Codeloop workspace',
@@ -21,11 +23,18 @@ export const dynamic = 'force-dynamic';
 const themeScript = `(function(){try{var t=localStorage.getItem('codeloop-theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark')}catch(e){}})()`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [hub, project] = await Promise.all([hubModeServer(), currentProjectServer()]);
+  // The hub's own home page (no project in the URL) has no board to shell: it lists projects
+  // instead, and the project-scoped shell (card counts, nav, the write gate) would have nothing to
+  // query against.
+  const atHubHome = hub && !project;
   const qc = getQueryClient();
-  await Promise.all([
-    qc.prefetchInfiniteQuery(cardsQueryOptions()),
-    qc.prefetchQuery({ queryKey: QK.config, queryFn: api.config, retry: false }),
-  ]);
+  if (!atHubHome) {
+    await Promise.all([
+      qc.prefetchInfiniteQuery(cardsQueryOptions()),
+      qc.prefetchQuery({ queryKey: QK.config, queryFn: api.config, retry: false }),
+    ]);
+  }
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -33,9 +42,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body className="antialiased">
         <QueryProvider>
-          <HydrationBoundary state={dehydrated(qc)}>
-            <AppShell>{children}</AppShell>
-          </HydrationBoundary>
+          <ProjectProvider project={project} hub={hub}>
+            {atHubHome ? (
+              children
+            ) : (
+              <HydrationBoundary state={dehydrated(qc)}>
+                <AppShell>{children}</AppShell>
+              </HydrationBoundary>
+            )}
+          </ProjectProvider>
         </QueryProvider>
       </body>
     </html>

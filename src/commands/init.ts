@@ -10,6 +10,7 @@ import { applyAgentsConfig, applyDetection, applyMcpConfig, installCi, installHo
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
 import { defaultSkillDirs, ensureSkillsIndex, scanSkills } from '../lib/skills.js';
+import { registerProject } from '../lib/hub-registry.js';
 
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -188,6 +189,10 @@ export const initCommand = new Command('init')
         console.log(chalk.yellow(`    ~ ${file}`));
       }
     }
+
+    // So the hub (and `codeloop projects list`) know about this project from the start, not only
+    // once someone runs `serve` here.
+    registerProject(projectDir);
 
     console.log();
     console.log(chalk.bold('Done.'));

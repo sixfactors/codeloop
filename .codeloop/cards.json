@@ -1,12 +1,12 @@
 {
-  "version": 242,
+  "version": 269,
   "cards": [
     {
       "id": "CL-001",
       "title": "Lane engine with enforced gates",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "build",
+      "stage": "done",
       "retries": {},
       "evidence": [
         "specs/001/research.md",
@@ -61,17 +61,25 @@
           "action": "verify",
           "stage": "build",
           "note": "result: pass at 527980d"
+        },
+        {
+          "at": "2026-10-11T21:01:56.910Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "engine and gates shipped (lane engine, approve/reject, run --agent)"
         }
       ],
       "createdAt": "2026-10-02T03:31:36.119Z",
-      "updatedAt": "2026-10-09T19:54:24.585Z"
+      "updatedAt": "2026-10-11T21:01:56.910Z"
     },
     {
       "id": "CL-002",
       "title": "README matches the lane engine the site sells",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "spec",
+      "stage": "done",
       "retries": {},
       "evidence": [
         "specs/002-readme-matches-the-lane-engine-the-site/research.md"
@@ -107,10 +115,18 @@
           "action": "output",
           "stage": "spec",
           "note": "specs/002-readme-matches-the-lane-engine-the-site/tasks.md"
+        },
+        {
+          "at": "2026-10-11T21:01:57.064Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "spec",
+          "note": "README rewritten from a real run and verified by first-user"
         }
       ],
       "createdAt": "2026-10-07T17:42:14.139Z",
-      "updatedAt": "2026-10-08T17:56:03.896Z",
+      "updatedAt": "2026-10-11T21:01:57.064Z",
       "spec": "specs/002-readme-matches-the-lane-engine-the-site"
     },
     {
@@ -1846,7 +1862,7 @@
       "title": "Cards read like user stories",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "done",
       "description": "As a founder, I can only create a card that says who, what and why in plain words, so that the board is readable by anyone and agents build what users need. Initiative: founder ships without ceremony · S · metric: cards failing check story",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Cards read like user stories",
@@ -1875,10 +1891,18 @@
           "action": "spec",
           "stage": "research",
           "note": "specs/057-cards-read-like-user-stories"
+        },
+        {
+          "at": "2026-10-11T21:01:57.215Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "research",
+          "note": "story standard enforced at start and spec check"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.206Z",
-      "updatedAt": "2026-10-07T19:14:19.562Z",
+      "updatedAt": "2026-10-11T21:01:57.215Z",
       "story": {
         "as": "founder",
         "can": "only create a card that says who, what and why in plain words",
@@ -1896,7 +1920,7 @@
       "title": "Small fixes skip the ceremony",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "proposed",
       "description": "As a founder, I can start a one-line fix and watch it go straight to build and verify, so that the pipeline matches the size of the work. Initiative: founder ships without ceremony · M · metric: cycle time, trivial cards",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Small fixes skip the ceremony",
@@ -1933,10 +1957,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:57.946Z",
+          "actor": "owner",
+          "human": true,
+          "action": "park",
+          "stage": "research",
+          "note": "reconciled 10-11: back to the plan; work continues under the new stories"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.339Z",
-      "updatedAt": "2026-10-07T21:19:48.977Z",
+      "updatedAt": "2026-10-11T21:01:57.946Z",
       "story": {
         "as": "founder",
         "can": "start a one-line fix and watch it go straight to build and verify",
@@ -1947,7 +1979,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "cycle time, trivial cards",
       "spec": "specs/058-small-fixes-skip-the-ceremony",
-      "feature": "right-sized-cards"
+      "feature": "right-sized-cards",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "parked_from": "research"
     },
     {
       "id": "c-059",
@@ -2045,7 +2080,7 @@
       "title": "Split a card that is too big",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "done",
       "description": "As a founder, I can split a card into two or three children under one epic, so that each piece ships in under a week. Initiative: founder ships without ceremony · S · metric: cards over one week",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Split a card that is too big",
@@ -2074,10 +2109,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:57.363Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "research",
+          "note": "card split, all-or-nothing since today"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.595Z",
-      "updatedAt": "2026-10-08T16:29:41.461Z",
+      "updatedAt": "2026-10-11T21:01:57.363Z",
       "story": {
         "as": "founder",
         "can": "split a card into two or three children under one epic",
@@ -2095,7 +2138,7 @@
       "title": "Cards are picked by value",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "done",
       "description": "As a founder, I can give a card a RICE score and see the board and the agent take the highest first, so that the most valuable work ships first. Initiative: founder ships without ceremony · S · metric: shipped cards that moved their metric",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Cards are picked by value",
@@ -2124,10 +2167,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:57.506Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "research",
+          "note": "priority scores and bands live on the board"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.726Z",
-      "updatedAt": "2026-10-08T16:29:47.150Z",
+      "updatedAt": "2026-10-11T21:01:57.506Z",
       "story": {
         "as": "founder",
         "can": "give a card a RICE score and see the board and the agent take the highest first",
@@ -2145,7 +2196,7 @@
       "title": "The board follows git",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "proposed",
       "description": "As a founder, I can merge a pull request or deploy and see the card move on its own, so that I never update status by hand. Initiative: founder ships without ceremony · M · metric: human turns per card",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The board follows git",
@@ -2174,10 +2225,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:58.228Z",
+          "actor": "owner",
+          "human": true,
+          "action": "park",
+          "stage": "research",
+          "note": "reconciled 10-11: back to the plan; work continues under the new stories"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.851Z",
-      "updatedAt": "2026-10-08T16:29:54.750Z",
+      "updatedAt": "2026-10-11T21:01:58.228Z",
       "story": {
         "as": "founder",
         "can": "merge a pull request or deploy and see the card move on its own",
@@ -2188,14 +2247,17 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "human turns per card",
       "spec": "specs/062-the-board-follows-git",
-      "feature": "board-follows-git"
+      "feature": "board-follows-git",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "parked_from": "research"
     },
     {
       "id": "c-063",
       "title": "Answer the agent's questions from my inbox",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "done",
       "description": "As a founder, I can answer up to five questions, each with a suggested answer, from the inbox or my phone, so that the agent keeps going without a meeting. Initiative: founder ships without ceremony · M · metric: unattended span",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Answer the agent's questions from my inbox",
@@ -2224,10 +2286,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:57.650Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "research",
+          "note": "answer and accept questions from the inbox"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.981Z",
-      "updatedAt": "2026-10-08T16:30:05.881Z",
+      "updatedAt": "2026-10-11T21:01:57.650Z",
       "story": {
         "as": "founder",
         "can": "answer up to five questions, each with a suggested answer, from the inbox or my phone",
@@ -2245,7 +2315,7 @@
       "title": "Get pinged when a card needs me",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "proposed",
       "description": "As a founder, I can get a message with the evidence link when a card reaches a gate, so that I approve from wherever I am. Initiative: founder ships without ceremony · S · metric: time waiting at gates",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Get pinged when a card needs me",
@@ -2314,10 +2384,18 @@
           "action": "answer",
           "stage": "research",
           "note": "Q2: Gate park, interview question posted, and retries exhausted. Nothing else; `run` summaries stay in the inbox."
+        },
+        {
+          "at": "2026-10-11T21:01:58.380Z",
+          "actor": "owner",
+          "human": true,
+          "action": "park",
+          "stage": "research",
+          "note": "reconciled 10-11: back to the plan; work continues under the new stories"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.113Z",
-      "updatedAt": "2026-10-08T16:31:58.906Z",
+      "updatedAt": "2026-10-11T21:01:58.380Z",
       "story": {
         "as": "founder",
         "can": "get a message with the evidence link when a card reaches a gate",
@@ -2328,7 +2406,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "time waiting at gates",
       "spec": "specs/064-get-pinged-when-a-card-needs-me",
-      "feature": "board-follows-git"
+      "feature": "board-follows-git",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "parked_from": "research"
     },
     {
       "id": "c-065",
@@ -2380,7 +2461,7 @@
       "title": "The agent thinks before it builds",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "proposed",
       "description": "As a founder, I can read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec, so that I approve a decision and not a guess. Initiative: founder ships without ceremony · M · metric: first-pass verify",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The agent thinks before it builds",
@@ -2409,10 +2490,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:58.515Z",
+          "actor": "owner",
+          "human": true,
+          "action": "park",
+          "stage": "research",
+          "note": "reconciled 10-11: back to the plan; work continues under the new stories"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.370Z",
-      "updatedAt": "2026-10-08T16:32:25.499Z",
+      "updatedAt": "2026-10-11T21:01:58.515Z",
       "story": {
         "as": "founder",
         "can": "read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec",
@@ -2423,7 +2512,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "first-pass verify",
       "spec": "specs/066-the-agent-thinks-before-it-builds",
-      "feature": "agent-thinks-first"
+      "feature": "agent-thinks-first",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "parked_from": "research"
     },
     {
       "id": "c-067",
@@ -2565,7 +2657,7 @@
       "title": "Review findings become cards",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "proposed",
       "description": "As a reviewer, I can mark each finding fix now, defer or unnecessary, and see deferred ones become cards, so that nothing is lost and nothing is padded. Initiative: nothing unasked ships, everything ships proven · M · metric: rework ratio",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Review findings become cards",
@@ -2595,10 +2687,18 @@
           "action": "promote",
           "stage": "research",
           "note": "I think each card must follow a user story and also define acceptance criteria - if we do review it should be saved as a set of cards - but it should update cards that are in backlog instead of duplicating them and try to reuse them (if not done). "
+        },
+        {
+          "at": "2026-10-11T21:01:58.650Z",
+          "actor": "owner",
+          "human": true,
+          "action": "park",
+          "stage": "research",
+          "note": "reconciled 10-11: back to the plan; work continues under the new stories"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.885Z",
-      "updatedAt": "2026-10-08T16:41:10.902Z",
+      "updatedAt": "2026-10-11T21:01:58.650Z",
       "story": {
         "as": "reviewer",
         "can": "mark each finding fix now, defer or unnecessary, and see deferred ones become cards",
@@ -2609,7 +2709,10 @@
       "initiative": "nothing-unasked-ships-everything-proven",
       "metric": "rework ratio",
       "spec": "specs/070-review-findings-become-cards",
-      "feature": "reviews-and-proof"
+      "feature": "reviews-and-proof",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "parked_from": "research"
     },
     {
       "id": "c-071",
@@ -3156,7 +3259,7 @@
       "title": "Bring my Spec Kit or BMAD work with me",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "research",
+      "stage": "done",
       "description": "As a dev switching tools, I can import my current Spec Kit or BMAD folders and get cards, so that trying codeloop costs nothing. Initiative: any stack, same loop · S · metric: imports succeeded",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Bring my Spec Kit or BMAD work with me",
@@ -3225,10 +3328,18 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:01:57.794Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "research",
+          "note": "codeloop import speckit and bmad"
         }
       ],
       "createdAt": "2026-10-07T18:01:34.559Z",
-      "updatedAt": "2026-10-08T16:31:32.947Z",
+      "updatedAt": "2026-10-11T21:01:57.794Z",
       "story": {
         "as": "dev switching tools",
         "can": "import my current Spec Kit or BMAD folders and get cards",
@@ -3667,7 +3778,7 @@
       "title": "Explain the architecture",
       "lane": "wiki",
       "laneVersion": 1,
-      "stage": "architecture",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -3705,21 +3816,29 @@
           "action": "park",
           "stage": "architecture",
           "note": "gate wiki (after the check passed)"
+        },
+        {
+          "at": "2026-10-11T21:02:17.380Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "architecture",
+          "note": "superseded by c-096, which wrote the pages the owner reviewed"
         }
       ],
       "createdAt": "2026-10-11T03:06:52.712Z",
-      "updatedAt": "2026-10-11T03:07:53.311Z",
-      "gate": "wiki",
-      "awaiting": "owner"
+      "updatedAt": "2026-10-11T21:02:17.380Z"
     },
     {
       "id": "c-096",
       "title": "Explain the architecture",
       "lane": "wiki",
       "laneVersion": 1,
-      "stage": "architecture",
+      "stage": "done",
       "retries": {},
-      "evidence": [],
+      "evidence": [
+        ".codeloop/wiki/architecture/overview.md"
+      ],
       "events": [
         {
           "at": "2026-10-11T04:03:59.370Z",
@@ -3755,12 +3874,249 @@
           "action": "park",
           "stage": "architecture",
           "note": "gate wiki (after the check passed)"
+        },
+        {
+          "at": "2026-10-11T21:02:16.916Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "architecture",
+          "note": "gate wiki",
+          "fingerprint": "c9cc3fa601f947e51c24dba142f2425e6e3fbe23"
+        },
+        {
+          "at": "2026-10-11T21:02:16.920Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "architecture",
+          "note": "to done"
         }
       ],
       "createdAt": "2026-10-11T04:03:59.370Z",
-      "updatedAt": "2026-10-11T04:07:01.090Z",
-      "gate": "wiki",
-      "awaiting": "owner"
+      "updatedAt": "2026-10-11T21:02:16.920Z"
+    },
+    {
+      "id": "c-097",
+      "title": "One board shows every project I run",
+      "story": {
+        "as": "founder",
+        "can": "see and act on every project from one board",
+        "so": "I stop juggling servers and ports"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "verify",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:17.534Z",
+          "actor": "owner",
+          "human": true,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:02:17.540Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/097-one-board-shows-every-project-i-run"
+        },
+        {
+          "at": "2026-10-11T21:02:17.544Z",
+          "actor": "owner",
+          "human": true,
+          "action": "place",
+          "stage": "verify",
+          "note": "started at verify: work already under way"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:17.534Z",
+      "updatedAt": "2026-10-11T21:02:17.544Z",
+      "spec": "specs/097-one-board-shows-every-project-i-run"
+    },
+    {
+      "id": "c-098",
+      "title": "Two sessions work side by side without blocking",
+      "story": {
+        "as": "founder",
+        "can": "run several agent sessions in one repo at once",
+        "so": "no session switches off another's work"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "spec",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:17.694Z",
+          "actor": "owner",
+          "human": true,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:02:17.698Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/098-two-sessions-work-side-by-side-without-b"
+        },
+        {
+          "at": "2026-10-11T21:02:17.702Z",
+          "actor": "owner",
+          "human": true,
+          "action": "place",
+          "stage": "spec",
+          "note": "started at spec: work already under way"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:17.694Z",
+      "updatedAt": "2026-10-11T21:02:17.702Z",
+      "spec": "specs/098-two-sessions-work-side-by-side-without-b"
+    },
+    {
+      "id": "c-099",
+      "title": "I ask Claude and codeloop organises the work",
+      "story": {
+        "as": "founder",
+        "can": "ask for anything in chat and have it captured, worked and approved there",
+        "so": "codeloop feels invisible, not like paperwork"
+      },
+      "persona": "founder",
+      "size": "L",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "spec: chanl-platform docs/plans/codeloop/2026-10-11-invisible-codeloop.md; spec written, start at spec; absorbs c-058 fast lane",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:36.475Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:36.475Z",
+      "updatedAt": "2026-10-11T21:02:36.475Z"
+    },
+    {
+      "id": "c-100",
+      "title": "I see work in action, the plan and what shipped",
+      "story": {
+        "as": "founder",
+        "can": "use a simple board, a plan and a shipped view",
+        "so": "I understand the state of work at a glance"
+      },
+      "persona": "founder",
+      "size": "L",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "spec: docs/plans/codeloop/2026-10-11-board-plan-shipped.md; start at spec; absorbs c-059 backlog",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:36.641Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:36.641Z",
+      "updatedAt": "2026-10-11T21:02:36.641Z"
+    },
+    {
+      "id": "c-101",
+      "title": "codeloop keeps all its files in one folder",
+      "story": {
+        "as": "founder",
+        "can": "keep every codeloop file under .codeloop",
+        "so": "my repo stays clean and specs merge into feature pages"
+      },
+      "persona": "founder",
+      "size": "L",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "spec: docs/plans/codeloop/2026-10-11-codeloop-folder-and-living-specs.md; start at spec",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:36.786Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:36.786Z",
+      "updatedAt": "2026-10-11T21:02:36.786Z"
+    },
+    {
+      "id": "c-102",
+      "title": "Finished or stuck stories stop holding slots",
+      "story": {
+        "as": "founder",
+        "can": "finish, drop, park or split a story without editing files",
+        "so": "new work is never blocked by stale stories"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "verify",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-11T21:02:50.737Z",
+          "actor": "owner",
+          "human": true,
+          "action": "create",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-11T21:02:50.741Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/102-finished-or-stuck-stories-stop-holding-s"
+        },
+        {
+          "at": "2026-10-11T21:02:50.745Z",
+          "actor": "owner",
+          "human": true,
+          "action": "place",
+          "stage": "verify",
+          "note": "started at verify: work already under way"
+        }
+      ],
+      "createdAt": "2026-10-11T21:02:50.737Z",
+      "updatedAt": "2026-10-11T21:02:50.745Z",
+      "spec": "specs/102-finished-or-stuck-stories-stop-holding-s"
     }
   ]
 }

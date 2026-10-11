@@ -171,7 +171,9 @@ describe('adopt merges the skills index', () => {
 });
 
 describe('init detection', () => {
-  const init = (...args: string[]) => spawnSync('node', [CLI, 'init', '--tools', 'claude', '--starter', 'generic', ...args], { cwd: dir, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
+  // CODELOOP_HOME keeps the registry write `init` now makes inside this throwaway project
+  // instead of the developer's real ~/.codeloop.
+  const init = (...args: string[]) => spawnSync('node', [CLI, 'init', '--tools', 'claude', '--starter', 'generic', ...args], { cwd: dir, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CODELOOP_HOME: join(dir, '.codeloop-home') } });
 
   it('reads package.json into quality_checks and the build lane, says what it found, and --starter still picks the config', () => {
     rmSync(join(dir, '.codeloop'), { recursive: true });

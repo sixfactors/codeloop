@@ -1,17 +1,22 @@
 import { HydrationBoundary } from '@tanstack/react-query';
 import { Kanban } from 'lucide-react';
 import { Board } from '@/components/shared/board';
+import { HubHome } from '@/components/shared/hub-home';
 import { backlogQuery, filtersFromUrl, laneColumns, toQuery } from '@/lib/board-columns';
 import { PageLayout } from '@/components/shared/page-layout';
 import { api } from '@/lib/api';
 import { deriveLanes } from '@/lib/cards';
 import { cardCountQueryOptions, cardsQueryOptions, QK } from '@/lib/queries';
 import { dehydrated, getQueryClient } from '@/lib/query-server';
+import { currentProjectServer, hubModeServer } from '@/lib/project';
 import type { Lane } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BoardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // The hub's bare `/` (no project in the URL) has no board to show; list every registered
+  // project and what needs a person across all of them instead.
+  if ((await hubModeServer()) && !(await currentProjectServer())) return <HubHome />;
   const initial = filtersFromUrl(await searchParams);
   const base = toQuery(initial);
   const qc = getQueryClient();

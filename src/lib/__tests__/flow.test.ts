@@ -19,8 +19,8 @@ function write(path: string, text: string): void {
   writeFileSync(join(dir, path), text);
 }
 
-function lane(id: string, stages: string): void {
-  write(`.codeloop/lanes/${id}.yaml`, `id: ${id}\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n${stages}`);
+function lane(id: string, stages: string, extra = ''): void {
+  write(`.codeloop/lanes/${id}.yaml`, `id: ${id}\nversion: 1\nmetric: { name: m, source: cards }\n${extra}stages:\n${stages}`);
 }
 
 const GATED_THEN_PUBLIC = `  - id: draft
@@ -171,5 +171,38 @@ describe('refusals', () => {
 
     expect(() => advanceCard(dir, 'c-1')).toThrow(RefusalError);
     expect(() => advanceCard(dir, 'c-1')).toThrow(/waiting for you at gate "copy"/);
+  });
+});
+
+describe('split, done and drop free lane slots without leaving duplicates', () => {
+  const STAGES = `  - id: one\n    done: { cmd: "false" }\n`;
+
+  it('split refuses up front when the children do not fit, and makes none', async () => {
+    const { splitCard } = await import('../services.js');
+    lane('build', STAGES, 'wip: 2\n');
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' });
+    expect(() => splitCard(dir, 'c-002', ['Export my todos as a CSV file', 'Export my todos as a JSON file', 'Export my todos as a PDF file'], 'owner')).toThrow(/needs 3 slots/);
+    expect(readCards(dir).cards.map(c => c.id)).toEqual(['c-001', 'c-002']);
+  });
+
+  it('split counts the parent as freed, makes every child and ends the parent', async () => {
+    const { splitCard } = await import('../services.js');
+    lane('build', STAGES, 'wip: 2\n');
+    createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-001' });
+    const { cards } = splitCard(dir, 'c-001', ['Export my todos as a CSV file', 'Export my todos as a JSON file'], 'owner');
+    expect(cards.map(c => c.title)).toEqual(['Export my todos as a CSV file', 'Export my todos as a JSON file']);
+    expect(readCards(dir).cards.find(c => c.id === 'c-001')?.stage).toBe('done');
+  });
+
+  it('done and drop are the owner\'s, free the slot, and drop needs a reason', async () => {
+    const { closeCard } = await import('../engine.js');
+    lane('build', STAGES, 'wip: 1\n');
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    expect(() => closeCard(dir, 'c-001', 'agent', 'done')).toThrow(/owner's decision/);
+    expect(() => closeCard(dir, 'c-001', 'owner', 'dropped')).toThrow(/say why/);
+    expect(() => createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' })).toThrow(/c-001/);
+    closeCard(dir, 'c-001', 'owner', 'done');
+    expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
   });
 });

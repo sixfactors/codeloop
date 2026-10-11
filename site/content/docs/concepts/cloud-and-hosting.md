@@ -12,21 +12,26 @@ Three things sit on top, and each one is optional.
 ## The board server
 
 ```sh
-codeloop serve
-codeloop serve --bg --open
-codeloop serve --stop
+codeloop serve          # joins the hub and opens this project's board
+codeloop open           # reopens it, from any folder in the project
+codeloop hub --stop     # stops the hub
 ```
 
-A local web board on port 4040 showing the same cards, inbox, lanes, evidence, mocks and questions the CLI shows. It binds `127.0.0.1`, answers only to a localhost host name, sends no CORS headers, and needs a same-origin request and a JSON content type for every write. Approve, Reject and every other write need you signed in — a username and password in `.codeloop/local.yaml` (default `owner` / `codeloop`; change it with `codeloop config board-password`). `codeloop open` reopens the board for this project without retyping the address. A script or an agent calling the API directly still authenticates with the token `codeloop serve` prints, sent as `x-codeloop-token`.
+One local hub serves every project you have run `codeloop serve` or `codeloop init` in, on one port (4040 by default), at `http://127.0.0.1:4040/p/<project>/`. The hub's home page lists your projects and everything that needs you across them: questions, gate approvals and stuck stories, each labelled with its project. Each project still reads only its own `.codeloop/` folder, and every request is answered from that project's own store, so two projects never share cards, runs or live updates. `codeloop projects list` shows the registered projects; `codeloop projects remove <id>` forgets one.
+
+The hub binds `127.0.0.1`, answers only to a localhost host name, sends no CORS headers, and needs a same-origin request and a JSON content type for every write. Approve, Reject and every other write need you signed in, once for the whole hub: the username and password live in `~/.codeloop/hub.yaml` (default `owner` / `codeloop`; change it before sharing the board). A script or an agent calling the API directly authenticates with the token `codeloop serve` prints, sent as `x-codeloop-token`.
+
+`codeloop serve --standalone` runs one project on its own port, the way codeloop worked before the hub; its sign-in lives in that project's `.codeloop/local.yaml` (`codeloop config board-password`). `codeloop open` reopens a running standalone board first, and the hub otherwise.
 
 | Flag | Use |
 |---|---|
 | `-p, --port <port>` | Port, default 4040. |
-| `--bg`, `--stop` | Run in the background; stop it. |
+| `--standalone` | Run this project alone instead of joining the hub. |
+| `--bg`, `--stop` | Standalone only: run in the background; stop it. |
 | `--open` | Open the browser after starting. |
 | `--owner` | Allow writes from the board at all. On localhost this is already the default; required on a non-loopback `--host`. |
 | `--read-only` | Disable writes even on localhost. |
-| `--host <host>` | Listen on another address. Anything but the default exposes the board to the network — refused while the board still uses the default password. |
+| `--host <host>` | Listen on another address. Anything but the default exposes the board to the network, and is refused while the default password is in use. |
 
 `codeloop watch` watches the project for file saves, commits, test and build results and pushes them to the board; `--with-serve` starts both.
 

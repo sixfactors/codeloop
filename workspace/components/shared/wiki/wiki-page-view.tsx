@@ -23,11 +23,12 @@ function withoutTitleHeading(body: string, title: string): string {
 }
 import { WikiToc } from './wiki-toc';
 import { isMissing, usePage, usePages, useSavePage } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { folderLabel, headingsOf, pageFolder, pageSlug, properties, updatedAt } from '@/lib/wiki';
 import type { Page } from '@/lib/types';
 
 function Backlinks({ page }: { page: Page }) {
+  const routes = useRoutes();
   const slug = pageSlug(page.id);
   const hits = usePages({ q: slug, limit: 50 });
   const links = useMemo(() => hits.pages.filter((p) => p.id !== page.id), [hits.pages, page.id]);
@@ -58,6 +59,7 @@ function Backlinks({ page }: { page: Page }) {
 }
 
 export function WikiPageView({ path, onEdit, canEdit }: { path: string; onEdit: () => void; canEdit: boolean }) {
+  const routes = useRoutes();
   const { data, isLoading, error, refetch } = usePage(path);
   const create = useSavePage();
   const toc = useMemo(() => headingsOf(data?.body ?? ''), [data?.body]);

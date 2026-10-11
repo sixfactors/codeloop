@@ -6,9 +6,10 @@ import { CardActions, CardDetailBody, CardDetailSkeleton, CardHeaderTags, storyL
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
 import { isMissing, useCard } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 
 export function CardPage({ id }: { id: string }) {
+  const routes = useRoutes();
   const { data: card, isLoading, error, refetch } = useCard(id);
   const crumbs = [{ label: 'Board', href: routes.board }, { label: id }];
 

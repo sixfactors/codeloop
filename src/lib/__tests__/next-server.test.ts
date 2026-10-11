@@ -6,7 +6,7 @@ import { join } from 'path';
 import { getRequestListener } from '@hono/node-server';
 import { createCard } from '../engine.js';
 import { closeIndex } from '../index/index.js';
-import { findWorkspaceBuild, frozenConfig, splitListener } from '../next-server.js';
+import { findWorkspaceBuild, frozenConfig, hubListener, splitListener } from '../next-server.js';
 import { createApp } from '../server.js';
 
 let dir: string;
@@ -80,5 +80,37 @@ describe('one port, two handlers', () => {
     expect(frozenConfig(root)).toEqual({ basePath: '', distDir: '.next' });
     expect(frozenConfig(root)).not.toHaveProperty('output');
     rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe('the hub\'s listener: /p/<id>/... rewritten for Next, a project id carried as a header', () => {
+  it('strips the /p/<id> prefix, defaults a bare project root to / (the board), and tags the request as hub mode', async () => {
+    const seen: { url: string; mode: string | undefined; project: string | undefined }[] = [];
+    const pages = (req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+      seen.push({ url: req.url ?? '', mode: req.headers['x-codeloop-mode'] as string | undefined, project: req.headers['x-codeloop-project'] as string | undefined });
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<html>page</html>');
+    };
+    const api = (_req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{}');
+    };
+    server = createServer(hubListener(api, pages));
+    await new Promise<void>(r => server!.listen(0, '127.0.0.1', r));
+    const port = (server.address() as { port: number }).port;
+    const base = `http://127.0.0.1:${port}`;
+
+    await fetch(`${base}/p/acme`);
+    await fetch(`${base}/p/acme/`);
+    await fetch(`${base}/p/acme/cards/c-1`);
+    await fetch(`${base}/`);
+    expect((await fetch(`${base}/api/hub/projects`)).headers.get('content-type')).toContain('json');
+
+    expect(seen).toEqual([
+      { url: '/', mode: 'hub', project: 'acme' },
+      { url: '/', mode: 'hub', project: 'acme' },
+      { url: '/cards/c-1', mode: 'hub', project: 'acme' },
+      { url: '/', mode: 'hub', project: undefined },
+    ]);
   });
 });

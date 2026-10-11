@@ -139,28 +139,29 @@ guardCommand
 
 // Owner actions an assistant must never take in its own shell tool. The hook only fires for the
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
-const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer)\b|--as[ =](owner|reviewer)\b/;
+const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|card\s+(?:done|drop|approve|reject))\b|--as[ =](owner|reviewer)\b/;
 
 guardCommand
   .command('bash')
-  .description("PreToolUse hook for the assistant's shell tool: refuses `codeloop approve`, `reject`, `answer` and `--as owner|reviewer`, which are the person's to run")
-  .option('--format <format>', 'claude (exit 2 with a message) or cursor (beforeShellExecution JSON)', 'claude')
+  .description("PreToolUse hook for the assistant's shell tool: `codeloop approve`, `reject`, `answer`, `card done|drop` and `--as owner|reviewer` go to the person as a permission prompt; their Allow is the decision")
+  .option('--format <format>', 'claude (PreToolUse JSON) or cursor (beforeShellExecution JSON)', 'claude')
   .action(async (opts: { format: string }) => {
     const input = await readStdinJson();
     const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
     const command = String(toolInput.command ?? input.command ?? '');
     const hit = OWNER_ACTION.exec(command);
-    const message = hit
-      ? `codeloop: \`${hit[0].trim()}\` is the person's decision, not the assistant's. Ask them to run it themselves (type it with ! in this session, or in a terminal), or to approve it on the board.`
-      : '';
-    if (opts.format === 'cursor') {
-      console.log(JSON.stringify(hit ? { permission: 'deny', userMessage: message, agentMessage: message } : { permission: 'allow' }));
+    if (!hit) {
+      if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
       return;
     }
-    if (hit) {
-      console.error(message);
-      process.exit(2);
+    // Asking, not refusing: the person sees the exact command and clicks Allow or Deny in their own
+    // tool, so the decision stays theirs without them leaving the chat to type it.
+    const reason = `codeloop: \`${hit[0].trim()}\` is your decision. Allow to run it as you, or Deny.`;
+    if (opts.format === 'cursor') {
+      console.log(JSON.stringify({ permission: 'ask', userMessage: reason, agentMessage: 'Waiting for the person to allow this codeloop decision.' }));
+      return;
     }
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: reason } }));
   });
 
 guardCommand

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export CODELOOP_HOME="${CODELOOP_HOME:-$(mktemp -d)}"  # keep test projects out of ~/.codeloop/projects.json
 # End-to-end proof of the lane engine, run against the built CLI in a fresh temp project.
 #   npm run build && bash scripts/e2e-founder-loop.sh
 set -u
@@ -371,8 +372,8 @@ up() { for _ in 1 2 3 4 5 6 7 8 9 10; do http 200 "$1/api/cards" > /dev/null 2>&
 rm -f .codeloop/board.json .codeloop/state/serve.json
 RO=$((20000 + RANDOM % 10000)); OW=$((RO + 1))
 # --read-only: on loopback, owner is the default, so the read-only case needs the flag now.
-codeloop serve --port $RO --read-only > serve-ro.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
-codeloop serve --port $OW --owner > serve-owner.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+codeloop serve --standalone --port $RO --read-only > serve-ro.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+codeloop serve --standalone --port $OW --owner > serve-owner.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 expect 0 "serve --read-only starts" up "http://127.0.0.1:$RO"
 expect 0 "serve --owner starts" up "http://127.0.0.1:$OW"
 RO_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-ro.log | head -1)
@@ -414,32 +415,37 @@ json "GET run shows the finished run and its log" "d.status==='done' && d.outcom
 expect 0 "the run stream replays the log and ends" bash -c "$(declare -f http); http 200 http://127.0.0.1:$OW/api/runs/c-900-draft-1/stream | grep -q 'event: end'"
 json "the run parked the card at the copy gate again: its output changed after the approval" "d.stage==='draft' && d.gate==='copy' && d.events.at(-1).note.includes('changed since it was approved')" codeloop card show c-900 --json
 json "POST split makes siblings marked split_from" "d.cards.length===1 && d.cards[0].split_from==='c-900' && d.cards[0].lane==='market'" as "$OW_TOKEN" "" "" 201 "http://127.0.0.1:$OW/api/cards/c-900/split" POST '{"titles":["Board approval reminder"]}'
+json "split ended the original card: its work now lives in its children" "d.stage==='done' && d.events.some(e=>e.action==='close' && (e.note||'').includes('split into 1'))" codeloop card show c-900 --json
 json "GET setup status says the project is set up" "d.initialised===true && d.lanes===4 && d.skillsIndexed>0 && d.agentsConfigured===0" http 200 "http://127.0.0.1:$OW/api/setup/status"
 
 # --- owner by default on localhost, serve.json, codeloop open, re-running serve on a taken port ---
 # One dedicated server (not RO/OW, which both write the same project's serve.json and would race
 # each other for it) so every assertion below is about one process, unambiguously.
 DEF=$((OW + 1))
-codeloop serve --port $DEF > serve-default.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+# A fresh card at the copy gate: c-900 was split above, which ends it.
+codeloop start "ACME-8: Default board approval" --lane market --id c-950 > /dev/null
+mkdir -p marketing/c-950 && echo "audience: founders" > marketing/c-950/brief.md && echo "claim: y" > marketing/c-950/blog.md
+codeloop next c-950 > /dev/null && codeloop next c-950 > /dev/null
+codeloop serve --standalone --port $DEF > serve-default.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 expect 0 "serve with no flags starts" up "http://127.0.0.1:$DEF"
 DEF_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-default.log | head -1)
 TOKEN="$DEF_TOKEN" json "no --owner on loopback is still an owner session" "d.owner===true && d.tokenValid===true" http 200 "http://127.0.0.1:$DEF/api/session"
-expect 0 "approve succeeds on a server started with no flags at all" as "$DEF_TOKEN" "" "" 200 "http://127.0.0.1:$DEF/api/cards/c-900/approve" POST '{"note":"loopback owner default"}'
+expect 0 "approve succeeds on a server started with no flags at all" as "$DEF_TOKEN" "" "" 200 "http://127.0.0.1:$DEF/api/cards/c-950/approve" POST '{"note":"loopback owner default"}'
 json "serve.json on disk matches the server actually running" "d.port===$DEF && d.host==='127.0.0.1' && d.token==='$DEF_TOKEN' && d.owner===true" sh -c "node -e \"console.log(require('fs').readFileSync('.codeloop/state/serve.json','utf8'))\""
 OPEN_OUT=$(codeloop open 2>&1)
 expect 0 "codeloop open reprints the running server's URL" sh -c "echo \"$OPEN_OUT\" | grep -q \"http://127.0.0.1:$DEF/\""
-SECOND=$(codeloop serve --port $DEF 2>&1)
+SECOND=$(codeloop serve --standalone --port $DEF 2>&1)
 expect 0 "a second serve on the same port prints the existing URL instead of failing" sh -c "echo \"$SECOND\" | grep -q 'already running' && echo \"$SECOND\" | grep -q \"http://127.0.0.1:$DEF/\""
 expect 0 "that second invocation did not touch the still-running server" up "http://127.0.0.1:$DEF"
 codeloop serve --stop > stop.log 2>&1
 expect 0 "serve --stop removes serve.json" sh -c "! test -f .codeloop/state/serve.json"
 expect 1 "serve --stop actually killed the process" up "http://127.0.0.1:$DEF"
-expect 0 "codeloop open after --stop says nothing is running" sh -c "codeloop open 2>&1 | grep -q 'No board is running'"
+expect 0 "codeloop open --standalone after --stop says nothing is running" sh -c "codeloop open --standalone 2>&1 | grep -q 'No standalone board is running'"
 
 # --- project discovery: serve (and open) walk up to the nearest .codeloop/, like git finds .git ---
 SUB=$((DEF + 1))
 mkdir -p "$PROJECT/deep/nested/folder"
-(cd "$PROJECT/deep/nested/folder" && exec codeloop serve --port $SUB) > "$WORK/serve-subfolder.log" 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+(cd "$PROJECT/deep/nested/folder" && exec codeloop serve --standalone --port $SUB) > "$WORK/serve-subfolder.log" 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 expect 0 "serve started from a subfolder answers" up "http://127.0.0.1:$SUB"
 json "serve from a subfolder serves the parent project's cards (c-001 lives at the project root)" "d.cards.some(c=>c.id==='c-001')" http 200 "http://127.0.0.1:$SUB/api/cards"
 SUB_OPEN=$(cd "$PROJECT/deep/nested/folder" && codeloop open 2>&1)
@@ -571,7 +577,7 @@ expect 0 "the card waits at the spec gate" sh -c "codeloop next 1 | grep -q 'wai
 expect 0 "inbox shows the mock path with the spec gate" sh -c "codeloop inbox | grep -q '        mock: $M'"
 expect 0 "mocks index writes the gallery" sh -c "codeloop mocks index | grep -q 'docs/mocks/index.html: 1 mock' && grep -q 'href=\"my-project/exports/c-001.html\"' docs/mocks/index.html"
 MP=$((RO + 2))
-codeloop serve --port $MP > serve-mocks.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
+codeloop serve --standalone --port $MP > serve-mocks.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 expect 0 "serve starts in the project with mocks" up "http://127.0.0.1:$MP"
 expect 0 "serve answers /mocks/ with the gallery" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/ | grep -q 'my-project/exports/c-001.html'"
 expect 0 "serve answers the card's mock" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/my-project/exports/c-001.html | grep -q 'data-screen=\"export-dialog\"'"

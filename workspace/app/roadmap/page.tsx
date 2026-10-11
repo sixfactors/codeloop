@@ -20,7 +20,7 @@ import { PageLayout } from '@/components/shared/page-layout';
 import { PageSkeleton } from '@/components/shared/page-skeleton';
 import { FeatureRow } from '@/components/shared/work-tree';
 import { isMissing, useConfig, useFeatures, useInitiativeList, useInitiativeTrees } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import type { FeatureRow as FeatureListRow, InitiativeTree, TreeFeature } from '@/lib/types';
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
@@ -53,6 +53,7 @@ function rowsFor(trees: InitiativeTree[], loose: FeatureListRow[], release: stri
 }
 
 export default function RoadmapPage() {
+  const routes = useRoutes();
   const initiatives = useInitiativeList();
   const ids = useMemo(() => (initiatives.data ?? []).map((b) => b.id), [initiatives.data]);
   const trees = useInitiativeTrees(ids);

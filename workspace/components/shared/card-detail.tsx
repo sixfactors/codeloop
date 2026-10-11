@@ -31,7 +31,8 @@ import { CardActionMenu } from '@/components/shared/card-action-menu';
 import { useCanWrite, useCard, useCardFull, useDecide, useQuestions, isMissing } from '@/hooks/use-api';
 import { mockUrl } from '@/lib/api';
 import { isGateWaiting } from '@/lib/cards';
-import { evidenceId, routes } from '@/lib/routes';
+import { evidenceId } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import type { Card as CardT, EvidenceFile } from '@/lib/types';
 
 const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
@@ -82,6 +83,7 @@ export function CardHeaderTags({ card }: { card: CardT }) {
 }
 
 export function CardActions({ card, inSheet }: { card: CardT; inSheet?: boolean }) {
+  const routes = useRoutes();
   return (
     <>
       {card.mock ? <Button size="sm" variant="outline" nativeButton={false} render={<a href={mockUrl(card.mock)} target="_blank" rel="noreferrer" />}><ExternalLink />Mock</Button> : null}
@@ -108,6 +110,7 @@ export function CardDetailSkeleton() {
 }
 
 export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boolean }) {
+  const routes = useRoutes();
   const full = useCardFull(card.id);
   const questions = useQuestions(card.id);
   const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
@@ -228,6 +231,7 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
 
 /** Sheet body: loading → ready | missing | error, same body as the page. */
 export function CardDetail({ id, stacked }: { id: string; stacked?: boolean }) {
+  const routes = useRoutes();
   const { data: card, isLoading, error, refetch } = useCard(id);
   if (isLoading) return <CardDetailSkeleton />;
   if (error) return <InlineError title="Story failed to load" error={error} onRetry={() => refetch()} />;

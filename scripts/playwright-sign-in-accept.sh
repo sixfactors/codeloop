@@ -40,7 +40,7 @@ expect 0 "start c-001 with an open question" sh -c "codeloop start 'Export invoi
 expect 0 "ask a question with a recommended answer" codeloop ask c-001 "Which export format?" --recommended "CSV" --as agent
 
 PORT=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")
-codeloop serve --owner --port "$PORT" > "$WORK/serve.log" 2>&1 &
+codeloop serve --standalone --owner --port "$PORT" > "$WORK/serve.log" 2>&1 &
 SERVE_PID=$!
 BASE="http://127.0.0.1:$PORT"
 expect 0 "serve starts" up "$BASE"

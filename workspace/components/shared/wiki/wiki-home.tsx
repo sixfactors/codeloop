@@ -13,12 +13,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { byRecent, folderIcon, isSpec, pageFolder, updatedAt } from '@/lib/wiki';
 import type { Page, PageSummary, WikiShapeCount } from '@/lib/types';
 import { WikiMarkdown } from './wiki-markdown-lazy';
 
 function SectionTile({ section, items }: { section: WikiShapeCount; items: PageSummary[] }) {
+  const routes = useRoutes();
   const Icon = folderIcon(section.id);
   return (
     <Link
@@ -37,6 +38,7 @@ function SectionTile({ section, items }: { section: WikiShapeCount; items: PageS
 }
 
 export function WikiHome({ pages, shape, startHere, loading, onNew }: { pages: PageSummary[]; shape: WikiShapeCount[]; startHere?: Page; loading?: boolean; onNew?: () => void }) {
+  const routes = useRoutes();
   const [refOpen, setRefOpen] = useState(false);
   const { sections, reference, specCount, recent } = useMemo(() => {
     const byFolder = new Map<string, PageSummary[]>();

@@ -15,7 +15,7 @@ codeloop init --tools claude
 codeloop serve --open
 ```
 
-`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve` opens the board on localhost, where Approve and Reject work once you sign in (default `owner` / `codeloop` — change it with `codeloop config board-password` before sharing the board). Lost the browser tab? `codeloop open` reopens it. The first card comes from the board's New story button or from the terminal:
+`init` writes `.codeloop/` (nine lanes, config, knowledge files, the board store), ten commands under `.claude/commands/` and fifteen stage skills under `.claude/skills/<name>/`, each a `SKILL.md` with a template and a checklist. A commands folder that already has files in it is left alone unless you pass `--yes`, and then a file you already have is kept. `serve` opens the board on a local hub that serves every project you use codeloop in, at `http://127.0.0.1:4040/p/<project>/`. Approve and Reject work once you sign in (default `owner` / `codeloop`; change it before sharing the board). Lost the browser tab? `codeloop open` reopens it. `serve --standalone` runs one project on its own. The first card comes from the board's New story button or from the terminal:
 
 ```sh
 codeloop start "Download every invoice as one CSV" \

@@ -18,13 +18,18 @@ function print(result: { lines: string[]; exitCode: number }): void {
   if (result.exitCode) process.exit(result.exitCode);
 }
 
-const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string } & StoryFlags) => {
-  const { card, hint } = await client().cards.new({ ...opts, lane, title }, { as: opts.as });
+const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string } & StoryFlags) => {
+  const { stage, ...rest } = opts;
+  const created = await client().cards.new({ ...rest, lane, title }, { as: opts.as });
+  // Work already under way enters at the stage it has reached, not at the first one.
+  const { card, hint } = stage && stage !== created.card.stage ? await client().cards.place(created.card.id, stage, { as: opts.as }) : created;
   console.log(`created ${card.id} in ${card.lane} at stage ${card.stage}${card.ticket ? ` for ${card.ticket}` : ''}${card.spec ? ` (${card.spec}/)` : ''}`);
   print({ lines: [hint], exitCode: 0 });
 };
 
-const next = async (id: string | undefined, opts: { event?: string }) => {
+// `--as` is accepted so a habit from approve does not cost a retry; moving a card on is the check's
+// decision, so who runs it does not change the outcome.
+const next = async (id: string | undefined, opts: { event?: string; as?: string }) => {
   print(await client().cards.advance(id, { event: opts.event }));
 };
 
@@ -59,7 +64,7 @@ function storyOptions(command: Command): Command {
     .option('--force', 'Create it even though the title or story fails the standard');
 }
 
-export const cardCommand = new Command('card').description('Create and move cards through a lane');
+export const cardCommand = new Command('card').alias('cards').description('Create and move cards through a lane');
 
 storyOptions(cardCommand
   .command('new <lane> <title>')
@@ -206,6 +211,7 @@ cardCommand
   .command('advance [id]')
   .description("Run the current stage's check and move the card if it passes")
   .option('--event <name>', 'Report the event a stage with `done.event` is waiting for')
+  .option(...ROLE)
   .action(guard(next));
 
 cardCommand
@@ -222,14 +228,45 @@ cardCommand
   .option(...ROLE)
   .action(guard(reject));
 
+cardCommand
+  .command('park <id> [note]')
+  .description('Move an active card back to your inbox, keeping its stage; frees its lane slot. Approving it later returns it to that stage')
+  .option(...ROLE)
+  .action(guard(async (id: string, note: string | undefined, opts: { as?: string }) => {
+    const { card, hint } = await client().cards.park(id, note, { as: opts.as });
+    console.log(`${card.id} is parked`);
+    console.log(chalk.cyan(hint));
+  }));
+
+cardCommand
+  .command('done <id> [note]')
+  .description('End a card whose work is finished; frees its lane slot (the owner decides)')
+  .option(...ROLE)
+  .action(guard(async (id: string, note: string | undefined, opts: { as?: string }) => {
+    const { card, hint } = await client().cards.close(id, 'done', note, { as: opts.as });
+    console.log(`${card.id} is done`);
+    console.log(chalk.cyan(hint));
+  }));
+
+cardCommand
+  .command('drop <id> <why>')
+  .description('Drop a card you will not do, with the reason; frees its lane slot (the owner decides)')
+  .option(...ROLE)
+  .action(guard(async (id: string, why: string, opts: { as?: string }) => {
+    const { card, hint } = await client().cards.close(id, 'dropped', why, { as: opts.as });
+    console.log(`${card.id} is dropped`);
+    console.log(chalk.cyan(hint));
+  }));
+
 // Short forms of the four commands a person types most.
 export const startCommand = storyOptions(new Command('start')
   .description('Start a card: `codeloop start "<title>"` (same as card new, plus its spec folder)')
   .argument('<title>')
   .option('--lane <lane>', 'Lane to start in', 'build')
   .option('--id <id>', 'Card id (default: next c-NNN)')
+  .option('--stage <stage>', 'Start at this stage, for work already under way (the owner decides)')
   .option(...ROLE))
-  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string } & StoryFlags) => start(opts.lane, title, opts)));
+  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string; stage?: string } & StoryFlags) => start(opts.lane, title, opts)));
 
 export const nextCommand = new Command('next')
   .description('Run the check for a card and move it on (same as card advance); with one active card the id is optional')

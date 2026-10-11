@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, API_BASE } from '@/lib/api';
+import { api, eventsUrl } from '@/lib/api';
 import { QK, isMissing } from '@/hooks/use-api';
 import { invalidateCardLists, invalidatePageLists, patchCard, patchPage, removeCard, removePage } from '@/lib/live-cache';
 import type { LiveEvent } from '@/lib/types';
@@ -73,7 +73,7 @@ export function useEvents() {
 
     const connect = () => {
       es?.close();
-      es = new EventSource(`${API_BASE}/api/events`);
+      es = new EventSource(eventsUrl());
       es.onmessage = parse;
       es.addEventListener('change', parse);
       es.addEventListener('hello', parse);

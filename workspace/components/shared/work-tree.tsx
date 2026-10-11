@@ -25,7 +25,7 @@ import { ProgressBar } from '@/components/shared/progress-bar';
 import { RecordStatRow } from '@/components/shared/record-layout';
 import { isMissing, useEpicTree, useFeature, useInitiativeTree } from '@/hooks/use-api';
 import { isShipped } from '@/lib/cards';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import type { Card as CardT, TreeEpic, TreeFeature, TreeStory } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -120,6 +120,7 @@ function RowShell({ depth, open, children, trailing, testId }: { depth: 0 | 1; o
 
 /** `compact`: a narrow column (the roadmap), no release chip, Board or Open; the title keeps the width. */
 export function FeatureRow({ feature, defaultOpen, link, onOpen, compact }: { feature: TreeFeature; defaultOpen: boolean; link: boolean; onOpen: (id: string) => void; compact?: boolean }) {
+  const routes = useRoutes();
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="border-t border-border/60">
@@ -145,6 +146,7 @@ export function FeatureRow({ feature, defaultOpen, link, onOpen, compact }: { fe
 }
 
 function EpicRow({ epic, defaultOpen, link, onOpen, featuresOpen }: { epic: EpicGroup; defaultOpen: boolean; link: boolean; onOpen: (id: string) => void; featuresOpen: boolean }) {
+  const routes = useRoutes();
   const [open, setOpen] = useState(defaultOpen);
   const done = epic.features.reduce((n, f) => n + f.done, 0);
   const total = epic.features.reduce((n, f) => n + f.total, 0);
@@ -174,6 +176,7 @@ function EpicRow({ epic, defaultOpen, link, onOpen, featuresOpen }: { epic: Epic
 const KIND_TITLE = { initiative: 'Initiative', epic: 'Epic', feature: 'Feature' } as const;
 
 export function WorkTree({ root }: { root: TreeRoot }) {
+  const routes = useRoutes();
   const { view, isLoading, error, refetch } = useTree(root);
   const [open, setOpen] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);

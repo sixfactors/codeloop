@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { isMissing, useCanWrite, useChangeBoardAuth, useConfig, useDeletePage, useLanes, usePages, useSavePage, useSession } from '@/hooks/use-api';
 import { AGENT_SNIPPET } from '@/lib/agent-snippet';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { toast } from '@/lib/toast';
 
 const PERSONAS_FOLDER = 'personas';
@@ -39,6 +39,7 @@ function configPersonas(cfg: unknown): { name: string; pains?: string }[] {
 }
 
 function PersonasCard({ owner }: { owner: boolean }) {
+  const routes = useRoutes();
   const config = useConfig();
   const pages = usePages({ folder: PERSONAS_FOLDER });
   const save = useSavePage();
@@ -222,6 +223,7 @@ function AgentsCard() {
 }
 
 export default function SettingsPage() {
+  const routes = useRoutes();
   const lanes = useLanes();
   const config = useConfig();
   const { canWrite: owner } = useCanWrite();

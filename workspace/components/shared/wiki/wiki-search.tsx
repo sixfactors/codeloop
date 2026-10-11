@@ -13,10 +13,11 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
 import { EMPTY_SEARCH, SearchAndFilter, type SearchAndFilterValue } from '@/components/shared/search-and-filter';
 import { useWikiSearch } from '@/hooks/use-wiki-search';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { folderIcon, folderLabel, pageFolder } from '@/lib/wiki';
 
 export function WikiSearch({ q, onQueryChange }: { q: string; onQueryChange: (q: string) => void }) {
+  const routes = useRoutes();
   const [value, setValue] = useState<SearchAndFilterValue>({ ...EMPTY_SEARCH, q });
   const search = useWikiSearch(value.q);
   const folders = useMemo(() => [...new Set(search.hits.map(pageFolder))].sort(), [search.hits]);

@@ -25,7 +25,7 @@ import { BAND_LABEL, BandChip } from '@/components/shared/band-chip';
 import { EMPTY_SEARCH, SearchAndFilter, type FacetDef, type SearchAndFilterValue } from '@/components/shared/search-and-filter';
 import { Button } from '@/components/ui/button';
 import { inboxSince, useCardCount, useCardFacets, useCards, useInbox, useLanes } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { BANDS, type Band, type Card as CardT, type InboxCard, type InboxQuery } from '@/lib/types';
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
@@ -61,6 +61,7 @@ function groupByBand(cards: InboxCard[]): Group[] {
 }
 
 export function InboxView() {
+  const routes = useRoutes();
   const since = inboxSince();
   const [filters, setFilters] = useState<SearchAndFilterValue>(EMPTY_SEARCH);
   const [pending, setPending] = useState(false);

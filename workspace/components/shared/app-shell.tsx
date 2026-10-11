@@ -19,8 +19,10 @@ import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import dynamic from 'next/dynamic';
 import { useCardCount, useCards, useCanWrite, useConfig, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
-import { routes } from '@/lib/routes';
+import { useProject, useRoutes } from '@/components/providers/project-provider';
+import { routesFor, type Routes } from '@/lib/routes';
 import { CommandPalette } from '@/components/shared/command-palette';
+import { ProjectSwitcher } from '@/components/shared/project-switcher';
 import { ReadOnlyBanner } from '@/components/shared/read-only-banner';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +33,15 @@ interface NavItem {
   id: string;
   title: string;
   url: string;
+  /**
+   * The unprefixed form of `url`, for deciding which row is current. The hub's server strips
+   * `/p/<id>` before Next ever routes the request (src/lib/next-server.ts), so usePathname() on
+   * the server never carries it either; comparing against it there would always read as "no match"
+   * on the server and the real one on the client, a text mismatch and React hydration error #418.
+   * `pathname` passed to NavRow is stripped the same way (see AppShell) so both sides compare
+   * unprefixed to unprefixed.
+   */
+  matchUrl: string;
   icon: LucideIcon;
   exact?: boolean;
   /** Other path prefixes that belong to this destination (an epic or feature page is a level of Initiatives). */
@@ -42,32 +53,53 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const GROUPS: NavGroup[] = [
-  {
-    label: 'Work',
-    items: [
-      { id: 'board', title: 'Board', url: routes.board, icon: Kanban, exact: true },
-      { id: 'inbox', title: 'Inbox', url: routes.inbox, icon: Inbox },
-      { id: 'initiatives', title: 'Initiatives', url: routes.initiatives, icon: Layers, also: ['/epics/', '/features/'] },
-      { id: 'roadmap', title: 'Roadmap', url: routes.roadmap, icon: Map },
-    ],
-  },
-  {
-    label: 'Knowledge',
-    items: [
-      { id: 'wiki', title: 'Wiki', url: routes.wiki(), icon: BookOpen },
-      { id: 'artifacts', title: 'Artifacts', url: routes.artifacts, icon: Images },
-      { id: 'stats', title: 'Stats', url: routes.stats, icon: BarChart3 },
-    ],
-  },
-];
+// Always unprefixed (routesFor() with no project): a fixed, static value, safe to share across
+// renders and across the server/client boundary.
+const MATCH = routesFor();
 
-const SECONDARY: NavItem[] = [{ id: 'settings', title: 'Settings', url: routes.settings, icon: Settings }];
+// Built from `routes` (per render, via useRoutes()), not at module scope: a plain object built
+// once at import time would bake in whatever `routes.board` resolved to on first evaluation. On
+// the server that is always the no-project prefix, which is right for standalone but wrong for
+// every hub page — the markup mismatch is React hydration error #418.
+function navGroups(routes: Routes): NavGroup[] {
+  return [
+    {
+      label: 'Work',
+      items: [
+        { id: 'board', title: 'Board', url: routes.board, matchUrl: MATCH.board, icon: Kanban, exact: true },
+        { id: 'inbox', title: 'Inbox', url: routes.inbox, matchUrl: MATCH.inbox, icon: Inbox },
+        { id: 'initiatives', title: 'Initiatives', url: routes.initiatives, matchUrl: MATCH.initiatives, icon: Layers, also: ['/epics/', '/features/'] },
+        { id: 'roadmap', title: 'Roadmap', url: routes.roadmap, matchUrl: MATCH.roadmap, icon: Map },
+      ],
+    },
+    {
+      label: 'Knowledge',
+      items: [
+        { id: 'wiki', title: 'Wiki', url: routes.wiki(), matchUrl: MATCH.wiki(), icon: BookOpen },
+        { id: 'artifacts', title: 'Artifacts', url: routes.artifacts, matchUrl: MATCH.artifacts, icon: Images },
+        { id: 'stats', title: 'Stats', url: routes.stats, matchUrl: MATCH.stats, icon: BarChart3 },
+      ],
+    },
+  ];
+}
+
+function secondaryNav(routes: Routes): NavItem[] {
+  return [{ id: 'settings', title: 'Settings', url: routes.settings, matchUrl: MATCH.settings, icon: Settings }];
+}
 
 function isActive(item: NavItem, pathname: string): boolean {
-  if (item.exact) return pathname === item.url || pathname.startsWith('/cards/');
-  const base = item.url.replace(/\/$/, '');
+  if (item.exact) return pathname === item.matchUrl || pathname.startsWith('/cards/');
+  const base = item.matchUrl.replace(/\/$/, '');
   return pathname === base || pathname.startsWith(`${base}/`) || (item.also ?? []).some((p) => pathname.startsWith(p));
+}
+
+/** Undoes the hub's `/p/<id>` rewrite so a pathname compares the same way on the server (which
+ * never saw the prefix) and the client (which reads it from the real browser URL). */
+function withoutProjectPrefix(pathname: string, project?: string): string {
+  if (!project) return pathname;
+  const prefix = `/p/${encodeURIComponent(project)}`;
+  if (pathname === prefix) return '/';
+  return pathname.startsWith(`${prefix}/`) ? pathname.slice(prefix.length) : pathname;
 }
 
 /** A count on a row. `attention` is for work that is waiting on a person, not merely in flight. */
@@ -115,23 +147,40 @@ function ThemeToggle() {
   );
 }
 
-function sectionFor(pathname: string): string {
-  if (pathname.startsWith(routes.setup)) return 'Setup';
-  const all = [...GROUPS.flatMap((g) => g.items), ...SECONDARY];
+/** `pathname` here is the unprefixed form (see `withoutProjectPrefix`), matched against the
+ * equally unprefixed `MATCH` routes, not `routes` itself. */
+function sectionFor(pathname: string, groups: NavGroup[], secondary: NavItem[]): string {
+  if (pathname.startsWith(MATCH.setup)) return 'Setup';
+  const all = [...groups.flatMap((g) => g.items), ...secondary];
   return all.find((i) => isActive(i, pathname))?.title ?? 'Workspace';
 }
 
 /** A project that is not initialised yet goes to /setup. A server without the status route answers 404, which gates nothing. */
 function SetupGate({ pathname }: { pathname: string }) {
   const router = useRouter();
+  const routes = useRoutes();
   const status = useSetupStatus();
   const send = status.data?.initialised === false && !pathname.startsWith(routes.setup);
-  React.useEffect(() => { if (send) router.replace(routes.setup); }, [send, router]);
+  React.useEffect(() => { if (send) router.replace(routes.setup); }, [send, router, routes.setup]);
   return null;
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() ?? '';
+  // The browser's actual pathname. Server-side this is already the unprefixed route (the hub
+  // strips `/p/<id>` before Next sees the request); client-side, after hydration, it is the real
+  // `/p/<id>/...` the address bar shows. Nav highlighting below normalizes it with
+  // withoutProjectPrefix() so both passes compare the same unprefixed value; SetupGate's redirect
+  // only runs client-side (inside an effect) so it can use the raw one directly.
+  const rawPathname = usePathname() ?? '';
+  // From the provider, not `pathname.startsWith('/p/')`: for the same reason as above, that read
+  // differs between the server and client passes — two different branches below (ProjectSwitcher
+  // vs. a plain span), which is React hydration error #418. `hub` is the same server-resolved flag
+  // on both passes.
+  const { hub: hubMode, project: projectId } = useProject();
+  const pathname = React.useMemo(() => withoutProjectPrefix(rawPathname, projectId), [rawPathname, projectId]);
+  const routes = useRoutes();
+  const groups = React.useMemo(() => navGroups(routes), [routes]);
+  const secondary = React.useMemo(() => secondaryNav(routes), [routes]);
   // Counts come from the server (the inbox totals and one filtered count), not from a walk over the cards.
   const { total } = useCards();
   const { canWrite } = useCanWrite();
@@ -155,7 +204,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <SetupGate pathname={pathname} />
+      <SetupGate pathname={rawPathname} />
       <Sidebar collapsible="icon">
         {/* A masthead, then destinations. The brand is not a menu row: it does not hover like one. */}
         <SidebarHeader className="gap-3 px-2 pt-3 pb-4">
@@ -173,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* 12px between groups, matching the chanl-admin rail. */}
         <SidebarContent className="gap-0 [&>[data-sidebar=group]:not(:first-child)]:pt-0.5">
-          {GROUPS.map((group, i) => (
+          {groups.map((group, i) => (
             <SidebarGroup key={group.label ?? `group-${i}`} className={i > 0 ? 'mt-0.5' : undefined}>
               {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
               <SidebarGroupContent>
@@ -188,7 +237,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
-                {SECONDARY.map((item) => <NavRow key={item.id} item={item} pathname={pathname} />)}
+                {secondary.map((item) => <NavRow key={item.id} item={item} pathname={pathname} />)}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -212,8 +261,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden sm:block"><span className="text-muted-foreground" title={project?.path}>{product}</span></BreadcrumbItem>
-              <BreadcrumbItem><BreadcrumbPage>{sectionFor(pathname)}</BreadcrumbPage></BreadcrumbItem>
+              <BreadcrumbItem className="hidden sm:block">
+                {hubMode ? <ProjectSwitcher currentName={product} /> : <span className="text-muted-foreground" title={project?.path}>{product}</span>}
+              </BreadcrumbItem>
+              <BreadcrumbItem><BreadcrumbPage>{sectionFor(pathname, groups, secondary)}</BreadcrumbPage></BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex items-center gap-2">

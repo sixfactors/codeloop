@@ -22,7 +22,7 @@ import { InlineError } from '@/components/shared/inline-error';
 import { PageLayout } from '@/components/shared/page-layout';
 import { isMissing, useCanWrite, useConfig, useSetupAdopt, useSetupDetect, useSetupStatus } from '@/hooks/use-api';
 import { AGENT_SNIPPET } from '@/lib/agent-snippet';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import { toast } from '@/lib/toast';
 import type { SetupAdopt, SetupDetect } from '@/lib/types';
 
@@ -63,6 +63,7 @@ function DetectResult({ d }: { d: SetupDetect }) {
 const SKILL_DIRS = ['.claude/skills', '.claude/commands', '.cursor/commands', '.agents/skills', '~/.claude/skills', '~/.claude/commands'];
 
 export default function SetupPage() {
+  const routes = useRoutes();
   const status = useSetupStatus();
   const config = useConfig();
   const { canWrite: owner, reason: readOnlyReason } = useCanWrite();

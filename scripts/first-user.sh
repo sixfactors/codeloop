@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export CODELOOP_HOME="${CODELOOP_HOME:-$(mktemp -d)}"  # keep test projects out of ~/.codeloop/projects.json
 # First-user proof: a stranger installs codeloop from the packed tarball into a private npm
 # prefix, runs the Start docs pages' own commands, and uses the served board. Nothing from this
 # checkout is on PATH; the docs commands are lifted from the pages at run time, never retyped.
@@ -175,10 +176,10 @@ expect 0 "a second card made like the docs card is parked at the spec gate" sh -
 
 PORT=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")
 TOKEN=firstuser$(date +%s)
-CODELOOP_SERVE_TOKEN=$TOKEN codeloop serve --owner --port "$PORT" > "$WORK/serve.log" 2>&1 &
+CODELOOP_SERVE_TOKEN=$TOKEN codeloop serve --standalone --owner --port "$PORT" > "$WORK/serve.log" 2>&1 &
 SERVE_PID=$!
 BASE="http://127.0.0.1:$PORT"
-expect 0 "codeloop serve --owner answers on $BASE" up "$BASE"
+expect 0 "codeloop serve --standalone --owner answers on $BASE" up "$BASE"
 UI=static
 grep -q "Workspace app:" "$WORK/serve.log" && UI=workspace
 grep -q "API only" "$WORK/serve.log" && UI=none

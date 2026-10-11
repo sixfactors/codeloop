@@ -18,13 +18,11 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { VIRTUAL_THRESHOLD } from '@/components/shared/virtual-list';
 import { useWikiShape } from '@/hooks/use-api';
 import { buildTree, folderIcon, type TreeFolder } from '@/lib/wiki';
-import { routes } from '@/lib/routes';
+import { useRoutes } from '@/components/providers/project-provider';
 import type { PageSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type Row = { kind: 'folder'; folder: TreeFolder } | { kind: 'page'; page: PageSummary; folder: string };
-
-const pageHref = (p: PageSummary) => routes.wiki(p.id);
 
 // Which folders the user opened, kept for the tab's life: /wiki and /wiki/<page> are different
 // route segments, so the tree remounts between them and would otherwise fold back up.
@@ -43,8 +41,9 @@ function FolderRow({ folder, open, onToggle }: { folder: TreeFolder; open: boole
 }
 
 function PageRow({ page, active }: { page: PageSummary; active: boolean }) {
+  const routes = useRoutes();
   return (
-    <SidebarMenuSubButton isActive={active} render={<Link href={pageHref(page)} data-active={active} />} className="h-7">
+    <SidebarMenuSubButton isActive={active} render={<Link href={routes.wiki(page.id)} data-active={active} />} className="h-7">
       <span className="truncate">{page.title}</span>
     </SidebarMenuSubButton>
   );

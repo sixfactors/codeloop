@@ -11,7 +11,7 @@ import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
 import { DONE, DROPPED, findCard, inLane, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
-import { advanceCard, createCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
+import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
 import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
@@ -190,6 +190,24 @@ export function approve(projectDir: string, ref: string, who: Role, note?: strin
   return { card: result.card, gate: result.gate, summary, advanced: result.advanced, ...rest };
 }
 
+/** `card park`: back to the owner's inbox, keeping its stage; approving it returns it there. */
+export function parkCard(projectDir: string, ref: string, who: Role, note?: string): { card: Card; hint: string } {
+  const card = parkCardLib(projectDir, findCard(readCards(projectDir).cards, ref).id, who, note);
+  return { card, hint: `Next: ${card.id} is parked from ${card.parked_from}; \`codeloop approve ${card.id}\` puts it back there.` };
+}
+
+/** `start --stage`: a card for work already under way, placed at that stage. */
+export function placeCard(projectDir: string, ref: string, stage: string, who: Role): { card: Card; hint: string } {
+  const card = placeCardLib(projectDir, findCard(readCards(projectDir).cards, ref).id, stage, who);
+  return { card, hint: nextHint(projectDir, card) };
+}
+
+/** `card done` / `card drop`: ends a card and frees its lane slot; the owner's or reviewer's decision. */
+export function closeCard(projectDir: string, ref: string, who: Role, outcome: 'done' | 'dropped', note?: string): { card: Card; hint: string } {
+  const card = closeCardLib(projectDir, findCard(readCards(projectDir).cards, ref).id, who, outcome, note);
+  return { card, hint: `Next: ${card.id} is ${card.stage}; its slot in ${card.lane} is free. \`codeloop inbox\` shows what else is waiting.` };
+}
+
 export function reject(projectDir: string, ref: string, who: Role, note: string): DecisionReport {
   const before = findCard(readCards(projectDir).cards, ref);
   const card = rejectCard(projectDir, ref, who, note);
@@ -256,7 +274,12 @@ export function splitCard(projectDir: string, ref: string, titles: string[], who
   if (!clean.length) throw new RefusalError('titles (one per new card) are required');
   // Every title is checked before any card is made, so a bad third title does not leave two behind.
   for (const t of clean) storyFields(splitTicket(t).title, {});
+  // All children fit, counting the parent's slot as freed, or none is made: a split that stops
+  // halfway leaves duplicates behind when it is run again.
+  const lane = loadLane(projectDir, from.lane);
+  assertRoomInLane(readCards(projectDir).cards, lane, clean.length, [from.id]);
   const inherited = { initiative: from.initiative, epic: from.epic, feature: from.feature, metric: from.metric };
+  if (inLane(from)) closeCardLib(projectDir, from.id, who ?? 'agent', 'done', `split into ${clean.length} stories`, { structural: true });
   const cards = clean.map(t => {
     const { title, ticket } = splitTicket(t);
     return startCard(projectDir, { lane: from.lane, title, role: who ?? 'agent', fields: { ...storyFields(title, inherited), ...(ticket ?? from.ticket ? { ticket: ticket ?? from.ticket } : {}), split_from: from.id } });

@@ -42,6 +42,8 @@ export interface StoryFields {
 
 /** Fields a card carries besides the story standard's. */
 export interface CardExtras {
+  /** The stage a parked card left; approving it in the inbox returns it there instead of the first stage. */
+  parked_from?: string;
   /** The tracker key a ticket-style title started with (`ACME-412: …`) or `--ticket` named. */
   ticket?: string;
   /** The card this one was split from (`card split`); siblings share its feature. */

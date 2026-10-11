@@ -102,6 +102,9 @@ export interface Transport {
   shapeProblem(problem: string, opts?: RoleOption): Promise<CardCreated>;
   approveCard(ref: string, opts?: RoleOption & { note?: string }): Promise<DecisionReport>;
   rejectCard(ref: string, note: string, opts?: RoleOption): Promise<DecisionReport>;
+  closeCard(ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
+  parkCard(ref: string, note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
+  placeCard(ref: string, stage: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   brief(ref: string): Promise<string>;
   /** Starts the card's stage: the check, the agent when it fails, one advance. Returns before it ends. */
   runCard(ref: string, opts?: { agent?: string }): Promise<{ runId: string }>;
@@ -203,6 +206,9 @@ export class CodeloopClient {
     shape: (problem: string, opts?: RoleOption) => this.transport.shapeProblem(problem, opts),
     approve: (ref: string, opts?: RoleOption & { note?: string }) => this.transport.approveCard(ref, opts),
     reject: (ref: string, note: string, opts?: RoleOption) => this.transport.rejectCard(ref, note, opts),
+    close: (ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption) => this.transport.closeCard(ref, outcome, note, opts),
+    park: (ref: string, note?: string, opts?: RoleOption) => this.transport.parkCard(ref, note, opts),
+    place: (ref: string, stage: string, opts?: RoleOption) => this.transport.placeCard(ref, stage, opts),
     /** What an agent is given to do the card's current stage. */
     brief: (ref: string) => this.transport.brief(ref),
     /** Runs the current stage: the check first, the agent (named or configured) when it fails, then one advance. */
