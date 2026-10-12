@@ -252,6 +252,9 @@ describe('mocks', () => {
     expect(await (await app.request(`/mocks/@/${MOCK}`)).text()).toContain('<title>c-001 Add CSV export</title>');
     expect(await (await app.request('/mocks/')).text()).toContain(`@/${MOCK}`);
     expect(await (await app.request('/mocks/acme-app/old/c-777.html')).text()).toContain('Old page');
+    write('docs/artifacts/ui-design.html', '<title>UI design</title>');
+    expect(await (await app.request('/mocks/@/docs/artifacts/ui-design.html')).text()).toContain('UI design');
+    expect((await app.request('/mocks/@/docs/other.html')).status).toBe(404);
     expect((await app.request('/mocks/@/secret.html')).status).toBe(404);
     expect((await app.request(`/mocks/@/${SPEC}/spec-secret.html`)).status).toBe(404);
     expect((await app.request('/mocks/@/..%2Fsecret.html')).status).toBe(404);

@@ -545,7 +545,7 @@ export async function evidenceDetail(projectDir: string, store: Store, nnn: stri
   return { ...found, files: found.files.map(f => (f.kind === 'md' || f.kind === 'json' || f.kind === 'txt' ? { ...f, content: readFileSync(join(projectDir, f.path), 'utf-8') } : f)) };
 }
 
-export const artifacts = async (index: ProjectIndex) => (await index.artifacts.list()).map(a => (a.kind === 'mock' ? { ...a, href: mockHref(a.id) } : a));
+export const artifacts = async (index: ProjectIndex) => (await index.artifacts.list()).map(a => ({ ...a, href: mockHref(a.id) }));
 
 export const stats = async (index: ProjectIndex): Promise<Stats> => computeStats(await index.cards.all(), await index.lanes.list());
 

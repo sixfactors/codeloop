@@ -21,7 +21,8 @@ import { routes } from '@/lib/routes';
 import type { Artifact } from '@/lib/types';
 
 type ArtifactRow = Artifact & { href?: string; lineage?: string[] };
-const hrefOf = (a: ArtifactRow) => a.url ?? (a.href ? `${API_BASE}${a.href}` : '');
+// mockUrl adds the hub's /api/p/<project> prefix; a bare API_BASE link 404s in the hub.
+const hrefOf = (a: ArtifactRow) => a.url ?? (a.href ? mockUrl(a.href) : '');
 
 export default function ArtifactsPage() {
   const artifacts = useArtifacts();
@@ -40,7 +41,7 @@ export default function ArtifactsPage() {
 
   const topics = useMemo(() => {
     const m = new Map<string, ArtifactRow[]>();
-    for (const a of items) m.set(a.topic ?? 'untitled', [...(m.get(a.topic ?? 'untitled') ?? []), a]);
+    for (const a of items) m.set(a.topic ?? (a.kind === 'artifact' ? 'pages' : 'untitled'), [...(m.get(a.topic ?? (a.kind === 'artifact' ? 'pages' : 'untitled')) ?? []), a]);
     return [...m];
   }, [items]);
   const activeTopic = topic ?? topics[0]?.[0] ?? null;

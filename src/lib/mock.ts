@@ -95,9 +95,11 @@ export function mockMeta(html: string): { project?: string; topic?: string } {
 /** The board's link to a mock. Older mocks keep their docs/mocks address; the rest are served by path under `/mocks/@/`. */
 export const mockHref = (path: string) => (path.startsWith(`${MOCKS_DIR}/`) ? `/${path.replace(`${MOCKS_DIR}/`, 'mocks/')}` : `/mocks/@/${path}`);
 
-/** True for a project-relative path the board may serve as a mock. */
+/** True for a project-relative path the board may serve: a mock, or an artifact page under docs/artifacts. */
 export const isMockPath = (path: string) =>
-  (path.startsWith(`${CARD_MOCKS_DIR}/`) && path.endsWith('.html')) || (path.startsWith('specs/') && path.endsWith(`/${MOCK_FILE}`));
+  (path.startsWith(`${CARD_MOCKS_DIR}/`) && path.endsWith('.html')) ||
+  (path.startsWith('specs/') && path.endsWith(`/${MOCK_FILE}`)) ||
+  (path.startsWith('docs/artifacts/') && path.endsWith('.html'));
 
 const dirs = (path: string) => readdirSync(path).filter(d => statSync(join(path, d)).isDirectory()).sort();
 
