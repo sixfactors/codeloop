@@ -152,7 +152,7 @@ env: staging
 deployed: 2026-10-09T14:02:00Z
 smoke: `make staging-health && make test-auth`, both green; `codeloop verify c-012 --env staging
 --no-record`, 3/3 use cases passed
-rollback: `fly releases rollback` to the release before this deploy, app chanl-platform-staging
+rollback: `fly releases rollback` to the release before this deploy, app <staging-app>
 ```
 Owner reviews this, approves the outward gate, prod deploy follows the same shape, and
 `evidence/012/prod.md` lands with `result: pass` only after both the card's own use cases and the
