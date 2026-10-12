@@ -12,3 +12,5 @@ coverage/
 .next-home/
 workspace/out/
 .codeloop/state/
+.serena/
+.next-dev/
