@@ -7,7 +7,13 @@ import { resolveSpecDir, slugify } from './spec.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TEMPLATE = 'templates/mock/template.html';
+/** Where mocks used to live. Still read so existing mocks keep showing; nothing new is written here. */
 export const MOCKS_DIR = 'docs/mocks';
+/** A card's mock sits beside its spec as `<spec folder>/mock.html`. */
+export const MOCK_FILE = 'mock.html';
+/** Mocks for cards with no spec folder yet (proposals), and the gallery page. */
+export const CARD_MOCKS_DIR = '.codeloop/mocks';
+const PLACEHOLDER_NAMES = new Set(['my-project', 'project', '']);
 const MARKER = '<!-- codeloop-mock-template: 1 -->';
 // `<!-- codeloop mock lineage: c-003 <- c-002 <- base -->`: this mock, the one it was copied from, and so on back.
 const LINEAGE = /<!-- codeloop mock lineage: ([^>]*?) -->/;
@@ -19,12 +25,19 @@ const COLOUR = /(?<![&\w]|href=["'])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F
 const template = () => readFileSync(join(PACKAGE_ROOT, TEMPLATE), 'utf-8');
 const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function projectName(projectDir: string): string {
-  return slugify(String(loadConfig(projectDir).project?.name ?? '')) || slugify(basename(projectDir)) || 'project';
+/** The configured project name; the starter's placeholder (`my-project`) counts as unset, so the repo folder names it. */
+export function projectName(projectDir: string): string {
+  const configured = slugify(String(loadConfig(projectDir).project?.name ?? ''));
+  return (PLACEHOLDER_NAMES.has(configured) ? '' : configured) || slugify(basename(projectDir)) || 'project';
 }
 
-/** The card's mock, wherever its project and topic folders put it. */
-export function findMock(projectDir: string, cardId: string): string | undefined {
+/** Where `mock new` writes this card's mock: beside its spec, or under .codeloop/mocks when it has no spec folder. */
+function mockPathFor(projectDir: string, cardId: string): string {
+  const spec = resolveSpecDirOrNone(projectDir, cardId);
+  return spec ? `${spec}/${MOCK_FILE}` : `${CARD_MOCKS_DIR}/${cardId}.html`;
+}
+
+function legacyMock(projectDir: string, cardId: string): string | undefined {
   const root = join(projectDir, MOCKS_DIR);
   if (!existsSync(root)) return undefined;
   for (const project of dirs(root)) {
@@ -34,6 +47,36 @@ export function findMock(projectDir: string, cardId: string): string | undefined
   }
   return undefined;
 }
+
+/** The card's mock: beside its spec, then under .codeloop/mocks, then an older one under docs/mocks. */
+export function findMock(projectDir: string, cardId: string): string | undefined {
+  const spec = resolveSpecDirOrNone(projectDir, cardId);
+  if (spec && existsSync(join(projectDir, spec, MOCK_FILE))) return `${spec}/${MOCK_FILE}`;
+  const own = `${CARD_MOCKS_DIR}/${cardId}.html`;
+  if (existsSync(join(projectDir, own))) return own;
+  return legacyMock(projectDir, cardId);
+}
+
+/** Every card's mock, one per card. */
+export function allMocks(projectDir: string): { id: string; path: string }[] {
+  return readCards(projectDir).cards.flatMap(c => {
+    const path = findMock(projectDir, c.id);
+    return path ? [{ id: c.id, path }] : [];
+  });
+}
+
+/** Project and topic, from the header line `mock new` writes (`<id> · <project> · <topic>`). */
+export function mockMeta(html: string): { project?: string; topic?: string } {
+  const parts = /<span class="meta">([^<]*)<\/span>/.exec(html)?.[1].split(' · ').map(s => s.trim());
+  return parts && parts.length === 3 ? { project: parts[1], topic: parts[2] } : {};
+}
+
+/** The board's link to a mock. Older mocks keep their docs/mocks address; the rest are served by path under `/mocks/@/`. */
+export const mockHref = (path: string) => (path.startsWith(`${MOCKS_DIR}/`) ? `/${path.replace(`${MOCKS_DIR}/`, 'mocks/')}` : `/mocks/@/${path}`);
+
+/** True for a project-relative path the board may serve as a mock. */
+export const isMockPath = (path: string) =>
+  (path.startsWith(`${CARD_MOCKS_DIR}/`) && path.endsWith('.html')) || (path.startsWith('specs/') && path.endsWith(`/${MOCK_FILE}`));
 
 const dirs = (path: string) => readdirSync(path).filter(d => statSync(join(path, d)).isDirectory()).sort();
 
@@ -48,15 +91,13 @@ const screenBlocks = (html: string) => [...html.replace(/<!--[\s\S]*?-->/g, '').
 /** The screens a mock draws, in order. */
 export const mockScreens = (html: string) => screenBlocks(html).map(m => m[1]);
 
-/** The newest mock in a project/topic folder other than the card's own, or undefined. */
-function latestMock(projectDir: string, project: string, topic: string, except: string): string | undefined {
-  const folder = join(projectDir, MOCKS_DIR, project, topic);
-  if (!existsSync(folder)) return undefined;
-  const newest = readdirSync(folder)
-    .filter(f => f.endsWith('.html') && f !== `${except}.html`)
-    .map(f => ({ f, at: statSync(join(folder, f)).mtimeMs }))
+/** The newest mock on the same project and topic other than the card's own, or undefined. */
+function latestMock(projectDir: string, project: string, topic: string, except: string): { id: string; path: string } | undefined {
+  return allMocks(projectDir)
+    .filter(m => m.id !== except)
+    .map(m => ({ ...m, meta: mockMeta(readFileSync(join(projectDir, m.path), 'utf-8')), at: statSync(join(projectDir, m.path)).mtimeMs }))
+    .filter(m => m.meta.project === project && m.meta.topic === topic)
     .sort((a, b) => b.at - a.at)[0];
-  return newest && `${MOCKS_DIR}/${project}/${topic}/${newest.f}`;
 }
 
 /**
@@ -72,12 +113,12 @@ export function newMock(projectDir: string, ref: string, topic: string, from: st
   const existing = findMock(projectDir, card.id);
   if (existing) return { path: existing, created: false };
   const project = projectName(projectDir);
-  const path = `${MOCKS_DIR}/${project}/${folder}/${card.id}.html`;
+  const path = mockPathFor(projectDir, card.id);
 
   let parent: { id: string; path: string } | undefined;
   if (from === 'latest') {
     const latest = latestMock(projectDir, project, folder, card.id);
-    if (latest) parent = { id: basename(latest, '.html'), path: latest };
+    if (latest) parent = { id: latest.id, path: latest.path };
   } else if (from !== 'none') {
     const source = findCard(cards, from);
     const found = findMock(projectDir, source.id);
@@ -150,7 +191,7 @@ export function checkMock(projectDir: string, ref: string): string[] {
 
   const id = card?.id ?? ref;
   const path = findMock(projectDir, id);
-  if (!path) return [`no mock for ${id} under ${MOCKS_DIR}; run \`codeloop mock new ${id} --topic <topic>\``];
+  if (!path) return [`no mock for ${id} (expected ${mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
   const html = readFileSync(join(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
   if (!html.includes(MARKER)) return [`${path} does not carry the template marker ${MARKER}`];
   if (TOKENS.exec(html)?.[0] !== TOKENS.exec(template())![0]) return [`${path}: the tokens block differs from ${TEMPLATE}`];
@@ -176,21 +217,25 @@ export function checkMock(projectDir: string, ref: string): string[] {
   return errors;
 }
 
-/** Writes docs/mocks/index.html: projects, then topics, then cards, each newest first. */
+/** Writes .codeloop/mocks/index.html: projects, then topics, then cards, each newest first. */
 export function writeMocksIndex(projectDir: string): { path: string; mocks: number } {
-  const root = join(projectDir, MOCKS_DIR);
   const { cards } = readCards(projectDir);
-  const found = (existsSync(root) ? dirs(root) : []).flatMap(project =>
-    dirs(join(root, project)).flatMap(topic =>
-      readdirSync(join(root, project, topic)).filter(f => f.endsWith('.html')).map(file => {
-        const full = join(root, project, topic, file);
-        const id = file.replace(/\.html$/, '');
-        const html = readFileSync(full, 'utf-8');
-        const title = cards.find(c => c.id === id)?.title ?? /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? id;
-        return { project, topic, id, title, from: mockLineage(html)[1], href: `${project}/${topic}/${file}`, at: statSync(full).mtimeMs };
-      }),
+  const listed = allMocks(projectDir);
+  // Older mocks under docs/mocks whose card is gone still belong in the gallery.
+  const legacyRoot = join(projectDir, MOCKS_DIR);
+  const orphans = (existsSync(legacyRoot) ? dirs(legacyRoot) : []).flatMap(project =>
+    dirs(join(legacyRoot, project)).flatMap(topic =>
+      readdirSync(join(legacyRoot, project, topic)).filter(f => f.endsWith('.html')).map(f => ({ id: f.replace(/\.html$/, ''), path: `${MOCKS_DIR}/${project}/${topic}/${f}` })),
     ),
-  );
+  ).filter(o => !listed.some(m => m.path === o.path));
+  const found = [...listed, ...orphans].map(({ id, path }) => {
+    const full = join(projectDir, path);
+    const html = readFileSync(full, 'utf-8');
+    const meta = mockMeta(html);
+    const title = cards.find(c => c.id === id)?.title ?? /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? id;
+    const legacy = path.startsWith(`${MOCKS_DIR}/`) ? path.split('/').slice(2) : [];
+    return { project: meta.project ?? legacy[0] ?? 'mocks', topic: meta.topic ?? legacy[1] ?? 'other', id, title, from: mockLineage(html)[1], href: mockHref(path).replace(/^\/mocks\//, ''), at: statSync(full).mtimeMs };
+  });
   const newest = (items: typeof found) => Math.max(...items.map(i => i.at));
   const group = <K extends 'project' | 'topic'>(items: typeof found, key: K) =>
     [...new Set(items.map(i => i[key]))].map(name => ({ name, items: items.filter(i => i[key] === name) })).sort((a, b) => newest(b.items) - newest(a.items));
@@ -216,8 +261,8 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
     .replace('<h1>{{title}}</h1>', '<h1>Mocks</h1>')
     .replace('{{id}} · {{project}} · {{topic}}', `${found.length} ${found.length === 1 ? 'mock' : 'mocks'}, newest first`)
     .replace(/<main class="screens">[\s\S]*<\/main>/, `<main class="screens">\n${body || '<p class="muted">No mocks yet. `codeloop mock new &lt;card&gt; --topic &lt;topic&gt;` creates one.</p>'}\n</main>`);
-  const path = `${MOCKS_DIR}/index.html`;
-  mkdirSync(root, { recursive: true });
+  const path = `${CARD_MOCKS_DIR}/index.html`;
+  mkdirSync(join(projectDir, CARD_MOCKS_DIR), { recursive: true });
   writeFileSync(join(projectDir, path), html);
   return { path, mocks: found.length };
 }

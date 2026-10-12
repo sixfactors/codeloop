@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createServer, type Server } from 'http';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { dirname, join, resolve } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { buildBrief } from '../agent.js';
 import { findCard, readCards } from '../cards.js';
 import { addCompetitor, appendFindings, listCompetitors } from '../competitors.js';
@@ -147,7 +147,7 @@ describe('competitor pages', () => {
 });
 
 describe('mocks', () => {
-  const MOCK = 'docs/mocks/acme-app/exports/c-001.html';
+  const MOCK = `${SPEC}/mock.html`;
   const screens = (names: string) => write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^screens:.*$/m, `screens:\n${names}`));
   const section = (name: string) => write(MOCK, read(MOCK).replace('</main>', `<section data-screen="${name}"><h2>${name}</h2></section>\n</main>`));
 
@@ -159,7 +159,7 @@ describe('mocks', () => {
     expect(TEMPLATE).not.toMatch(/\d+px/);
   });
 
-  it('mock new creates docs/mocks/<project>/<topic>/<card-id>.html from the template and never overwrites it', () => {
+  it('mock new writes the mock beside the spec as mock.html from the template and never overwrites it', () => {
     expect(newMock(dir, '1', 'exports')).toEqual({ path: MOCK, created: true });
     expect(read(MOCK)).toContain('<title>c-001 Add CSV export</title>');
     write(MOCK, read(MOCK) + '<!-- my work -->');
@@ -172,7 +172,7 @@ describe('mocks', () => {
   it('check mock fails while the spec names no screens, and while there is no mock file', () => {
     expect(checkMock(dir, 'c-001')).toEqual([`${SPEC}/spec.md names no screens under \`screens:\` (write \`screens: none\` for a card with nothing to draw)`]);
     screens('- export-dialog\n');
-    expect(checkMock(dir, 'c-001')).toEqual(['no mock for c-001 under docs/mocks; run `codeloop mock new c-001 --topic <topic>`']);
+    expect(checkMock(dir, 'c-001')).toEqual([`no mock for c-001 (expected ${MOCK}); run \`codeloop mock new c-001 --topic <topic>\``]);
   });
 
   it('check mock fails on a missing screen, a changed tokens block, a missing marker and a colour outside the tokens', () => {
@@ -212,30 +212,42 @@ describe('mocks', () => {
     newMock(dir, 'c-002', 'exports');
     write('docs/mocks/acme-app/billing/c-777.html', '<title>Old invoice page</title>');
     utimesSync(join(dir, MOCK), new Date('2026-09-01'), new Date('2026-09-01'));
-    utimesSync(join(dir, 'docs/mocks/acme-app/exports/c-002.html'), new Date('2026-09-20'), new Date('2026-09-20'));
+    utimesSync(join(dir, findMock(dir, 'c-002')!), new Date('2026-09-20'), new Date('2026-09-20'));
     utimesSync(join(dir, 'docs/mocks/acme-app/billing/c-777.html'), new Date('2026-08-01'), new Date('2026-08-01'));
 
-    expect(writeMocksIndex(dir)).toEqual({ path: 'docs/mocks/index.html', mocks: 3 });
-    const index = read('docs/mocks/index.html');
-    const order = ['acme-app', 'exports', 'acme-app/exports/c-002.html', 'Import wizard', 'acme-app/exports/c-001.html', 'Add CSV export', 'billing', 'acme-app/billing/c-777.html', 'Old invoice page'].map(s => index.indexOf(s));
+    expect(writeMocksIndex(dir)).toEqual({ path: '.codeloop/mocks/index.html', mocks: 3 });
+    const index = read('.codeloop/mocks/index.html');
+    const order = ['acme-app', 'exports', '@/specs/002-import-wizard/mock.html', 'Import wizard', `@/${MOCK}`, 'Add CSV export', 'billing', 'acme-app/billing/c-777.html', 'Old invoice page'].map(s => index.indexOf(s));
     expect(order.every(i => i >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(index).toContain('codeloop-tokens:start');
     writeMocksIndex(dir);
-    expect(read('docs/mocks/index.html').match(/index\.html/g)).toBeNull();
+    expect(read('.codeloop/mocks/index.html').match(/index\.html/g)).toBeNull();
   });
 
-  it('serve answers /mocks/ from docs/mocks, refuses a path that climbs out, and links the mock on the card', async () => {
+  it('serve answers /mocks/ with the gallery and each mock beside its spec, and serves nothing else from the repo', async () => {
     newMock(dir, 'c-001', 'exports');
     writeMocksIndex(dir);
     write('secret.html', 'top secret');
+    write(`${SPEC}/spec-secret.html`, 'top secret');
+    write('docs/mocks/acme-app/old/c-777.html', '<title>Old page</title>');
     const { app } = createApp(dir);
-    expect(await (await app.request('/mocks/acme-app/exports/c-001.html')).text()).toContain('<title>c-001 Add CSV export</title>');
-    expect(await (await app.request('/mocks/')).text()).toContain('acme-app/exports/c-001.html');
+    expect(await (await app.request(`/mocks/@/${MOCK}`)).text()).toContain('<title>c-001 Add CSV export</title>');
+    expect(await (await app.request('/mocks/')).text()).toContain(`@/${MOCK}`);
+    expect(await (await app.request('/mocks/acme-app/old/c-777.html')).text()).toContain('Old page');
+    expect((await app.request('/mocks/@/secret.html')).status).toBe(404);
+    expect((await app.request(`/mocks/@/${SPEC}/spec-secret.html`)).status).toBe(404);
+    expect((await app.request('/mocks/@/..%2Fsecret.html')).status).toBe(404);
     expect((await app.request('/mocks/..%2F..%2Fsecret.html')).status).toBe(404);
-    expect((await app.request('/mocks/nope.html')).status).toBe(404);
     const payload = await (await app.request('/api/cards')).json() as { cards: { id: string; mock?: string }[] };
-    expect(payload.cards.find(c => c.id === 'c-001')!.mock).toBe('/mocks/acme-app/exports/c-001.html');
+    expect(payload.cards.find(c => c.id === 'c-001')!.mock).toBe(`/mocks/@/${MOCK}`);
+  });
+
+  it('a placeholder project name never names a mock: the repo folder does', () => {
+    write('.codeloop/config.yaml', 'project:\n  name: "my-project"\n');
+    newMock(dir, 'c-001', 'exports');
+    expect(read(MOCK)).toContain(`c-001 · ${basename(dir).toLowerCase()} · exports`);
+    expect(read(MOCK)).not.toContain('my-project');
   });
 
   it('inbox shows the mock path on the card waiting at the spec gate', () => {

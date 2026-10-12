@@ -13,7 +13,7 @@ artifactCommand
   .command('new <card>')
   .description(
     'Create docs/artifacts/<project>/<topic>/<card-id>-<kind>.html from templates/artifacts/<kind>/template.html. ' +
-      '`--kind mock` is the same engine as `codeloop mock new`: it writes docs/mocks/<project>/<topic>/<card-id>.html instead.',
+      '`--kind mock` is the same engine as `codeloop mock new`: it writes the mock beside the card spec as mock.html instead.',
   )
   .requiredOption('--kind <kind>', `Which artifact to create: ${ARTIFACT_KINDS.join(' | ')}`)
   .requiredOption('--topic <topic>', 'Folder the artifact is filed under, e.g. board')

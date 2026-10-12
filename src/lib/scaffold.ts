@@ -1,6 +1,6 @@
 import fse from 'fs-extra';
 import { spawnSync } from 'child_process';
-import { join, dirname, resolve } from 'path';
+import { basename, join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { parse as parseYaml } from 'yaml';
 import type { ProjectDetection } from './detect.js';
@@ -140,7 +140,9 @@ export function scaffold(projectDir: string, starterFile: string, tools: ToolId[
     const starterPath = join(PACKAGE_ROOT, 'starters', starterFile);
     if (existsSync(starterPath)) {
       ensureDirSync(dirname(configDest));
-      copySync(starterPath, configDest);
+      // The starter's `my-project` is a placeholder; the repo folder's name is the real default.
+      const name = basename(resolve(projectDir)).replace(/"/g, '');
+      writeFileSync(configDest, readFileSync(starterPath, 'utf-8').replace(/^(\s*name:\s*)"my-project"/m, `$1"${name}"`));
       result.created.push('.codeloop/config.yaml');
     }
   } else {

@@ -10,7 +10,7 @@ import { EPICS_DIR, FEATURES_DIR, listEpics, listFeatures, loadEpic, loadFeature
 import { interviewPath, parseQuestions, renderQuestions } from '../interview.js';
 import { lanePath, LANES_DIR, loadLanes, parseLane, type Lane } from '../lane.js';
 import { withLockAsync } from '../lock.js';
-import { findMock, mockLineage, MOCKS_DIR } from '../mock.js';
+import { CARD_MOCKS_DIR, findMock, isMockPath, mockLineage, mockMeta, MOCKS_DIR } from '../mock.js';
 import { parseFrontmatter } from '../skills.js';
 import { WIKI_DIR } from '../wiki.js';
 import { applyQuery, type Change, type Entity, type KeyValue, type Query, type Repo, type RepoName, type Store } from './driver.js';
@@ -172,9 +172,10 @@ export function repoFor(path: string): RepoName | undefined {
   if (path.startsWith(`${EPICS_DIR}/`)) return 'epics';
   if (path.startsWith(`${FEATURES_DIR}/`)) return 'features';
   if (path.startsWith(`${WIKI_DIR}/`)) return 'pages';
+  if (isMockPath(path)) return 'artifacts';
   if (path.startsWith(`${SPECS_DIR}/`)) return path.endsWith('/interview.md') ? 'questions' : path.endsWith('.md') ? 'pages' : undefined;
   if (path.startsWith(`${EVIDENCE_DIR}/`)) return 'evidence';
-  if (path.startsWith(`${MOCKS_DIR}/`) || path.startsWith(`${ARTIFACTS_DIR}/`)) return 'artifacts';
+  if (path.startsWith(`${MOCKS_DIR}/`) || path.startsWith(`${CARD_MOCKS_DIR}/`) || path.startsWith(`${ARTIFACTS_DIR}/`)) return 'artifacts';
   return undefined;
 }
 
@@ -504,7 +505,10 @@ class ArtifactsRepo extends ReadOnlyRepo<Artifact> {
       const path = findMock(this.projectDir, card.id);
       if (!path) return [];
       const html = readText(join(this.projectDir, path));
-      const [, project, topic] = path.split('/').slice(1);
+      const legacy = path.startsWith(`${MOCKS_DIR}/`) ? path.split('/').slice(2) : [];
+      const meta = mockMeta(html);
+      const project = meta.project ?? legacy[0];
+      const topic = meta.topic ?? legacy[1];
       const lineage = mockLineage(html);
       return [{ id: path, kind: 'mock', project, topic, cardId: card.id, ...(lineage[1] ? { from: lineage[1] } : {}), ...(lineage.length ? { lineage } : {}), title: card.title, version: sha1(html) }];
     });

@@ -20,7 +20,7 @@ import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type In
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
 import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
-import { MOCKS_DIR } from './mock.js';
+import { mockHref } from './mock.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
 import { computeStats, type Stats } from './stats.js';
@@ -509,7 +509,7 @@ export async function getCard(index: ProjectIndex, ref: string) {
 }
 
 /** The page's path to the board's `/mocks/*` route. */
-export const mockHref = (path: string) => `/${path.replace(`${MOCKS_DIR}/`, 'mocks/')}`;
+export { mockHref };
 
 /** Everything the card screen shows at once: the card, its spec and tasks, questions, evidence, mock and wiki page. */
 export async function cardFull(index: ProjectIndex, store: Store, ref: string): Promise<CardFull> {

@@ -86,14 +86,14 @@ checkCommand
   .action((card: string, opts: { kind?: string }) =>
     failing(() => {
       const kind = opts.kind as ArtifactKind | undefined;
-      // The mock kind still lives under docs/mocks via the original template/checker (`check mock`
+      // The mock kind lives beside the spec via the original template/checker (`check mock`
       // is the same check under a different name); system-design and workflow live under
       // docs/artifacts via the newer, shared artifact engine.
       if (kind === 'mock') return checkMock(process.cwd(), card);
       if (kind) return checkArtifact(process.cwd(), card, kind);
       if (findMock(process.cwd(), card)) return checkMock(process.cwd(), card);
       if (findArtifact(process.cwd(), card)) return checkArtifact(process.cwd(), card);
-      return [`no artifact for ${card} under docs/mocks or docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
+      return [`no artifact for ${card} beside its spec or under docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
     })(),
   );
 

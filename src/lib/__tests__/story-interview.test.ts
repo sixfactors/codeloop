@@ -135,8 +135,8 @@ describe('questions', () => {
 describe('mocks build on each other', () => {
   const screens = (spec: string, names: string) => write(`${spec}/spec.md`, read(`${spec}/spec.md`).replace(/^screens:.*$/m, `screens:\n${names}`));
   const draw = (path: string, name: string, body = '') => write(path, read(path).replace('  </main>', `    <section data-screen="${name}"><h2>${name}</h2>${body}</section>\n  </main>`));
-  const M1 = 'docs/mocks/acme-app/exports/c-001.html';
-  const M2 = 'docs/mocks/acme-app/exports/c-002.html';
+  const M1 = `${SPEC}/mock.html`;
+  const M2 = 'specs/002-pick-export-columns/mock.html';
 
   it('mock new copies the newest mock in the topic, marks each section data-from, and scaffolds the new screens', () => {
     screens(SPEC, '- export-dialog\n');
@@ -157,8 +157,8 @@ describe('mocks build on each other', () => {
 
     // Proposals have no spec folder, so their mocks are what the lineage alone decides.
     const c3 = proposeCard(dir, { lane: 'build', title: 'Schedule an export' }).card.id;
-    expect(newMock(dir, c3, 'exports', 'none')).toEqual({ path: `docs/mocks/acme-app/exports/${c3}.html`, created: true });
-    expect(read(`docs/mocks/acme-app/exports/${c3}.html`)).toContain(`lineage: ${c3} <- base`);
+    expect(newMock(dir, c3, 'exports', 'none')).toEqual({ path: `.codeloop/mocks/${c3}.html`, created: true });
+    expect(read(`.codeloop/mocks/${c3}.html`)).toContain(`lineage: ${c3} <- base`);
     const c4 = proposeCard(dir, { lane: 'build', title: 'Email an export' }).card.id;
     expect(() => newMock(dir, c4, 'exports', 'c-9')).toThrow(/not found/);
     expect(read(newMock(dir, c4, 'exports', 'c-002').path)).toContain(`lineage: ${c4} <- c-002 <- c-001 <- base`);

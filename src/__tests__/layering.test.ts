@@ -24,7 +24,7 @@ const EXEMPT_FILES: Record<string, string> = {
   'lane.ts': 'lane lint and evaluation',
   'list.ts': 'skill registry',
   'login.ts': 'skill registry',
-  'mock.ts': 'mock scaffolding writes docs/mocks',
+  'mock.ts': 'mock scaffolding writes the mock beside the spec',
   'open.ts': 'reads serve.json and opens a browser; host-local like serve.ts, no SDK operation',
   'pack.ts': 'skill packaging',
   'projects.ts': 'the hub registry is host-local state, not a project operation',

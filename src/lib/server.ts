@@ -8,7 +8,7 @@ import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
 import { getIndex, type Diff, type ProjectIndex } from './index/index.js';
 import { readInboxSeen } from './inbox.js';
-import { MOCKS_DIR } from './mock.js';
+import { CARD_MOCKS_DIR, isMockPath, MOCKS_DIR } from './mock.js';
 import * as services from './services.js';
 import { openStore, type Store } from './store/index.js';
 import type { StoryFlags } from './story.js';
@@ -436,18 +436,32 @@ export function createApp(
     return c.json(made, 201);
   }));
 
-  // The mock gallery and each mock, straight from docs/mocks. Read-only, and nothing outside that folder.
+  // The mock gallery and each mock. `@/<path>` is a mock beside a spec or under .codeloop/mocks; any
+  // other path is an older mock under docs/mocks. Read-only, and nothing outside those files.
   app.get(mocksRoute('/*'), (c) => {
-    const root = resolve(projectDir, MOCKS_DIR);
     let wanted: string;
     try {
-      wanted = decodeURIComponent(c.req.path.replace(mocksPrefix, '')) || 'index.html';
+      wanted = decodeURIComponent(c.req.path.replace(mocksPrefix, ''));
     } catch {
       return c.text('Not found', 404);
     }
-    const file = resolve(root, wanted);
-    if (!file.startsWith(root + sep) || !existsSync(file) || !statSync(file).isFile()) return c.text('Not found', 404);
-    return new Response(readFileSync(file), { headers: { 'Content-Type': MIME_TYPES[extname(file)] || 'application/octet-stream' } });
+    const serve = (file: string) => new Response(readFileSync(file), { headers: { 'Content-Type': MIME_TYPES[extname(file)] || 'application/octet-stream' } });
+    const isFile = (file: string) => existsSync(file) && statSync(file).isFile();
+    const projectRoot = resolve(projectDir);
+    if (wanted === '' || wanted === 'index.html') {
+      const index = resolve(projectRoot, CARD_MOCKS_DIR, 'index.html');
+      if (isFile(index)) return serve(index);
+    }
+    if (wanted.startsWith('@/')) {
+      const file = resolve(projectRoot, wanted.slice(2));
+      const rel = file.slice(projectRoot.length + 1).split(sep).join('/');
+      if (!file.startsWith(projectRoot + sep) || !isMockPath(rel) || !isFile(file)) return c.text('Not found', 404);
+      return serve(file);
+    }
+    const root = resolve(projectDir, MOCKS_DIR);
+    const file = resolve(root, wanted || 'index.html');
+    if (!file.startsWith(root + sep) || !isFile(file)) return c.text('Not found', 404);
+    return serve(file);
   });
   app.get(mocksRoute(''), (c) => c.redirect(mocksRoute('/')));
 

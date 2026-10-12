@@ -540,7 +540,7 @@ codeloop init --tools claude --starter generic > /dev/null
 expect 0 "wiki competitor add writes the page with its links" sh -c "codeloop wiki competitor add acme --docs https://acme.test/docs --changelog https://acme.test/changelog | grep -q '.codeloop/wiki/competitors/acme.md' && grep -q '^changelog: https://acme.test/changelog' .codeloop/wiki/competitors/acme.md"
 codeloop start "Add CSV export" > /dev/null
 R=specs/001-add-csv-export
-M=docs/mocks/my-project/exports/c-001.html
+M=$R/mock.html
 expect 0 "the research brief carries the competitor page" sh -c "codeloop brief 1 | grep -q '^### acme (.codeloop/wiki/competitors/acme.md)'"
 expect 1 "check research fails on the unfilled template" codeloop check research 1
 printf 'verdict: build\n- source: https://acme.test/docs/export — toolbar button\n- source: https://globex.test/changelog — bulk export\n' >> $R/research.md
@@ -575,13 +575,13 @@ printf -- '- [ ] T001 [US1] [ui] Export dialog in src/export.tsx\n' >> $R/tasks.
 perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' $R/spec.md
 expect 0 "the card waits at the spec gate" sh -c "codeloop next 1 | grep -q 'waiting for you at spec'"
 expect 0 "inbox shows the mock path with the spec gate" sh -c "codeloop inbox | grep -q '        mock: $M'"
-expect 0 "mocks index writes the gallery" sh -c "codeloop mocks index | grep -q 'docs/mocks/index.html: 1 mock' && grep -q 'href=\"my-project/exports/c-001.html\"' docs/mocks/index.html"
+expect 0 "mocks index writes the gallery" sh -c "codeloop mocks index | grep -q '.codeloop/mocks/index.html: 1 mock' && grep -q 'href=\"@/$M\"' .codeloop/mocks/index.html && ! grep -q my-project .codeloop/mocks/index.html"
 MP=$((RO + 2))
 codeloop serve --standalone --port $MP > serve-mocks.log 2>&1 & SERVE_PIDS="$SERVE_PIDS $!"
 expect 0 "serve starts in the project with mocks" up "http://127.0.0.1:$MP"
-expect 0 "serve answers /mocks/ with the gallery" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/ | grep -q 'my-project/exports/c-001.html'"
-expect 0 "serve answers the card's mock" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/my-project/exports/c-001.html | grep -q 'data-screen=\"export-dialog\"'"
-json "the card on the board links its mock" "d.cards.find(c=>c.id==='c-001').mock==='/mocks/my-project/exports/c-001.html'" http 200 "http://127.0.0.1:$MP/api/cards"
+expect 0 "serve answers /mocks/ with the gallery" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/ | grep -q '@/$M'"
+expect 0 "serve answers the card's mock" bash -c "$(declare -f http); http 200 http://127.0.0.1:$MP/mocks/@/$M | grep -q 'data-screen=\"export-dialog\"'"
+json "the card on the board links its mock" "d.cards.find(c=>c.id==='c-001').mock==='/mocks/@/$M'" http 200 "http://127.0.0.1:$MP/api/cards"
 
 # --- competitor scan: one proposed plan card per change, never started by itself --------------
 printf '# Changelog\n\n## September\n- Faster search\n' > changelog-v1.txt

@@ -8,7 +8,7 @@ import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type 
 import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
 import type { Lane } from '../lane.js';
-import { MOCKS_DIR } from '../mock.js';
+import { CARD_MOCKS_DIR, MOCK_FILE, MOCKS_DIR, mockHref } from '../mock.js';
 import { EVIDENCE_DIR, FileDriver } from '../store/file.js';
 
 const SPECS_DIR = 'specs';
@@ -140,7 +140,6 @@ const sha1 = (text: string) => createHash('sha1').update(text).digest('hex');
 const SCAN_CHARS = 32_768;
 const scannable = (body: string) => body.slice(0, SCAN_CHARS).toLowerCase();
 const searchDoc = (p: WikiPage) => ({ id: p.id, title: p.title, tags: [p.frontmatter.tags].flat().filter(Boolean).map(String).join(' ') });
-const mockHref = (path: string) => `/${path.replace(`${MOCKS_DIR}/`, 'mocks/')}`;
 const SEARCH = { prefix: true, combineWith: 'AND' as const };
 /** Score descending, unscored last, then by id. */
 const byScore = <T extends { id: string; score?: number }>(items: T[]) => [...items].sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.id.localeCompare(b.id));
@@ -188,6 +187,7 @@ export class ProjectIndex {
   private scoredFeatures = new Map<string, IndexedFeature>();
   private artifactsById = new Map<string, Artifact>();
   private mockByCard = new Map<string, string>();
+  private mockBySpec = new Map<string, string>();
   private evidenceKeys = new Set<string>();
   private specFolders: string[] = [];
   private openById = new Map<string, Question[]>();
@@ -444,7 +444,9 @@ export class ProjectIndex {
 
   /** The card's mock path under docs/mocks, for the inbox. */
   mockOf(id: string): string | undefined {
-    return this.mockByCard.get(id);
+    const card = this.cardsById.get(id);
+    const spec = card ? this.specDirOf(card) : undefined;
+    return (spec && this.mockBySpec.get(spec)) || this.mockByCard.get(id);
   }
 
   async close(): Promise<void> {
@@ -459,6 +461,7 @@ export class ProjectIndex {
 
   private async build(): Promise<void> {
     const t0 = performance.now();
+    this.loadSpecFolders();
     this.loadMocks();
     this.loadEvidence();
     for (const lane of await this.store.lanes.list()) this.lanesById.set(lane.id, lane);
@@ -509,6 +512,20 @@ export class ProjectIndex {
 
   private loadMocks(): void {
     this.mockByCard.clear();
+    // A spec's mock is keyed by folder and wins in derive(); then .codeloop/mocks, then an older one
+    // under docs/mocks: the order findMock uses. Cards are not loaded yet when this first runs.
+    this.mockBySpec.clear();
+    for (const folder of this.specFolders) {
+      const spec = `${SPECS_DIR}/${folder}`;
+      if (existsSync(join(this.projectDir, spec, MOCK_FILE))) this.mockBySpec.set(spec, `${spec}/${MOCK_FILE}`);
+    }
+    const own = join(this.projectDir, CARD_MOCKS_DIR);
+    if (existsSync(own)) {
+      for (const f of readdirSync(own).sort()) {
+        const id = basename(f, '.html');
+        if (f.endsWith('.html') && f !== 'index.html' && !this.mockByCard.has(id)) this.mockByCard.set(id, `${CARD_MOCKS_DIR}/${f}`);
+      }
+    }
     const root = join(this.projectDir, MOCKS_DIR);
     if (!existsSync(root)) return;
     const dirs = (p: string) => readdirSync(p, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name).sort();
@@ -590,14 +607,14 @@ export class ProjectIndex {
 
   private derive(card: Card): { openQuestions: number; mock?: string; specDir?: string; hasEvidence: boolean } & CardChain {
     const specDir = this.specDirOf(card);
-    const mock = this.mockByCard.get(card.id);
+    const mock = (specDir && this.mockBySpec.get(specDir)) || this.mockByCard.get(card.id);
     const key = cardKey(card);
     const hasEvidence = this.evidenceKeys.has(key) || this.evidenceKeys.has(card.id.toLowerCase());
     return { openQuestions: this.openOf(card.id, specDir).length, ...(mock ? { mock: mockHref(mock) } : {}), ...(specDir ? { specDir } : {}), hasEvidence, ...chainOf(card, this.scoredFeatures) };
   }
 
   /** `resolveSpecDir` over a listing taken once per reload: it re-reads cards.json per call, which 5k cards cannot afford. */
-  private specDirOf(card: Card): string | undefined {
+  private specDirOf(card: { id: string; key?: string; spec?: string }): string | undefined {
     if (card.spec) return card.spec;
     const key = cardKey(card);
     if (this.specFolders.includes(key)) return `${SPECS_DIR}/${key}`;
@@ -699,6 +716,7 @@ export class ProjectIndex {
         break;
       case 'questions':
         this.loadSpecFolders();
+        this.loadMocks();
         diffs.push(...this.rederive(change.id ? [change.id.split('#')[0]] : change.path ? this.cardsUnderSpec(dirname(change.path)) : [...this.cardsById.keys()]));
         break;
       case 'evidence':
@@ -708,7 +726,7 @@ export class ProjectIndex {
       case 'artifacts':
         this.loadMocks();
         diffs.push(...(await this.reloadArtifacts()));
-        diffs.push(...this.rederive(change.path?.startsWith(`${MOCKS_DIR}/`) ? [basename(change.path, '.html')] : [...this.cardsById.keys()]));
+        diffs.push(...this.rederive(change.path?.startsWith(`${MOCKS_DIR}/`) || change.path?.startsWith(`${CARD_MOCKS_DIR}/`) ? [basename(change.path, '.html')] : [...this.cardsById.keys()]));
         break;
       case 'lanes': {
         const id = change.id ?? (change.path ? basename(change.path).replace(/\.ya?ml$/, '') : undefined);
