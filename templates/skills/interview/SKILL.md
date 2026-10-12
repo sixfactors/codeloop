@@ -80,7 +80,7 @@ recommended: Skip research, spec and the spec gate; keep build, verify (local ga
 answer:
 
 ## Q2 Who sets size: the agent's investigate stage alone, the founder at `card new`, or agent proposes and the founder's first gate confirms?
-recommended: Agent proposes `size:` in the investigate stage; founder can override with `card new --size`; a trivial sizing is shown in the local gate note ("size: trivial, skipped research/spec") so Dean sees it once.
+recommended: Agent proposes `size:` in the investigate stage; founder can override with `card new --size`; a trivial sizing is shown in the local gate note ("size: trivial, skipped research/spec") so the owner sees it once.
 answer:
 
 ## Q3 Acceptance: what proves it, and on which real card do we dogfood it?
