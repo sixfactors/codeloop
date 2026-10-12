@@ -1,0 +1,15 @@
+{
+  "id": "uc-102-03",
+  "accept": "US3",
+  "failure_mode": "a parked story comes back at the first stage",
+  "sha": "8a9316b022d4ba2b8d7d342f73b31e2c93321110",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/deangrover/Projects/codeloop\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/flow.test.ts \u001b[2m(\u001b[22m\u001b[2m14 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m13 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 15\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m13 skipped\u001b[39m\u001b[90m (14)\u001b[39m\n\u001b[2m   Start at \u001b[22m 17:16:36\n\u001b[2m   Duration \u001b[22m 2.03s\u001b[2m (transform 119ms, setup 0ms, import 181ms, tests 15ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "uc-098-03",
+  "accept": "US3",
+  "failure_mode": "sessions started before the release are blocked, or an ended session keeps its lease",
+  "sha": "e55ff3bf4879030a13f3bf7a7f3e8099bb56a0f5",
+  "env": "local",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/deangrover/Projects/codeloop\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/host-enforcement.test.ts \u001b[2m(\u001b[22m\u001b[2m35 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m34 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[33m 704\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m a session with no story of its own falls back to the repo's card, and release frees a session's story \u001b[33m 703\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m34 skipped\u001b[39m\u001b[90m (35)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:08:09\n\u001b[2m   Duration \u001b[22m 2.62s\u001b[2m (transform 58ms, setup 0ms, import 82ms, tests 704ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+    }
+  ]
+}
