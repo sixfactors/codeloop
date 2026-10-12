@@ -61,7 +61,13 @@ with "an acceptance line has no use case."
      # and/or:
      api: { request: { method: GET, path: "/..." }, expect: { status: 200 } }
    ```
-5. **Run `codeloop verify {id}` locally.** Confirm the new use case passes for the right reason -
+5. **Commit, then run `codeloop verify {id}`.** Use cases run in a throwaway export of HEAD, not the
+   working tree, so other stories' half-done edits in a shared tree cannot fail yours. Uncommitted
+   code is not verified; the card's own use cases and spec are copied in as they are. The export
+   links the tree's `node_modules` and `.venv`; a repo that needs a real install or a build sets
+   `verify: { setup: "<commands>" }` in `.codeloop/config.yaml`. `verify: { workspace: tree }` runs
+   in the working tree instead.
+   **Then** Confirm the new use case passes for the right reason -
    read its `evidence/{nnn}/<uc-id>.json` and check the `layers` output, not just the exit code.
 6. **Prove it can fail.** Temporarily break the feature (revert the fix, or hand-edit the
    assertion to something the current code can't satisfy) and re-run. A use case that stays green

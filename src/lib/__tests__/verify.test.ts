@@ -34,6 +34,31 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+describe('verify runs on an export of HEAD', () => {
+  const WALK = '## Live walk\nstack: make up\nurl: http://localhost:3000/\nsteps:\n- opened it\n- saw it\nnetwork:\n- GET http://localhost:3000/api 200\nexternal: none: the feature calls nothing outside\n';
+
+  it('a teammate\'s half-done edit in the shared tree does not fail this card, and tree mode still sees it', async () => {
+    write('app.sh', 'echo ok\n');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    // The card's own use cases and evidence are not committed yet; they still count.
+    useCase('uc-1', 'US1', 'cli: { run: "sh app.sh", expect: { stdout: ok } }');
+    useCase('uc-2', 'US2', 'cli: { run: "test -f app.sh" }');
+    write('evidence/001/verify.md', WALK);
+    // Another lane, mid-edit, breaks app.sh in the working tree.
+    write('app.sh', 'exit 3\n');
+
+    const exported = await verify(dir, '001');
+    expect(exported.exitCode).toBe(0);
+    expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toMatch(/workspace: export of [0-9a-f]{7}/);
+    expect(readFileSync(join(dir, 'app.sh'), 'utf-8')).toBe('exit 3\n');
+
+    write('.codeloop/config.yaml', 'verify:\n  workspace: tree\n');
+    expect((await verify(dir, '001')).exitCode).toBe(1);
+  });
+});
+
 describe('verify and the live walk', () => {
   it('refuses when use cases pass but nobody walked the feature on the real stack, and passes once the walk is recorded', async () => {
     useCase('uc-1', 'US1', 'cli: { run: "true" }');
@@ -172,11 +197,19 @@ describe('verify cannot pass on nothing', () => {
 
   it('--mutate exits 5 with "environment differs" when the setup fails, and gives no verdict', async () => {
     repoWithFeature();
-    write('.codeloop/config.yaml', 'verify:\n  setup: "echo no toolchain >&2; exit 1"\n');
+    write('.codeloop/config.yaml', 'verify:\n  workspace: tree\n  setup: "echo no toolchain >&2; exit 1"\n');
     const result = await verify(dir, 'c-1', { mutate: true });
     expect(result.exitCode).toBe(5);
     expect(result.vacuous).toEqual([]);
     expect(result.mutate).toMatch(/environment differs.*no toolchain/s);
+  });
+
+  it('refuses with the setup\'s output when the export of HEAD cannot be set up', async () => {
+    repoWithFeature();
+    write('.codeloop/config.yaml', 'verify:\n  setup: "echo no toolchain >&2; exit 1"\n');
+    const result = await verify(dir, 'c-1');
+    expect(result.exitCode).toBe(2);
+    expect(result.problem).toMatch(/verify.setup .* failed in the export of [0-9a-f]{7}[\s\S]*no toolchain/);
   });
 });
 

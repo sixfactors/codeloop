@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { parse as parseYaml } from 'yaml';
@@ -137,6 +137,53 @@ function mutate(projectDir: string, cardId: string, cases: UseCase[]): MutateRes
   }
 }
 
+/** `export` (the default) runs use cases on a copy of HEAD; `tree` runs them in the working tree. */
+export function verifyWorkspace(projectDir: string): 'export' | 'tree' {
+  return (loadConfig(projectDir).verify as { workspace?: string } | undefined)?.workspace === 'tree' ? 'tree' : 'export';
+}
+
+// Gitignored folders a copy of HEAD lacks and use cases usually need. Linked, not copied: the
+// export is read-only for them, and a full install per verify would take minutes.
+const DEPENDENCY_DIRS = ['node_modules', '.venv', 'venv'];
+
+/**
+ * A throwaway copy of HEAD for the use cases to run in. Several stories share one working tree, so
+ * the tree holds other stories' half-done edits; HEAD is what this story's commits actually made.
+ * The card's own use cases and spec are copied in from the tree (it owns them, committed or not),
+ * and `verify.setup` runs there when it is set; otherwise the tree's dependency folders are linked.
+ * Returns undefined when there is no commit to export.
+ */
+function exportHead(projectDir: string, nnn: string, specDir: string | undefined): { dir: string; sha: string; dispose: () => void } | { problem: string } | undefined {
+  const sha = git(projectDir, ['rev-parse', 'HEAD']);
+  if (!sha) return undefined;
+  const root = mkdtempSync(join(tmpdir(), 'codeloop-verify-'));
+  const dir = join(root, 'head');
+  mkdirSync(dir);
+  const dispose = () => rmSync(root, { recursive: true, force: true });
+  const archive = spawnSync('sh', ['-c', `git -C "$1" archive HEAD | tar -x -C "$2"`, 'sh', projectDir, dir], { encoding: 'utf-8' });
+  if (archive.status !== 0) {
+    dispose();
+    return { problem: `could not export HEAD ${sha.slice(0, 7)}: ${tail(archive.stderr ?? '')}` };
+  }
+  // Checks that list files with git (docs checks, linters) need a repository; this one holds HEAD only.
+  spawnSync('sh', ['-c', 'git init -q && git add -A && git -c user.name=verify -c user.email=verify@local -c commit.gpgsign=false commit -q -m head'], { cwd: dir });
+  for (const own of [`usecases/${nnn}`, specDir].filter((p): p is string => Boolean(p))) {
+    if (existsSync(join(projectDir, own))) cpSync(join(projectDir, own), join(dir, own), { recursive: true });
+  }
+  if (existsSync(join(projectDir, '.env')) && !existsSync(join(dir, '.env'))) cpSync(join(projectDir, '.env'), join(dir, '.env'));
+  const setup = (loadConfig(projectDir).verify as { setup?: string } | undefined)?.setup;
+  if (setup) {
+    const run = spawnSync(setup, { cwd: dir, shell: true, encoding: 'utf-8', timeout: 900_000 });
+    if (run.status !== 0) {
+      dispose();
+      return { problem: `verify.setup \`${setup}\` failed in the export of ${sha.slice(0, 7)}:\n${tail(`${run.stdout ?? ''}${run.stderr ?? ''}`)}` };
+    }
+  } else {
+    for (const d of DEPENDENCY_DIRS) if (existsSync(join(projectDir, d)) && !existsSync(join(dir, d))) symlinkSync(join(projectDir, d), join(dir, d));
+  }
+  return { dir, sha, dispose };
+}
+
 export async function verify(projectDir: string, ref: string, opts: { mutate?: boolean; env?: string; record?: boolean } = {}): Promise<VerifyResult> {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   const nnn = card ? cardKey(card) : cardNumber(ref);
@@ -151,21 +198,30 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   const baseUrl = baseUrlFor(projectDir, opts.env);
   const out = join(projectDir, 'evidence', nnn);
   mkdirSync(out, { recursive: true });
+  // Evidence is written to the tree, but only this card's own evidence folder.
+  const exported = verifyWorkspace(projectDir) === 'export' ? exportHead(projectDir, nnn, resolveSpecDir(projectDir, ref)) : undefined;
+  if (exported && 'problem' in exported) return { ...result, exitCode: 2, problem: exported.problem };
+  const runIn = exported ? exported.dir : projectDir;
+  const workspace = exported ? `export of ${exported.sha.slice(0, 7)}` : 'working tree';
+  try {
   for (const uc of cases) {
     const layers: LayerResult[] = [];
-    if (uc.layers.cli) layers.push(runCli(uc, projectDir, opts.env));
+    if (uc.layers.cli) layers.push(runCli(uc, runIn, opts.env));
     if (uc.layers.api) layers.push(await runApi(uc, baseUrl));
     // A use case with nothing runnable (ui only, or empty) must not count as a pass.
     const pass = layers.length > 0 && layers.every(l => l.pass);
     result.cases.push({ id: uc.id, accept: uc.accept, pass, layers });
-    writeFileSync(join(out, `${uc.id}.json`), JSON.stringify({ id: uc.id, accept: uc.accept, failure_mode: uc.failure_mode, sha, env: opts.env ?? 'local', pass, layers }, null, 2) + '\n');
+    writeFileSync(join(out, `${uc.id}.json`), JSON.stringify({ id: uc.id, accept: uc.accept, failure_mode: uc.failure_mode, sha, env: opts.env ?? 'local', workspace, pass, layers }, null, 2) + '\n');
+  }
+  } finally {
+    if (exported) exported.dispose();
   }
 
   const passed = result.cases.every(c => c.pass);
   const rows = result.cases.map(c => `| ${c.id} | ${c.accept} | ${c.layers.map(l => `${l.layer} ${l.pass ? 'pass' : 'FAIL'}`).join(', ') || 'no runnable layer'} |`);
   // Only the marked block is rewritten: what a person adds to verify.md outside it (a clean-export
   // run, a table of guards) survives every later verify.
-  const block = [VERIFY_START, `# Verify ${ref}`, '', `result: ${passed ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, VERIFY_END].join('\n');
+  const block = [VERIFY_START, `# Verify ${ref}`, '', `result: ${passed ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, `workspace: ${workspace}`, '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, VERIFY_END].join('\n');
   const file = join(out, 'verify.md');
   const before = existsSync(file) ? readFileSync(file, 'utf-8') : '';
   const at = before.indexOf(VERIFY_START), end = before.indexOf(VERIFY_END);

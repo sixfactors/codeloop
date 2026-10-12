@@ -103,3 +103,8 @@ codeloop:
 # drives (a library with no UI or service):
 # verify:
 #   live_walk: false
+#
+# Use cases run in an export of HEAD (other stories edit the same tree). Install or build there:
+# verify:
+#   setup: "npm ci && npm run build"
+#   workspace: export              # or tree, to run in the working tree
