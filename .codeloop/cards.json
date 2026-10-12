@@ -1,5 +1,5 @@
 {
-  "version": 388,
+  "version": 393,
   "cards": [
     {
       "id": "CL-001",
@@ -5290,6 +5290,136 @@
       "createdAt": "2026-10-11T22:59:00.251Z",
       "updatedAt": "2026-10-11T22:59:00.256Z",
       "spec": "specs/112-search-links-and-bulk-changes-on-the-boa"
+    },
+    {
+      "id": "c-113",
+      "title": "The inbox shows every story waiting on me, including failing checks",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "ops-ai c-007 sits in build with 49 failing tests after an unstick, and the inbox says 0 waiting. Inbox lists gates, open questions and any card whose last check failed.",
+      "source": "ops-ai review 2026-10-11",
+      "dedupe": "build:ops-ai review 2026-10-11:The inbox shows every story waiting on me, including failing checks",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T00:05:10.993Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai review 2026-10-11"
+        }
+      ],
+      "createdAt": "2026-10-12T00:05:10.993Z",
+      "updatedAt": "2026-10-12T00:05:10.993Z"
+    },
+    {
+      "id": "c-114",
+      "title": "Agent instructions read the live story, not a baked copy",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "ops-ai AGENTS.md says Active card: c-004 (shipped) and carries 64 lane-table rows plus 38 per-stage agent files. Render a short protocol; the session reads codeloop whoami and brief live.",
+      "source": "ops-ai review 2026-10-11",
+      "dedupe": "build:ops-ai review 2026-10-11:Agent instructions read the live story, not a baked copy",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T00:05:11.358Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai review 2026-10-11"
+        }
+      ],
+      "createdAt": "2026-10-12T00:05:11.358Z",
+      "updatedAt": "2026-10-12T00:05:11.358Z"
+    },
+    {
+      "id": "c-115",
+      "title": "Every stage check can fail for a real reason",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "staging and live in build, and all four deploy stages, pass when a file contains result: pass. Remove them or replace with a command that runs; verify-head stays.",
+      "source": "ops-ai review 2026-10-11",
+      "dedupe": "build:ops-ai review 2026-10-11:Every stage check can fail for a real reason",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T00:05:11.621Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai review 2026-10-11"
+        }
+      ],
+      "createdAt": "2026-10-12T00:05:11.621Z",
+      "updatedAt": "2026-10-12T00:05:11.621Z"
+    },
+    {
+      "id": "c-116",
+      "title": "Shaped stories start building without a second interview",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "shape queues approved stories into build, which starts again at research and interview. They enter at spec carrying the shape's answers.",
+      "source": "ops-ai review 2026-10-11",
+      "dedupe": "build:ops-ai review 2026-10-11:Shaped stories start building without a second interview",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T00:05:11.779Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai review 2026-10-11"
+        }
+      ],
+      "createdAt": "2026-10-12T00:05:11.779Z",
+      "updatedAt": "2026-10-12T00:05:11.779Z"
+    },
+    {
+      "id": "c-117",
+      "title": "Each story starts from what the last story wrote in the wiki",
+      "lane": "build",
+      "laneVersion": 1,
+      "stage": "proposed",
+      "description": "the brief injects wiki by skill inputs and scope, not the pages the previous card changed; .codeloop/gotchas.md and principles.md are a second memory. Brief lists wiki pages changed by recent cards; drop the two files with a migration into the wiki.",
+      "source": "ops-ai review 2026-10-11",
+      "dedupe": "build:ops-ai review 2026-10-11:Each story starts from what the last story wrote in the wiki",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T00:05:11.936Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai review 2026-10-11"
+        }
+      ],
+      "createdAt": "2026-10-12T00:05:11.936Z",
+      "updatedAt": "2026-10-12T00:05:11.936Z"
     }
   ]
 }
