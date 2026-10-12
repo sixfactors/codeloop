@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { resolveRole } from '../lib/engine.js';
-import { lintLane, loadLane, loadLanes, loadSkillsIndex } from '../lib/lane.js';
+import { lintLane, loadLane, loadLanes, loadSkillsIndex, refreshLane } from '../lib/lane.js';
 import { evalProposal, promote, propose, PROPOSALS_DIR, rollback } from '../lib/proposals.js';
 import { guard } from './guard.js';
 
@@ -59,6 +59,18 @@ laneCommand
     errors.forEach(e => console.error(chalk.red(`  ${e}`)));
     if (errors.length) process.exit(2);
     console.log(`  ${lanes.length} lanes ok${skills ? '' : chalk.dim(' (no skills index; skill names not checked)')}`);
+  }));
+
+laneCommand
+  .command('refresh <id>')
+  .description('Replace an installed lane with the shipped template; refuses when a card would be stranded')
+  .action(guard((id: string) => {
+    const r = refreshLane(process.cwd(), id);
+    console.log(`  lane ${r.id} refreshed from v${r.from} to v${r.to}`);
+    if (r.addedStages.length) console.log(chalk.dim(`  added stages: ${r.addedStages.join(', ')}`));
+    if (r.keptWip !== undefined) {
+      console.log(chalk.yellow(`  kept wip: ${r.keptWip} (workable cards exceed the template's wip)`));
+    }
   }));
 
 laneCommand

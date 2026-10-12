@@ -5,6 +5,7 @@ import fse from 'fs-extra';
 const { existsSync, readFileSync, copySync } = fse;
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { installMissingLane, laneDrift, templateLaneFiles } from '../lib/lane.js';
 import { compareVersions, parseVersion } from '../lib/version.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,7 +93,34 @@ export const updateCommand = new Command('update')
       console.log(`  ${chalk.green(`${updated} updated`)}, ${upToDate} up to date`);
     }
 
+    // Lanes are sacred: never overwrite an installed one. Copy a template that is missing, and
+    // name drift so the owner can run `codeloop lane refresh <id>` when they want the template.
     console.log();
-    console.log(chalk.dim('  Knowledge files (.codeloop/gotchas.md, patterns.md, rules.md) are never overwritten.'));
+    console.log(chalk.bold(dryRun ? 'Lanes (dry run)...' : 'Lanes...'));
+    let lanesInstalled = 0;
+    for (const file of templateLaneFiles()) {
+      if (dryRun) {
+        const dest = join(projectDir, '.codeloop/lanes', file);
+        if (!existsSync(dest)) {
+          console.log(chalk.yellow(`  ${file}: would install`));
+          lanesInstalled++;
+        }
+        continue;
+      }
+      const dest = installMissingLane(projectDir, file);
+      if (dest) {
+        console.log(chalk.green(`  ${file}: installed`));
+        lanesInstalled++;
+      }
+    }
+    const drift = laneDrift(projectDir).filter(d => d.reason !== 'not installed');
+    for (const d of drift) {
+      console.log(chalk.yellow(`  ${d.id}: ${d.reason}; \`codeloop lane refresh ${d.id}\` takes the template`));
+    }
+    if (!lanesInstalled && !drift.length) console.log(chalk.dim('  lanes match the templates that are installed'));
+
+    console.log();
+    console.log(chalk.dim('  Wiki pages and legacy knowledge files are never overwritten.'));
+    console.log(chalk.dim('  Installed lanes are never overwritten; use `codeloop lane refresh <id>` for that.'));
     console.log();
   });

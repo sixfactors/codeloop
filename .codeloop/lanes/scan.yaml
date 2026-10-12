@@ -1,0 +1,11 @@
+id: scan
+version: 1
+metric: { name: competitor_proposals_promoted, source: cards }
+trigger: { cron: "0 7 * * MON" }
+wip: 1
+retries: 3
+stages:
+  # The stage is its command: it reads the changelog on each page in .codeloop/wiki/competitors/
+  # and proposes a plan card for what is new. The cards wait in the inbox; nothing starts them.
+  - id: scan
+    done: { cmd: "codeloop scan competitors" }

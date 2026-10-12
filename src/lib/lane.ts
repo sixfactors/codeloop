@@ -1,8 +1,12 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { parse as parseYaml } from 'yaml';
-import { RefusalError, safeName } from './cards.js';
+import { inLane, readCards, RefusalError, safeName } from './cards.js';
 import { cronError } from './cron.js';
+
+const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+export const LANE_TEMPLATES_DIR = join(PACKAGE_ROOT, 'templates/lanes');
 
 export type Approver = 'owner' | 'reviewer';
 
@@ -137,4 +141,115 @@ export function substitute(template: string, card: string | { id: string; key?: 
  */
 export function shellQuote(value: string): string {
   return /^[A-Za-z0-9_./-]+$/.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/** Template lane filenames under `templates/lanes/`. */
+export function templateLaneFiles(): string[] {
+  if (!existsSync(LANE_TEMPLATES_DIR)) return [];
+  return readdirSync(LANE_TEMPLATES_DIR).filter(f => f.endsWith('.yaml')).sort();
+}
+
+export function templateLanePath(id: string): string {
+  return join(LANE_TEMPLATES_DIR, `${safeName(id, 'lane id')}.yaml`);
+}
+
+export interface LaneRefreshResult {
+  id: string;
+  from: number;
+  to: number;
+  keptWip?: number;
+  addedStages: string[];
+}
+
+/**
+ * Replace an installed lane with the shipped template. Refuses when any card in the lane sits on a
+ * stage the template does not have (so refresh never strands work). Bumps `version`. When workable
+ * cards already exceed the template's `wip`, keeps the installed `wip` so new starts are not
+ * refused until room opens.
+ */
+export function refreshLane(projectDir: string, id: string): LaneRefreshResult {
+  const templateFile = templateLanePath(id);
+  if (!existsSync(templateFile)) throw new RefusalError(`no template lane "${id}" at templates/lanes/${id}.yaml`);
+  const installedFile = lanePath(projectDir, id);
+  if (!existsSync(installedFile)) throw new RefusalError(`lane "${id}" is not installed; run \`codeloop update\` to copy missing lanes`);
+
+  const templateText = readFileSync(templateFile, 'utf-8');
+  const template = parseLane(templateText);
+  const installed = loadLane(projectDir, id);
+  const stageIds = new Set(template.stages.map(s => s.id));
+  const stranded = readCards(projectDir).cards.filter(c => c.lane === id && inLane(c) && !stageIds.has(c.stage));
+  if (stranded.length) {
+    const list = stranded.map(c => `${c.id} (${c.stage})`).join(', ');
+    throw new RefusalError(
+      `lane ${id}: cannot refresh; ${stranded.length} card${stranded.length === 1 ? '' : 's'} on stage${stranded.length === 1 ? '' : 's'} the template does not have: ${list}`,
+    );
+  }
+
+  const to = installed.version + 1;
+  let text = templateText.replace(/^version:\s*\d+\s*$/m, `version: ${to}`);
+  if (!/^version:\s*\d+\s*$/m.test(templateText)) {
+    throw new RefusalError(`templates/lanes/${id}.yaml has no version: line to bump`);
+  }
+
+  // Same rule as engine.workable: in the lane and not waiting on a person.
+  const workableCount = readCards(projectDir).cards.filter(c => c.lane === id && inLane(c) && !c.gate).length;
+  let keptWip: number | undefined;
+  if (template.wip !== undefined && workableCount > template.wip && installed.wip !== undefined) {
+    keptWip = installed.wip;
+    if (/^wip:\s*\d+\s*$/m.test(text)) {
+      text = text.replace(/^wip:\s*\d+\s*$/m, `wip: ${keptWip}`);
+    } else {
+      text = text.replace(/^(version:\s*\d+\s*)$/m, `$1\nwip: ${keptWip}`);
+    }
+  }
+
+  writeFileSync(installedFile, text.endsWith('\n') ? text : `${text}\n`);
+  const addedStages = template.stages.map(s => s.id).filter(s => !installed.stages.some(i => i.id === s));
+  return { id, from: installed.version, to, ...(keptWip === undefined ? {} : { keptWip }), addedStages };
+}
+
+/**
+ * Copy a template lane that is not yet installed. Does not overwrite an existing file.
+ * Returns the destination path when copied, or undefined when it was already there.
+ */
+export function installMissingLane(projectDir: string, filename: string): string | undefined {
+  const dest = join(projectDir, LANES_DIR, filename);
+  if (existsSync(dest)) return undefined;
+  const src = join(LANE_TEMPLATES_DIR, filename);
+  if (!existsSync(src)) throw new RefusalError(`no template at templates/lanes/${filename}`);
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(src, dest);
+  return dest;
+}
+
+/** Installed lanes whose stage ids or done checks differ from the template. */
+export function laneDrift(projectDir: string): { id: string; reason: string }[] {
+  const out: { id: string; reason: string }[] = [];
+  for (const file of templateLaneFiles()) {
+    const id = file.replace(/\.yaml$/, '');
+    const dest = join(projectDir, LANES_DIR, file);
+    if (!existsSync(dest)) {
+      out.push({ id, reason: 'not installed' });
+      continue;
+    }
+    const installed = loadLane(projectDir, id);
+    const template = parseLane(readFileSync(join(LANE_TEMPLATES_DIR, file), 'utf-8'));
+    const instStages = installed.stages.map(s => s.id).join(',');
+    const tmplStages = template.stages.map(s => s.id).join(',');
+    if (instStages !== tmplStages) {
+      out.push({ id, reason: `stages ${instStages} vs template ${tmplStages}` });
+      continue;
+    }
+    for (const stage of template.stages) {
+      const mine = installed.stages.find(s => s.id === stage.id);
+      if (!mine) continue;
+      const a = mine.done?.cmd ?? mine.done?.event ?? '';
+      const b = stage.done?.cmd ?? stage.done?.event ?? '';
+      if (a !== b) {
+        out.push({ id, reason: `stage ${stage.id} done check differs` });
+        break;
+      }
+    }
+  }
+  return out;
 }

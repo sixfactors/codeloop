@@ -1,0 +1,27 @@
+id: shape
+version: 1
+metric: { name: stories_shipped_per_epic, source: cards }
+trigger: { manual: true }
+wip: 2
+retries: 3
+stages:
+  - id: brief
+    skill: brief
+    output: "shape/{id}/brief.md"
+    done: { cmd: "codeloop check brief {id}" }
+  - id: interview
+    skill: interview
+    output: "shape/{id}/interview.md"
+    done: { cmd: "codeloop check questions {id} --min 3" }
+  - id: breakdown
+    skill: breakdown
+    output: "shape/{id}/breakdown.md"
+    done: { cmd: "codeloop check breakdown {id}" }
+  - id: rank
+    skill: breakdown
+    output: "shape/{id}/breakdown.md"
+    done: { cmd: "codeloop check breakdown {id} --ranked" }
+    gate: { name: plan, approver: owner }
+# on_done.queue always runs, with no lanes.auto_start gate: the owner's approval of the rank stage's
+# plan gate already covers the exact list of stories this makes (src/lib/shape.ts queueBreakdown).
+on_done: { queue: build }
