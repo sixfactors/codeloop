@@ -1,6 +1,6 @@
 {
-  "version": "0.4.1",
-  "generatedAt": "2026-10-10T04:21:33.347Z",
+  "version": "0.4.3",
+  "generatedAt": "2026-10-12T04:40:10.105Z",
   "commands": [
     {
       "name": "init",
@@ -68,7 +68,7 @@
         },
         {
           "signature": "--stop",
-          "description": "Stop background server"
+          "description": "Stop the server running for this project"
         },
         {
           "signature": "--open",
@@ -76,7 +76,11 @@
         },
         {
           "signature": "--owner",
-          "description": "Allow Approve and Reject from the board, for whoever has the URL with its token"
+          "description": "Allow Approve, Reject and other writes from the board. On localhost this is already the default; it is required on a non-loopback --host"
+        },
+        {
+          "signature": "--read-only",
+          "description": "Disable Approve, Reject and other writes even on localhost"
         },
         {
           "signature": "--ui <dir>",
@@ -85,9 +89,76 @@
         {
           "signature": "--host <host>",
           "description": "Address to listen on. Anything but the default exposes the board to the network (default: \"127.0.0.1\")"
+        },
+        {
+          "signature": "--standalone",
+          "description": "Run this project's own single-process server instead of joining the hub"
         }
       ],
       "commands": []
+    },
+    {
+      "name": "open",
+      "usage": "codeloop open [options]",
+      "description": "Open the board already running for this project",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--standalone",
+          "description": "Open this project's own single-process server instead of its page on the hub"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "hub",
+      "usage": "codeloop hub [options]",
+      "description": "Run the one board that serves every registered project, each under its own path",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "-p, --port <port>",
+          "description": "Port to listen on (default: \"4040\")"
+        },
+        {
+          "signature": "--host <host>",
+          "description": "Address to listen on (default: \"127.0.0.1\")"
+        },
+        {
+          "signature": "--stop",
+          "description": "Stop the hub"
+        },
+        {
+          "signature": "--open",
+          "description": "Open the browser after starting"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "projects",
+      "usage": "codeloop projects [options] [command]",
+      "description": "The hub's registry of known projects",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "projects list",
+          "usage": "codeloop projects list [options]",
+          "description": "Every project the hub knows about",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "projects remove",
+          "usage": "codeloop projects remove [options] <id>",
+          "description": "Drop a project from the registry (does not touch its files)",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
     },
     {
       "name": "store",
@@ -181,6 +252,14 @@
           "commands": []
         },
         {
+          "name": "lane refresh",
+          "usage": "codeloop lane refresh [options] <id>",
+          "description": "Replace an installed lane with the shipped template; refuses when a card would be stranded",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
           "name": "lane propose",
           "usage": "codeloop lane propose [options]",
           "description": "Write lane-change proposals from repeated rejections and stuck stages",
@@ -226,7 +305,7 @@
     },
     {
       "name": "card",
-      "usage": "codeloop card [options] [command]",
+      "usage": "codeloop card|cards [options] [command]",
       "description": "Create and move cards through a lane",
       "arguments": [],
       "options": [],
@@ -243,7 +322,7 @@
             },
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             },
             {
               "signature": "--persona <persona>",
@@ -316,7 +395,7 @@
             },
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             },
             {
               "signature": "--persona <persona>",
@@ -448,7 +527,7 @@
           "options": [
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             }
           ],
           "commands": []
@@ -461,7 +540,7 @@
           "options": [
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             }
           ],
           "commands": []
@@ -475,6 +554,10 @@
             {
               "signature": "--event <name>",
               "description": "Report the event a stage with `done.event` is waiting for"
+            },
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             }
           ],
           "commands": []
@@ -487,7 +570,7 @@
           "options": [
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             },
             {
               "signature": "--note <note>",
@@ -508,7 +591,59 @@
             },
             {
               "signature": "--as <role>",
-              "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card place",
+          "usage": "codeloop card place [options] <id> <stage>",
+          "description": "Move a story to the stage its work has really reached (the owner decides); its checks run from there",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card park",
+          "usage": "codeloop card park [options] <id> [note]",
+          "description": "Move an active card back to your inbox, keeping its stage; frees its lane slot. Approving it later returns it to that stage",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card done",
+          "usage": "codeloop card done [options] <id> [note]",
+          "description": "End a card whose work is finished; frees its lane slot (the owner decides)",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card drop",
+          "usage": "codeloop card drop [options] <id> <why>",
+          "description": "Drop a card you will not do, with the reason; frees its lane slot (the owner decides)",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--as <role>",
+              "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             }
           ],
           "commands": []
@@ -538,8 +673,12 @@
           "description": "Card id (default: next c-NNN)"
         },
         {
+          "signature": "--stage <stage>",
+          "description": "Start at this stage, for work already under way (the owner decides)"
+        },
+        {
           "signature": "--as <role>",
-          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+          "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
         },
         {
           "signature": "--persona <persona>",
@@ -605,7 +744,7 @@
       "options": [
         {
           "signature": "--as <role>",
-          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+          "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
         }
       ],
       "commands": []
@@ -631,7 +770,7 @@
       "options": [
         {
           "signature": "--as <role>",
-          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+          "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
         },
         {
           "signature": "--note <note>",
@@ -652,7 +791,7 @@
         },
         {
           "signature": "--as <role>",
-          "description": "owner | reviewer | agent (default: owner at a terminal, agent otherwise)"
+          "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
         }
       ],
       "commands": []
@@ -1067,7 +1206,7 @@
         {
           "name": "check research",
           "usage": "codeloop check research [options] <card>",
-          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url> — <note>` lines",
+          "description": "Exit 1 unless the card's research.md has a `verdict:` line and enough `- source: <url or path> — <note>` lines",
           "arguments": [],
           "options": [
             {
@@ -1127,6 +1266,19 @@
             {
               "signature": "--ranked",
               "description": "Also require a `rice:` part on every story"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check architecture",
+          "usage": "codeloop check architecture [options]",
+          "description": "Exit 1 unless the five architecture pages exist, name only real paths, cover every top-level folder, stay inside the noise limits, and carry no scanner leftovers",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--dir <wikiDir>",
+              "description": "The architecture folder, relative to the project root (default: \".codeloop/wiki/architecture\")"
             }
           ],
           "commands": []
@@ -1519,9 +1671,22 @@
         {
           "name": "wiki lint",
           "usage": "codeloop wiki lint [options]",
-          "description": "Report broken links (exit 1), stale pages and duplicate titles",
+          "description": "Report broken links, stale pages, duplicate titles and scanner filler (exit 1 on a broken link or a page in an unknown folder)",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki migrate",
+          "usage": "codeloop wiki migrate [options]",
+          "description": "Move scanner filler (assumption:/no-data: pages, per-script runbooks, the generated glossary/overview) into reference/legacy/, never deleting it; `wiki build` runs this first",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--dry-run",
+              "description": "Print what would move without moving it (default: false)"
+            }
+          ],
           "commands": []
         },
         {
@@ -1549,6 +1714,23 @@
             {
               "signature": "--json",
               "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "wiki build",
+          "usage": "codeloop wiki build [options]",
+          "description": "Run `wiki migrate`, refresh .codeloop/wiki/reference/ and repo-facts.json, start a card titled \"Explain the architecture\" in the wiki lane, then run it (--agent picks a preset; --no-run only creates the card)",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--agent <name>",
+              "description": "Agent preset to run with; default is the wiki lane's own agent, else agents.default"
+            },
+            {
+              "signature": "--no-run",
+              "description": "Only refresh the facts and create the card; do not run the agent"
             }
           ],
           "commands": []
@@ -1661,6 +1843,19 @@
           "description": "Print one value by dotted path (empty when unset), for use in CI scripts",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "config board-password",
+          "usage": "codeloop config board-password [options]",
+          "description": "Set the board sign-in user and password (.codeloop/local.yaml); refuses a non-loopback `codeloop serve` while the default is still in use",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--user <name>",
+              "description": "Sign-in username; unchanged if not given"
+            }
+          ],
           "commands": []
         }
       ]
@@ -1778,6 +1973,27 @@
           "name": "guard session",
           "usage": "codeloop guard session [options]",
           "description": "SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard bash",
+          "usage": "codeloop guard bash [options]",
+          "description": "PreToolUse hook for the assistant's shell tool: `codeloop approve`, `reject`, `answer`, `card done|drop` and `--as owner|reviewer` go to the person as a permission prompt; their Allow is the decision",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--format <format>",
+              "description": "claude (PreToolUse JSON) or cursor (beforeShellExecution JSON) (default: \"claude\")"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "guard release",
+          "usage": "codeloop guard release [options]",
+          "description": "SessionEnd hook: releases this session's active story, so its files are free for other sessions",
           "arguments": [],
           "options": [],
           "commands": []

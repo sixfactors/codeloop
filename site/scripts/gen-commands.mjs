@@ -59,8 +59,9 @@ function describe(text) {
 function walk(path) {
   const text = help(path);
   const { usage, description } = describe(text);
+  // Commander prints an alias as `card|cards`; only the first name is a command to recurse into.
   const subs = section(text, 'Commands')
-    .map((r) => r.signature.split(/\s+/)[0])
+    .map((r) => r.signature.split(/\s+/)[0].split('|')[0])
     .filter((n) => n !== 'help');
   return {
     name: path.join(' '),
@@ -74,7 +75,7 @@ function walk(path) {
 
 const root = help([]);
 const top = section(root, 'Commands')
-  .map((r) => r.signature.split(/\s+/)[0])
+  .map((r) => r.signature.split(/\s+/)[0].split('|')[0])
   .filter((n) => n !== 'help');
 
 const commands = top.map((name) => walk([name]));

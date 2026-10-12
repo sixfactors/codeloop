@@ -92,7 +92,7 @@ schedule() {
 day "Setup, Sunday evening"
 at "2026-10-04T18:00:00"
 
-claim "codeloop init installs the 8 shipped lanes; none is edited for this demo" sh -c "codeloop init --tools claude --starter generic && test \"\$(ls .codeloop/lanes/*.yaml | wc -l | tr -d ' ')\" = 8 && codeloop lane lint"
+claim "codeloop init installs the 10 shipped lanes; none is edited for this demo" sh -c "codeloop init --tools claude --starter generic && test \"\$(ls .codeloop/lanes/*.yaml | wc -l | tr -d ' ')\" = 10 && codeloop lane lint"
 perl -pi -e 's/name: "my-project"/name: "exportly"/' .codeloop/config.yaml
 
 # A small product: one function the build card has to write, and the test that proves it.
@@ -196,7 +196,7 @@ if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && [ -f "$CACHE" ]; then
   KEY=$(node -e "console.log(require('$CACHE').api_key)")
   STAMP=$(date +%s)
   export CODELOOP_CLOUD_BOARD_TITLE="codeloop demo $STAMP" CODELOOP_CLOUD_FOLDER="codeloop-demo-$STAMP"
-  claim "cloud connect uploads the board, config.yaml and the 8 lanes to the local Protobox" sh -c "codeloop cloud connect --url 'http://localhost:$PORT/api/mcp/$WS' --key '$KEY' --workspace-name demo | grep -q 'board uploaded (revision 1)'"
+  claim "cloud connect uploads the board, config.yaml and the 10 lanes to the local Protobox" sh -c "codeloop cloud connect --url 'http://localhost:$PORT/api/mcp/$WS' --key '$KEY' --workspace-name demo | grep -q 'board uploaded (revision 1)'"
   claim_json "cloud status: 10 documents, all in sync, and local.yaml is not one of them" "d.documents.length===10 && d.documents.every(x=>x.state==='in-sync') && !d.documents.some(x=>x.path.includes('local'))" codeloop cloud status --json
   CLOUD=on
   echo "  cloud: ON, workspace $WS on localhost:$PORT, board page \"$CODELOOP_CLOUD_BOARD_TITLE\""
@@ -237,7 +237,7 @@ claim_json "nothing started any proposal overnight: three proposals, none of the
 # =============================================================================================
 day "Monday morning: the founder's ten minutes"
 show codeloop inbox
-claim_json "the inbox has four things waiting: the triage batch and three proposals" "d.needs_you.length===4 && d.needs_you.filter(n=>n.gate==='proposal').length===3" codeloop inbox --json
+claim_json "the triage batch waits on you and the three proposals sit in the backlog" "d.needs_you.length===1 && d.needs_you[0].gate==='proposals' && d.backlog.count===3" codeloop inbox --json
 DARK=$(card_id plan "Dark theme") || die "no dark theme proposal"
 say "The founder passes the triage batch, promotes the competitor card and drops the dark theme."
 owner approve "$TRIAGE"
@@ -394,7 +394,7 @@ claim_json "the second post is approved and waits before publishing; it is left 
 # =============================================================================================
 day "Friday, end of the week"
 show codeloop inbox
-claim_json "four things wait: the second post's publish step, Thursday night's triage batch, the new plan card and the invoice proposal" "d.needs_you.map(n=>n.gate).sort().join()==='backlog,proposal,proposals,publish'" codeloop inbox --json
+claim_json "three things wait: the second post's publish step, Thursday night's triage batch and the new plan card; the invoice proposal is in the backlog" "d.needs_you.map(n=>n.gate).sort().join()==='backlog,proposals,publish' && d.backlog.count===1" codeloop inbox --json
 show codeloop stats
 show codeloop stats --lane market --compare v1 v2
 if [ "$CLOUD" = on ]; then
