@@ -82,12 +82,17 @@ describe('an approval covers what was approved', () => {
   - id: review
     done: { cmd: "true" }
 `);
-    write('evidence/001/verify.md', 'result: pass\nsha: 1111111111111111111111111111111111111111\n');
+    write('evidence/001/verify.md', 'result: pass\nsha: 1111111111111111111111111111111111111111\nworkspace: export of 1111111\n');
+    write('evidence/001/uc-1.json', '{"sha":"1111111"}\n');
+    // A plan that lists the card's own evidence folder must not void the approval when verify rewrites it.
+    write('specs/001/plan.md', '## Files\n- evidence/001/\n');
     write('usecases/001/uc-1.yaml', 'id: uc-1\naccept: US1\n');
     createCard(dir, { lane: 'build', title: 't', id: 'c-001' });
     advanceCard(dir, 'c-001');
     approveCard(dir, 'c-001', 'owner');
-    write('evidence/001/verify.md', 'result: pass\nsha: 2222222222222222222222222222222222222222\n');
+    // Verify re-ran at a new commit (the card's evidence was committed): sha and workspace lines move.
+    write('evidence/001/verify.md', 'result: pass\nsha: 2222222222222222222222222222222222222222\nworkspace: export of 2222222\n');
+    write('evidence/001/uc-1.json', '{"sha":"2222222"}\n');
     expect(advanceCard(dir, 'c-001').card.stage).toBe('review');
 
     createCard(dir, { lane: 'build', title: 'u', id: 'c-002' });

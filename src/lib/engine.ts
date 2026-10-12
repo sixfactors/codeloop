@@ -136,7 +136,7 @@ export function runCheck(projectDir: string, card: Card, stage: Stage): { passed
  */
 // Lines that record where and when a check ran, not what it found: a shared tree's HEAD moves as
 // other stories commit, so binding an approval to them re-parks the card on every run.
-const VOLATILE_LINE = /^(sha|commit|at|ran at|env):\s*\S.*$/gim;
+const VOLATILE_LINE = /^(sha|commit|at|ran at|env|workspace):\s*\S.*$/gim;
 
 /** Files under a folder, sorted, as relative paths. */
 function filesUnder(root: string, rel: string): string[] {
@@ -155,7 +155,10 @@ function stageFingerprint(projectDir: string, card: Card, stage: Stage): string 
   const hash = createHash('sha1').update(stage.done?.cmd ?? stage.done?.event ?? '');
   const output = !stage.gate?.outward && stage.output ? join(projectDir, substitute(stage.output, card)) : null;
   if (output) hash.update('\0').update(existsSync(output) && statSync(output).isFile() ? readFileSync(output, 'utf-8').replace(VOLATILE_LINE, '') : 'missing');
-  const owned = [...filesUnder(projectDir, `usecases/${cardKey(card)}`), ...(planFiles(projectDir, card) ?? []).filter(f => !/[*?]/.test(f)).flatMap(f => filesUnder(projectDir, f.replace(/\/$/, '')))];
+  // The card's evidence folder is what verify writes on every run, so it is never part of what was approved.
+  const evidence = `evidence/${cardKey(card)}/`;
+  const owned = [...filesUnder(projectDir, `usecases/${cardKey(card)}`), ...(planFiles(projectDir, card) ?? []).filter(f => !/[*?]/.test(f)).flatMap(f => filesUnder(projectDir, f.replace(/\/$/, '')))]
+    .filter(rel => !rel.startsWith(evidence));
   for (const rel of [...new Set(owned)].sort()) hash.update('\0').update(rel).update('\0').update(readFileSync(join(projectDir, rel)));
   return hash.digest('hex');
 }
