@@ -72,6 +72,33 @@ describe('an approval covers what was approved', () => {
     expect(advanceCard(dir, 'c-1').card).toMatchObject({ stage: 'draft', gate: 'copy' });
   });
 
+  it('holds when only the commit the check ran at moved, and asks again when the card\'s own use cases changed', () => {
+    // A shared tree: other stories commit while this one waits, so the verify output's sha line moves.
+    lane('build', `stages:
+  - id: verify
+    output: evidence/{nnn}/verify.md
+    done: { cmd: "test -s evidence/{nnn}/verify.md" }
+    gate: { name: local, approver: owner }
+  - id: review
+    done: { cmd: "true" }
+`);
+    write('evidence/001/verify.md', 'result: pass\nsha: 1111111111111111111111111111111111111111\n');
+    write('usecases/001/uc-1.yaml', 'id: uc-1\naccept: US1\n');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-001' });
+    advanceCard(dir, 'c-001');
+    approveCard(dir, 'c-001', 'owner');
+    write('evidence/001/verify.md', 'result: pass\nsha: 2222222222222222222222222222222222222222\n');
+    expect(advanceCard(dir, 'c-001').card.stage).toBe('review');
+
+    createCard(dir, { lane: 'build', title: 'u', id: 'c-002' });
+    write('evidence/002/verify.md', 'result: pass\nsha: 1111111111111111111111111111111111111111\n');
+    write('usecases/002/uc-1.yaml', 'id: uc-1\naccept: US1\n');
+    advanceCard(dir, 'c-002');
+    approveCard(dir, 'c-002', 'owner');
+    write('usecases/002/uc-1.yaml', 'id: uc-1\naccept: US2\n');
+    expect(advanceCard(dir, 'c-002').card).toMatchObject({ stage: 'verify', gate: 'local' });
+  });
+
   it('moves on when nothing changed', () => {
     parkedAndApproved();
     expect(advanceCard(dir, 'c-1').card.stage).toBe('ship');

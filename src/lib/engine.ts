@@ -1,6 +1,6 @@
 import { spawnSync } from 'child_process';
 import { checkEnv } from './shell.js';
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
@@ -8,10 +8,11 @@ import { researchSummary } from './research.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
-import { CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
+import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
+import { planFiles } from './plan-scope.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
 // engine.ts drives a stage's domain-specific side effect without owning its parsing.
@@ -133,10 +134,29 @@ export function runCheck(projectDir: string, card: Card, stage: Stage): { passed
  * What an approval is bound to: the check's text and the stage's output file. A public step is
  * approved before its work exists, so only its check is bound.
  */
+// Lines that record where and when a check ran, not what it found: a shared tree's HEAD moves as
+// other stories commit, so binding an approval to them re-parks the card on every run.
+const VOLATILE_LINE = /^(sha|commit|at|ran at|env):\s*\S.*$/gim;
+
+/** Files under a folder, sorted, as relative paths. */
+function filesUnder(root: string, rel: string): string[] {
+  const abs = join(root, rel);
+  if (!existsSync(abs)) return [];
+  if (statSync(abs).isFile()) return [rel];
+  return readdirSync(abs).sort().flatMap(name => filesUnder(root, `${rel}/${name}`));
+}
+
+/**
+ * What an approval covers: the check, the stage output with run-location lines removed, the card's
+ * use cases, and the files its plan lists. A change to any of those asks the owner again; another
+ * story's commit moving HEAD does not.
+ */
 function stageFingerprint(projectDir: string, card: Card, stage: Stage): string {
   const hash = createHash('sha1').update(stage.done?.cmd ?? stage.done?.event ?? '');
   const output = !stage.gate?.outward && stage.output ? join(projectDir, substitute(stage.output, card)) : null;
-  if (output) hash.update('\0').update(existsSync(output) && statSync(output).isFile() ? readFileSync(output) : 'missing');
+  if (output) hash.update('\0').update(existsSync(output) && statSync(output).isFile() ? readFileSync(output, 'utf-8').replace(VOLATILE_LINE, '') : 'missing');
+  const owned = [...filesUnder(projectDir, `usecases/${cardKey(card)}`), ...(planFiles(projectDir, card) ?? []).filter(f => !/[*?]/.test(f)).flatMap(f => filesUnder(projectDir, f.replace(/\/$/, '')))];
+  for (const rel of [...new Set(owned)].sort()) hash.update('\0').update(rel).update('\0').update(readFileSync(join(projectDir, rel)));
   return hash.digest('hex');
 }
 
