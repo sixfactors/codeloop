@@ -34,6 +34,19 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+describe('verify and the live walk', () => {
+  it('refuses when use cases pass but nobody walked the feature on the real stack, and passes once the walk is recorded', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+    const refused = await verify(dir, '001');
+    expect(refused.exitCode).toBe(2);
+    expect(refused.problem).toMatch(/live walk is not done[\s\S]*no `## Live walk` section/);
+    const file = join(dir, 'evidence/001/verify.md');
+    writeFileSync(file, readFileSync(file, 'utf-8') + '\n## Live walk\nstack: make up\nurl: http://localhost:3000/\nsteps:\n- opened it\n- saw it\nnetwork:\n- GET http://localhost:3000/api 200\nexternal: none: the feature calls nothing outside\n');
+    expect((await verify(dir, '001')).exitCode).toBe(0);
+  });
+});
+
 describe('verify', () => {
   it('exits 2 naming an acceptance line that has no use case', async () => {
     useCase('uc-1', 'US1', 'cli: { run: "true" }');

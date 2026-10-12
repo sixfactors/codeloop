@@ -297,7 +297,11 @@ git checkout -q -b feat/c-001-csv-export
 echo "exported" > feature-marker.txt
 git add feature-marker.txt && commit "feat: csv export"
 expect 0 "hook added the Feature trailer from the branch name" sh -c "git log -1 --format=%B | grep -q '^Feature: c-001$'"
-expect 0 "verify passes once the use case passes" codeloop verify 001
+expect 2 "verify refuses while nobody has walked the feature on the real stack" sh -c "codeloop verify 001 2>&1 | grep -q 'no .## Live walk. section'; test \$? -eq 0 && codeloop verify 001 > /dev/null 2>&1; exit \$?"
+expect 1 "check verify fails a walk answered by a mock" sh -c "printf '\\n## Live walk\\nstack: make up\\nurl: http://localhost:3000/export\\nsteps:\\n- clicked Export\\n- got a file\\nnetwork:\\n- GET http://localhost:3000/__mock/export 200 (mock)\\nexternal: none: export reads only our database\\n' >> evidence/001/verify.md && codeloop check verify 001"
+sed -i.bak 's#__mock/export 200 (mock)#api/export 200#' evidence/001/verify.md && rm -f evidence/001/verify.md.bak
+expect 0 "check verify passes a walk on the real stack" codeloop check verify 001
+expect 0 "verify passes once the use case passes and the walk is recorded" codeloop verify 001
 json "evidence json carries the sha and the layer result" "d.pass && d.sha.length===40 && d.layers[0].layer==='cli'" cat evidence/001/uc-1.json
 json "verify evidence is attached to the card" "d.evidence.includes('evidence/001/verify.md')" codeloop card show c-001 --json
 expect 0 "verify --mutate: the use case fails before the feature commit" codeloop verify 001 --mutate

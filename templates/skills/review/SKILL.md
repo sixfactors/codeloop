@@ -37,24 +37,28 @@ comments, or a `verdict: approve` line written before every fix-now finding is a
 
 1. Confirm `evidence/{nnn}/verify.md` says `result: pass`. If it doesn't, stop here, review
    cannot approve work that hasn't been shown to work.
-2. Run `codeloop check gotchas --files <changed files>`. Read every critical page it names, confirm
+2. **Repeat one step of the live walk yourself.** Pick the step in `## Live walk` that matters most,
+   start the same stack, and do it in a browser. Record it in review.md as
+   `walk repeated: <step> -> <what you saw>, <the call that answered and its status>`. If it does
+   not reproduce, or the page ran on a mock, that is a fix-now finding: the evidence does not hold.
+3. Run `codeloop check gotchas --files <changed files>`. Read every critical page it names, confirm
    the diff actually handles it, then re-run with `--ack "<title>"` for each. Don't commit the
    review while this exits 1.
-3. Read the diff against `spec.md`'s acceptance lines: does every changed file trace to a task that
+4. Read the diff against `spec.md`'s acceptance lines: does every changed file trace to a task that
    traces to a `USn`? Anything outside `## Not building` that isn't traced is a finding, not a
    bonus.
-4. For every issue found, classify it:
+5. For every issue found, classify it:
    - **fix now**, blocks `verdict: approve`
    - **defer**, becomes a `codeloop card propose <lane> "<title>" --description "<finding>"
      --source evidence/{nnn}/review.md` line, not a comment left to be forgotten
    - **unnecessary**, recorded with why, so the next reviewer doesn't re-raise the same thing
-5. Write the findings table with evidence per finding, a `file:line`, a command and its output, or
+6. Write the findings table with evidence per finding, a `file:line`, a command and its output, or
    a quoted diff hunk. Never a finding with no evidence a second person could check.
-6. Fix every "fix now" item. Re-run `codeloop verify {id}`; confirm it still passes after the fix.
-7. Write `evidence/{nnn}/review.md`, ending with `verdict: approve` only once every fix-now item is
+7. Fix every "fix now" item. Re-run `codeloop verify {id}`; confirm it still passes after the fix.
+8. Write `evidence/{nnn}/review.md`, ending with `verdict: approve` only once every fix-now item is
    resolved and verify is still green. If any fix-now item remains, end with `verdict:
    changes-requested` instead, the done check only looks for the literal string `verdict: approve`.
-8. Run the done command.
+9. Run the done command.
 
 ## Questions to ask before working
 
@@ -86,6 +90,7 @@ verdict: approve
 See `checklist.md`:
 
 - [ ] `evidence/{nnn}/verify.md` says `result: pass` before review starts
+- [ ] one step of the live walk repeated by the reviewer, recorded as `walk repeated:`
 - [ ] every wiki gotcha matching the changed files is read and acked (`codeloop check gotchas` exits 0)
 - [ ] every finding has a verdict (fix now / defer / unnecessary) and evidence
 - [ ] every "fix now" finding is actually fixed, and `codeloop verify {id}` re-run and still green

@@ -7,6 +7,7 @@ import { cardKey, findCardOrNone, readCards, safeName } from './cards.js';
 import { loadConfig } from './config.js';
 import { annotateCard, RefusalError } from './engine.js';
 import { cardNumber } from './lane.js';
+import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
 import { checkEnv } from './shell.js';
 import { readAcceptance, resolveSpecDir } from './spec.js';
 
@@ -174,6 +175,13 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
     annotateCard(projectDir, card.id, { evidence: `evidence/${nnn}/verify.md` }, 'verify', { note: `result: ${passed ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
   }
   if (!passed) return { ...result, exitCode: 1 };
+
+  // Use cases run against harnesses; the walk proves the real stack answers a person. Checked on a
+  // local verify only: a staging run and a mutation run judge the use cases, not the walk.
+  if (!opts.mutate && !opts.env && liveWalkRequired(projectDir)) {
+    const walk = checkLiveWalk(projectDir, card?.id ?? ref);
+    if (walk.length) return { ...result, exitCode: 2, problem: `use cases pass, but the live walk is not done:\n  ${walk.join('\n  ')}` };
+  }
 
   if (opts.mutate) {
     const m = mutate(projectDir, card?.id ?? ref, cases);

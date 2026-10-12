@@ -7,3 +7,4 @@
 - [ ] every "defer" finding exists as a `codeloop card propose` line, not only in this file
 - [ ] the file ends with a line starting `verdict:`
 - [ ] `codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'` exits 0
+- [ ] one step of the live walk repeated by the reviewer and recorded as `walk repeated:`

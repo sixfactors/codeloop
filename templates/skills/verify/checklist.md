@@ -9,3 +9,4 @@
 - [ ] `evidence/{nnn}/verify.md` shows `result: pass` with a row per acceptance line
 - [ ] No use case asserts on something unrelated to its acceptance line (the "always green"
   smell, e.g. hitting `/health` to stand in for a feature-specific check)
+- [ ] `## Live walk` in verify.md: normal dev stack, the page, two or more steps, the calls that answered (none a mock), and a real external call or `external: none: <why>`

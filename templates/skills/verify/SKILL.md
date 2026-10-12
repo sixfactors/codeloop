@@ -73,7 +73,28 @@ with "an acceptance line has no use case."
    vacuous use case was found; fix or remove it, don't ignore the list.
 8. **Read `evidence/{nnn}/verify.md`** after a full run, it has the acceptance-to-use-case table
    the stage's gate reads. Confirm every acceptance line has a row and every row says `pass`.
-9. **If `--mutate` can't run** (exit 5, no commit carries the `Feature:` trailer yet, or the
+9. **Walk the feature as a person, on the real stack.** Use cases run against harnesses that wire
+   their own URLs and fakes, so they can pass while the page a person opens still runs on a mock.
+   Start the repo's normal dev stack the way a teammate would (`make up`, `npm run dev`: whatever
+   the README says, never a harness), open the feature in a browser, and use it. Watch the network
+   panel. Record it in `evidence/{nnn}/verify.md`, outside the marked block:
+   ```markdown
+   ## Live walk
+   stack: make up
+   url: http://localhost:3016/tools
+   steps:
+   - opened Tools and saw the three seeded tools
+   - imported an OpenAPI file and saw the new tool listed
+   network:
+   - GET http://localhost:8410/tools 200
+   - POST https://httpbin.org/post 200
+   external: https://httpbin.org/post
+   ```
+   If the feature calls an outside system, make one real call to a public test host (httpbin.org,
+   a provider's sandbox) and list it under `network:`; otherwise write `external: none: <why>`.
+   A call answered by a mock, a stub or a canned reply fails the check, and so does a stack that is
+   a harness. `codeloop check verify {id}` reads the section; `codeloop verify {id}` runs it too.
+10. **If `--mutate` can't run** (exit 5, no commit carries the `Feature:` trailer yet, or the
    environment setup command failed on the base commit), that's a signal to commit with the
    trailer before closing this stage, not to skip the mutation check.
 
@@ -127,11 +148,14 @@ See `template.md` in this folder for the use case YAML skeleton.
 - [ ] `--mutate` has been run since the card's `Feature: {id}` commit exists, and found no
   vacuous use case (or any found were fixed, not left as "known vacuous")
 - [ ] `evidence/{nnn}/verify.md` shows `result: pass` and a row for every acceptance line
+- [ ] the `## Live walk` section names the normal dev stack, the page, at least two steps, the calls
+  that answered (none a mock or stub), and a real external call or `external: none: <why>`
 
 ## Done
 
-`codeloop verify {id}` exits 0. It exits 2 if any acceptance line has no use case or `spec.md` has
-no acceptance lines; 1 if any use case failed; 4 if `--mutate` found a vacuous use case; 5 if
+`codeloop verify {id}` exits 0. It exits 2 if any acceptance line has no use case, `spec.md` has
+no acceptance lines, or the live walk is missing or names a mock (off only with
+`verify: { live_walk: false }` in config); 1 if any use case failed; 4 if `--mutate` found a vacuous use case; 5 if
 `--mutate` could not run. Read `evidence/{nnn}/verify.md` for the table backing the stage's gate
 (`codeloop check file evidence/{nnn}/verify.md --has 'result: pass'` is what the lane actually
 checks).

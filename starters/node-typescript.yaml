@@ -106,3 +106,9 @@ codeloop:
   critical_frequency: 3
   promote_frequency: 10
   max_knowledge_lines: 200
+
+# codeloop verify also requires a live walk in evidence/<nnn>/verify.md: the feature driven in a
+# browser on the normal dev stack, with the calls that answered. Off only for a repo a person never
+# drives (a library with no UI or service):
+# verify:
+#   live_walk: false

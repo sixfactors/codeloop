@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { checkLiveWalk, liveWalkRequired } from '../lib/live-walk.js';
 import { existsSync, readFileSync } from 'fs';
 import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { checkMock, findMock } from '../lib/mock.js';
@@ -96,6 +97,11 @@ checkCommand
       return [`no artifact for ${card} beside its spec or under docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
     })(),
   );
+
+checkCommand
+  .command('verify <card>')
+  .description("Exit 1 unless evidence/<nnn>/verify.md has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
+  .action((card: string) => failing(() => (liveWalkRequired(process.cwd()) ? checkLiveWalk(process.cwd(), card) : []))());
 
 checkCommand
   .command('story <card>')
