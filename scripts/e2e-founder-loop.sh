@@ -570,7 +570,7 @@ expect 1 "check mock fails on a colour outside the tokens" codeloop check mock 1
 expect 0 "it names the colour" sh -c "codeloop check mock 1 2>&1 | grep -q 'uses colours outside the tokens block: #cc0000'"
 perl -pi -e 's/ style="color: #cc0000"//' $M
 cp $M "$WORK/mock.good"
-perl -pi -e 's/--accent: #2f5fd0/--accent: #ff00ff/' $M
+perl -pi -e 's/--accent: #c2512f/--accent: #ff00ff/' $M
 expect 0 "check mock fails when the tokens block was edited" sh -c "codeloop check mock 1 2>&1 | grep -q 'the tokens block differs'"
 cp "$WORK/mock.good" $M
 expect 0 "check mock passes once the screen is drawn from the tokens" codeloop check mock 1

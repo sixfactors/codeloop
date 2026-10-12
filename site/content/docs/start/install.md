@@ -110,6 +110,9 @@ Initializing codeloop...
     + .codeloop/lanes/triage.yaml
     + .codeloop/lanes/wiki.yaml
     + .codeloop/.gitignore
+    + .codeloop/design-system/tokens.css
+    + .codeloop/design-system/blocks.css
+    + .codeloop/design-system/README.md
     + .codeloop/wiki
     + .codeloop/wiki/architecture/
     + .codeloop/wiki/gotchas/
@@ -141,6 +144,7 @@ Done.
 | `.codeloop/lanes/*.yaml` | The ten lanes. Each one is a list of stages with a check command and, where you want to decide, a gate. | No |
 | `.codeloop/config.yaml` | Project name, scopes, quality checks, agents, deploy commands. | No |
 | `.codeloop/wiki/` | What the project knows: architecture, gotchas, decisions, runbooks. Agents read it before a stage and the learn loop writes it. | No |
+| `.codeloop/design-system/` | The look mocks are built from: `tokens.css` (colours, spacing, fonts) and `blocks.css` (the building blocks). Yours to change. | No |
 | `.codeloop/cards.json` | The board: every story, its stage and its events. Written on the first card. | No |
 | `.claude/commands/*.md` | Ten commands: design, plan, manage, test, commit, qa, deploy, debug, reflect, ship. The cron lanes name them. | Yes, when the version changes |
 | `.claude/skills/<name>/` | Sixteen stage skills, each a `SKILL.md` with its procedure, a `template.md` and a `checklist.md`: brief, breakdown, research, interview, mock, spec, api, sdk, ui, test-design, verify, review, release, system-design, workflow, architecture. The build, shape and wiki lanes name one per stage. | Yes, when the version changes |

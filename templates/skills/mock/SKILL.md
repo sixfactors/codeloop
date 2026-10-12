@@ -5,60 +5,58 @@ lane: build
 inputs:
   - specs/{id}/spec.md
   - specs/{id}/interview.md
-  - docs/artifacts/<project>/<topic>/*-mock.html (the prior mock in this topic, if any)
+  - .codeloop/design-system/README.md
+  - .codeloop/design-system/blocks.css
 outputs:
-  - "docs/artifacts/<project>/<topic>/{id}-mock.html: frames per screen state, a component map, a state matrix, a design contract"
-check: "codeloop check artifact {id} --kind mock"
+  - "specs/{id}/mock.html: one section per screen named in the spec, each drawn as the product from the design system's blocks"
+check: "codeloop check mock {id}"
 questions: 4
 ---
 
 # mock
 
-Draw the product's screens before the build stage writes a line of code, so a reviewer can see the
-surface before approving the spec. One mock per card, one frame per screen **state**
-(loading/ready/empty/error), never one frame per screen.
+Draw the product's screens before the build stage writes code, so the owner approves the spec
+having seen the surface. A mock is a spec: built from the project's design system, with real
+content, in the states the story is about. It should read like a page of the finished product,
+not a sketch.
 
 ## Role
 
-The designer working the `mock` stage of a card. A card with nothing to draw sets `screens: none`
-in `spec.md` and skips this stage; everything else must produce a mock before `spec` opens.
+The designer working the `mock` stage. A card with nothing to draw writes `screens: none` in
+`spec.md` and passes this stage without a mock.
 
 ## Inputs
 
-- `specs/{id}/spec.md`, the acceptance lines; every screen in the mock traces to one.
-- `specs/{id}/interview.md`, answers to open design questions asked at the prior stage.
-- The newest mock in the same project/topic folder under `docs/artifacts/`, when one exists -
-  `codeloop artifact new {id} --kind mock --topic <topic>` copies its frontmatter forward by
-  default (`--from latest`), so a chain means something instead of starting cold each time.
+- `specs/{id}/spec.md`: the acceptance lines and `screens:`; every screen traces to one.
+- `specs/{id}/interview.md`: answered design questions.
+- `.codeloop/design-system/`: `tokens.css` (colours, radius, spacing, fonts) and `blocks.css` (the
+  building blocks). The README lists every block and what it is for. This is the project's own
+  design system; the owner changes it there, never inside a mock.
+- The newest mock on the same topic: `mock new` copies its screens forward, marked `data-from`.
 
 ## Procedure
 
-1. **Read the spec and the interview.** Pull the card's acceptance lines and any answered design
-   questions. Note the entities, states, and who is using the screen (role, device).
-2. **Pick the surface pattern.** Match each screen to a known pattern before drawing anything: list
-   page, detail/record page, form, dashboard, sidebar app shell, dialog, wizard. If nothing fits,
-   say so in the contract section and justify a new pattern, never invent silently.
-3. **Search the registry.** `mcp__shadcn__search_items_in_registries` for the chosen pattern's
-   keyword, then `get_item_examples_from_registries` on the best 1–2 matches. Record the block or
-   primitive chosen in the component map table before writing frame markup.
-4. **Create the file.** `codeloop artifact new {id} --kind mock --topic <topic>` (alias:
-   `codeloop mock new {id} --topic <topic>`). Fill the frontmatter's `screens:`, `components:` and
-   `states:` lists first, the check reads them to know what the mock owes.
-5. **Draw frames per state.** For every screen, one `<section class="screen-group"
-   data-screen="<name>">` holding loading (a skeleton matching the real layout, never a bare
-   spinner) → ready → empty (says what will fill it) → error (keeps input, offers retry), each
-   wrapped in `.chrome` so it reads as the product. Copy inside a `.frame` is product copy only.
-6. **Caption every frame.** A sibling `.caption` div per frame: label, one-sentence rationale, an
-   `.api` line naming the request that fills it. A frame with no caption fails the check.
-7. **Fill the component map and state matrix.** One row per name in `components:`; the state
-   matrix needs a non-empty cell (or an explicit `<td class="gap">why</td>`) for every state named
-   in `states:`.
-8. **Write the contract section.** The spacing/radius tokens actually used (they come from
-   `templates/artifacts/base.css`; do not invent new ones), which surfaces are push/sheet/dialog,
-   and the container each error state uses.
-9. **Self-check.** `codeloop check artifact {id} --kind mock`. Then look at the frame alone, delete
-   anything inside it that would not ship as product copy, confirm every colour is a token, confirm
-   every frame has a caption.
+1. **Read the spec and the interview.** List the screens under `screens:` and, for each, the
+   acceptance line it proves and the state it must show (the gate waiting, the empty first run,
+   the failure).
+2. **Read the design system.** Open `.codeloop/design-system/README.md`. Every screen is composed
+   from those blocks: an `app-frame` with `chrome`, `nav` and `main` for a full screen; `list-row`,
+   `columns`/`tile`, `record`/`props`/`tabs` and `tree-row` for content; `key`, `pill`, `holder`,
+   `prio`, `proof` and `btn` for the details. When a screen needs something the blocks lack, add the
+   block to `.codeloop/design-system/blocks.css` (and a row to its README), then use it. Never style
+   inside the mock.
+3. **Create the file.** `codeloop mock new {id} --topic <topic>` writes `specs/{id}/mock.html` with
+   the design system inlined. A proposal without a spec folder gets `.codeloop/mocks/{id}.html`.
+4. **Draw each screen as the product.** One `<section data-screen="<name>">` per screen. Inside, the
+   app frame with the real navigation, the real page title, and real content: story titles, keys,
+   names, numbers, the copy a user would read. Show the state the story is about, and draw the
+   empty and error states where the acceptance lines name them. No lorem ipsum, no grey boxes.
+5. **Make it explain itself.** Under each section, a `<p class="note">` saying what the screen proves
+   and which acceptance line it covers. Notes stay outside the frame; the frame holds product only.
+6. **Check it the way a reviewer will.** `codeloop check mock {id}`: every screen in the spec drawn,
+   the tokens and blocks unchanged from the design system, no colour outside them, inherited
+   screens kept or listed under `screens_removed:`. Then open the file in a browser at desktop and
+   phone width: nothing overflows, nothing is clipped, and it reads as the product.
 
 ## Questions to ask before working
 
@@ -67,24 +65,24 @@ recommended: Build on it with `--from latest` (the default) rather than starting
 that drops a screen without saying so under `screens_removed:` is a regression, not a redesign.
 answer:
 
-## Q2 Does this screen match a registry block, or does it need hand-composed primitives?
-recommended: Name the block first (`dashboard-01`, `sidebar-0N`, `sheet-side`, …); only fall back to
-primitives for forms and wizards, where no dedicated block exists yet.
+## Q2 Does any screen need a block the design system does not have?
+recommended: Add it to `.codeloop/design-system/blocks.css` with a README row, built from the tokens,
+then use it; a block styled inside one mock cannot be reused or checked.
 answer:
 
-## Q3 Which states does each data-bearing component actually need?
-recommended: All four (loading/ready/empty/error) unless the component never shows that state in
-this product, and say why in the state matrix, don't just leave the cell blank.
+## Q3 Which state does each screen need to show for this story?
+recommended: The state the acceptance line is about (a gate waiting, a list with real rows), plus
+empty and error wherever an acceptance line or failure mode names them.
 answer:
 
-## Q4 Does any frame need a destructive confirm, and is it drawn as `alert-dialog`, not `dialog`?
-recommended: Yes for anything irreversible; the plain `dialog` primitive is never the right surface
-for that case.
+## Q4 Does any screen need a destructive confirm?
+recommended: Draw it as an alert dialog naming what is lost, with the destructive button last and
+not primary.
 answer:
 
 ## Template
 
-See `template.md` in this folder for the component-map and state-matrix row formats.
+See `template.md` in this folder: a full screen composed from the blocks, to copy and fill.
 
 ## Checklist
 
@@ -92,20 +90,18 @@ See `checklist.md` in this folder.
 
 ## Done
 
-`codeloop check artifact {id} --kind mock` exits 0: every screen in `screens:` has a frame for
-every state in `states:`, every frame has a caption, every component in `components:` has a filled
-state-matrix row, no colour literal appears outside the token blocks, and both the light and dark
-token blocks are present.
+`codeloop check mock {id}` exits 0: every screen named in `screens:` has a section, the tokens and
+blocks are exactly the project's design system, no colour literal appears outside them, and every
+screen inherited from the parent mock is kept or named under `screens_removed:`.
 
 ## Examples
 
-**Good.** `screens: [board, card-drawer]`, four states each. The board's empty state shows the
-exact copy a first-run workspace sees ("No cards yet, `codeloop card new` creates one"), not a grey
-box; the card-drawer's error state keeps the field values the user typed and offers Retry. Every
-frame's caption names the endpoint it reads, e.g. `GET /api/cards?lane=build`.
+**Good.** `screens: [home, story]`. Home is an `app-frame` with the project's real navigation and
+a Needs you list of `list-row`s: real keys, titles, a `pill you` gate and a primary Approve. Story
+is a `record` with the property panel filled and the Proof tab showing each acceptance line with a
+`pill ok`. Each section has a note naming its acceptance line. The check passes and it looks like
+the product.
 
-**Failing, and why.** A mock with one frame per screen, no `data-state` variants, and a caption that
-only says "card drawer" with no rationale or API line. `codeloop check artifact {id} --kind mock`
-passes anyway if the frontmatter's `states:` list is edited down to a single entry, which is why
-step 2 of the procedure asks what states the component needs before the frontmatter is written, not
-after: the check only enforces what the frontmatter claims.
+**Failing, and why.** A section holding a grey box labelled "list goes here", or a screen styled
+with its own `style=` colours. The first is not a spec; the second fails `codeloop check mock`
+because colours must come from the design system's tokens.

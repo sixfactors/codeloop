@@ -119,8 +119,20 @@ export const updateCommand = new Command('update')
     }
     if (!lanesInstalled && !drift.length) console.log(chalk.dim('  lanes match the templates that are installed'));
 
+    // The design system is the project's to change: copy the default only where it is missing.
+    for (const f of ['tokens.css', 'blocks.css', 'README.md']) {
+      const dest = join(projectDir, '.codeloop/design-system', f);
+      if (existsSync(dest)) continue;
+      if (dryRun) console.log(chalk.yellow(`  .codeloop/design-system/${f}: would install`));
+      else {
+        fse.ensureDirSync(dirname(dest));
+        copySync(join(PACKAGE_ROOT, 'templates/design-system', f), dest);
+        console.log(chalk.green(`  .codeloop/design-system/${f}: installed`));
+      }
+    }
+
     console.log();
-    console.log(chalk.dim('  Wiki pages and legacy knowledge files are never overwritten.'));
+    console.log(chalk.dim('  Wiki pages, the design system and legacy knowledge files are never overwritten.'));
     console.log(chalk.dim('  Installed lanes are never overwritten; use `codeloop lane refresh <id>` for that.'));
     console.log();
   });

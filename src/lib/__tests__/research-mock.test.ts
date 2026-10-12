@@ -151,12 +151,29 @@ describe('mocks', () => {
   const screens = (names: string) => write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^screens:.*$/m, `screens:\n${names}`));
   const section = (name: string) => write(MOCK, read(MOCK).replace('</main>', `<section data-screen="${name}"><h2>${name}</h2></section>\n</main>`));
 
-  it('the shared template uses the system font stack, light and dark tokens, and no pixel sizes', () => {
+  it('the default design system has light and dark tokens, the system font stack, no pixel sizes, and blocks with no colour literals', () => {
+    const tokens = readFileSync(resolve('templates/design-system/tokens.css'), 'utf-8');
+    const blocks = readFileSync(resolve('templates/design-system/blocks.css'), 'utf-8');
     expect(TEMPLATE).toContain('<!-- codeloop-mock-template: 1 -->');
-    expect(TEMPLATE).toMatch(/font-family: system-ui/);
-    expect(TEMPLATE).toMatch(/codeloop-tokens:start[\s\S]*prefers-color-scheme: dark[\s\S]*codeloop-tokens:end/);
-    expect(TEMPLATE).toMatch(/minmax\(/);
-    expect(TEMPLATE).not.toMatch(/\d+px/);
+    expect(tokens).toMatch(/--font: system-ui/);
+    expect(tokens).toMatch(/prefers-color-scheme: dark/);
+    expect(`${TEMPLATE}${tokens}${blocks}`).not.toMatch(/\d+px/);
+    expect(blocks).toMatch(/minmax\(/);
+    expect(blocks).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/);
+  });
+
+  it('mocks are built from the project\'s own design system, and a mock cannot restyle it', () => {
+    screens('- export-dialog\n');
+    write('.codeloop/design-system/tokens.css', readFileSync(resolve('templates/design-system/tokens.css'), 'utf-8').replace('--accent: #c2512f;', '--accent: #0b6e4f;'));
+    write('.codeloop/design-system/blocks.css', readFileSync(resolve('templates/design-system/blocks.css'), 'utf-8') + '.banner { background: var(--accent); }\n');
+    newMock(dir, 'c-001', 'exports');
+    section('export-dialog');
+    expect(read(MOCK)).toContain('--accent: #0b6e4f;');
+    expect(read(MOCK)).toContain('.banner { background: var(--accent); }');
+    expect(checkMock(dir, 'c-001')).toEqual([]);
+    const good = read(MOCK);
+    write(MOCK, good.replace('.banner { background: var(--accent); }', '.banner { background: var(--warn); }'));
+    expect(checkMock(dir, 'c-001')).toEqual([`${MOCK}: the blocks block differs from .codeloop/design-system/blocks.css; add blocks to the design system, not the mock`]);
   });
 
   it('mock new writes the mock beside the spec as mock.html from the template and never overwrites it', () => {
@@ -186,7 +203,7 @@ describe('mocks', () => {
 
     const good = read(MOCK);
     write(MOCK, good.replace('--accent:', '--brand:'));
-    expect(checkMock(dir, 'c-001')).toEqual([`${MOCK}: the tokens block differs from templates/mock/template.html`]);
+    expect(checkMock(dir, 'c-001')).toEqual([`${MOCK}: the tokens block differs from templates/design-system/tokens.css; change the design system, not the mock`]);
     write(MOCK, good.replace('<!-- codeloop-mock-template: 1 -->', ''));
     expect(checkMock(dir, 'c-001')).toEqual([`${MOCK} does not carry the template marker <!-- codeloop-mock-template: 1 -->`]);
     write(MOCK, good.replace('</main>', '<p style="color: #ff0000; background: rgb(0 0 0)">x</p><a href="#fff">ok</a></main>'));

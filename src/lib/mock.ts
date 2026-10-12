@@ -22,7 +22,28 @@ const TOKENS = /\/\* codeloop-tokens:start \*\/[\s\S]*?\/\* codeloop-tokens:end 
 // Hex colours and colour functions. `href="#fff"` is a link to an anchor, and `&#123;` an entity.
 const COLOUR = /(?<![&\w]|href=["'])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/g;
 
-const template = () => readFileSync(join(PACKAGE_ROOT, TEMPLATE), 'utf-8');
+/** The project's own design system; `init` copies the package default here and `update` never overwrites it. */
+export const DESIGN_SYSTEM_DIR = '.codeloop/design-system';
+const DEFAULT_DESIGN_SYSTEM = join(PACKAGE_ROOT, 'templates/design-system');
+const BLOCKS = /\/\* codeloop-blocks:start \*\/[\s\S]*?\/\* codeloop-blocks:end \*\//;
+
+/** The tokens and blocks mocks are built from: the project's when it has them, else the package default. */
+export function designSystem(projectDir: string): { tokens: string; blocks: string; source: string } {
+  const read = (name: string) => {
+    const own = join(projectDir, DESIGN_SYSTEM_DIR, name);
+    return existsSync(own) ? { text: readFileSync(own, 'utf-8'), own: true } : { text: readFileSync(join(DEFAULT_DESIGN_SYSTEM, name), 'utf-8'), own: false };
+  };
+  const tokens = read('tokens.css');
+  const blocks = read('blocks.css');
+  const end = (t: string) => (t.endsWith('\n') ? t : `${t}\n`);
+  return { tokens: end(tokens.text), blocks: end(blocks.text), source: tokens.own || blocks.own ? DESIGN_SYSTEM_DIR : 'templates/design-system' };
+}
+
+/** The mock template with the project's design system filled in. */
+const template = (projectDir: string) => {
+  const ds = designSystem(projectDir);
+  return readFileSync(join(PACKAGE_ROOT, TEMPLATE), 'utf-8').replace('{{tokens}}', () => ds.tokens).replace('{{blocks}}', () => ds.blocks);
+};
 const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** The configured project name; the starter's placeholder (`my-project`) counts as unset, so the repo folder names it. */
@@ -137,7 +158,7 @@ export function newMock(projectDir: string, ref: string, topic: string, from: st
 
   const values: Record<string, string> = { id: card.id, title: escape(card.title), project, topic, lineage: lineage.join(' <- ') };
   mkdirSync(dirname(join(projectDir, path)), { recursive: true });
-  const html = template().replace(/\{\{(id|title|project|topic|lineage)\}\}/g, (_, key: string) => values[key]).replace('  </main>', `${sections}  </main>`);
+  const html = template(projectDir).replace(/\{\{(id|title|project|topic|lineage)\}\}/g, (_, key: string) => values[key]).replace('  </main>', `${sections}  </main>`);
   writeFileSync(join(projectDir, path), html);
   return { path, created: true, ...(parent ? { from: parent.id } : {}) };
 }
@@ -194,10 +215,13 @@ export function checkMock(projectDir: string, ref: string): string[] {
   if (!path) return [`no mock for ${id} (expected ${mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
   const html = readFileSync(join(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
   if (!html.includes(MARKER)) return [`${path} does not carry the template marker ${MARKER}`];
-  if (TOKENS.exec(html)?.[0] !== TOKENS.exec(template())![0]) return [`${path}: the tokens block differs from ${TEMPLATE}`];
+  const expected = template(projectDir);
+  const source = designSystem(projectDir).source;
+  if (TOKENS.exec(html)?.[0] !== TOKENS.exec(expected)![0]) return [`${path}: the tokens block differs from ${source}/tokens.css; change the design system, not the mock`];
+  if (BLOCKS.exec(html)?.[0] !== BLOCKS.exec(expected)![0]) return [`${path}: the blocks block differs from ${source}/blocks.css; add blocks to the design system, not the mock`];
 
   const errors: string[] = [];
-  const literals = [...new Set(html.replace(TOKENS, '').match(COLOUR) ?? [])];
+  const literals = [...new Set(html.replace(TOKENS, '').replace(BLOCKS, '').match(COLOUR) ?? [])];
   if (literals.length) errors.push(`${path} uses colours outside the tokens block: ${literals.join(', ')}`);
   for (const screen of screens) {
     if (!new RegExp(`<section[^>]*\\sdata-screen=["']${screen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(html)) {
@@ -255,7 +279,7 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
   ].join('\n')).join('\n');
 
   // The gallery is the same page shell as every mock, with the list where the screens go.
-  const html = template()
+  const html = template(projectDir)
     .replace('<title>{{id}} {{title}}</title>', '<title>Mocks</title>')
     .replace('<!-- codeloop mock lineage: {{lineage}} -->\n', '')
     .replace('<h1>{{title}}</h1>', '<h1>Mocks</h1>')

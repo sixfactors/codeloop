@@ -89,6 +89,8 @@ function getKnowledgeFiles(): ScaffoldFile[] {
   return [
     ...getLaneFiles(),
     { source: 'templates/codeloop/gitignore', destination: '.codeloop/.gitignore', overwrite: false },
+    // The project's design system: mocks are built from it, and it is the project's to change.
+    ...['tokens.css', 'blocks.css', 'README.md'].map(f => ({ source: `templates/design-system/${f}`, destination: `.codeloop/design-system/${f}`, overwrite: false })),
   ];
 }
 

@@ -8,41 +8,11 @@
 <title>{{id}} {{title}}</title>
 <style>
 /* codeloop-tokens:start */
-:root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --text: #1a1d21;
-  --muted: #5f6b7a;
-  --border: #d9dee5;
-  --accent: #2f5fd0;
-  --accent-text: #ffffff;
-  --ok: #1f7a4d;
-  --warn: #a15c00;
-  --danger: #b3261e;
-  --radius: 0.5rem;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 1rem;
-  --space-4: 1.5rem;
-  --line: 0.0625rem;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111418;
-    --surface: #1a1f26;
-    --text: #e8ebef;
-    --muted: #9aa5b4;
-    --border: #2c343f;
-    --accent: #7ea2f5;
-    --accent-text: #0d1117;
-    --ok: #5fcf96;
-    --warn: #f0b860;
-    --danger: #f28b82;
-  }
-}
-/* codeloop-tokens:end */
+{{tokens}}/* codeloop-tokens:end */
+/* codeloop-blocks:start */
+{{blocks}}/* codeloop-blocks:end */
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; background: var(--bg); color: var(--text); }
+body { margin: 0; font-family: var(--font); line-height: 1.5; background: var(--bg); color: var(--text); }
 .shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: 72rem; margin: 0 auto; padding: var(--space-4); }
 .bar { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: baseline; padding-bottom: var(--space-3); border-bottom: var(--line) solid var(--border); }
 .bar h1 { margin: 0; font-size: 1.25rem; }
@@ -74,7 +44,9 @@ th, td { padding: var(--space-2); text-align: left; border-bottom: var(--line) s
   <main class="screens">
     <!--
       One <section data-screen="name"> per screen named under `screens:` in the spec.
-      Draw the screen inside its .frame with the classes above. Notes about a screen go in
+      Build each screen from the design system's blocks (.codeloop/design-system/README.md lists
+      them): an app-frame with chrome, nav and main, then rows, tiles, records and pills inside it.
+      Use real content and show the state the screen is about. Notes about a screen go in
       <p class="note"> below the frame, outside it. Colours come only from the tokens: var(--accent), never a literal.
     -->
   </main>

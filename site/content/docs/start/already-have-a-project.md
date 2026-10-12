@@ -30,6 +30,9 @@ Initializing codeloop...
     + .codeloop/lanes/scan.yaml
     + .codeloop/lanes/triage.yaml
     + .codeloop/.gitignore
+    + .codeloop/design-system/tokens.css
+    + .codeloop/design-system/blocks.css
+    + .codeloop/design-system/README.md
     + .codeloop/wiki
     + .codeloop/wiki/architecture/
     + .codeloop/wiki/gotchas/
