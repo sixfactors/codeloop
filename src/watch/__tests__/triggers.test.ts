@@ -4,21 +4,23 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { processSignal } from '../triggers.js';
 import type { WatchSignal } from '../signals.js';
-import { loadBoard, saveBoard, addTask, type Board, type AddTaskInput } from '../../lib/board.js';
+import { setActiveCard } from '../../lib/active-card.js';
+import { createCard } from '../../lib/engine.js';
 
 describe('processSignal', () => {
   let tmpDir: string;
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'codeloop-triggers-'));
-    // Create a minimal board
-    mkdirSync(join(tmpDir, '.codeloop'), { recursive: true });
-    const board: Board = {
-      version: 1,
-      columns: ['backlog', 'planned', 'in_progress', 'review', 'done'],
-      tasks: [],
-    };
-    saveBoard(tmpDir, board);
+    mkdirSync(join(tmpDir, '.codeloop/lanes'), { recursive: true });
+    writeFileSync(join(tmpDir, '.codeloop/lanes/build.yaml'), `id: build
+version: 1
+metric: { name: m, source: cards }
+stages:
+  - id: research
+    done: { cmd: "true" }
+`);
+    writeFileSync(join(tmpDir, '.codeloop/cards.json'), JSON.stringify({ version: 1, cards: [] }));
   });
 
   afterEach(() => {
@@ -38,11 +40,9 @@ describe('processSignal', () => {
     expect(results[0].details).toContain('src/index.ts');
   });
 
-  it('appends commit SHA to active task', () => {
-    // Create an active task
-    let board = loadBoard(tmpDir);
-    board = addTask(board, { title: 'Fix bug', status: 'in_progress' });
-    saveBoard(tmpDir, board);
+  it('appends commit SHA to the active card', () => {
+    createCard(tmpDir, { lane: 'build', title: 'Fix bug', id: 'c-1' });
+    setActiveCard(tmpDir, 'c-1');
 
     const signal: WatchSignal = {
       type: 'git_commit',
@@ -54,14 +54,14 @@ describe('processSignal', () => {
     expect(results).toHaveLength(1);
     expect(results[0].action).toBe('commit_tracked');
     expect(results[0].details).toContain('abc1234');
+    expect(results[0].details).toContain('c-1');
 
-    // Verify commit was actually saved to board
-    const updated = loadBoard(tmpDir);
-    const task = updated.tasks[0];
-    expect(task.commits).toContain('abc1234');
+    const cards = JSON.parse(readFileSync(join(tmpDir, '.codeloop/cards.json'), 'utf-8'));
+    const events = cards.cards[0].events.map((e: { action: string; note?: string }) => e);
+    expect(events.some((e: { action: string; note?: string }) => e.action === 'commit' && e.note?.includes('abc1234'))).toBe(true);
   });
 
-  it('reports untracked commit when no active task', () => {
+  it('reports untracked commit when no active card', () => {
     const signal: WatchSignal = {
       type: 'git_commit',
       timestamp: new Date().toISOString(),

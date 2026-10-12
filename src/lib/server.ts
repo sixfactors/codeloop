@@ -4,16 +4,6 @@ import { streamSSE } from 'hono/streaming';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join, extname, resolve, sep } from 'path';
-import {
-  loadBoard,
-  saveBoard,
-  addTask,
-  updateTask,
-  deleteTask,
-  getTask,
-  type AddTaskInput,
-  type Task,
-} from './board.js';
 import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
 import { getIndex, type Diff, type ProjectIndex } from './index/index.js';
@@ -111,15 +101,10 @@ export function createApp(
   index.subscribe(diffs => {
     for (const send of sinks) send(diffs);
   });
-  const legacyBoard = (id: string, kind: 'put' | 'remove') => {
-    const diff = { repo: 'board', id, version: statSync(join(projectDir, '.codeloop/board.json'), { throwIfNoEntry: false })?.mtimeMs ?? 0, kind } as unknown as Diff;
-    for (const send of sinks) send([diff]);
-  };
-
   // After an engine write in this process the index is patched before the response, so the
   // caller's next read sees it; the file watcher's later report of the same file is a no-op.
   const refreshCards = () => index.patch({ repo: 'cards' });
-  /** For `codeloop watch` and the serve watcher: cards.json or board.json moved on disk. */
+  /** For `codeloop watch` and the serve watcher: cards.json moved on disk. */
   const broadcast = () => void refreshCards();
   const broadcastCards = broadcast;
 
@@ -465,52 +450,6 @@ export function createApp(
     return new Response(readFileSync(file), { headers: { 'Content-Type': MIME_TYPES[extname(file)] || 'application/octet-stream' } });
   });
   app.get(mocksRoute(''), (c) => c.redirect(mocksRoute('/')));
-
-  // The legacy task board, kept for `codeloop watch`.
-  app.get(api('/board'), (c) => c.json(loadBoard(projectDir)));
-
-  app.post(api('/tasks'), async (c) => {
-    const body = await c.req.json<AddTaskInput>();
-    let board = loadBoard(projectDir);
-    board = addTask(board, body);
-    saveBoard(projectDir, board);
-
-    const task = board.tasks[board.tasks.length - 1];
-    legacyBoard(task.id, 'put');
-    return c.json(task, 201);
-  });
-
-  app.patch(api('/tasks/:id'), async (c) => {
-    const id = c.req.param('id')!;
-    const patch = await c.req.json<Partial<Omit<Task, 'id' | 'createdAt'>>>();
-
-    let board = loadBoard(projectDir);
-    try {
-      board = updateTask(board, id, patch);
-    } catch (e: any) {
-      return c.json({ error: e.message }, 404);
-    }
-
-    saveBoard(projectDir, board);
-    const task = getTask(board, id)!;
-    legacyBoard(id, 'put');
-    return c.json(task);
-  });
-
-  app.delete(api('/tasks/:id'), (c) => {
-    const id = c.req.param('id')!;
-    let board = loadBoard(projectDir);
-
-    try {
-      board = deleteTask(board, id);
-    } catch (e: any) {
-      return c.json({ error: e.message }, 404);
-    }
-
-    saveBoard(projectDir, board);
-    legacyBoard(id, 'remove');
-    return c.json({ ok: true });
-  });
 
   // GET /api/events: a `hello` with the collections' version counters, then one message per
   // changed entity, `{repo, id, version, kind}`. Diffs landing within 50 ms go out together, the

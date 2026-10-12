@@ -109,12 +109,20 @@ Initializing codeloop...
     + .codeloop/lanes/shape.yaml
     + .codeloop/lanes/triage.yaml
     + .codeloop/lanes/wiki.yaml
-    + .codeloop/rules.md
-    + .codeloop/gotchas.md
-    + .codeloop/patterns.md
-    + .codeloop/principles.md
-    + .codeloop/board.json
     + .codeloop/.gitignore
+    + .codeloop/wiki
+    + .codeloop/wiki/architecture/
+    + .codeloop/wiki/gotchas/
+    + .codeloop/wiki/decisions/
+    + .codeloop/wiki/runbooks/
+    + .codeloop/wiki/competitors/
+    + .codeloop/wiki/reference/
+    + .codeloop/wiki/initiatives/
+    + .codeloop/wiki/epics/
+    + .codeloop/wiki/features/
+    + .codeloop/wiki/cards/
+    + .codeloop/wiki/numbers/
+    + .codeloop/wiki/INDEX.md
     + .codeloop/config.yaml
 
 Done.
@@ -132,8 +140,8 @@ Done.
 |---|---|---|
 | `.codeloop/lanes/*.yaml` | The ten lanes. Each one is a list of stages with a check command and, where you want to decide, a gate. | No |
 | `.codeloop/config.yaml` | Project name, scopes, quality checks, agents, deploy commands. | No |
-| `.codeloop/rules.md`, `gotchas.md`, `patterns.md`, `principles.md` | Knowledge the agents read and the learn loop writes. | No |
-| `.codeloop/board.json` | The board the web UI reads. | No |
+| `.codeloop/wiki/` | What the project knows: architecture, gotchas, decisions, runbooks. Agents read it before a stage and the learn loop writes it. | No |
+| `.codeloop/cards.json` | The board: every story, its stage and its events. Written on the first card. | No |
 | `.claude/commands/*.md` | Ten commands: design, plan, manage, test, commit, qa, deploy, debug, reflect, ship. The cron lanes name them. | Yes, when the version changes |
 | `.claude/skills/<name>/` | Sixteen stage skills, each a `SKILL.md` with its procedure, a `template.md` and a `checklist.md`: brief, breakdown, research, interview, mock, spec, api, sdk, ui, test-design, verify, review, release, system-design, workflow, architecture. The build, shape and wiki lanes name one per stage. | Yes, when the version changes |
 | `.codeloop/skills.index.yaml` | Index of the skills and commands that exist in the repo, so lanes can name them. Gitignored. | Rebuilt |

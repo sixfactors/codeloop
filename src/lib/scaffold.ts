@@ -4,6 +4,7 @@ import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { parse as parseYaml } from 'yaml';
 import type { ProjectDetection } from './detect.js';
+import { seedWiki } from './wiki.js';
 
 const { copySync, ensureDirSync, existsSync, readdirSync, readFileSync, writeFileSync } = fse;
 
@@ -84,13 +85,9 @@ function getLaneFiles(): ScaffoldFile[] {
 }
 
 function getKnowledgeFiles(): ScaffoldFile[] {
+  // Lanes and gitignore only. Lessons live in `.codeloop/wiki/` (seeded below), not gotchas.md.
   return [
     ...getLaneFiles(),
-    { source: 'templates/codeloop/rules.md', destination: '.codeloop/rules.md', overwrite: false },
-    { source: 'templates/codeloop/gotchas.md', destination: '.codeloop/gotchas.md', overwrite: false },
-    { source: 'templates/codeloop/patterns.md', destination: '.codeloop/patterns.md', overwrite: false },
-    { source: 'templates/codeloop/principles.md', destination: '.codeloop/principles.md', overwrite: false },
-    { source: 'templates/codeloop/board.json', destination: '.codeloop/board.json', overwrite: false },
     { source: 'templates/codeloop/gitignore', destination: '.codeloop/.gitignore', overwrite: false },
   ];
 }
@@ -134,34 +131,8 @@ export function scaffold(projectDir: string, starterFile: string, tools: ToolId[
     result.created.push(file.destination);
   }
 
-  // 3. Append seed content to knowledge files based on stack
-  const stackId = starterFile.replace('.yaml', '');
-  const seedTargets: { knowledge: string; seeds: string[] }[] = [
-    {
-      knowledge: '.codeloop/gotchas.md',
-      seeds: ['templates/seeds/universal-gotchas.md', `templates/seeds/${stackId}-gotchas.md`],
-    },
-    {
-      knowledge: '.codeloop/patterns.md',
-      seeds: ['templates/seeds/universal-patterns.md', `templates/seeds/${stackId}-patterns.md`],
-    },
-  ];
-
-  for (const target of seedTargets) {
-    const destPath = join(projectDir, target.knowledge);
-    // Only append seeds to files we just created (not pre-existing ones)
-    if (!result.created.includes(target.knowledge)) continue;
-    if (!existsSync(destPath)) continue;
-
-    let content = readFileSync(destPath, 'utf-8');
-    for (const seedSource of target.seeds) {
-      const seedPath = join(PACKAGE_ROOT, seedSource);
-      if (existsSync(seedPath)) {
-        content += '\n' + readFileSync(seedPath, 'utf-8').trimEnd() + '\n';
-      }
-    }
-    writeFileSync(destPath, content);
-  }
+  // 3. Wiki tree: gotchas, decisions, architecture folders and INDEX.md. Existing pages stay.
+  for (const path of seedWiki(projectDir)) result.created.push(path);
 
   // 4. Copy starter config → .codeloop/config.yaml
   const configDest = join(projectDir, '.codeloop/config.yaml');

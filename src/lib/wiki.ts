@@ -293,6 +293,40 @@ function writeIndex(projectDir: string): void {
   writeFileSync(join(projectDir, WIKI_DIR, 'INDEX.md'), lines.join('\n'));
 }
 
+/**
+ * Create the wiki folder tree and INDEX.md for a new project. Does not overwrite an existing
+ * INDEX.md. Returns the paths that were created.
+ */
+export function seedWiki(projectDir: string): string[] {
+  const created: string[] = [];
+  const root = join(projectDir, WIKI_DIR);
+  if (!existsSync(root)) {
+    mkdirSync(root, { recursive: true });
+    created.push(WIKI_DIR);
+  }
+  for (const section of WIKI_SHAPE) {
+    if (!section.folder) continue;
+    const dir = join(root, section.folder);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+      created.push(`${WIKI_DIR}/${section.folder}/`);
+    }
+  }
+  for (const { folder } of hiddenStorageFolders) {
+    const dir = join(root, folder);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+      created.push(`${WIKI_DIR}/${folder}/`);
+    }
+  }
+  const index = join(root, 'INDEX.md');
+  if (!existsSync(index)) {
+    writeIndex(projectDir);
+    created.push(`${WIKI_DIR}/INDEX.md`);
+  }
+  return created;
+}
+
 export function thresholds(projectDir: string): { critical: number; promote: number } {
   const config = loadConfig(projectDir);
   return { critical: config.codeloop?.critical_frequency ?? 3, promote: config.codeloop?.promote_frequency ?? 10 };

@@ -4,7 +4,6 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, wr
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { saveBoard, createBoard, addTask } from '../board.js';
 import { createCard } from '../engine.js';
 import { render } from '../render.js';
 import { installCi } from '../scaffold.js';
@@ -84,15 +83,13 @@ describe('init --ci', () => {
 });
 
 describe('board server', () => {
-  it('cannot change cards.json through PATCH /api/tasks/:id', async () => {
+  it('retired /api/tasks cannot change cards.json', async () => {
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
-    saveBoard(dir, addTask(createBoard(), { title: 'task' }));
     const cards = readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8');
     const { app, token } = createApp(dir);
 
-    for (const id of ['t-001', 'c-1']) {
-      await app.request(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': token }, body: JSON.stringify({ status: 'done', stage: 'done', gate: null }) });
-    }
+    const res = await app.request('/api/tasks/c-1', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': token }, body: JSON.stringify({ status: 'done', stage: 'done', gate: null }) });
+    expect(res.status).toBe(404);
     expect(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).toBe(cards);
   });
 });

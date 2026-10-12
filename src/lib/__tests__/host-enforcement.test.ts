@@ -497,7 +497,8 @@ describe('MCP tools: brief, ask, answer, check, propose', () => {
   }, 20_000);
 
   it('propose creates a proposal that does not start work', async () => {
-    const [result] = await session([{ method: 'tools/call', params: { name: 'propose', arguments: { lane: 'build', title: 'Found: a thing' } } }]);
+    // Same path as `codeloop card propose` / newProposal: titles must pass the story check.
+    const [result] = await session([{ method: 'tools/call', params: { name: 'propose', arguments: { lane: 'build', title: 'Download every invoice as one CSV' } } }]);
     expect(JSON.parse(result.result.content[0].text)).toMatchObject({ lane: 'build', created: true });
   }, 20_000);
 });

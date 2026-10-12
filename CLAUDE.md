@@ -6,7 +6,7 @@ Quick reference for the **codeloop** project.
 
 ## What Is This?
 
-A CLI tool (`codeloop`) that gives AI coding agents a self-improving workflow: **Plan → Build → Commit → Reflect**. Knowledge files (gotchas, patterns, rules) accumulate automatically through use, and frequency-driven severity escalation makes the loop smarter over time.
+A CLI tool (`codeloop`) that gives AI coding agents a self-improving workflow: **Plan → Build → Commit → Reflect**. Lessons live in `.codeloop/wiki/` (gotchas, decisions, architecture). Frequency-driven severity escalation and `codeloop learn` promote pages into `rules.md` over time.
 
 ---
 
@@ -66,10 +66,10 @@ codeloop/
 │   │   ├── cloud.ts              # `codeloop cloud connect|status|push|pull|disconnect` (optional)
 │   │   └── guard.ts              # Exit codes: 2 refusal, 3 version conflict
 │   └── lib/
-│       ├── board.ts              # Board data model + CRUD (immutable)
 │       ├── lane.ts               # Load + lint .codeloop/lanes/*.yaml
 │       ├── cards.ts              # Card store (.codeloop/cards.json), compare-and-swap writes
 │       ├── engine.ts             # The only code that moves a card: create/advance/approve/reject
+│       ├── wiki.ts               # Wiki pages, capture, learn, seed
 │       ├── cron.ts               # 5-field cron matcher (lists, ranges, steps, day names)
 │       ├── clock.ts              # The current time; CODELOOP_NOW replaces it for tests and the demo
 │       ├── lock.ts               # Exclusive lock file around every read-check-write
@@ -101,12 +101,9 @@ codeloop/
 │       ├── server.ts             # Hono server + REST API + SSE
 │       └── version.ts            # Semver comparison + version parsing
 ├── templates/
-│   ├── codeloop/                 # Knowledge file templates (.codeloop/)
-│   │   ├── rules.md
-│   │   ├── gotchas.md
-│   │   ├── patterns.md
-│   │   ├── principles.md
-│   │   └── board.json            # Empty board template
+│   ├── codeloop/                 # Supporting templates (.codeloop/)
+│   │   ├── rules.md              # Optional legacy template; learn promotes wiki pages here
+│   │   └── gitignore
 │   ├── lanes/                    # Lane files installed into .codeloop/lanes/ (never overwritten)
 │   ├── spec/                     # research, spec, plan, tasks templates for `spec new`
 │   ├── mock/template.html        # The one page shell and tokens block every mock starts from
@@ -141,7 +138,7 @@ codeloop/
 All board CRUD functions (`addTask`, `updateTask`, `moveTask`, `deleteTask`) return a **new board** — never mutate the input. This makes it safe for concurrent reads.
 
 ### Knowledge-Is-Sacred Rule
-`codeloop init` and `codeloop update` **never overwrite** existing knowledge files (gotchas.md, patterns.md, rules.md, board.json). Only skill templates (.claude/commands/*.md) get updated.
+`codeloop init` and `codeloop update` **never overwrite** existing wiki pages, lanes, or legacy knowledge files. Only skill templates (`.claude/commands/*.md`) get updated. Lane upgrades use `codeloop lane refresh <id>`.
 
 ### The Engine Is the Only Thing That Moves a Card
 `src/lib/engine.ts` moves cards (create, propose, advance, approve, reject), and only by executing the lane file: a stage's `done.cmd` exit code decides, gates park the card for a named approver, and every action is appended to `card.events`. Writes to `cards.json` go through `writeCards`, which refuses a write made from a stale read (`ConflictError`). Lanes change only through `lane propose` → `lane eval` → `lane promote`. Run `bash scripts/e2e-founder-loop.sh` after touching any of it.
@@ -162,7 +159,7 @@ Card ids must match letters-dash-digits, and `substitute(..., { shell: true })` 
 A done check or use case that cannot fail is worse than none. `lane eval` refuses a changed check with no failing fixture, `verify --mutate` refuses a use case that passes without the feature, and a use case with no runnable layer counts as a failure. In shell use cases put each assertion on its own line: under `set -e` a failing test inside an `&&` list does not stop the script.
 
 ### Frequency = Severity
-Gotchas start at `[freq:1]` (WARNING). Re-encountered → frequency increments. At `freq >= 3` → CRITICAL (blocks commits). At `freq >= 10` → promote to rules.md.
+Wiki gotcha pages start at `freq: 1` (warning). Re-capture of the same title increments frequency. At `freq >= 3` → critical. At `freq >= 10` → `codeloop learn` promotes the page into `rules.md`.
 
 ### Scope-Based Context Loading
 `/commit` maps changed files to scopes (from config.yaml), then loads only relevant gotcha/pattern sections. No wasted context.
@@ -182,9 +179,9 @@ Same markdown template goes to `.claude/commands/`, `.cursor/commands/`, `.agent
 
 ### Adding a New Template File
 
-1. Add the file to `templates/codeloop/` (or appropriate subdirectory)
-2. Add a `ScaffoldFile` entry in `scaffold.ts` → `getKnowledgeFiles()`
-3. Set `overwrite: false` for knowledge files (sacred)
+1. Add the file to `templates/lanes/` or `templates/skills/` (or appropriate subdirectory)
+2. For lanes, `getLaneFiles()` picks up every `.yaml` under `templates/lanes/`
+3. Set `overwrite: false` for anything that must never replace a user's copy
 4. Update the `files` array in `package.json` if needed for npm distribution
 
 ### Version Tags in Templates
@@ -216,5 +213,5 @@ npm run test:coverage       # Coverage report
 1. **ESM only** — Use `.js` extensions in all imports, `"type": "module"` in package.json
 2. **Immutable board ops** — Never mutate input boards/tasks
 3. **Never overwrite knowledge** — `overwrite: false` on all knowledge files in scaffold
-4. **Atomic file writes** — Write board.json via temp file + rename (not direct write)
+4. **Atomic file writes**: write cards.json via temp file + rename (not direct write)
 5. **No `doc.save()` pattern** — Return new objects, don't mutate in place

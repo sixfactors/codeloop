@@ -7,7 +7,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { parseVersion, compareVersions } from '../lib/version.js';
 import { parse as parseYaml } from 'yaml';
-import { loadBoard } from '../lib/board.js';
+import { listPages, thresholds, WIKI_DIR } from '../lib/wiki.js';
 import { getServeStatus } from './serve.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -242,60 +242,35 @@ export const statusCommand = new Command('status')
       console.log(`    ${skill.name}: ${toolStrs.join(', ')}`);
     }
 
-    // Knowledge
+    // Knowledge: wiki first; legacy markdown files only when they still exist.
     console.log();
     console.log(chalk.bold('  Knowledge'));
-    const gotchas = getKnowledgeStats(projectDir, 'gotchas.md');
-    const patterns = getKnowledgeStats(projectDir, 'patterns.md');
-    const rules = getKnowledgeStats(projectDir, 'rules.md');
-
-    for (const stats of [gotchas, patterns, rules]) {
-      if (!stats.exists) {
-        console.log(chalk.dim(`    ${stats.file}: not found`));
-        continue;
+    const wikiRoot = join(projectDir, WIKI_DIR);
+    if (existsSync(wikiRoot)) {
+      const pages = listPages(projectDir);
+      const { critical, promote } = thresholds(projectDir);
+      const criticalPages = pages.filter(p => p.severity === 'critical' || p.freq >= critical);
+      console.log(`    wiki: ${pages.length} page${pages.length === 1 ? '' : 's'}${criticalPages.length ? `, ${criticalPages.length} critical (freq >= ${critical})` : ''}`);
+      const nearPromote = pages.filter(p => !p.promoted && p.freq >= promote);
+      if (nearPromote.length) {
+        console.log(chalk.yellow(`    ${nearPromote.length} page(s) at freq >= ${promote}; \`codeloop learn\` promotes them into rules.md`));
       }
-
+    } else {
+      console.log(chalk.dim(`    wiki: not found (${WIKI_DIR})`));
+    }
+    for (const stats of [getKnowledgeStats(projectDir, 'gotchas.md'), getKnowledgeStats(projectDir, 'patterns.md'), getKnowledgeStats(projectDir, 'rules.md')]) {
+      if (!stats.exists) continue;
       const freqStr = Object.entries(stats.freqDistribution)
         .map(([bucket, count]) => `${bucket}: ${count}`)
         .join(', ');
-
-      console.log(`    ${stats.file}: ${stats.entries} entries${freqStr ? ` (${freqStr})` : ''}`);
-    }
-
-    // High-frequency suggestions
-    if (gotchas.highFreqEntries.length > 0) {
-      console.log();
-      console.log(chalk.bold('  Suggestions'));
-      console.log(chalk.yellow(`    ${gotchas.highFreqEntries.length} gotcha(s) at freq >= 10, consider promoting to rules.md:`));
-      for (const entry of gotchas.highFreqEntries) {
-        console.log(chalk.yellow(`      - ${entry}`));
-      }
-    }
-
-    // Board stats
-    const board = loadBoard(projectDir);
-    if (board.tasks.length > 0) {
-      console.log();
-      console.log(chalk.bold('  Board'));
-      const byStatus: Record<string, number> = {};
-      for (const task of board.tasks) {
-        byStatus[task.status] = (byStatus[task.status] || 0) + 1;
-      }
-      const statusStr = Object.entries(byStatus)
-        .map(([status, count]) => `${status}: ${count}`)
-        .join(', ');
-      console.log(`    ${board.tasks.length} tasks (${statusStr})`);
-    } else if (existsSync(join(projectDir, '.codeloop', 'board.json'))) {
-      console.log();
-      console.log(chalk.bold('  Board'));
-      console.log(chalk.dim('    No tasks yet'));
+      console.log(`    ${stats.file}: ${stats.entries} entries${freqStr ? ` (${freqStr})` : ''} ${chalk.dim('(legacy)')}`);
     }
 
     // Serve status
     const serveStatus = getServeStatus(projectDir);
     if (serveStatus.running) {
       console.log(chalk.green(`    Server: running (PID ${serveStatus.pid})`));
-    } else if (existsSync(join(projectDir, '.codeloop', 'board.json'))) {
+    } else if (existsSync(join(projectDir, '.codeloop', 'cards.json'))) {
       console.log(chalk.dim('    Server: not running'));
     }
 

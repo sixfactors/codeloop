@@ -105,7 +105,8 @@ describe('proposed cards', () => {
     const { card } = proposeCard(dir, { lane: 'plan', title: 'Acme shipped: X', description: 'excerpt', source: 'https://acme.test/changelog' });
     expect(runDue(dir).advanced).toEqual([]);
     expect(() => advanceCard(dir, card.id)).toThrow(RefusalError);
-    expect(buildInbox(dir).needs_you).toMatchObject([{ id: card.id, gate: 'proposal', source: 'https://acme.test/changelog', last_check: 'not started: a proposal' }]);
+    expect(buildInbox(dir).needs_you).toEqual([]);
+    expect(buildInbox(dir).backlog).toMatchObject({ count: 1, oldest: { id: card.id, title: card.title } });
     expect(buildInbox(dir).numbers.find(n => n.lane === 'plan')).toMatchObject({ active: 0, parked: 1 });
     // wip is 1: a proposal must not use the slot.
     expect(createCard(dir, { lane: 'plan', title: 'real work' }).stage).toBe('gather');

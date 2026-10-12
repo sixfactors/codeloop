@@ -29,12 +29,20 @@ Initializing codeloop...
     + .codeloop/lanes/plan.yaml
     + .codeloop/lanes/scan.yaml
     + .codeloop/lanes/triage.yaml
-    + .codeloop/rules.md
-    + .codeloop/gotchas.md
-    + .codeloop/patterns.md
-    + .codeloop/principles.md
-    + .codeloop/board.json
     + .codeloop/.gitignore
+    + .codeloop/wiki
+    + .codeloop/wiki/architecture/
+    + .codeloop/wiki/gotchas/
+    + .codeloop/wiki/decisions/
+    + .codeloop/wiki/runbooks/
+    + .codeloop/wiki/competitors/
+    + .codeloop/wiki/reference/
+    + .codeloop/wiki/initiatives/
+    + .codeloop/wiki/epics/
+    + .codeloop/wiki/features/
+    + .codeloop/wiki/cards/
+    + .codeloop/wiki/numbers/
+    + .codeloop/wiki/INDEX.md
     + .codeloop/config.yaml
 
 Done.

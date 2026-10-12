@@ -34,7 +34,7 @@ describe('package integrity', () => {
   });
 
   it('knowledge templates exist', () => {
-    const files = ['board.json', 'rules.md', 'gotchas.md', 'patterns.md', 'principles.md'];
+    const files = ['rules.md', 'gotchas.md', 'patterns.md', 'principles.md'];
     for (const file of files) {
       const path = join(PACKAGE_ROOT, `templates/codeloop/${file}`);
       expect(existsSync(path), `Missing knowledge template: ${file}`).toBe(true);

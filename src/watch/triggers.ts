@@ -1,4 +1,6 @@
-import { loadBoard, saveBoard, updateTask, addTask, type Board } from '../lib/board.js';
+import { getActiveCard } from '../lib/active-card.js';
+import { findCardOrNone, readCards, writeCards, type CardEvent } from '../lib/cards.js';
+import { clock } from '../lib/clock.js';
 import type { WatchSignal } from './signals.js';
 
 export interface TriggerResult {
@@ -24,32 +26,43 @@ export function processSignal(projectDir: string, signal: WatchSignal): TriggerR
       break;
 
     case 'git_commit': {
-      // Append commit SHA to the active board task
+      const cardId = getActiveCard(projectDir);
+      if (!cardId) {
+        results.push({
+          action: 'commit_untracked',
+          details: `${signal.data.sha}: no active card`,
+        });
+        break;
+      }
       try {
-        let board = loadBoard(projectDir);
-        const activeTask = board.tasks.find(
-          t => t.status === 'in_progress' || t.status === 'planned',
-        );
-
-        if (activeTask) {
-          const commits = [...activeTask.commits, signal.data.sha as string];
-          board = updateTask(board, activeTask.id, { commits });
-          saveBoard(projectDir, board);
-
-          results.push({
-            action: 'commit_tracked',
-            details: `${signal.data.sha} → task ${activeTask.id} (${signal.data.message})`,
-          });
-        } else {
+        const file = readCards(projectDir);
+        const card = findCardOrNone(file.cards, cardId);
+        if (!card) {
           results.push({
             action: 'commit_untracked',
-            details: `${signal.data.sha} — no active task on board`,
+            details: `${signal.data.sha}: active card ${cardId} not on the board`,
           });
+          break;
         }
+        const now = clock();
+        const event: CardEvent = {
+          at: now.toISOString(),
+          actor: 'watch',
+          human: false,
+          action: 'commit',
+          stage: card.stage,
+          note: `${signal.data.sha}${signal.data.message ? ` ${signal.data.message}` : ''}`,
+        };
+        const next = { ...card, events: [...card.events, event], updatedAt: now.toISOString() };
+        writeCards(projectDir, file, file.cards.map(c => (c.id === card.id ? next : c)));
+        results.push({
+          action: 'commit_tracked',
+          details: `${signal.data.sha} → card ${card.id} (${signal.data.message})`,
+        });
       } catch {
         results.push({
           action: 'commit_error',
-          details: `Failed to update board with commit ${signal.data.sha}`,
+          details: `Failed to record commit ${signal.data.sha} on card ${cardId}`,
         });
       }
       break;
