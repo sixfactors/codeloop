@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codeloop UI design</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --sunk: #efefec; --line: #dcdcd6; --line-strong: #b9b9b0;
+  --text: #1d1d1b; --muted: #6b6b64; --faint: #9a9a92;
+  --accent: #c2512f; --accent-soft: #f6e3dc;
+  --agent: #3d5bd9; --agent-soft: #e3e8fb;
+  --ok: #2f7d4f; --ok-soft: #e0f0e6; --warn: #a86a00; --warn-soft: #f8ecd2; --bad: #b3261e; --bad-soft: #f7dedc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --surface: #1f1f1d; --sunk: #2a2a27; --line: #36362f; --line-strong: #4d4d45;
+    --text: #ecece6; --muted: #a3a39a; --faint: #75756d;
+    --accent: #e0805f; --accent-soft: #3d241b; --agent: #8ea2f2; --agent-soft: #232a47;
+    --ok: #6cc08d; --ok-soft: #1c3326; --warn: #e0b04f; --warn-soft: #3a2f16; --bad: #ef8a83; --bad-soft: #3e1f1d;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; padding-inline: 16px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 80px; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; text-wrap: balance; }
+h2 { font-size: 1.35rem; margin: 56px 0 6px; text-wrap: balance; }
+h3 { font-size: 1.02rem; margin: 22px 0 6px; }
+p, li { max-width: 68ch; }
+.lede { color: var(--muted); font-size: 1.05rem; }
+.kicker { text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; color: var(--muted); font-weight: 600; }
+.num { color: var(--accent); font-weight: 700; margin-right: 6px; }
+code { font: .86em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.box h3 { margin-top: 0; }
+.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); }
+
+/* the vocabulary of building blocks, drawn as they would read */
+.key { font: 600 .78rem ui-monospace, Menlo, monospace; color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--sunk); white-space: nowrap; }
+.pill.agent { background: var(--agent-soft); border-color: transparent; color: var(--agent); }
+.pill.you { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.pill.ok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.pill.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.pill.bad { background: var(--bad-soft); border-color: transparent; color: var(--bad); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+.live { animation: none; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: .66rem; font-weight: 700; color: #fff; background: var(--muted); flex: none; }
+.av.agent { background: var(--agent); border-radius: 6px; }
+.prio { font-weight: 700; font-size: .74rem; }
+.proof { display: inline-flex; gap: 2px; }
+.proof i { width: 10px; height: 6px; border-radius: 2px; background: var(--line-strong); display: inline-block; }
+.proof i.y { background: var(--ok); } .proof i.n { background: var(--bad); }
+
+/* wireframes */
+.frame { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); overflow: hidden; margin: 16px 0 6px; }
+.chrome { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--sunk); font-size: .8rem; color: var(--muted); flex-wrap: wrap; }
+.chrome .crumb { color: var(--text); font-weight: 600; }
+.chrome .search { margin-left: auto; border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; background: var(--surface); min-width: 0; }
+.app { display: grid; grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); min-height: 300px; }
+.nav { border-right: 1px solid var(--line); padding: 12px 10px; font-size: .84rem; display: flex; flex-direction: column; gap: 2px; }
+.nav b { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 10px 6px 4px; }
+.nav span { padding: 4px 8px; border-radius: 6px; display: flex; justify-content: space-between; gap: 6px; }
+.nav span.on { background: var(--sunk); font-weight: 600; }
+.nav em { font-style: normal; font-size: .7rem; background: var(--accent-soft); color: var(--accent); padding: 0 6px; border-radius: 999px; }
+.main { padding: 14px 16px; min-width: 0; }
+.main h4 { margin: 0 0 2px; font-size: 1rem; }
+.sub { color: var(--muted); font-size: .8rem; margin-bottom: 12px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: .85rem; flex-wrap: wrap; }
+.row .t { flex: 1 1 200px; min-width: 0; }
+.row .act { display: flex; gap: 6px; margin-left: auto; }
+.btn { font-size: .74rem; font-weight: 600; border: 1px solid var(--line-strong); border-radius: 6px; padding: 2px 9px; background: var(--surface); white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.section-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin: 14px 0 4px; display: flex; gap: 8px; align-items: center; }
+.cols { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 8px; }
+.col { background: var(--sunk); border-radius: 8px; padding: 8px; min-height: 120px; display: flex; flex-direction: column; gap: 6px; }
+.col > .h { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px; font-size: .8rem; display: flex; flex-direction: column; gap: 5px; }
+.tile .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.lane-label { font-size: .7rem; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); gap: 16px; }
+.props { border-left: 1px solid var(--line); padding-left: 14px; font-size: .82rem; display: flex; flex-direction: column; gap: 7px; }
+.props div { display: grid; grid-template-columns: 82px 1fr; gap: 6px; align-items: center; }
+.props dt, .props .l { color: var(--muted); }
+.tabs { display: flex; gap: 14px; border-bottom: 1px solid var(--line); font-size: .82rem; margin: 10px 0; flex-wrap: wrap; }
+.tabs span { padding: 6px 0; color: var(--muted); }
+.tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); }
+.check { display: flex; gap: 8px; align-items: center; font-size: .82rem; padding: 4px 0; }
+.tree { font-size: .82rem; }
+.tree div { padding: 4px 6px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tree .i1 { padding-left: 22px; } .tree .i2 { padding-left: 40px; }
+.bar { height: 8px; border-radius: 4px; background: var(--accent); opacity: .75; }
+.timeline { display: grid; grid-template-columns: 160px repeat(6, minmax(40px, 1fr)); gap: 4px 0; font-size: .74rem; align-items: center; }
+.timeline .wk { color: var(--muted); border-left: 1px solid var(--line); padding-left: 4px; }
+.doc { font-size: .86rem; }
+.doc .callout { background: var(--sunk); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.caption { font-size: .8rem; color: var(--muted); margin-bottom: 22px; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: .82rem; }
+.mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; } .nav { display: none; }
+  .split { grid-template-columns: 1fr; } .props { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 10px; }
+  .cols { overflow-x: auto; grid-template-columns: repeat(5, 170px); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="kicker">codeloop · design proposal · 2026-10-12 · status: target design, initiative people-and-agents-workplace</div>
+<h1>codeloop, designed as a workplace for people and agents</h1>
+<p class="lede">The target design for codeloop's interface, built from the bottom up: the things a team tracks, the fields on each, the small pieces that show them, and the screens those pieces add up to. It covers the Jira-style project management and the wiki as one product. It describes how it should be, not how it is today.</p>
+
+<div class="note">Reading order: the job, the objects, the fields and states, the building blocks, the screens, the main flows, and what is different from Jira. The build order and the decisions needed from you are at the end.</div>
+
+<h2><span class="num">1</span>The job it does</h2>
+<p>A founder or a small team describes work. Agents do most of it. People decide at a few points and want proof before they do. The interface exists for three moments of the day:</p>
+<div class="grid">
+  <div class="box"><h3>"What needs me?"</h3><p>Approvals, questions an agent asked, work that is failing or stuck. Answer each in place, with the evidence beside it, in minutes.</p></div>
+  <div class="box"><h3>"What is moving?"</h3><p>Which stories are in flight, who holds each one (an agent or a person), what stage it is at, and whether its checks pass.</p></div>
+  <div class="box"><h3>"What next, and what shipped?"</h3><p>Rank the plan, fill Up next, see releases and what each delivered. Read why a decision was made, in the wiki.</p></div>
+</div>
+<p>Two principles follow from this. <b>Nothing is approved without its proof on the same screen.</b> <b>An agent is a teammate with a name and a status</b>, shown the same way a person is, so "who has this" always has an answer.</p>
+
+<h2><span class="num">2</span>The objects</h2>
+<p>Eleven things, in two families. Work is tracked in a hierarchy. Knowledge lives in the wiki and is linked to the work, never copied into it.</p>
+<pre class="mermaid">
+flowchart LR
+  subgraph Work
+    I[Initiative<br/>a bet with a metric] --> E[Epic<br/>an outcome]
+    E --> S[Story<br/>one shippable change]
+    S --> T[Task<br/>a step, by layer]
+    S --> Q[Question<br/>asked by an agent]
+    S --> A[Approval<br/>a gate decision]
+    S --> P[Proof<br/>tests, review, commits, mock]
+    S -.ships in.-> R[Release<br/>a git tag]
+  end
+  subgraph Knowledge
+    W[Wiki page<br/>architecture, runbook, reference]
+    D[Decision<br/>why, with date and owner]
+    G[Gotcha<br/>a mistake not to repeat]
+  end
+  S -.reads / updates.-> W
+  S -.records.-> D
+  S -.learns.-> G
+  M((Member<br/>person or agent)) -.holds.-> S
+</pre>
+<p class="caption">Feature is not a separate object. In practice it was an epic with a score. Score moves onto the epic and the hierarchy is three levels: initiative, epic, story.</p>
+
+<div class="scroll"><table>
+<tr><th>Object</th><th>What it is</th><th>Lives in</th><th>Who writes it</th></tr>
+<tr><td>Initiative</td><td>A bet: a goal, a metric and a hypothesis. Few, long-lived.</td><td>Plan</td><td>Owner</td></tr>
+<tr><td>Epic</td><td>An outcome that needs several stories. Carries the score (reach, impact, confidence, effort).</td><td>Plan</td><td>Owner or an agent's proposal</td></tr>
+<tr><td>Story</td><td>One shippable change, written as "as / can / so that" with acceptance lines. The unit everything else hangs off.</td><td>Board, Plan</td><td>Anyone; agents propose</td></tr>
+<tr><td>Bug</td><td>A story type with steps to reproduce and an expected result instead of "so that".</td><td>Board</td><td>Anyone, triage</td></tr>
+<tr><td>Task</td><td>A step inside a story, tagged by layer (api, sdk, ui, test, docs). Ticked by whoever does it.</td><td>Story</td><td>Agent</td></tr>
+<tr><td>Question</td><td>Something an agent needs decided, with a recommended answer.</td><td>Story, Home</td><td>Agent asks, person answers</td></tr>
+<tr><td>Approval</td><td>A gate: spec, local check, review, release. Records who approved, when, and what proof they saw.</td><td>Story, Home</td><td>Person</td></tr>
+<tr><td>Proof</td><td>Use cases with their last run, reviews with a verdict, commits carrying the story id, mocks, screenshots.</td><td>Story</td><td>Computed and agents</td></tr>
+<tr><td>Release</td><td>A git tag, and the stories that shipped in it, with generated notes.</td><td>Releases</td><td>Computed</td></tr>
+<tr><td>Wiki page</td><td>How the system works: architecture, runbooks, reference. Has an owner and a last-verified date.</td><td>Wiki</td><td>Agents and people</td></tr>
+<tr><td>Decision, Gotcha</td><td>Typed wiki pages. A decision has context, choice and consequences. A gotcha has a trigger, a symptom and a fix.</td><td>Wiki</td><td>Agents and people</td></tr>
+</table></div>
+
+<h2><span class="num">3</span>Fields, and one set of states</h2>
+<h3>The story's fields</h3>
+<p>Taken from Jira where they earn their place. Every field has one home on screen: the property panel on the right of a story.</p>
+<div class="scroll"><table>
+<tr><th>Field</th><th>Shown as</th><th>Notes</th></tr>
+<tr><td>Key</td><td><span class="key">CL-142</span></td><td>Project prefix plus number. The commit trailer and every link use it.</td></tr>
+<tr><td>Type</td><td>Story, Bug, Chore</td><td>Decides the template the spec starts from.</td></tr>
+<tr><td>Status</td><td><span class="pill">Build</span></td><td>One of the states below.</td></tr>
+<tr><td>Holder</td><td><span class="av agent">A</span> agent, or <span class="av">DG</span> person</td><td>Who has it right now. Changes as the story moves; history keeps every hand-off.</td></tr>
+<tr><td>Owner</td><td><span class="av">DG</span></td><td>The person accountable. Approves its gates.</td></tr>
+<tr><td>Reviewer</td><td><span class="av">LD</span></td><td>Who reviews the change. May be an agent for low-risk work.</td></tr>
+<tr><td>Priority</td><td><span class="prio" style="color:var(--bad)">P1</span> to P4</td><td>From the epic's score unless set by hand.</td></tr>
+<tr><td>Size, Risk</td><td>S M L, low high</td><td>L cannot pass the spec gate unsplit. Risk sets review depth.</td></tr>
+<tr><td>Parent</td><td>Epic</td><td>One parent. Initiative is inherited.</td></tr>
+<tr><td>Links</td><td>blocks, blocked by, relates, duplicates</td><td>A blocked story never enters Up next.</td></tr>
+<tr><td>Labels, Area</td><td>chips</td><td>Area maps to code owners and routes review.</td></tr>
+<tr><td>Release</td><td><code>v0.5.0</code> or next</td><td>Filled when it ships, or set as a target.</td></tr>
+<tr><td>Proof</td><td><span class="proof"><i class="y"></i><i class="y"></i><i class="y"></i><i></i></span> 3 of 4</td><td>Acceptance lines covered by passing evidence.</td></tr>
+<tr><td>Time in stage</td><td>2d</td><td>With a limit per stage; past it the story shows in Needs you.</td></tr>
+<tr><td>Watchers</td><td>avatars</td><td>Notified on gates, questions and failures.</td></tr>
+</table></div>
+
+<h3>States: what people see, and what agents do inside them</h3>
+<p>Today's lanes and nine stages are too many to read. People need six states. The stage inside "In progress" is shown as a sub-label, not a column, unless a team turns it on.</p>
+<div class="legend">
+  <span class="pill">Backlog</span> →
+  <span class="pill">Up next</span> →
+  <span class="pill agent"><span class="dot"></span>In progress · Shape / Spec / Build / Test</span> →
+  <span class="pill you">Needs you</span> →
+  <span class="pill ok">Done</span> →
+  <span class="pill ok">Shipped in v0.5.0</span>
+</div>
+<p>Two flags can sit on any state: <span class="pill bad">Failing</span> when the last check failed, and <span class="pill warn">Blocked</span> when a linked story is not done. "Needs you" is not a stage the work moves into; it is shown whenever a gate, a question or a failure waits on a person, so the board never hides it.</p>
+
+<h2><span class="num">4</span>The building blocks</h2>
+<p>Every screen is assembled from these twelve pieces, and nothing else. Each one maps to a component in the shared library, so the screens stay consistent and the code stays small.</p>
+<div class="grid">
+  <div class="box"><h3>Key</h3><span class="key">CL-142</span><p>Monospace, copyable, links to the story everywhere.</p></div>
+  <div class="box"><h3>Status pill</h3><span class="pill">Spec</span> <span class="pill agent"><span class="dot"></span>Build</span><p>A dot means an agent is working on it now.</p></div>
+  <div class="box"><h3>Holder</h3><span class="av agent">A</span> <span class="av">DG</span><p>Square for an agent, round for a person. Hover shows the session.</p></div>
+  <div class="box"><h3>Priority</h3><span class="prio" style="color:var(--bad)">P1</span> <span class="prio" style="color:var(--warn)">P2</span> <span class="prio" style="color:var(--muted)">P3</span><p>Text, not an icon set.</p></div>
+  <div class="box"><h3>Proof meter</h3><span class="proof"><i class="y"></i><i class="y"></i><i class="n"></i><i></i></span><p>One segment per acceptance line: passed, failed, no evidence.</p></div>
+  <div class="box"><h3>Gate badge</h3><span class="pill you">Local check</span><p>Which decision is waiting, and on whom.</p></div>
+  <div class="box"><h3>Question bubble</h3><span class="pill agent">2 questions</span><p>Opens the questions with the recommended answers.</p></div>
+  <div class="box"><h3>Link chip</h3><span class="pill">blocks CL-150</span><p>Typed links between stories, and to wiki pages.</p></div>
+  <div class="box"><h3>Property row</h3><p>Label and value, editable in place. The right panel is a stack of these.</p></div>
+  <div class="box"><h3>Activity entry</h3><p>Who, what, when. Agents' entries collapse into one line per session.</p></div>
+  <div class="box"><h3>Query bar</h3><p><code>status:build holder:agent P1 area:auth</code>, with chips for each part. Saved as a view.</p></div>
+  <div class="box"><h3>Doc block</h3><p>Rendered markdown with a table of contents, backlinks and "changed by" stories.</p></div>
+</div>
+<p>They combine into five patterns: a <b>row</b> (lists), a <b>tile</b> (board), a <b>peek</b> (side sheet over any list), a <b>record</b> (the full story page) and a <b>doc</b> (a wiki page).</p>
+
+<h2><span class="num">5</span>The screens</h2>
+<p>Six places in the left navigation, the same in every project: Home, Board, Plan, Releases, Wiki, and Reports. Settings sits at the bottom. A project switcher at the top moves between projects; "All projects" shows every project's Home at once.</p>
+
+<h3>Home: what needs you, and what is moving</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span class="crumb">Home</span><span class="search">Search or run a command  ⌘K</span></div>
+  <div class="app">
+    <div class="nav">
+      <span class="on">Home <em>5</em></span><span>Board</span><span>Plan</span><span>Releases</span><span>Wiki</span><span>Reports</span>
+      <b>Agents</b><span>builder-1 <span class="pill agent"><span class="dot"></span>CL-142</span></span><span>reviewer <span class="pill">idle</span></span>
+    </div>
+    <div class="main">
+      <h4>Good morning. 5 things need you.</h4>
+      <div class="sub">3 shipped since yesterday · 4 in progress · 2 agents working</div>
+      <div class="section-label"><span class="pill you">Needs you</span></div>
+      <div class="row"><span class="key">CL-142</span><span class="t">Export invoices as CSV</span><span class="pill you">Local check</span><span class="proof"><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i></span><span class="act"><span class="btn">Open proof</span><span class="btn primary">Approve</span></span></div>
+      <div class="row"><span class="key">CL-151</span><span class="t">Pick which columns to export</span><span class="pill agent">2 questions</span><span class="act"><span class="btn primary">Answer</span></span></div>
+      <div class="row"><span class="key">CL-139</span><span class="t">Schedule a weekly export</span><span class="pill bad">Failing · 2 tries</span><span class="act"><span class="btn">See failure</span></span></div>
+      <div class="section-label">In progress</div>
+      <div class="row"><span class="av agent">A</span><span class="key">CL-148</span><span class="t">Retry failed webhook deliveries</span><span class="pill agent"><span class="dot"></span>Build · 3 of 7 tasks</span></div>
+      <div class="row"><span class="av">LD</span><span class="key">CL-146</span><span class="t">Invoice PDF layout</span><span class="pill">Spec</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Home replaces today's Inbox and hub home. Every row can be finished from here: approve, answer, or open the failure. The agents panel in the navigation shows who is working on what, live.</p>
+
+<h3>Board: work by state, with people and agents in swimlanes</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span class="crumb">Board</span><span class="search">status:active area:billing</span></div>
+  <div class="main">
+    <div class="sub">Group by: holder ▾ · Up next 4 of 6 · drag to rank</div>
+    <div class="lane-label">Needs you</div>
+    <div class="cols">
+      <div class="col"><div class="h">Up next <span>4/6</span></div><div class="tile"><span>Bulk delete invoices</span><div class="meta"><span class="key">CL-153</span><span class="prio" style="color:var(--warn)">P2</span></div></div></div>
+      <div class="col"><div class="h">Shape</div></div>
+      <div class="col"><div class="h">Spec</div><div class="tile"><span>Pick export columns</span><div class="meta"><span class="key">CL-151</span><span class="pill agent">2 questions</span></div></div></div>
+      <div class="col"><div class="h">Build</div><div class="tile"><span>Weekly export</span><div class="meta"><span class="key">CL-139</span><span class="pill bad">Failing</span></div></div></div>
+      <div class="col"><div class="h">Test</div><div class="tile"><span>Export invoices as CSV</span><div class="meta"><span class="key">CL-142</span><span class="pill you">Local check</span><span class="proof"><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i></span></div></div></div>
+    </div>
+    <div class="lane-label">Agents</div>
+    <div class="cols">
+      <div class="col"><div class="h">Up next</div></div>
+      <div class="col"><div class="h">Shape</div></div>
+      <div class="col"><div class="h">Spec</div></div>
+      <div class="col"><div class="h">Build</div><div class="tile"><span>Retry webhooks</span><div class="meta"><span class="av agent">A</span><span class="key">CL-148</span><span class="pill agent"><span class="dot"></span>3/7</span></div></div></div>
+      <div class="col"><div class="h">Test</div></div>
+    </div>
+  </div>
+</div>
+<p class="caption">One row of columns for the whole project, not one board per workflow. Swimlanes group by holder by default; group by epic or priority is one click. A story's tile shows key, priority, holder, flags and proof, and nothing more. Clicking opens the peek.</p>
+
+<h3>Story: the record, with its proof beside the decision</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span>Board</span><span class="crumb">CL-142</span><span class="search">⌘K</span></div>
+  <div class="main">
+    <div class="split">
+      <div>
+        <div class="kicker">Billing exports › CL-142 · Story</div>
+        <h4 style="font-size:1.15rem">Export invoices as CSV</h4>
+        <p style="font-size:.86rem;color:var(--muted);margin:4px 0 0">As a founder, I can export this month's invoices as CSV, so that my accountant gets them without asking me.</p>
+        <div class="tabs"><span class="on">Proof</span><span>Spec</span><span>Tasks 7/7</span><span>Questions 3</span><span>Wiki 2</span><span>Activity</span></div>
+        <div class="box" style="background:var(--accent-soft);border-color:transparent;margin-bottom:10px"><b>Waiting on you: local check.</b> Every acceptance line has passing evidence at commit <code>4c7ef63</code>. <span class="btn primary" style="margin-left:6px">Approve</span> <span class="btn">Send back</span></div>
+        <div class="check"><span class="pill ok">pass</span> US1 · the file has one row per invoice · <span class="key">uc-142-01</span> · 2 min ago</div>
+        <div class="check"><span class="pill ok">pass</span> US2 · amounts use the account currency · <span class="key">uc-142-02</span></div>
+        <div class="check"><span class="pill ok">pass</span> US3 · an empty month gives a header-only file · <span class="key">uc-142-03</span></div>
+        <div class="check"><span class="pill ok">accept</span> Review by <span class="av">LD</span> on 3 commits · 1 finding fixed</div>
+        <div class="check"><span class="pill">mock</span> 2 screens, matched by the shipped page</div>
+      </div>
+      <div class="props">
+        <div><span class="l">Status</span><span><span class="pill">Test</span> <span class="pill you">Local check</span></span></div>
+        <div><span class="l">Holder</span><span><span class="av">DG</span> you</span></div>
+        <div><span class="l">Owner</span><span><span class="av">DG</span></span></div>
+        <div><span class="l">Reviewer</span><span><span class="av">LD</span></span></div>
+        <div><span class="l">Priority</span><span class="prio" style="color:var(--bad)">P1</span></div>
+        <div><span class="l">Size, risk</span><span>M · low</span></div>
+        <div><span class="l">Parent</span><span>Billing exports</span></div>
+        <div><span class="l">Links</span><span><span class="pill">blocks CL-151</span></span></div>
+        <div><span class="l">Release</span><span>next</span></div>
+        <div><span class="l">In stage</span><span>4 h</span></div>
+        <div><span class="l">Commits</span><span>3 · 11 files</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">The record opens on whatever the story is waiting for. At a gate that is Proof; with open questions it is Questions; while an agent works it is Tasks with the live session. The architecture it touched is linked under Wiki, not copied into the story.</p>
+
+<h3>Plan: the hierarchy, ranked, with a timeline view</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span class="crumb">Plan</span><span class="search">⌘K</span></div>
+  <div class="main">
+    <div class="sub">Tree · Timeline &nbsp;|&nbsp; Up next holds 6 and refills from the top of this list</div>
+    <div class="tree">
+      <div><b>Initiative</b> Founders pay us in month one <span class="pill">metric: paid workspaces</span></div>
+      <div class="i1">▾ <b>Billing exports</b> <span class="prio" style="color:var(--bad)">P1</span> <span class="pill">score 42</span> <span class="proof"><i class="y"></i><i class="y"></i><i></i><i></i></span> 2 of 4 stories done</div>
+      <div class="i2"><span class="key">CL-142</span> Export invoices as CSV <span class="pill">Test</span></div>
+      <div class="i2"><span class="key">CL-151</span> Pick export columns <span class="pill">Spec</span></div>
+      <div class="i2"><span class="key">CL-153</span> Bulk delete invoices <span class="pill">Up next</span></div>
+      <div class="i1">▸ <b>Self-serve onboarding</b> <span class="prio" style="color:var(--warn)">P2</span> <span class="pill">score 31</span></div>
+      <div class="i1" style="color:var(--muted)">+ Describe a problem. An agent shapes it into an epic of stories for you to approve.</div>
+    </div>
+    <div class="section-label">Timeline</div>
+    <div class="timeline">
+      <span></span><span class="wk">Oct 13</span><span class="wk">20</span><span class="wk">27</span><span class="wk">Nov 3</span><span class="wk">10</span><span class="wk">17</span>
+      <span>Billing exports</span><span class="bar" style="grid-column: span 3"></span><span></span><span></span><span></span>
+      <span>Self-serve onboarding</span><span></span><span></span><span class="bar" style="grid-column: span 4;opacity:.45"></span>
+    </div>
+  </div>
+</div>
+<p class="caption">Plan replaces Initiatives and Roadmap. Order in the tree is the rank. The timeline is projected from rank, size and how many agents are available; it is an estimate and labelled as one.</p>
+
+<h3>Releases: what shipped, grouped by tag</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span class="crumb">Releases</span></div>
+  <div class="main">
+    <div class="row"><b>v0.5.0</b><span class="t">Oct 12 · 6 stories · 2 bugs</span><span class="act"><span class="btn">Release notes</span></span></div>
+    <div class="row" style="padding-left:22px"><span class="key">CL-131</span><span class="t">The inbox shows failing checks</span><span class="proof"><i class="y"></i><i class="y"></i><i class="y"></i></span></div>
+    <div class="row" style="padding-left:22px"><span class="key">CL-128</span><span class="t">Mocks live beside their spec</span><span class="proof"><i class="y"></i><i class="y"></i></span></div>
+    <div class="row"><b>Unreleased</b><span class="t">3 done, not tagged yet</span></div>
+  </div>
+</div>
+<p class="caption">Release notes are written from the stories' titles and "so that" lines, and edited before they go out.</p>
+
+<h3>Wiki: how the system works, and why</h3>
+<div class="frame">
+  <div class="chrome"><span>codeloop ▾</span><span>Wiki</span><span class="crumb">Architecture › Exports</span><span class="search">⌘K</span></div>
+  <div class="app">
+    <div class="nav">
+      <b>Start here</b><span>Overview</span>
+      <b>Architecture</b><span class="on">Exports</span><span>Billing</span><span>Data model</span>
+      <b>Decisions</b><span>CSV over XLSX</span>
+      <b>Gotchas</b><span>Currency rounding <em>3×</em></span>
+      <b>Runbooks</b><span>Release</span>
+    </div>
+    <div class="main doc">
+      <h4>Exports</h4>
+      <div class="sub">Owner <span class="av">DG</span> · verified 2 days ago · changed by <span class="key">CL-142</span> <span class="key">CL-128</span></div>
+      <p>An export is a background job that writes one file per request to object storage and emails a link.</p>
+      <div class="callout"><b>Decision:</b> CSV, not XLSX, because every accounting tool imports it. <span class="key">CL-142</span></div>
+      <div class="callout"><b>Gotcha, seen 3 times:</b> round per line, then sum; rounding the total breaks reconciliation.</div>
+      <div class="section-label">Referenced by</div>
+      <div class="row"><span class="key">CL-151</span><span class="t">Pick export columns</span><span class="pill">Spec</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">The wiki is a Notion-style reader and editor with typed pages. Every page shows who owns it, when it was last checked against the code, and which stories changed it. A gotcha seen three times becomes critical and appears in the brief of any story that touches its area.</p>
+
+<h3>Everywhere: command palette, peek, and keyboard</h3>
+<p><b>⌘K</b> finds any story, page or person, and runs any action: approve, answer, create, move. <b>Peek</b> opens a story in a side sheet over any list, so triage never loses its place. <b>j / k</b> move, <b>a</b> approves, <b>r</b> sends back, <b>c</b> creates. Every list supports multi-select and bulk change.</p>
+
+<h2><span class="num">6</span>The four flows that matter most</h2>
+<div class="grid">
+  <div class="box"><h3>Ask becomes a story</h3><p>Type in Claude, or "Describe a problem" in Plan. An agent writes the story with acceptance lines and puts it in Backlog for you to rank. Nothing starts until it reaches Up next.</p></div>
+  <div class="box"><h3>Approve with proof</h3><p>Home shows the gate. Open proof shows each acceptance line, its test and its last run, the review verdict and the commits. Approve records what you saw.</p></div>
+  <div class="box"><h3>Answer an agent</h3><p>Each question has a recommended answer. Accept with one key, or write your own. The agent continues on its own.</p></div>
+  <div class="box"><h3>Find out why</h3><p>From a story, the Wiki tab lists the pages it read and changed. From a page, "changed by" lists the stories and their decisions.</p></div>
+</div>
+
+<h2><span class="num">7</span>Compared with Jira</h2>
+<div class="scroll"><table>
+<tr><th>Jira has</th><th>codeloop</th><th>Why</th></tr>
+<tr><td>Issues, epics, initiatives</td><td>Stories, epics, initiatives; Bug and Chore as story types</td><td>Same hierarchy, one fewer level than today</td></tr>
+<tr><td>Assignee</td><td>Holder (person or agent) plus Owner</td><td>Agents do the work; a person stays accountable</td></tr>
+<tr><td>Workflow statuses and transitions</td><td>Six states; stages inside "In progress"</td><td>Readable by people, precise for agents</td></tr>
+<tr><td>Validators and conditions</td><td>Gates with proof</td><td>The check runs; the person sees its result</td></tr>
+<tr><td>JQL and saved filters</td><td>Query bar and saved views</td><td>Same idea, plainer syntax</td></tr>
+<tr><td>Sprints and story points</td><td>Up next with a limit, and size</td><td>Continuous flow suits agents better than timeboxes</td></tr>
+<tr><td>Versions</td><td>Releases from git tags</td><td>The tag is the truth</td></tr>
+<tr><td>Confluence</td><td>The wiki, linked both ways</td><td>Architecture stays in one place and stories link to it</td></tr>
+<tr><td>Time logging</td><td>Time in stage, from events</td><td>Measured, never typed</td></tr>
+<tr><td>Nothing similar</td><td>Proof meter, agent sessions, questions with recommendations</td><td>What working with agents needs</td></tr>
+</table></div>
+
+<h2><span class="num">8</span>Today's screens, and where each goes</h2>
+<div class="scroll"><table>
+<tr><th>Today</th><th>In this design</th></tr>
+<tr><td>Inbox, hub home</td><td>Home (per project, and All projects)</td></tr>
+<tr><td>Board, one row per workflow, nine stage columns</td><td>Board with one row of states and swimlanes</td></tr>
+<tr><td>Initiatives, Roadmap, epic and feature pages</td><td>Plan (tree and timeline); feature folds into epic</td></tr>
+<tr><td>Card page, card drawer</td><td>Story record and peek</td></tr>
+<tr><td>Evidence page, Artifacts page</td><td>The story's Proof tab; mocks under Proof</td></tr>
+<tr><td>Stats</td><td>Reports: flow, cycle time, waiting on people, agent cost</td></tr>
+<tr><td>Setup, Settings</td><td>Settings: members and agents, workflow, Up next, notifications, sign-in</td></tr>
+<tr><td>Wiki</td><td>Wiki with typed pages, owners, verified dates and story links</td></tr>
+</table></div>
+
+<h2><span class="num">9</span>Build order, bottom up</h2>
+<ol>
+  <li><b>Data:</b> the story's fields above, links, holder versus owner, states derived from stages. One API call per screen returns everything that screen needs.</li>
+  <li><b>Building blocks:</b> the twelve pieces in section 4, as shared components with a page that shows each in every state.</li>
+  <li><b>Patterns:</b> row, tile, peek, record, doc.</li>
+  <li><b>Screens:</b> Story record first, because every other screen links to it. Then Home, Board, Plan, Wiki, Releases, Reports.</li>
+  <li><b>Everywhere:</b> command palette, keyboard, bulk change, saved views.</li>
+</ol>
+<p>Each step ships behind a browser test and an independent design review before you see it.</p>
+
+<h2><span class="num">10</span>Decisions needed from you</h2>
+<div class="scroll"><table>
+<tr><th>Question</th><th>Recommended</th><th>Why it matters</th></tr>
+<tr><td>Fold Feature into Epic, so the hierarchy is initiative, epic, story?</td><td>Yes</td><td>Removes a level nobody could tell apart from epic</td></tr>
+<tr><td>Show six states by default, with stages as sub-labels?</td><td>Yes; teams can switch to stage columns</td><td>Today's nine columns per workflow are why the board reads as complicated</td></tr>
+<tr><td>Agents listed as members, with a name and a live status?</td><td>Yes</td><td>"Who has this" needs an answer when no person does</td></tr>
+<tr><td>Home replaces Inbox?</td><td>Yes</td><td>One screen answers "what needs me" and "what is moving"</td></tr>
+<tr><td>Build it as a fresh app shell rather than reshaping today's pages?</td><td>Fresh shell, reusing the shared components that fit</td><td>Today's pages were added one at a time; reshaping keeps their seams</td></tr>
+</table></div>
+
+<p class="caption" style="margin-top:40px">Wireframes are drawn to explain layout and content, not final styling. The build composes each screen from the shared component library and registry blocks: sidebar with collapsible icons, data table with faceted filters, sheet for peek, command for ⌘K, resizable panes for the wiki.</p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral" });</script>
+</body>
+</html>

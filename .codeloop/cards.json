@@ -1,5 +1,5 @@
 {
-  "version": 393,
+  "version": 420,
   "cards": [
     {
       "id": "CL-001",
@@ -5143,7 +5143,7 @@
       "start_stage": "spec",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "queued",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -5161,10 +5161,18 @@
           "action": "spec",
           "stage": "queued",
           "note": "specs/108-the-board-by-stage-with-needs-you-on-top"
+        },
+        {
+          "at": "2026-10-12T21:10:35.610Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "queued",
+          "note": "superseded by c-136 in the people-and-agents-workplace initiative"
         }
       ],
       "createdAt": "2026-10-11T22:59:00.217Z",
-      "updatedAt": "2026-10-11T22:59:00.223Z",
+      "updatedAt": "2026-10-12T21:10:35.610Z",
       "spec": "specs/108-the-board-by-stage-with-needs-you-on-top"
     },
     {
@@ -5174,7 +5182,7 @@
       "start_stage": "spec",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "queued",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -5192,10 +5200,18 @@
           "action": "spec",
           "stage": "queued",
           "note": "specs/109-up-next-fills-itself-from-plan-with-its"
+        },
+        {
+          "at": "2026-10-12T21:10:35.763Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "queued",
+          "note": "superseded by c-120 in the people-and-agents-workplace initiative"
         }
       ],
       "createdAt": "2026-10-11T22:59:00.228Z",
-      "updatedAt": "2026-10-11T22:59:00.235Z",
+      "updatedAt": "2026-10-12T21:10:35.763Z",
       "spec": "specs/109-up-next-fills-itself-from-plan-with-its"
     },
     {
@@ -5205,7 +5221,7 @@
       "start_stage": "spec",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "queued",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -5223,10 +5239,18 @@
           "action": "spec",
           "stage": "queued",
           "note": "specs/110-plan-replaces-initiatives-and-roadmap"
+        },
+        {
+          "at": "2026-10-12T21:10:35.920Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "queued",
+          "note": "superseded by c-137 in the people-and-agents-workplace initiative"
         }
       ],
       "createdAt": "2026-10-11T22:59:00.239Z",
-      "updatedAt": "2026-10-11T22:59:00.242Z",
+      "updatedAt": "2026-10-12T21:10:35.920Z",
       "spec": "specs/110-plan-replaces-initiatives-and-roadmap"
     },
     {
@@ -5236,7 +5260,7 @@
       "start_stage": "spec",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "queued",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -5254,10 +5278,18 @@
           "action": "spec",
           "stage": "queued",
           "note": "specs/111-shipped-groups-done-stories-by-release"
+        },
+        {
+          "at": "2026-10-12T21:10:36.080Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "queued",
+          "note": "superseded by c-123 in the people-and-agents-workplace initiative"
         }
       ],
       "createdAt": "2026-10-11T22:59:00.246Z",
-      "updatedAt": "2026-10-11T22:59:00.248Z",
+      "updatedAt": "2026-10-12T21:10:36.080Z",
       "spec": "specs/111-shipped-groups-done-stories-by-release"
     },
     {
@@ -5267,7 +5299,7 @@
       "start_stage": "spec",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "queued",
+      "stage": "dropped",
       "retries": {},
       "evidence": [],
       "events": [
@@ -5285,10 +5317,18 @@
           "action": "spec",
           "stage": "queued",
           "note": "specs/112-search-links-and-bulk-changes-on-the-boa"
+        },
+        {
+          "at": "2026-10-12T21:10:36.254Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "queued",
+          "note": "superseded by c-122 in the people-and-agents-workplace initiative"
         }
       ],
       "createdAt": "2026-10-11T22:59:00.251Z",
-      "updatedAt": "2026-10-11T22:59:00.256Z",
+      "updatedAt": "2026-10-12T21:10:36.254Z",
       "spec": "specs/112-search-links-and-bulk-changes-on-the-boa"
     },
     {
@@ -5420,6 +5460,776 @@
       ],
       "createdAt": "2026-10-12T00:05:11.936Z",
       "updatedAt": "2026-10-12T00:05:11.936Z"
+    },
+    {
+      "id": "c-118",
+      "title": "Stories carry a holder, an owner, a type and links",
+      "story": {
+        "as": "founder",
+        "can": "see who holds each story, who owns it, its type and what it blocks",
+        "so": "nobody asks who has this"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Fields: holder (person or agent), owner, reviewer, type story|bug|chore, links blocks|blocked_by|relates|duplicates, labels, area, risk, release. Schema, validation, migration of cards.json.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Stories carry a holder, an owner, a type and links",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:19.806Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:19.806Z",
+      "updatedAt": "2026-10-12T21:10:19.806Z"
+    },
+    {
+      "id": "c-119",
+      "title": "The board reads as six states with failing and blocked flags",
+      "story": {
+        "as": "founder",
+        "can": "read every story as Backlog, Up next, In progress, Needs you, Done or Shipped",
+        "so": "the board is readable at a glance"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] States derived server-side from stage, gate and links; flags failing and blocked; stage kept as a sub-label.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The board reads as six states with failing and blocked flags",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.059Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.059Z",
+      "updatedAt": "2026-10-12T21:10:20.059Z"
+    },
+    {
+      "id": "c-120",
+      "title": "Up next fills itself and its limit is a setting",
+      "story": {
+        "as": "founder",
+        "can": "keep six stories ready and refill from the top of the plan",
+        "so": "agents never wait for me to pick work"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] board.up_next.limit and auto_refill in config; refill on every board change; blocked stories skipped. Supersedes c-109.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Up next fills itself and its limit is a setting",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.284Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.284Z",
+      "updatedAt": "2026-10-12T21:10:20.284Z"
+    },
+    {
+      "id": "c-121",
+      "title": "Each screen loads its data with one call",
+      "story": {
+        "as": "founder",
+        "can": "open Home, Board, Plan, Releases, a story or a wiki page and see it at once",
+        "so": "screens appear fast and never join data in the browser"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Endpoints per screen returning pre-joined data: /home, /board, /plan, /releases, /stories/:id, /wiki/:path.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Each screen loads its data with one call",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.472Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.472Z",
+      "updatedAt": "2026-10-12T21:10:20.472Z"
+    },
+    {
+      "id": "c-122",
+      "title": "I can find any story with a query and change many at once",
+      "story": {
+        "as": "founder",
+        "can": "type status:build holder:agent P1 and act on the selection",
+        "so": "triage takes seconds"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Query language over the index, saved views, bulk change endpoint touching only the selection. Supersedes c-112.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can find any story with a query and change many at once",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.652Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.652Z",
+      "updatedAt": "2026-10-12T21:10:20.652Z"
+    },
+    {
+      "id": "c-123",
+      "title": "Releases list what shipped from git tags with notes",
+      "story": {
+        "as": "founder",
+        "can": "see each release's stories and copy its notes",
+        "so": "I can tell customers what changed"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Release = git tag; stories grouped by the tag their commits landed in; notes from titles and so-that lines. Supersedes c-111.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Releases list what shipped from git tags with notes",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.800Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.800Z",
+      "updatedAt": "2026-10-12T21:10:20.800Z"
+    },
+    {
+      "id": "c-124",
+      "title": "Wiki pages know their owner, when they were checked and which stories changed them",
+      "story": {
+        "as": "builder",
+        "can": "see a page's owner, verified date, backlinks and changed-by stories",
+        "so": "I trust what the wiki says"
+      },
+      "persona": "builder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Typed pages decision|gotcha|runbook|architecture|reference; owner, verified_at, backlinks, changed_by from commits.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Wiki pages know their owner, when they were checked and which stories changed them",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:20.951Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:20.951Z",
+      "updatedAt": "2026-10-12T21:10:20.951Z"
+    },
+    {
+      "id": "c-125",
+      "title": "Agents show as members with what they are working on",
+      "story": {
+        "as": "founder",
+        "can": "see each agent, its status and its story",
+        "so": "agent work is visible like a teammate's"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Members list people and agents; live session per agent from active sessions.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Agents show as members with what they are working on",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:21.102Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:21.102Z",
+      "updatedAt": "2026-10-12T21:10:21.102Z"
+    },
+    {
+      "id": "c-126",
+      "title": "Features fold into epics",
+      "story": {
+        "as": "founder",
+        "can": "plan with initiative, epic and story only",
+        "so": "the hierarchy has no level nobody can tell apart"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-data-api",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[api] Decision pending from the owner (recommended yes): score moves onto the epic; migration rewrites features into epics.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Features fold into epics",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:21.268Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:21.268Z",
+      "updatedAt": "2026-10-12T21:10:21.268Z"
+    },
+    {
+      "id": "c-127",
+      "title": "The SDK has typed calls for every screen, query and bulk change",
+      "story": {
+        "as": "builder",
+        "can": "call each screen endpoint, the query and bulk change with types and hooks",
+        "so": "the CLI and the UI share one client"
+      },
+      "persona": "builder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-sdk",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[sdk] Client methods and React hooks for the endpoints above; query keys; contract tests against the API.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The SDK has typed calls for every screen, query and bulk change",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:21.460Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:21.460Z",
+      "updatedAt": "2026-10-12T21:10:21.460Z"
+    },
+    {
+      "id": "c-128",
+      "title": "I can link, label and hand off stories from the terminal",
+      "story": {
+        "as": "builder",
+        "can": "run codeloop story link, label, hold and own",
+        "so": "agents and people do in the terminal what the board does"
+      },
+      "persona": "builder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-cli",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[cli] Commands over the SDK for fields and links.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can link, label and hand off stories from the terminal",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:21.695Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:21.695Z",
+      "updatedAt": "2026-10-12T21:10:21.695Z"
+    },
+    {
+      "id": "c-129",
+      "title": "I can query stories and write release notes from the terminal",
+      "story": {
+        "as": "builder",
+        "can": "run codeloop card list --q and codeloop release notes v0.5.0",
+        "so": "scripts and agents read the same views as the board"
+      },
+      "persona": "builder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-cli",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[cli] Query and release notes commands over the SDK.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can query stories and write release notes from the terminal",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:21.869Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:21.869Z",
+      "updatedAt": "2026-10-12T21:10:21.869Z"
+    },
+    {
+      "id": "c-130",
+      "title": "Mocks are built from the project's design system",
+      "story": {
+        "as": "founder",
+        "can": "get mocks that look like the product, made from its own tokens and blocks",
+        "so": "a mock is a real spec, not a sketch"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-design-system",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] The mock skill and template compose from .codeloop/design-system (tokens and building blocks); check mock compares against the project's tokens.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Mocks are built from the project's design system",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:22.041Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:22.041Z",
+      "updatedAt": "2026-10-12T21:10:22.041Z"
+    },
+    {
+      "id": "c-131",
+      "title": "I can change the design system and every mock follows",
+      "story": {
+        "as": "founder",
+        "can": "edit the tokens and blocks in one place",
+        "so": "my product's look is mine, not the template's"
+      },
+      "persona": "founder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-design-system",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] .codeloop/design-system is copied at init, never overwritten by update, and read by mock new, check mock and the workspace.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can change the design system and every mock follows",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:22.239Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:22.239Z",
+      "updatedAt": "2026-10-12T21:10:22.239Z"
+    },
+    {
+      "id": "c-132",
+      "title": "The building blocks show every state on one page",
+      "story": {
+        "as": "builder",
+        "can": "open one page with each block in every state",
+        "so": "screens are assembled, not hand-rolled"
+      },
+      "persona": "builder",
+      "size": "S",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-design-system",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Key, status, holder, priority, proof meter, gate, question, link, property row, activity, query bar, doc block.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The building blocks show every state on one page",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:22.420Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:22.420Z",
+      "updatedAt": "2026-10-12T21:10:22.420Z"
+    },
+    {
+      "id": "c-133",
+      "title": "The app shell has six places, a project switcher and command palette",
+      "story": {
+        "as": "founder",
+        "can": "move between Home, Board, Plan, Releases, Wiki and Reports in every project",
+        "so": "I always know where things are"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Sidebar collapsing to icons, project switcher, command palette, peek sheet, keyboard.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The app shell has six places, a project switcher and command palette",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:22.615Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:22.615Z",
+      "updatedAt": "2026-10-12T21:10:22.615Z"
+    },
+    {
+      "id": "c-134",
+      "title": "The story page shows the proof beside the decision",
+      "story": {
+        "as": "founder",
+        "can": "approve a gate with each acceptance line, its test, the review and commits in view",
+        "so": "I approve what I can see"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Record with property panel and tabs Proof, Spec, Tasks, Questions, Wiki, Activity; opens on what it waits for.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The story page shows the proof beside the decision",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:22.827Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:22.827Z",
+      "updatedAt": "2026-10-12T21:10:22.827Z"
+    },
+    {
+      "id": "c-135",
+      "title": "Home shows what needs me and what is moving",
+      "story": {
+        "as": "founder",
+        "can": "approve, answer or open a failure from one list",
+        "so": "my morning takes minutes"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Needs you, In progress, agents now, shipped since yesterday. Replaces Inbox and hub home.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Home shows what needs me and what is moving",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:23.058Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:23.058Z",
+      "updatedAt": "2026-10-12T21:10:23.058Z"
+    },
+    {
+      "id": "c-136",
+      "title": "The board shows six states with people and agents in swimlanes",
+      "story": {
+        "as": "founder",
+        "can": "see every story in one row of states, grouped by holder",
+        "so": "the board reads at a glance"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] One row of states, swimlanes by holder, epic or priority; Up next limit shown. Supersedes c-108.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The board shows six states with people and agents in swimlanes",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:23.236Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:23.236Z",
+      "updatedAt": "2026-10-12T21:10:23.236Z"
+    },
+    {
+      "id": "c-137",
+      "title": "Plan shows the ranked tree and a timeline",
+      "story": {
+        "as": "founder",
+        "can": "rank initiatives, epics and stories and see when they land",
+        "so": "I plan in one place"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Tree with rank and describe-a-problem entry; timeline projected from rank and capacity. Supersedes c-110.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Plan shows the ranked tree and a timeline",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:23.438Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:23.438Z",
+      "updatedAt": "2026-10-12T21:10:23.438Z"
+    },
+    {
+      "id": "c-138",
+      "title": "The wiki reads like a document with owners and backlinks",
+      "story": {
+        "as": "builder",
+        "can": "read and edit pages with their owner, verified date and the stories that changed them",
+        "so": "the next agent knows the truth"
+      },
+      "persona": "builder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Typed pages, TOC, backlinks, changed-by, editor.",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The wiki reads like a document with owners and backlinks",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:23.595Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:23.595Z",
+      "updatedAt": "2026-10-12T21:10:23.595Z"
+    },
+    {
+      "id": "c-139",
+      "title": "Releases, reports and settings follow the same design",
+      "story": {
+        "as": "founder",
+        "can": "see releases with notes, flow reports, and change settings",
+        "so": "every screen looks and works the same"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "people-and-agents-workplace",
+      "feature": "ui-screens",
+      "lane": "build",
+      "laneVersion": 2,
+      "stage": "proposed",
+      "description": "[ui] Releases by tag, reports (flow, cycle time, waiting on people, agent cost), settings (members, agents, workflow, Up next, sign-in).",
+      "source": "docs/artifacts/codeloop-ui-design.html",
+      "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Releases, reports and settings follow the same design",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-12T21:10:23.762Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop-ui-design.html"
+        }
+      ],
+      "createdAt": "2026-10-12T21:10:23.762Z",
+      "updatedAt": "2026-10-12T21:10:23.762Z"
     }
   ]
 }
