@@ -2,7 +2,7 @@
    Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
    <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
    single, self-contained HTML file; nothing links out to this file at view time.
-   Token set extends the Protobox palette already used in templates/mock/template.html. */
+   Token set extends the palette already used in templates/mock/template.html. */
 :root {
   --bg: #f6f7f9;
   --surface: #ffffff;
