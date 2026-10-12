@@ -1,5 +1,7 @@
 import type {
   AdoptCounts,
+  BoardView,
+  HomeView,
   AdvanceReport,
   Artifact,
   Card,
@@ -133,6 +135,8 @@ export interface Transport {
   ask(ref: string, items: AskInput[], opts?: RoleOption): Promise<{ path: string; added: Question[] }>;
   answer(ref: string, n: number, reply: AnswerInput, opts?: RoleOption): Promise<Question>;
   inbox(query?: InboxQuery): Promise<InboxPayload>;
+  board(): Promise<BoardView>;
+  home(): Promise<HomeView>;
   inboxReport(opts?: { sort?: 'score' | 'age' }): Promise<Inbox>;
   markInboxSeen(): Promise<void>;
   lanes(): Promise<Lane[]>;
@@ -249,6 +253,12 @@ export class CodeloopClient {
     ask: (ref: string, items: AskInput[], opts?: RoleOption) => this.transport.ask(ref, items, opts),
     answer: (ref: string, n: number, reply: AnswerInput, opts?: RoleOption) => this.transport.answer(ref, n, reply, opts),
   };
+
+  /** The board: every story in one row of the six states, already grouped by the server. */
+  readonly board = { get: () => this.transport.board() };
+
+  /** Home: what needs you, what is failing, what is moving, the agents working and what shipped. */
+  readonly home = { get: () => this.transport.home() };
 
   readonly inbox = {
     /** Three capped, cursor-paged lists and the per-lane numbers. */

@@ -224,6 +224,8 @@ export function httpTransport(options: HttpOptions = {}): Transport {
       return q;
     },
     inbox: (query: InboxQuery = {}) => json(`/api/inbox${search({ ...query, needsMe: query.needsMe ? '1' : undefined })}`),
+    board: () => json('/api/board'),
+    home: () => json('/api/home'),
     inboxReport: (opts = {}) => json(`/api/inbox/report${search({ sort: opts.sort })}`),
     markInboxSeen: () => post('/api/inbox/seen', {}).then(() => undefined),
     lanes: () => json<{ lanes: Awaited<ReturnType<Transport['lanes']>> }>('/api/lanes').then(b => b.lanes),

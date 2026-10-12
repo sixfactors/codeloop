@@ -22,8 +22,9 @@ describe('server', () => {
   });
 
   describe('retired task board', () => {
-    it('no longer serves /api/board or /api/tasks', async () => {
-      expect((await app.request('/api/board')).status).toBe(404);
+    it('serves the six-state board at /api/board, not the legacy task board, and no /api/tasks', async () => {
+      const board = await (await app.request('/api/board')).json() as { columns: { state: string }[] };
+      expect(board.columns.map(c => c.state)).toEqual(['up-next', 'in-progress', 'needs-you', 'done']);
       expect((await app.request('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(404);
     });
   });

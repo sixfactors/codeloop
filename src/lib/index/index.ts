@@ -8,6 +8,7 @@ import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type 
 import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
 import type { Lane } from '../lane.js';
+import { storyState, type StoryState } from '../states.js';
 import { CARD_MOCKS_DIR, MOCK_FILE, MOCKS_DIR, mockHref } from '../mock.js';
 import { EVIDENCE_DIR, FileDriver } from '../store/file.js';
 
@@ -34,6 +35,8 @@ export interface IndexedCard extends Omit<Card, 'events'>, Scored {
   mock?: string;
   specDir?: string;
   hasEvidence: boolean;
+  /** One of the six states a person sees, with the stage and flags (src/lib/states.ts). Absent for a dropped card. */
+  display?: StoryState;
 }
 
 /** A page without its body; the body is read on demand through `pages.get`. */
@@ -602,15 +605,17 @@ export class ProjectIndex {
   }
 
   private derivedOf(c: IndexedCard) {
-    return { openQuestions: c.openQuestions, mock: c.mock, specDir: c.specDir, hasEvidence: c.hasEvidence, band: c.band, score: c.score, initiative: c.initiative, epic: c.epic, feature: c.feature };
+    return { openQuestions: c.openQuestions, mock: c.mock, specDir: c.specDir, hasEvidence: c.hasEvidence, display: c.display, band: c.band, score: c.score, initiative: c.initiative, epic: c.epic, feature: c.feature };
   }
 
-  private derive(card: Card): { openQuestions: number; mock?: string; specDir?: string; hasEvidence: boolean } & CardChain {
+  private derive(card: Card): { openQuestions: number; mock?: string; specDir?: string; hasEvidence: boolean; display?: StoryState } & CardChain {
     const specDir = this.specDirOf(card);
     const mock = (specDir && this.mockBySpec.get(specDir)) || this.mockByCard.get(card.id);
     const key = cardKey(card);
     const hasEvidence = this.evidenceKeys.has(key) || this.evidenceKeys.has(card.id.toLowerCase());
-    return { openQuestions: this.openOf(card.id, specDir).length, ...(mock ? { mock: mockHref(mock) } : {}), ...(specDir ? { specDir } : {}), hasEvidence, ...chainOf(card, this.scoredFeatures) };
+    const openQuestions = this.openOf(card.id, specDir).length;
+    const display = storyState(card as Card & { release?: string }, openQuestions);
+    return { openQuestions, ...(mock ? { mock: mockHref(mock) } : {}), ...(specDir ? { specDir } : {}), hasEvidence, ...(display ? { display } : {}), ...chainOf(card, this.scoredFeatures) };
   }
 
   /** `resolveSpecDir` over a listing taken once per reload: it re-reads cards.json per call, which 5k cards cannot afford. */

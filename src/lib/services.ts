@@ -21,6 +21,9 @@ import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
 import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
+import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
+import { activeSessions } from './active-card.js';
+import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
 import { computeStats, type Stats } from './stats.js';
@@ -702,3 +705,86 @@ export async function buildWiki(projectDir: string, opts: { agent?: string; run?
 // --- skill eval: `codeloop skill eval`, replaying a skill's fixtures against a headless agent ---
 export { listSkillNames, loadSkillDef, runSkillEval } from './skill-eval.js';
 export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from './skill-eval.js';
+
+// --- board and home: one call per screen, already grouped by the six states ------------------
+
+export interface BoardStory {
+  id: string;
+  title: string;
+  lane: string;
+  stage: string;
+  display: StoryState;
+  band?: string;
+  score?: number;
+  epic?: string;
+  feature?: string;
+  initiative?: string;
+  openQuestions: number;
+  /** The agent session working it right now, when one is. */
+  agent?: string;
+  updatedAt: string;
+}
+
+const storyRow = (c: IndexedCardRow, agents: Map<string, string>): BoardStory => ({
+  id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
+  epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
+  ...(agents.get(c.id) ? { agent: agents.get(c.id) } : {}), updatedAt: c.updatedAt,
+});
+type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
+
+async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
+  const agents = new Map(activeSessions(projectDir).map(s => [s.card, s.session] as const));
+  const { items } = await index.cards.list({}, undefined, 100_000);
+  return items.filter(c => c.display).map(c => storyRow(c, agents));
+}
+
+const byRank = (a: BoardStory, b: BoardStory) => (b.score ?? -1) - (a.score ?? -1) || a.updatedAt.localeCompare(b.updatedAt);
+const newestFirst = (a: BoardStory, b: BoardStory) => b.updatedAt.localeCompare(a.updatedAt);
+
+export interface BoardView {
+  columns: { state: DisplayState; label: string; stories: BoardStory[] }[];
+  backlog: number;
+  upNext: { count: number; limit?: number };
+}
+
+/** The board: one row of states for the whole project, not one board per workflow. */
+export async function boardView(index: ProjectIndex, projectDir: string): Promise<BoardView> {
+  const rows = await storyRows(index, projectDir);
+  const of = (s: DisplayState) => rows.filter(r => r.display.state === s);
+  const done = [...of('done'), ...of('shipped')].sort(newestFirst).slice(0, 30);
+  const limit = (loadConfig(projectDir).board as { up_next?: { limit?: number } } | undefined)?.up_next?.limit;
+  return {
+    columns: [
+      { state: 'up-next', label: STATE_LABELS['up-next'], stories: of('up-next').sort(byRank) },
+      { state: 'in-progress', label: STATE_LABELS['in-progress'], stories: of('in-progress').sort(byRank) },
+      { state: 'needs-you', label: STATE_LABELS['needs-you'], stories: of('needs-you').sort(byRank) },
+      { state: 'done', label: STATE_LABELS.done, stories: done },
+    ],
+    backlog: of('backlog').length,
+    upNext: { count: of('up-next').length, ...(limit ? { limit } : {}) },
+  };
+}
+
+export interface HomeView {
+  summary: { needsYou: number; inProgress: number; failing: number; shippedThisWeek: number; agentsWorking: number };
+  needsYou: BoardStory[];
+  failing: BoardStory[];
+  inProgress: BoardStory[];
+  agents: { session: string; card: string; title?: string; since: string }[];
+  shipped: BoardStory[];
+}
+
+/** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
+export async function homeView(index: ProjectIndex, projectDir: string): Promise<HomeView> {
+  const rows = await storyRows(index, projectDir);
+  const week = Date.now() - 7 * 86_400_000;
+  const needsYou = rows.filter(r => r.display.state === 'needs-you').sort(byRank);
+  const failing = rows.filter(r => r.display.flags.includes('failing')).sort(newestFirst);
+  const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
+  const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
+  const agents = activeSessions(projectDir).map(s => ({ session: s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
+  return {
+    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
+    needsYou, failing, inProgress, agents, shipped,
+  };
+}

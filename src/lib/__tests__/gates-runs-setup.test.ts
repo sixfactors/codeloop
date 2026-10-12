@@ -7,7 +7,7 @@ import { parse as parseYaml } from 'yaml';
 import { createHttpClient } from '../../sdk/index.js';
 import { createLocalClient } from '../../sdk/local.js';
 import { findCard, readCards, type Card } from '../cards.js';
-import { advanceCard, createCard, rejectCard } from '../engine.js';
+import { advanceCard, createCard, proposeCard, rejectCard } from '../engine.js';
 import { describeAdvance, stageBrief } from '../flow.js';
 import { closeIndex } from '../index/index.js';
 import { runDue } from '../run.js';
@@ -429,5 +429,26 @@ describe('runs in two projects held by one server', () => {
       rmSync(passes, { recursive: true, force: true });
       rmSync(fails, { recursive: true, force: true });
     }
+  });
+});
+
+describe('board and home through the SDK', () => {
+  it('group every story into the six states on the server, the same over http and in process', async () => {
+    lane('build', `  - id: draft\n    done: { cmd: "true" }\n    gate: { name: copy, approver: owner }\n  - id: build\n    done: { cmd: "false" }\n`);
+    createCard(dir, { lane: 'build', title: 'Export invoices as CSV', id: 'c-001' });
+    advanceCard(dir, 'c-001');
+    createCard(dir, { lane: 'build', title: 'Import a bank statement', id: 'c-002' });
+    proposeCard(dir, { lane: 'build', title: 'Schedule a weekly export' });
+    const http = overHttp();
+    const board = await http.board.get();
+    const count = (state: string) => board.columns.find(c => c.state === state)!.stories.map(s => s.id);
+    expect(count('needs-you')).toEqual(['c-001']);
+    expect(count('in-progress')).toEqual(['c-002']);
+    expect(board.backlog).toBe(1);
+    expect(board.columns.find(c => c.state === 'needs-you')!.stories[0].display).toEqual({ state: 'needs-you', stage: 'draft', waitingOn: 'copy', flags: [] });
+    const home = await http.home.get();
+    expect(home.summary).toMatchObject({ needsYou: 1, inProgress: 1 });
+    expect(home.needsYou.map(s => s.id)).toEqual(['c-001']);
+    expect((await createLocalClient(dir).board.get()).columns.map(c => c.stories.length)).toEqual(board.columns.map(c => c.stories.length));
   });
 });
