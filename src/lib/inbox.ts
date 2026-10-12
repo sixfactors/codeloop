@@ -12,7 +12,12 @@ export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 
 export interface Inbox {
   summary: string;
+  /** Started work waiting on a person: stage gates and stuck. Proposals are in `backlog`. */
   needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent }[];
+  /** In a lane, not at a gate, with at least one failed check on the current stage. */
+  failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string }[];
+  /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
+  backlog: { count: number; oldest?: { id: string; title: string; since: string } };
   /** Wiki pages changed here and in the cloud: merge the cloud version into the local page, then delete it. */
   needs_merge: { path: string; cloud: string }[];
   /** Cards whose interview.md has a question without an answer. */
@@ -29,6 +34,9 @@ export interface Inbox {
     first_pass_rate: number | null;
   }[];
 }
+
+/** A check has failed on this stage and the card is not yet stuck: retries remain, no gate. */
+export const isFailing = (c: Card) => inLane(c) && !c.gate && (c.retries[c.stage] ?? 0) > 0;
 
 const firstPass = (c: Card) => !c.events.some(e => e.action === 'fail' || e.action === 'reject');
 
@@ -115,21 +123,60 @@ export function laneNumbers(cards: Card[], lanes: Lane[]): LaneNumbers[] {
   });
 }
 
-export function inboxSummary(waiting: { since: string }[], shippedThisWeek: number, now: Date): string {
+export function inboxSummary(waiting: { since: string }[], shippedThisWeek: number, now: Date, extras: { failing?: number; backlog?: number } = {}): string {
   const day = 86_400_000;
   const oldest = waiting.length ? Math.floor((now.getTime() - Math.min(...waiting.map(w => new Date(w.since).getTime()))) / day) : 0;
-  return `${shippedThisWeek} shipped this week, ${waiting.length} waiting on you${waiting.length ? `, oldest ${oldest === 0 ? 'today' : `${oldest} day${oldest === 1 ? '' : 's'}`}` : ''}`;
+  const parts = [
+    `${shippedThisWeek} shipped this week`,
+    `${waiting.length} waiting on you${waiting.length ? `, oldest ${oldest === 0 ? 'today' : `${oldest} day${oldest === 1 ? '' : 's'}`}` : ''}`,
+  ];
+  if (extras.failing) parts.push(`${extras.failing} failing`);
+  if (extras.backlog) parts.push(`${extras.backlog} in backlog`);
+  return parts.join(', ');
 }
 
 export const shippedWithin = (cards: Card[], now: Date, days = 7) => cards.filter(c => c.stage === DONE && now.getTime() - new Date(c.updatedAt).getTime() < days * 86_400_000).length;
 
+/** Proposals waiting to be promoted or dropped, oldest first. */
+export function backlogOf(cards: Card[]): Inbox['backlog'] {
+  const proposed = cards
+    .filter(c => c.stage === PROPOSED)
+    .map(c => ({ id: c.id, title: c.title, since: c.events.filter(e => e.action === 'propose').at(-1)?.at ?? c.createdAt }))
+    .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+  return { count: proposed.length, ...(proposed[0] ? { oldest: proposed[0] } : {}) };
+}
+
+/** Cards whose current stage has failed at least once and are not yet stuck. */
+export function failingOf(cards: Card[]): Inbox['failing'] {
+  return cards
+    .filter(isFailing)
+    .map(c => {
+      const fail = c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1);
+      return {
+        id: c.id,
+        title: c.title,
+        lane: c.lane,
+        stage: c.stage,
+        retries: c.retries[c.stage] ?? 0,
+        last_check: fail?.note?.split('\n').at(-1) ?? 'failed',
+        since: fail?.at ?? c.updatedAt,
+      };
+    })
+    .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+}
+
 export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
-  const parked = cards.filter(c => c.gate).map(c => needsYouItem(c, lanes, mockOf(c.id), scoreOf(c)));
+  // Proposals wait in the backlog; only started work at a gate or stuck counts as waiting on you.
+  const parked = cards.filter(c => c.gate && c.stage !== PROPOSED).map(c => needsYouItem(c, lanes, mockOf(c.id), scoreOf(c)));
   const waiting = sort === 'score' ? byScoreThenOldest(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+  const failing = failingOf(cards);
+  const backlog = backlogOf(cards);
 
   return {
-    summary: inboxSummary(waiting, shippedWithin(cards, now), now),
+    summary: inboxSummary(waiting, shippedWithin(cards, now), now, { failing: failing.length, backlog: backlog.count }),
     needs_you: waiting,
+    failing,
+    backlog,
     needs_merge: merges,
     questions: cards
       .filter(c => c.stage !== DONE && c.stage !== DROPPED)

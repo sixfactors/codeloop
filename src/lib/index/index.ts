@@ -2,10 +2,10 @@ import { createHash } from 'crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import MiniSearch from 'minisearch';
-import { cardKey, CARDS_PATH, DONE, DROPPED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
+import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
 import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
-import { inboxSummary, laneNumbers, needsYouItem, shippedWithin, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
+import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
 import type { Lane } from '../lane.js';
 import { MOCKS_DIR } from '../mock.js';
@@ -122,6 +122,8 @@ export interface InboxQuery {
 export interface InboxPayload {
   summary: string;
   needsYou: Paged2<InboxCard>;
+  failing: Paged2<InboxCard>;
+  backlog: Inbox['backlog'];
   questions: Paged2<InboxCard>;
   shipped: Paged2<InboxCard>;
   perLane: LaneNumbers[];
@@ -197,7 +199,7 @@ export class ProjectIndex {
   private pageSearch = new MiniSearch<{ id: string; title: string; tags: string }>({ fields: ['title', 'tags'], searchOptions: SEARCH });
   private bodyById = new Map<string, string>();
   private cardSearch = new MiniSearch<{ id: string; title: string; story: string }>({ fields: ['id', 'title', 'story'], searchOptions: SEARCH });
-  private inboxCache: { key: string; needsYou: InboxCard[]; questions: InboxCard[]; shipped: InboxCard[]; perLane: LaneNumbers[]; shippedThisWeek: number } | undefined;
+  private inboxCache: { key: string; needsYou: InboxCard[]; failing: InboxCard[]; backlog: Inbox['backlog']; questions: InboxCard[]; shipped: InboxCard[]; perLane: LaneNumbers[]; shippedThisWeek: number } | undefined;
   private listeners = new Set<(diffs: Diff[]) => void>();
   private queue: Promise<unknown> = Promise.resolve();
   private stopEvents: (() => void) | undefined;
@@ -262,25 +264,35 @@ export class ProjectIndex {
       if (!this.inboxCache || this.inboxCache.key !== key) {
         const order = <T extends InboxCard>(items: T[]) => (sort === 'score' ? byScoreThenOldest(items) : [...items].sort((a, b) => ((a.since ?? a.updatedAt) < (b.since ?? b.updatedAt) ? -1 : 1)));
         const mine = (c: IndexedCard) => !q.needsMe || this.needsRole(c, q.needsMe);
+        // Proposals wait in the backlog; only started work at a gate or stuck is waiting on you.
         const needsYou: InboxCard[] = order(
-          this.filterCards({ ...narrow, gate: 'waiting' }).filter(mine).map(c => {
+          this.filterCards({ ...narrow, gate: 'waiting' }).filter(mine).filter(c => c.stage !== PROPOSED).map(c => {
             const { id: _id, title: _t, lane: _l, stage: _s, gate: _g, awaiting: _a, mock: _m, source: _src, ...rest } = needsYouItem(this.withEvents(c), lanes, this.mockByCard.get(c.id), { band: c.band, ...(c.score === undefined ? {} : { score: c.score }), ...(c.feature ? { feature: c.feature } : {}) });
             return { ...c, ...rest };
           }),
         );
+        const all = [...this.cardsById.values()].map(c => this.withEvents(c));
+        const scoped = Object.keys(narrow).length ? all.filter(c => this.filterCards(narrow).some(n => n.id === c.id)) : all;
+        const failingRows = failingOf(scoped).filter(f => mine(this.cardsById.get(f.id)!));
+        const failing: InboxCard[] = failingRows.map(f => {
+          const c = this.cardsById.get(f.id)!;
+          return { ...c, last_check: f.last_check, since: f.since };
+        });
+        const backlog = backlogOf(scoped);
         const questions: InboxCard[] = order(this.filterCards({ ...narrow, questions: 'open' }).filter(c => c.stage !== DONE && c.stage !== DROPPED).map(c => ({ ...c, first: this.openById.get(c.id)?.[0]?.question })));
         const shipped: InboxCard[] = order(this.filterCards({ ...narrow, shippedSince: since }));
-        const all = [...this.cardsById.values()].map(c => this.withEvents(c));
-        this.inboxCache = { key, needsYou, questions, shipped, perLane: laneNumbers(all, lanes), shippedThisWeek: shippedWithin(all, now) };
+        this.inboxCache = { key, needsYou, failing, backlog, questions, shipped, perLane: laneNumbers(all, lanes), shippedThisWeek: shippedWithin(all, now) };
       }
-      const { needsYou, questions, shipped, perLane, shippedThisWeek } = this.inboxCache;
+      const { needsYou, failing, backlog, questions, shipped, perLane, shippedThisWeek } = this.inboxCache;
       const paged = (items: InboxCard[], cursor: string | undefined): Paged2<InboxCard> => {
         const { items: cards, total, nextCursor } = page(items, cursor, limit);
         return { cards, total, nextCursor };
       };
       return {
-        summary: inboxSummary(needsYou as { since: string }[], shippedThisWeek, now),
+        summary: inboxSummary(needsYou as { since: string }[], shippedThisWeek, now, { failing: failing.length, backlog: backlog.count }),
         needsYou: paged(needsYou, q.cursor),
+        failing: paged(failing, undefined),
+        backlog,
         questions: paged(questions, q.questionsCursor),
         shipped: paged(shipped, q.shippedCursor),
         perLane,

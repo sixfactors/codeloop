@@ -590,7 +590,7 @@ expect 0 "the first scan stores a baseline and proposes nothing" bash -c "$(decl
 expect 0 "a scan that finds new text proposes one plan card" sh -c "codeloop scan competitors --from-file changelog-v2.txt | grep -q 'acme: proposed c-002'"
 json "the proposal names what shipped, carries the excerpt and the source, and waits for the owner" "d.lane==='plan' && d.stage==='proposed' && d.gate==='proposal' && d.awaiting==='owner' && d.title==='acme shipped: Bulk CSV export' && d.description.includes('- Export any list to CSV') && d.source==='https://acme.test/changelog'" codeloop card show c-002 --json
 expect 0 "the same change scanned again creates no second card" bash -c "$(declare -f cards_in); codeloop scan competitors --from-file changelog-v2.txt | grep -q 'acme: nothing new' && test \"\$(cards_in plan)\" = 1"
-expect 0 "inbox lists the proposal with how to promote or drop it" sh -c "codeloop inbox | grep -q 'codeloop approve c-002   puts it in the plan lane'"
+expect 0 "inbox counts the proposal in the backlog and says how to promote it" sh -c "codeloop inbox | grep -q 'codeloop approve c-002. promotes it'"
 expect 2 "a proposal cannot be advanced" codeloop next c-002
 expect 2 "an agent cannot promote a proposal" codeloop approve c-002 --as agent
 expect 0 "a run at the scan lane's weekly slot runs the scan stage and leaves the proposal alone" sh -c "codeloop run --now 2026-10-05T07:05:00 > run-scan.out 2>&1; grep -q 'in scan (trigger: cron 0 7 \* \* MON)' run-scan.out"

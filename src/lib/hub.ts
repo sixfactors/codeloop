@@ -135,13 +135,10 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   // the hub home page the same as a 5-card one. A project that fails to read (not a codeloop
   // project, or unreadable right now) is listed without counts, not dropped from the list.
   //
-  // `needs_you` is one row per gated card (every gate type, including a backlog proposal's —
-  // engine.ts sets `gate: 'proposal'` on a proposed card the same way it sets a stage gate on a
-  // parked one) and `questions` is one row per card with an open question, so their lengths are
-  // already "waiting on you" and "stories with questions" with no further counting needed. These
-  // are the two numbers the hub home's project grid and sidebar both read — never add them
-  // together; a story can be in both lists at once (parked AND asking a question) without being
-  // double work.
+  // `needs_you` is started work at a gate or stuck; proposals are `backlog` and do not inflate
+  // waitingOnYou. `questions` is one row per card with an open question. These are the numbers the
+  // hub home's project grid and sidebar both read. Never add them together; a story can be in
+  // both lists at once (parked AND asking a question) without being double work.
   app.get('/api/hub/projects', c => {
     const projects = listProjects().map(p => {
       if (p.missing) return p;
@@ -149,7 +146,7 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
         const report = services.inboxReport(p.path);
         const active = report.numbers.reduce((n, l) => n + l.active, 0);
         const stuck = report.needs_you.filter(g => g.gate === 'stuck').length;
-        return { ...p, counts: { active, waitingOnYou: report.needs_you.length, storiesWithQuestions: report.questions.length, stuck } };
+        return { ...p, counts: { active, waitingOnYou: report.needs_you.length, storiesWithQuestions: report.questions.length, stuck, failing: report.failing.length, backlog: report.backlog.count } };
       } catch {
         return p;
       }
@@ -162,7 +159,9 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   // a ProjectContext, so listing it never opens a context or touches another project's watcher.
   app.get('/api/hub/needs-you', c => {
     const gates: Labelled<services.Inbox['needs_you'][number]>[] = [];
+    const failing: Labelled<services.Inbox['failing'][number]>[] = [];
     const questions: Labelled<services.Inbox['questions'][number]>[] = [];
+    let backlog = 0;
     for (const p of listProjects()) {
       if (p.missing) continue;
       let report: services.Inbox;
@@ -172,9 +171,11 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
         continue; // not a codeloop project, or unreadable right now; skip it, not the whole list
       }
       for (const g of report.needs_you) gates.push({ ...g, project: p.id, projectName: p.name });
+      for (const f of report.failing) failing.push({ ...f, project: p.id, projectName: p.name });
       for (const q of report.questions) questions.push({ ...q, project: p.id, projectName: p.name });
+      backlog += report.backlog.count;
     }
-    return c.json({ gates, questions, projects: knownIds() });
+    return c.json({ gates, failing, backlog, questions, projects: knownIds() });
   });
 
   app.get('/api/hub/session', c => {

@@ -203,7 +203,7 @@ export interface ListedProject {
    * failed to read. `waitingOnYou` and `storiesWithQuestions` are the same two numbers everywhere
    * they appear — the hub's project grid, its sidebar, and a single project's own inbox page.
    */
-  counts?: { active: number; waitingOnYou: number; storiesWithQuestions: number; stuck: number };
+  counts?: { active: number; waitingOnYou: number; storiesWithQuestions: number; stuck: number; failing?: number; backlog?: number };
 }
 export interface HubGateItem {
   id: string;
@@ -220,6 +220,17 @@ export interface HubGateItem {
   project: string;
   projectName: string;
 }
+export interface HubFailingItem {
+  id: string;
+  title: string;
+  lane: string;
+  stage: string;
+  retries: number;
+  last_check: string;
+  since: string;
+  project: string;
+  projectName: string;
+}
 export interface HubQuestionItem {
   id: string;
   title: string;
@@ -231,6 +242,8 @@ export interface HubQuestionItem {
 }
 export interface HubNeedsYou {
   gates: HubGateItem[];
+  failing?: HubFailingItem[];
+  backlog?: number;
   questions: HubQuestionItem[];
   projects: string[];
 }

@@ -90,10 +90,12 @@ export type CardsPage = Omit<CardsPayload, 'version' | 'owner' | 'nextCursor' | 
 export type InboxCard = Card & Partial<Pick<SdkInboxCard, 'read' | 'last_check' | 'since' | 'first' | 'last_event'>>;
 export type InboxList = Paged2<InboxCard>;
 export type LaneNumbers = Pick<SdkLaneNumbers, 'lane' | 'active' | 'parked' | 'done'> & Partial<SdkLaneNumbers>;
-/** GET /api/inbox: three lists capped per call and the per-lane numbers. */
+/** GET /api/inbox: gated work, failing checks, backlog count, and the per-lane numbers. */
 export interface InboxPayload {
   summary?: string;
   needsYou: InboxList;
+  failing?: InboxList;
+  backlog?: { count: number; oldest?: { id: string; title: string; since: string } };
   questions: InboxList;
   shipped: InboxList;
   perLane: LaneNumbers[];

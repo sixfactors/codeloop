@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { advanceCard, createCard } from '../engine.js';
+import { advanceCard, createCard, proposeCard } from '../engine.js';
+import { buildInbox } from '../inbox.js';
 import { closeIndex } from '../index/index.js';
 import { createApp } from '../server.js';
 
@@ -57,11 +58,13 @@ describe('inbox-shaped card queries', () => {
   it('/api/inbox caps each list at the limit and pages needsYou by cursor', async () => {
     const { app } = createApp(dir);
     const first = await (await app.request('/api/inbox?limit=2')).json();
-    expect(Object.keys(first).sort()).toEqual(['needsYou', 'perLane', 'questions', 'shipped', 'summary']);
+    expect(Object.keys(first).sort()).toEqual(['backlog', 'failing', 'needsYou', 'perLane', 'questions', 'shipped', 'summary']);
     expect(ids(first.needsYou.cards)).toEqual(['c-1', 'c-2']);
     expect(first.needsYou.total).toBe(3);
     expect(first.needsYou.nextCursor).toBe('c-2');
     expect(first.needsYou.cards[0]).toMatchObject({ read: 'out/c-1.md', last_check: 'passed' });
+    expect(first.failing).toEqual({ cards: [], total: 0, nextCursor: null });
+    expect(first.backlog).toEqual({ count: 0 });
     expect(first.questions).toMatchObject({ total: 1, nextCursor: null });
     expect(first.questions.cards[0]).toMatchObject({ id: 'c-5', openQuestions: 1, first: 'Who reads it?' });
     expect(first.shipped).toEqual({ cards: [], total: 0, nextCursor: null });
@@ -82,5 +85,36 @@ describe('inbox-shaped card queries', () => {
     const withInbox = await (await app.request('/api/cards?include=events,inbox')).json();
     expect(ids(withInbox.inbox.needs_you)).toEqual(['c-1', 'c-2', 'c-3']);
     expect(withInbox.cards[0].events.length).toBeGreaterThan(0);
+  });
+
+  it('a proposal does not count as waiting on you; a failed check appears under failing', async () => {
+    proposeCard(dir, { lane: 'market', title: 'Maybe later', id: 'c-6' });
+    writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market
+version: 1
+retries: 3
+stages:
+  - id: draft
+    output: out/{id}.md
+    done: { cmd: "test -f out/{id}.md" }
+  - id: ship
+    done: { cmd: "true" }
+`);
+    // c-1..c-3 are still parked at the old gate from beforeEach; create a fresh failing card.
+    createCard(dir, { lane: 'market', title: 'Will fail', id: 'c-7' });
+    const fail = advanceCard(dir, 'c-7');
+    expect(fail.outcome).toBe('failed');
+
+    const inbox = buildInbox(dir);
+    expect(inbox.needs_you.map(c => c.id)).not.toContain('c-6');
+    expect(inbox.backlog).toMatchObject({ count: 1, oldest: { id: 'c-6' } });
+    expect(inbox.failing).toMatchObject([{ id: 'c-7', stage: 'draft', retries: 1 }]);
+    expect(inbox.summary).toContain('1 failing');
+    expect(inbox.summary).toContain('1 in backlog');
+
+    const { app } = createApp(dir);
+    const body = await (await app.request('/api/inbox')).json();
+    expect(ids(body.needsYou.cards)).not.toContain('c-6');
+    expect(body.backlog).toMatchObject({ count: 1, oldest: { id: 'c-6' } });
+    expect(ids(body.failing.cards)).toEqual(['c-7']);
   });
 });

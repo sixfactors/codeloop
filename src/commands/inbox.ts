@@ -21,11 +21,6 @@ export const inboxCommand = new Command('inbox')
       for (const c of inbox.needs_you) {
         // The band rides along only when the card has a score: an unscored board reads as it always did.
         console.log(`  ${c.id}  ${c.title}: ${c.lane}/${c.stage}, gate ${chalk.yellow(c.gate)}${c.score === undefined ? '' : `  ${chalk.dim(`${c.band} ${c.score}`)}`}`);
-        if (c.gate === 'proposal') {
-          console.log(chalk.dim(`        proposed${c.source ? ` from ${c.source}` : ''}; \`codeloop card show ${c.id}\` has the detail`));
-          console.log(chalk.dim(`        codeloop approve ${c.id}   puts it in the ${c.lane} lane   or   codeloop reject ${c.id} "<why not>"   drops it`));
-          continue;
-        }
         console.log(chalk.dim(`        read: ${c.read ?? 'nothing written for this stage'}   last check: ${c.last_check}`));
         if (c.mock) console.log(chalk.dim(`        mock: ${c.mock}`));
         console.log(chalk.dim(`        codeloop approve ${c.id}   or   codeloop reject ${c.id} "<what to change>"`));
@@ -33,6 +28,22 @@ export const inboxCommand = new Command('inbox')
       for (const m of inbox.needs_merge) {
         console.log(`  wiki  ${m.path}: changed here and in the cloud`);
         console.log(chalk.dim(`        merge ${m.cloud} into it, then delete that file; the next command pushes your merge`));
+      }
+      if (inbox.failing.length) {
+        console.log(chalk.bold(`Failing checks (${inbox.failing.length})`));
+        for (const c of inbox.failing) {
+          console.log(`  ${c.id}  ${c.title}: ${c.lane}/${c.stage}, ${c.retries} fail${c.retries === 1 ? '' : 's'}`);
+          console.log(chalk.dim(`        last check: ${c.last_check}`));
+          console.log(chalk.dim(`        fix the work, then \`codeloop next ${c.id}\``));
+        }
+      }
+      if (inbox.backlog.count) {
+        console.log(chalk.bold(`Backlog (${inbox.backlog.count})`));
+        const oldest = inbox.backlog.oldest;
+        if (oldest) {
+          console.log(chalk.dim(`        oldest ${oldest.id}  ${oldest.title}`));
+          console.log(chalk.dim(`        \`codeloop approve ${oldest.id}\` promotes it, or review on the board backlog`));
+        }
       }
       if (inbox.questions.length) {
         console.log(chalk.bold(`Questions for you (${inbox.questions.length})`));

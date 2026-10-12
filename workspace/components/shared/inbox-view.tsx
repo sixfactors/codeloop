@@ -10,7 +10,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { CheckCircle2, Inbox, Lock, MessageSquare, Waypoints } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Inbox, Lock, MessageSquare, Waypoints } from 'lucide-react';
 import { PageLayout } from '@/components/shared/page-layout';
 import { PageSkeleton } from '@/components/shared/page-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -133,9 +133,9 @@ export function InboxView() {
             // already counts stories with a question, not the open questions on them, so it needs
             // no further reduction here.
             { label: 'Waiting on you', value: data.needsYou.total },
+            { label: 'Failing checks', value: data.failing?.total ?? 0 },
             { label: 'Stories with questions', value: asking.total },
-            { label: 'Shipped this week', value: shipped.total },
-            { label: 'Backlog', value: backlog.data ?? 0 },
+            { label: 'Backlog', value: data.backlog?.count ?? backlog.data ?? 0 },
           ]}
         />
 
@@ -182,6 +182,22 @@ export function InboxView() {
             </div>
           ) : <EmptyState compact icon={CheckCircle2} title="No gate is waiting on you" description={Object.keys(filters.facets).length ? 'Nothing matches these filters.' : 'A story parked at a gate shows up here.'} />}
         </AttributeCard>
+
+        {(data.failing?.total ?? 0) > 0 ? (
+          <AttributeCard title="Failing checks" icon={AlertCircle} testId="inbox-failing">
+            <div className="flex flex-col gap-1">
+              {(data.failing?.cards ?? []).filter(matches).map((c) => (
+                <FieldRow
+                  key={c.id}
+                  label={c.id}
+                  value={<button type="button" className="truncate text-left hover:underline" onClick={() => setOpen(c.id)}>{c.title}</button>}
+                  adornment={<MetaChip label="Stage" value={c.stage} />}
+                  testId={`failing-row-${c.id}`}
+                />
+              ))}
+            </div>
+          </AttributeCard>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <AttributeCard title="Questions to answer" icon={MessageSquare} testId="inbox-questions">

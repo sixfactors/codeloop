@@ -8,6 +8,8 @@ export const isGateWaiting = (c: Card) => Boolean(c.gate || c.awaiting) && !isPr
 export const DONE_STAGE_IDS = ['done', 'shipped', 'live', 'released'];
 const DONE_STAGES = new Set(DONE_STAGE_IDS);
 export const isShipped = (c: Card) => DONE_STAGES.has(c.stage);
+/** In a lane, not at a gate, with at least one failed check on the current stage. */
+export const isFailing = (c: Card) => !isProposed(c) && !isDropped(c) && !isGateWaiting(c) && !isShipped(c) && ((c.retries?.[c.stage] ?? 0) > 0);
 
 export function shippedSince(c: Card, since: Date): boolean {
   if (!isShipped(c)) return false;
@@ -39,6 +41,12 @@ export const uniq = (values: (string | number | undefined)[]) =>
 export function deriveInbox(cards: Card[], lanes: Lane[], since: Date, limit = 50): InboxPayload {
   const cap = <T,>(items: T[]) => ({ cards: items.slice(0, limit), total: items.length, nextCursor: null });
   const gates = cards.filter(isGateWaiting);
+  const failing = cards.filter(isFailing);
+  const proposed = cards.filter(isProposed).sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+  const backlog = {
+    count: proposed.length,
+    ...(proposed[0] ? { oldest: { id: proposed[0].id, title: proposed[0].title, since: proposed[0].createdAt ?? '' } } : {}),
+  };
   const asking = cards.filter((c) => (c.openQuestions ?? 0) > 0 && !isDropped(c) && !isShipped(c));
   const shipped = cards.filter((c) => shippedSince(c, since));
   const laneIds = uniq([...lanes.map((l) => l.id), ...cards.map((c) => c.lane)]);
@@ -46,5 +54,5 @@ export function deriveInbox(cards: Card[], lanes: Lane[], since: Date, limit = 5
     const mine = cards.filter((c) => c.lane === lane && !isProposed(c) && !isDropped(c));
     return { lane, active: mine.filter((c) => !isGateWaiting(c) && !isShipped(c)).length, parked: mine.filter(isGateWaiting).length, done: mine.filter(isShipped).length };
   });
-  return { needsYou: cap(gates), questions: cap(asking), shipped: cap(shipped), perLane };
+  return { needsYou: cap(gates), failing: cap(failing), backlog, questions: cap(asking), shipped: cap(shipped), perLane };
 }

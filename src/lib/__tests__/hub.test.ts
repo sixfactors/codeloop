@@ -119,6 +119,8 @@ describe('the hub keeps projects apart', () => {
     const projects = body.gates.map((g: { project: string }) => g.project).sort();
     expect(projects).toEqual([idA, idB].sort());
     expect(body.gates.every((g: { gate: string }) => g.gate === 'ship')).toBe(true);
+    expect(body.failing).toEqual([]);
+    expect(body.backlog).toBe(0);
   });
 
   it('idles out a project context after its timeout and rebuilds it cleanly on the next request', async () => {
