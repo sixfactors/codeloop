@@ -4,6 +4,10 @@ capacity:
   gates_per_day: 8
 agents:
   default: claude
+  cursor:
+    cmd: "cursor-agent -p --force --output-format text \"$(cat {brief})\""
+    timeout_minutes: 20
+    max_runs_per_day: 40
   claude-sonnet:
     cmd: "claude -p --model sonnet --permission-mode acceptEdits < {brief}"
     timeout_minutes: 30

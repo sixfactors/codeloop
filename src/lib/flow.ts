@@ -22,8 +22,14 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
   const gate = before.gate ?? '';
   const stage = currentStage(projectDir, before);
   const card = approveCard(projectDir, before.id, role, { note });
-  // A promoted proposal enters its first stage with no work done yet, so its check is not run either.
-  if (gate === 'stuck' || gate === PROPOSAL_GATE || stage?.gate?.outward) return { card, gate };
+  // A promoted proposal enters its first stage with no work done yet, so its check is not run
+  // either; it does get the spec folder a story started directly gets, or its first stage has
+  // nowhere to write.
+  if (gate === PROPOSAL_GATE) {
+    if (card.stage !== DROPPED && usesSpec(loadLane(projectDir, card.lane))) newSpec(projectDir, card.id, role);
+    return { card: findCard(readCards(projectDir).cards, card.id), gate };
+  }
+  if (gate === 'stuck' || stage?.gate?.outward) return { card, gate };
   // A stage that waits for an event reaches its gate only once that event has been reported, so
   // the advance after approval carries it. Without this the approval was recorded and the advance
   // then refused, asking for an event that had already arrived.

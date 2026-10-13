@@ -271,3 +271,16 @@ describe('what the lane limit counts', () => {
     expect(b.gate).toBe('stuck');
   });
 });
+
+describe('a promoted proposal', () => {
+  it('gets its spec folder, the same as a story started directly', async () => {
+    const { proposeCard } = await import('../engine.js');
+    lane('build', `  - id: research\n    output: "{spec}/research.md"\n    done: { cmd: "codeloop check file {spec}/research.md --has 'verdict:'" }\n`);
+    const { card } = proposeCard(dir, { lane: 'build', title: 'Export my todos as a file' });
+    approveFlow(dir, card.id, 'owner');
+    const promoted = readCards(dir).cards.find(c => c.id === card.id)!;
+    expect(promoted.stage).toBe('research');
+    expect(promoted.spec).toMatch(/^specs\//);
+    expect(existsSync(join(dir, promoted.spec!, 'research.md'))).toBe(true);
+  });
+});

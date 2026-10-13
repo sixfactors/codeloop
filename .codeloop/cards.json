@@ -1,5 +1,5 @@
 {
-  "version": 442,
+  "version": 508,
   "cards": [
     {
       "id": "CL-001",
@@ -1924,7 +1924,9 @@
       "description": "As a founder, I can start a one-line fix and watch it go straight to build and verify, so that the pipeline matches the size of the work. Initiative: founder ships without ceremony · M · metric: cycle time, trivial cards",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Small fixes skip the ceremony",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -2004,10 +2006,38 @@
           "human": true,
           "action": "unpark",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:00.999Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-058-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:01.858Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 859,
+          "log": ".codeloop/state/agent-runs/c-058-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:01.858Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/058-small-fixes-skip-the-ceremony/research.md has no line starting with \"verdict:\"\nspecs/058-small-fixes-skip-the-ceremony/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.339Z",
-      "updatedAt": "2026-10-11T22:06:27.565Z",
+      "updatedAt": "2026-10-13T03:50:01.858Z",
       "story": {
         "as": "founder",
         "can": "start a one-line fix and watch it go straight to build and verify",
@@ -2018,7 +2048,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "cycle time, trivial cards",
       "spec": "specs/058-small-fixes-skip-the-ceremony",
-      "feature": "right-sized-cards"
+      "feature": "right-sized-cards",
+      "failures": {
+        "research": "9ee81f4cb9bdf56d916ef52fa9c5798c79bfaafd"
+      }
     },
     {
       "id": "c-059",
@@ -2236,7 +2269,9 @@
       "description": "As a founder, I can merge a pull request or deploy and see the card move on its own, so that I never update status by hand. Initiative: founder ships without ceremony · M · metric: human turns per card",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The board follows git",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -2316,10 +2351,38 @@
           "human": true,
           "action": "unpark",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:02.483Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-062-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:03.177Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 694,
+          "log": ".codeloop/state/agent-runs/c-062-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:03.177Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/062-the-board-follows-git/research.md has no line starting with \"verdict:\"\nspecs/062-the-board-follows-git/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.851Z",
-      "updatedAt": "2026-10-11T22:17:34.621Z",
+      "updatedAt": "2026-10-13T03:50:03.177Z",
       "story": {
         "as": "founder",
         "can": "merge a pull request or deploy and see the card move on its own",
@@ -2330,7 +2393,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "human turns per card",
       "spec": "specs/062-the-board-follows-git",
-      "feature": "board-follows-git"
+      "feature": "board-follows-git",
+      "failures": {
+        "research": "77bb8d4b64f8bf910f435f2011f73def1f837a1f"
+      }
     },
     {
       "id": "c-063",
@@ -2545,7 +2611,9 @@
       "description": "As a founder, I can read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec, so that I approve a decision and not a guess. Initiative: founder ships without ceremony · M · metric: first-pass verify",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The agent thinks before it builds",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -2625,10 +2693,38 @@
           "human": true,
           "action": "unpark",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:03.853Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-066-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:04.540Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 687,
+          "log": ".codeloop/state/agent-runs/c-066-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:04.540Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/066-the-agent-thinks-before-it-builds/research.md has no line starting with \"verdict:\"\nspecs/066-the-agent-thinks-before-it-builds/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.370Z",
-      "updatedAt": "2026-10-11T22:38:10.792Z",
+      "updatedAt": "2026-10-13T03:50:04.540Z",
       "story": {
         "as": "founder",
         "can": "read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec",
@@ -2639,7 +2735,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "first-pass verify",
       "spec": "specs/066-the-agent-thinks-before-it-builds",
-      "feature": "agent-thinks-first"
+      "feature": "agent-thinks-first",
+      "failures": {
+        "research": "e211d8140cd56ed77731296bdb9025b03cc96d87"
+      }
     },
     {
       "id": "c-067",
@@ -2650,7 +2749,9 @@
       "description": "As a founder, I can get a research page with sources and screenshots and a draft spec before I spend a minute, so that my time goes to deciding, not gathering. Initiative: founder ships without ceremony · M · metric: time to spec gate",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Research writes the first draft",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -2716,10 +2817,38 @@
           "action": "promote",
           "stage": "research",
           "note": "this is a P1"
+        },
+        {
+          "at": "2026-10-13T03:50:05.193Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-067-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:05.886Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 693,
+          "log": ".codeloop/state/agent-runs/c-067-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:05.886Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/067-research-writes-the-first-draft/research.md has no line starting with \"verdict:\"\nspecs/067-research-writes-the-first-draft/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.496Z",
-      "updatedAt": "2026-10-11T22:38:30.939Z",
+      "updatedAt": "2026-10-13T03:50:05.886Z",
       "story": {
         "as": "founder",
         "can": "get a research page with sources and screenshots and a draft spec before I spend a minute",
@@ -2730,7 +2859,10 @@
       "initiative": "founder-ships-without-ceremony",
       "metric": "time to spec gate",
       "spec": "specs/067-research-writes-the-first-draft",
-      "feature": "agent-thinks-first"
+      "feature": "agent-thinks-first",
+      "failures": {
+        "research": "7a63c4300d415a900320505a13838ceedb7f8d5e"
+      }
     },
     {
       "id": "c-068",
@@ -3233,7 +3365,9 @@
       "description": "As a dev, I can drop a plugin folder in my repo or install one from npm or the catalog, so that my stack's rules and checks run without touching core. Initiative: any stack, same loop · L · metric: plugins installed",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Add a plugin and codeloop uses it",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -3298,10 +3432,38 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:06.548Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-075-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:07.244Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 696,
+          "log": ".codeloop/state/agent-runs/c-075-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:07.244Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/075-add-a-plugin-and-codeloop-uses-it/research.md has no line starting with \"verdict:\"\nspecs/075-add-a-plugin-and-codeloop-uses-it/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:33.521Z",
-      "updatedAt": "2026-10-11T22:37:41.249Z",
+      "updatedAt": "2026-10-13T03:50:07.244Z",
       "story": {
         "as": "dev",
         "can": "drop a plugin folder in my repo or install one from npm or the catalog",
@@ -3312,7 +3474,10 @@
       "initiative": "any-stack-same-loop",
       "metric": "plugins installed",
       "spec": "specs/075-add-a-plugin-and-codeloop-uses-it",
-      "feature": "plugins-load"
+      "feature": "plugins-load",
+      "failures": {
+        "research": "7d8c520244cc3a2ca6821059fcc43a1f8b598310"
+      }
     },
     {
       "id": "c-076",
@@ -3323,7 +3488,9 @@
       "description": "As a dev, I can run init and see each stage mapped to my own skill and my own test command, so that nothing generic replaces what I built. Initiative: any stack, same loop · M · metric: stages mapped to adopted skills",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Lanes use the skills I already have",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -3388,10 +3555,38 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:07.915Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-076-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:08.579Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 664,
+          "log": ".codeloop/state/agent-runs/c-076-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:50:08.579Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "specs/076-lanes-use-the-skills-i-already-have/research.md has no line starting with \"verdict:\"\nspecs/076-lanes-use-the-skills-i-already-have/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-07T18:01:33.651Z",
-      "updatedAt": "2026-10-11T22:37:16.766Z",
+      "updatedAt": "2026-10-13T03:50:08.579Z",
       "story": {
         "as": "dev",
         "can": "run init and see each stage mapped to my own skill and my own test command",
@@ -3402,7 +3597,10 @@
       "initiative": "any-stack-same-loop",
       "metric": "stages mapped to adopted skills",
       "spec": "specs/076-lanes-use-the-skills-i-already-have",
-      "feature": "plugins-load"
+      "feature": "plugins-load",
+      "failures": {
+        "research": "2a4da4ff9cabe32dcea77ab4465a83ea965a10b2"
+      }
     },
     {
       "id": "c-077",
@@ -5479,7 +5677,9 @@
       "description": "[api] Fields: holder (person or agent), owner, reviewer, type story|bug|chore, links blocks|blocked_by|relates|duplicates, labels, area, risk, release. Schema, validation, migration of cards.json.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Stories carry a holder, an owner, a type and links",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5496,10 +5696,50 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:45.340Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-118-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:49:46.213Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 873,
+          "log": ".codeloop/state/agent-runs/c-118-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:49:46.213Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-118; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:10.869Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/118-stories-carry-a-holder-an-owner-a-type-a"
         }
       ],
       "createdAt": "2026-10-12T21:10:19.806Z",
-      "updatedAt": "2026-10-12T21:47:37.555Z"
+      "updatedAt": "2026-10-13T03:52:10.869Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/118-stories-carry-a-holder-an-owner-a-type-a"
     },
     {
       "id": "c-119",
@@ -5519,7 +5759,9 @@
       "description": "[api] States derived server-side from stage, gate and links; flags failing and blocked; stage kept as a sub-label.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The board reads as six states with failing and blocked flags",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5536,10 +5778,50 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:46.881Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "research",
+          "agent": "cursor",
+          "log": ".codeloop/state/agent-runs/c-119-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:49:47.525Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "research",
+          "agent": "cursor",
+          "exit": 1,
+          "durationMs": 644,
+          "log": ".codeloop/state/agent-runs/c-119-research-1.log"
+        },
+        {
+          "at": "2026-10-13T03:49:47.525Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-119; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.034Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/119-the-board-reads-as-six-states-with-faili"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.059Z",
-      "updatedAt": "2026-10-12T21:47:37.715Z"
+      "updatedAt": "2026-10-13T03:52:11.034Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/119-the-board-reads-as-six-states-with-faili"
     },
     {
       "id": "c-120",
@@ -5559,7 +5841,9 @@
       "description": "[api] board.up_next.limit and auto_refill in config; refill on every board change; blocked stories skipped. Supersedes c-109.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Up next fills itself and its limit is a setting",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5576,10 +5860,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:48.181Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-120; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.177Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/120-up-next-fills-itself-and-its-limit-is-a"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.284Z",
-      "updatedAt": "2026-10-12T21:47:37.871Z"
+      "updatedAt": "2026-10-13T03:52:11.177Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/120-up-next-fills-itself-and-its-limit-is-a"
     },
     {
       "id": "c-121",
@@ -5599,7 +5903,9 @@
       "description": "[api] Endpoints per screen returning pre-joined data: /home, /board, /plan, /releases, /stories/:id, /wiki/:path.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Each screen loads its data with one call",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5616,10 +5922,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:48.801Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-121; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.316Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/121-each-screen-loads-its-data-with-one-call"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.472Z",
-      "updatedAt": "2026-10-12T21:47:38.033Z"
+      "updatedAt": "2026-10-13T03:52:11.316Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/121-each-screen-loads-its-data-with-one-call"
     },
     {
       "id": "c-122",
@@ -5639,7 +5965,9 @@
       "description": "[api] Query language over the index, saved views, bulk change endpoint touching only the selection. Supersedes c-112.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can find any story with a query and change many at once",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5656,10 +5984,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:49.411Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-122; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.455Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/122-i-can-find-any-story-with-a-query-and-ch"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.652Z",
-      "updatedAt": "2026-10-12T21:47:38.190Z"
+      "updatedAt": "2026-10-13T03:52:11.455Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/122-i-can-find-any-story-with-a-query-and-ch"
     },
     {
       "id": "c-123",
@@ -5679,7 +6027,9 @@
       "description": "[api] Release = git tag; stories grouped by the tag their commits landed in; notes from titles and so-that lines. Supersedes c-111.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Releases list what shipped from git tags with notes",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5696,10 +6046,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:50.055Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-123; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.656Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/123-releases-list-what-shipped-from-git-tags"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.800Z",
-      "updatedAt": "2026-10-12T21:47:38.346Z"
+      "updatedAt": "2026-10-13T03:52:11.656Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/123-releases-list-what-shipped-from-git-tags"
     },
     {
       "id": "c-124",
@@ -5719,7 +6089,9 @@
       "description": "[api] Typed pages decision|gotcha|runbook|architecture|reference; owner, verified_at, backlinks, changed_by from commits.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Wiki pages know their owner, when they were checked and which stories changed them",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5736,10 +6108,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:50.660Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-124; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.838Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/124-wiki-pages-know-their-owner-when-they-we"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.951Z",
-      "updatedAt": "2026-10-12T21:47:38.506Z"
+      "updatedAt": "2026-10-13T03:52:11.838Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/124-wiki-pages-know-their-owner-when-they-we"
     },
     {
       "id": "c-125",
@@ -5759,7 +6151,9 @@
       "description": "[api] Members list people and agents; live session per agent from active sessions.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Agents show as members with what they are working on",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5776,10 +6170,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:51.242Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-125; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:11.985Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/125-agents-show-as-members-with-what-they-ar"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.102Z",
-      "updatedAt": "2026-10-12T21:47:38.666Z"
+      "updatedAt": "2026-10-13T03:52:11.985Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/125-agents-show-as-members-with-what-they-ar"
     },
     {
       "id": "c-126",
@@ -5799,7 +6213,9 @@
       "description": "[api] Decision pending from the owner (recommended yes): score moves onto the epic; migration rewrites features into epics.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Features fold into epics",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5816,10 +6232,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:51.899Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-126; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.141Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/126-features-fold-into-epics"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.268Z",
-      "updatedAt": "2026-10-12T21:47:38.822Z"
+      "updatedAt": "2026-10-13T03:52:12.141Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/126-features-fold-into-epics"
     },
     {
       "id": "c-127",
@@ -5839,7 +6275,9 @@
       "description": "[sdk] Client methods and React hooks for the endpoints above; query keys; contract tests against the API.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The SDK has typed calls for every screen, query and bulk change",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5856,10 +6294,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:52.556Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-127; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.279Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/127-the-sdk-has-typed-calls-for-every-screen"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.460Z",
-      "updatedAt": "2026-10-12T21:47:38.979Z"
+      "updatedAt": "2026-10-13T03:52:12.279Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/127-the-sdk-has-typed-calls-for-every-screen"
     },
     {
       "id": "c-128",
@@ -5879,7 +6337,9 @@
       "description": "[cli] Commands over the SDK for fields and links.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can link, label and hand off stories from the terminal",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5896,10 +6356,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:53.188Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-128; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.417Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/128-i-can-link-label-and-hand-off-stories-fr"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.695Z",
-      "updatedAt": "2026-10-12T21:47:39.132Z"
+      "updatedAt": "2026-10-13T03:52:12.417Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/128-i-can-link-label-and-hand-off-stories-fr"
     },
     {
       "id": "c-129",
@@ -5919,7 +6399,9 @@
       "description": "[cli] Query and release notes commands over the SDK.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can query stories and write release notes from the terminal",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5936,10 +6418,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:53.818Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-129; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.552Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/129-i-can-query-stories-and-write-release-no"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.869Z",
-      "updatedAt": "2026-10-12T21:47:39.290Z"
+      "updatedAt": "2026-10-13T03:52:12.552Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/129-i-can-query-stories-and-write-release-no"
     },
     {
       "id": "c-130",
@@ -5959,7 +6461,9 @@
       "description": "[ui] The mock skill and template compose from .codeloop/design-system (tokens and building blocks); check mock compares against the project's tokens.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Mocks are built from the project's design system",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -5976,10 +6480,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:54.480Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-130; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.689Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/130-mocks-are-built-from-the-project-s-desig"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.041Z",
-      "updatedAt": "2026-10-12T21:47:39.442Z"
+      "updatedAt": "2026-10-13T03:52:12.689Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/130-mocks-are-built-from-the-project-s-desig"
     },
     {
       "id": "c-131",
@@ -5999,7 +6523,9 @@
       "description": "[ui] .codeloop/design-system is copied at init, never overwritten by update, and read by mock new, check mock and the workspace.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can change the design system and every mock follows",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6016,10 +6542,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:55.139Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-131; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.824Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/131-i-can-change-the-design-system-and-every"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.239Z",
-      "updatedAt": "2026-10-12T21:47:39.615Z"
+      "updatedAt": "2026-10-13T03:52:12.824Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/131-i-can-change-the-design-system-and-every"
     },
     {
       "id": "c-132",
@@ -6039,7 +6585,9 @@
       "description": "[ui] Key, status, holder, priority, proof meter, gate, question, link, property row, activity, query bar, doc block.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The building blocks show every state on one page",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6056,10 +6604,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:55.792Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-132; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:12.963Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/132-the-building-blocks-show-every-state-on"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.420Z",
-      "updatedAt": "2026-10-12T21:47:39.794Z"
+      "updatedAt": "2026-10-13T03:52:12.963Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/132-the-building-blocks-show-every-state-on"
     },
     {
       "id": "c-133",
@@ -6079,7 +6647,9 @@
       "description": "[ui] Sidebar collapsing to icons, project switcher, command palette, peek sheet, keyboard.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The app shell has six places, a project switcher and command palette",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6096,10 +6666,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:56.463Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-133; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.104Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/133-the-app-shell-has-six-places-a-project-s"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.615Z",
-      "updatedAt": "2026-10-12T21:47:39.952Z"
+      "updatedAt": "2026-10-13T03:52:13.104Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/133-the-app-shell-has-six-places-a-project-s"
     },
     {
       "id": "c-134",
@@ -6119,7 +6709,9 @@
       "description": "[ui] Record with property panel and tabs Proof, Spec, Tasks, Questions, Wiki, Activity; opens on what it waits for.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The story page shows the proof beside the decision",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6136,10 +6728,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:57.096Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-134; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.237Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/134-the-story-page-shows-the-proof-beside-th"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.827Z",
-      "updatedAt": "2026-10-12T21:47:40.111Z"
+      "updatedAt": "2026-10-13T03:52:13.237Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/134-the-story-page-shows-the-proof-beside-th"
     },
     {
       "id": "c-135",
@@ -6159,7 +6771,9 @@
       "description": "[ui] Needs you, In progress, agents now, shipped since yesterday. Replaces Inbox and hub home.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Home shows what needs me and what is moving",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6176,10 +6790,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:57.728Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-135; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.373Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/135-home-shows-what-needs-me-and-what-is-mov"
         }
       ],
       "createdAt": "2026-10-12T21:10:23.058Z",
-      "updatedAt": "2026-10-12T21:47:40.273Z"
+      "updatedAt": "2026-10-13T03:52:13.373Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/135-home-shows-what-needs-me-and-what-is-mov"
     },
     {
       "id": "c-136",
@@ -6199,7 +6833,9 @@
       "description": "[ui] One row of states, swimlanes by holder, epic or priority; Up next limit shown. Supersedes c-108.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The board shows six states with people and agents in swimlanes",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6216,10 +6852,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:58.360Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-136; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.511Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/136-the-board-shows-six-states-with-people-a"
         }
       ],
       "createdAt": "2026-10-12T21:10:23.236Z",
-      "updatedAt": "2026-10-12T21:47:40.430Z"
+      "updatedAt": "2026-10-13T03:52:13.511Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/136-the-board-shows-six-states-with-people-a"
     },
     {
       "id": "c-137",
@@ -6239,7 +6895,9 @@
       "description": "[ui] Tree with rank and describe-a-problem entry; timeline projected from rank and capacity. Supersedes c-110.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Plan shows the ranked tree and a timeline",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6256,10 +6914,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:59.009Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-137; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.648Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/137-plan-shows-the-ranked-tree-and-a-timelin"
         }
       ],
       "createdAt": "2026-10-12T21:10:23.438Z",
-      "updatedAt": "2026-10-12T21:47:40.587Z"
+      "updatedAt": "2026-10-13T03:52:13.648Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/137-plan-shows-the-ranked-tree-and-a-timelin"
     },
     {
       "id": "c-138",
@@ -6279,7 +6957,9 @@
       "description": "[ui] Typed pages, TOC, backlinks, changed-by, editor.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The wiki reads like a document with owners and backlinks",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6296,10 +6976,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:49:59.702Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-138; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.793Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/138-the-wiki-reads-like-a-document-with-owne"
         }
       ],
       "createdAt": "2026-10-12T21:10:23.595Z",
-      "updatedAt": "2026-10-12T21:47:40.757Z"
+      "updatedAt": "2026-10-13T03:52:13.793Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/138-the-wiki-reads-like-a-document-with-owne"
     },
     {
       "id": "c-139",
@@ -6319,7 +7019,9 @@
       "description": "[ui] Releases by tag, reports (flow, cycle time, waiting on people, agent cost), settings (members, agents, workflow, Up next, sign-in).",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Releases, reports and settings follow the same design",
-      "retries": {},
+      "retries": {
+        "research": 1
+      },
       "evidence": [],
       "events": [
         {
@@ -6336,10 +7038,30 @@
           "human": true,
           "action": "promote",
           "stage": "research"
+        },
+        {
+          "at": "2026-10-13T03:50:00.391Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "no spec folder for c-139; run `codeloop spec new <card-id>`"
+        },
+        {
+          "at": "2026-10-13T03:52:13.929Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/139-releases-reports-and-settings-follow-the"
         }
       ],
       "createdAt": "2026-10-12T21:10:23.762Z",
-      "updatedAt": "2026-10-12T21:47:40.939Z"
+      "updatedAt": "2026-10-13T03:52:13.929Z",
+      "failures": {
+        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+      },
+      "spec": "specs/139-releases-reports-and-settings-follow-the"
     }
   ]
 }
