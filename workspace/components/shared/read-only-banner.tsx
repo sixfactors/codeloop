@@ -18,13 +18,16 @@ export function ReadOnlyBanner() {
   if (isLoading || canWrite) return null;
   return (
     <>
-      <Alert className="mx-5 mt-3 border-warning/50" data-testid="read-only-banner">
+      {/* Padding on a wrapper, not margin on the full-width alert: mx-5 on a w-full box pushed it past the right edge. */}
+      <div className="px-5 pt-3">
+      <Alert className="border-warning/50" data-testid="read-only-banner">
         <Lock className="text-warning-foreground dark:text-warning" />
         <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
           <span>{reason}</span>
           {needsSignIn ? <Button size="sm" variant="outline" onClick={() => setSigningIn(true)} data-testid="read-only-banner-sign-in">Sign in</Button> : null}
         </AlertDescription>
       </Alert>
+      </div>
       {needsSignIn ? <SignInDialog open={signingIn} onOpenChange={setSigningIn} /> : null}
     </>
   );

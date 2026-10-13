@@ -4,11 +4,16 @@
 import type {
   AdoptCounts,
   AdvanceReport,
+  BoardStory,
+  BoardView,
+  DisplayState,
+  HomeView,
   ProjectDetection,
   RunView,
   SetupStatus,
   SplitResult,
   StageOutput,
+  StoryState,
   Artifact as SdkArtifact,
   Card as SdkCard,
   CardShow as SdkCardShow,
@@ -50,6 +55,12 @@ import type {
 
 export { CARD_FACETS } from '@protoboxai/codeloop/sdk';
 export type { CardEvent, Config, LiveEvent, NextAction, PagesQuery, PageWrite, Question, Session, Stats, Task, WikiShapeCount };
+/** The board and home views: one story row (`BoardStory`) carrying its display state
+ * (`StoryState`: a `DisplayState` plus stage, waitingOn and flags), as GET /api/board and
+ * GET /api/home already group and compute it. */
+export type { BoardStory, BoardView, DisplayState, HomeView, StoryState };
+/** Not exported by the SDK directly; derived from `StoryState.flags` so the two never drift. */
+export type StateFlag = StoryState['flags'][number];
 export type { CardsQuery, InboxQuery };
 export type CardFacet = CardFilterKey;
 

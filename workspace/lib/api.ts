@@ -4,7 +4,7 @@
 // component reaches the API's internal address (`codeloop serve`/`codeloop hub` set it), and the
 // public env var is only for a build served from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { AdvanceReport, Artifact, Band, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
+import type { AdvanceReport, Artifact, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 import { currentProjectBrowser, currentProjectServer, hubModeBrowser, hubModeServer } from './project';
 
@@ -40,7 +40,7 @@ export function token(): string {
 }
 
 // One client per project per side, so switching projects (always a full navigation, never a
-// client-side one — see the project switcher) never reuses another project's ETag cache. The
+// client-side one, see the project switcher) never reuses another project's ETag cache. The
 // browser clients revalidate with the ETags the SDK keeps; a server render reads fresh and waits
 // at most two seconds for the API, past which the client fetches instead.
 const browserClients = new Map<string, CodeloopClient>();
@@ -130,6 +130,10 @@ export const api = {
   },
   /** The one thing the board's first screen leads with. */
   next: async (): Promise<NextAction> => (await client()).next(),
+  /** The board: every story in one row of states (up next, in progress, needs you, done), already grouped server side. */
+  board: async (): Promise<BoardView> => (await client()).board.get(),
+  /** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
+  home: async (): Promise<HomeView> => (await client()).home.get(),
   async login(user: string, password: string) {
     if (typeof window !== 'undefined' ? hubModeBrowser() : await hubModeServer()) {
       const res = await fetch(`${base()}/api/hub/session/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user, password }) });
@@ -201,7 +205,7 @@ export interface ListedProject {
   /**
    * Computed server-side (hub.ts, from the project's own inbox report); absent when the project
    * failed to read. `waitingOnYou` and `storiesWithQuestions` are the same two numbers everywhere
-   * they appear — the hub's project grid, its sidebar, and a single project's own inbox page.
+   * they appear, the hub's project grid, its sidebar, and a single project's own inbox page.
    */
   counts?: { active: number; waitingOnYou: number; storiesWithQuestions: number; stuck: number; failing?: number; backlog?: number };
 }

@@ -2,7 +2,7 @@
 //
 // Under the hub every page lives at /p/<project>/..., not /...; `routesFor()` takes the project
 // explicitly rather than reading the URL, because a server-rendered client component has no
-// `window` to read — see components/providers/project-provider.tsx, which supplies the project the
+// `window` to read, see components/providers/project-provider.tsx, which supplies the project the
 // server already resolved via a React context, and lib/project.ts's `currentProjectServer()`.
 // Components rendering links use `useRoutes()` from that provider. `routes` below is kept only for
 // callers that are never part of a render pass (event handlers, api.ts): it delegates to
@@ -15,6 +15,7 @@ export function routesFor(project?: string) {
   const wikiPath = (path: string) => `${prefix}/wiki/${path.split('/').map(encodeURIComponent).join('/')}/`;
   return {
     get board() { return `${prefix}/`; },
+    get home() { return `${prefix}/home/`; },
     card: (id: string) => `${prefix}/cards/${encodeURIComponent(id)}/`,
     get inbox() { return `${prefix}/inbox/`; },
     wiki: (path?: string) => (path ? wikiPath(path) : `${prefix}/wiki/`),
@@ -41,6 +42,7 @@ export type Routes = ReturnType<typeof routesFor>;
 /** Non-render use only (event handlers, api.ts). Anything rendered needs `useRoutes()` instead. */
 export const routes: Routes = {
   get board() { return routesFor(currentProjectBrowser()).board; },
+  get home() { return routesFor(currentProjectBrowser()).home; },
   card: (id: string) => routesFor(currentProjectBrowser()).card(id),
   get inbox() { return routesFor(currentProjectBrowser()).inbox; },
   wiki: (path?: string) => routesFor(currentProjectBrowser()).wiki(path),

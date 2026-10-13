@@ -57,6 +57,8 @@ export const QK = {
   wikiShape: ['wiki-shape'] as const,
   session: ['session'] as const,
   next: ['next'] as const,
+  board: ['board'] as const,
+  home: ['home'] as const,
 };
 
 export const isMissing = (err: unknown) => err instanceof ApiError && err.status === 404;
@@ -126,3 +128,8 @@ export const pageQueryOptions = (path: string) => ({ queryKey: QK.page(path), qu
 
 /** The wiki shape with page counts: one request, server-computed, instead of the wiki home/sidebar grouping the full page list. */
 export const wikiShapeQueryOptions = () => ({ queryKey: QK.wikiShape, queryFn: api.wikiShape, retry: false });
+
+/** The board: one row of states for the whole project, server-grouped. Polled, like the inbox, so a gate an agent clears elsewhere clears here too. */
+export const boardQueryOptions = () => ({ queryKey: QK.board, queryFn: api.board, retry: false, refetchInterval: 15_000 });
+/** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
+export const homeQueryOptions = () => ({ queryKey: QK.home, queryFn: api.home, retry: false, refetchInterval: 15_000 });

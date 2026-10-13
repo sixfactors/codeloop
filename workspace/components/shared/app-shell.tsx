@@ -10,7 +10,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, BookOpen, Boxes, Home, Images, Inbox, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
+import { BarChart3, BookOpen, Boxes, Home, Images, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import dynamic from 'next/dynamic';
-import { useCardCount, useCards, useCanWrite, useConfig, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
+import { useCardCount, useCards, useCanWrite, useConfig, useHome, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { useProject, useRoutes } from '@/components/providers/project-provider';
 import { routesFor, type Routes } from '@/lib/routes';
 import { api, type ListedProject } from '@/lib/api';
@@ -62,14 +62,16 @@ const MATCH = routesFor();
 // Built from `routes` (per render, via useRoutes()), not at module scope: a plain object built
 // once at import time would bake in whatever `routes.board` resolved to on first evaluation. On
 // the server that is always the no-project prefix, which is right for standalone but wrong for
-// every hub page — the markup mismatch is React hydration error #418.
+// every hub page, the markup mismatch is React hydration error #418.
 function navGroups(routes: Routes): NavGroup[] {
   return [
     {
       label: 'Work',
       items: [
+        // Home leads the nav and replaces Inbox there (docs/artifacts/codeloop-ui-design.html
+        // §5, §10 "Home replaces Inbox"); the Inbox route itself still renders, just unlinked.
+        { id: 'home', title: 'Home', url: routes.home, matchUrl: MATCH.home, icon: Home },
         { id: 'board', title: 'Board', url: routes.board, matchUrl: MATCH.board, icon: Kanban, exact: true },
-        { id: 'inbox', title: 'Inbox', url: routes.inbox, matchUrl: MATCH.inbox, icon: Inbox },
         { id: 'initiatives', title: 'Initiatives', url: routes.initiatives, matchUrl: MATCH.initiatives, icon: Layers, also: ['/epics/', '/features/'] },
         { id: 'roadmap', title: 'Roadmap', url: routes.roadmap, matchUrl: MATCH.roadmap, icon: Map },
       ],
@@ -90,9 +92,9 @@ function secondaryNav(routes: Routes): NavItem[] {
 }
 
 /** The hub home's own nav: no board to scope to, so "Work"/"Knowledge" are replaced by every
- * registered project (a plain link, full navigation — see hub-home.tsx) plus a way back home.
+ * registered project (a plain link, full navigation, see hub-home.tsx) plus a way back home.
  * Each row's badge is `counts.waitingOnYou`, the same number (and the same server computation,
- * src/lib/hub.ts) the project grid card shows — one definition of "waiting", not a second one
+ * src/lib/hub.ts) the project grid card shows, one definition of "waiting", not a second one
  * added up from the gates+questions feed. */
 function HubNavGroups({ pathname, projects }: { pathname: string; projects?: ListedProject[] }) {
   const known = (projects ?? []).filter((p) => !p.missing);
@@ -217,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // only runs client-side (inside an effect) so it can use the raw one directly.
   const rawPathname = usePathname() ?? '';
   // From the provider, not `pathname.startsWith('/p/')`: for the same reason as above, that read
-  // differs between the server and client passes — two different branches below (ProjectSwitcher
+  // differs between the server and client passes, two different branches below (ProjectSwitcher
   // vs. a plain span), which is React hydration error #418. `hub` is the same server-resolved flag
   // on both passes.
   const { hub: hubMode, project: projectId } = useProject();
@@ -235,6 +237,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const session = useSession();
   const config = useConfig(!atHubHome);
   const inbox = useInbox({}, !atHubHome);
+  const home = useHome(!atHubHome);
+  const needsYouCount = home.data?.summary.needsYou ?? 0;
   const gates = inbox.data?.needsYou.total ?? 0;
   const questions = inbox.data?.questions.total ?? 0;
   const backlog = useCardCount({ stage: ['proposed'] }, !atHubHome).data ?? 0;
@@ -248,7 +252,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => { document.title = !atHubHome && project?.name ? `${project.name} · codeloop` : 'Codeloop'; }, [project?.name, atHubHome]);
 
   const indicators: Record<string, React.ReactNode> = {
-    inbox: gates + questions > 0 ? <CountBadge value={gates + questions} tone="attention" /> : null,
+    // The same number Home leads with, so the badge and the page never disagree.
+    home: needsYouCount > 0 ? <CountBadge value={needsYouCount} tone="attention" /> : null,
     board: <CountBadge value={backlog} />,
   };
 
@@ -288,7 +293,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SidebarGroup>
             ))
           )}
-          {/* Settings is a project's own page (lanes, personas, board auth) — nothing to show it
+          {/* Settings is a project's own page (lanes, personas, board auth), nothing to show it
               for at the hub home, where there's no project to configure. No hub-level settings
               page exists yet, so this stays off rather than linking somewhere that degrades. */}
           {!atHubHome && (

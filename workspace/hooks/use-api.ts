@@ -8,9 +8,9 @@ import { CARD_FACETS } from '@/lib/types';
 import type { NewCardInput, ProposalInput } from '@/lib/api';
 import { deriveInbox, deriveLanes, uniq } from '@/lib/cards';
 import { findCard, invalidateCardLists, invalidatePageLists, patchCard, patchPage, removePage } from '@/lib/live-cache';
-import { cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, isMissing, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
+import { boardQueryOptions, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, homeQueryOptions, inboxQueryOptions, isMissing, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
 
-export { CARD_PAGE_SIZE, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, inboxQueryOptions, inboxSince, INBOX_LIMIT, isConflict, isMissing, normaliseCardsQuery, PAGE_SIZE, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
+export { boardQueryOptions, CARD_PAGE_SIZE, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, homeQueryOptions, inboxQueryOptions, inboxSince, INBOX_LIMIT, isConflict, isMissing, normaliseCardsQuery, PAGE_SIZE, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
 
 /**
  * Cards matching the query, without event logs: the first page (CARD_PAGE_SIZE rows, prefetched by
@@ -66,7 +66,7 @@ export function useLanes(enabled = true) {
  * The inbox from GET /api/inbox: three lists of at most INBOX_LIMIT rows and the per-lane numbers.
  * On a server without the route the same shape is derived from the full card list, which is the
  * only time the client walks every page. `enabled` disables all of it (main query, fallback walk
- * and lanes) — for a caller with no project in scope, e.g. the hub home shell.
+ * and lanes), for a caller with no project in scope, e.g. the hub home shell.
  */
 export function useInbox(q: InboxQuery = {}, enabled = true) {
   const result = useQuery({ ...inboxQueryOptions(q), enabled });
@@ -190,6 +190,11 @@ export function useCanWrite() {
 
 /** The board's "what next" panel: one state, with the data that state needs. */
 export const useNextAction = () => useQuery({ queryKey: QK.next, queryFn: api.next, retry: false });
+
+/** The board: one row of states for the whole project, server-grouped (GET /api/board). */
+export const useBoard = () => useQuery(boardQueryOptions());
+/** Home: what needs you, what is failing, what is moving, which agents are working, what shipped (GET /api/home). */
+export const useHome = (enabled = true) => useQuery({ ...homeQueryOptions(), enabled });
 
 /** Signs this browser in; refetches the session on success so every write control re-enables at once. */
 export function useLogin() {

@@ -2,38 +2,29 @@ import { HydrationBoundary } from '@tanstack/react-query';
 import { Kanban } from 'lucide-react';
 import { Board } from '@/components/shared/board';
 import { HubHome } from '@/components/shared/hub-home';
-import { backlogQuery, filtersFromUrl, laneColumns, toQuery } from '@/lib/board-columns';
+import { backlogQuery } from '@/lib/board-columns';
 import { PageLayout } from '@/components/shared/page-layout';
-import { api } from '@/lib/api';
-import { deriveLanes } from '@/lib/cards';
-import { cardCountQueryOptions, cardsQueryOptions, QK } from '@/lib/queries';
+import { boardQueryOptions, cardsQueryOptions } from '@/lib/queries';
 import { dehydrated, getQueryClient } from '@/lib/query-server';
 import { currentProjectServer, hubModeServer } from '@/lib/project';
-import type { Lane } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BoardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function BoardPage() {
   // The hub's bare `/` (no project in the URL) has no board to show; list every registered
   // project and what needs a person across all of them instead.
   if ((await hubModeServer()) && !(await currentProjectServer())) return <HubHome />;
-  const initial = filtersFromUrl(await searchParams);
-  const base = toQuery(initial);
   const qc = getQueryClient();
-  // The first page of cards is prefetched by the layout (the shell needs it too). The board draws
-  // one small page per column, so the same column queries are filled here, 50 rows each.
-  const [lanes] = await Promise.all([
-    qc.fetchQuery({ queryKey: QK.lanes, queryFn: api.lanes, retry: false }).catch(() => [] as Lane[]),
-    qc.prefetchQuery({ queryKey: QK.facets, queryFn: api.cardFacets, retry: false }),
+  // GET /api/board carries the four state columns already grouped; the backlog strip is the one
+  // thing it only counts, not lists, so its own card page is prefetched alongside it.
+  await Promise.all([
+    qc.prefetchQuery(boardQueryOptions()),
+    qc.prefetchInfiniteQuery(cardsQueryOptions(backlogQuery({}))),
   ]);
-  const first = qc.getQueryData<{ pages: { lanes?: Lane[] }[] }>(cardsQueryOptions().queryKey)?.pages[0];
-  const known = deriveLanes([], lanes.length ? lanes : first?.lanes);
-  const columns = [backlogQuery(base), ...known.flatMap((lane) => laneColumns(lane, base, Boolean(initial.facets.dropped?.length)).map((c) => c.query))];
-  await Promise.all([...columns.map((q) => qc.prefetchInfiniteQuery(cardsQueryOptions(q))), qc.prefetchQuery(cardCountQueryOptions(base))]);
   return (
     <HydrationBoundary state={dehydrated(qc)}>
-      <PageLayout icon={Kanban} title="Board" description="Every story by lane and stage. Proposed stories wait in the backlog.">
-        <Board initial={initial} />
+      <PageLayout icon={Kanban} title="Board" description="Every story in one row of states: up next, in progress, needs you, done.">
+        <Board />
       </PageLayout>
     </HydrationBoundary>
   );
