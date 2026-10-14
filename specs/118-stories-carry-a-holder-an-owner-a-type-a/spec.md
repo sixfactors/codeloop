@@ -15,10 +15,12 @@ acceptance:
 - US2 Given a story with no holder, when it is shown, then the holder row reads Unassigned and the owner is still named.
 - US3 Given a story of type bug or chore, when it is shown, then the type reads on the record and the board tile.
 - US4 Given a story that blocks another, when either is shown, then each carries a typed link chip to the other.
-- US5 Given a write with an unknown type, an unknown link type or a link to a missing story, then it is refused and the screen says which field.
+- US5 Given a story write carries an unknown type, an unknown link type or a link to a missing story, when it is saved, then it is refused and the screen says which field.
 
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
 screens: story-properties, story-links
+
+not_building: editing holder or owner from the board; the query bar and saved views over these fields
 
 ## Not building
 
