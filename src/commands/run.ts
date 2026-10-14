@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { loadAgents, resolveAgent } from '../lib/agent.js';
 import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
-import { planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
+import { doctorTick, planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
 import { guard } from './guard.js';
 
 interface RunOptions {
@@ -43,8 +43,10 @@ export const runCommand = new Command('run')
       return;
     }
     const result = wanted ? await runDueWithAgent(projectDir, wanted, now, filter) : runDue(projectDir, now, filter);
+    // The doctor tick runs on a full run only: a run aimed at one card or lane does what it was asked.
+    const doctor = filter.card || filter.lane ? [] : await doctorTick(projectDir, now, { skip: new Set(wanted ? result.advanced.map(a => a.id) : []), agent: wanted?.name });
     if (opts.json) {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify({ ...result, doctor }, null, 2));
       return;
     }
     result.created.forEach(c => console.log(`  created ${c.id} in ${c.lane} (trigger: ${c.trigger})`));
@@ -60,5 +62,6 @@ export const runCommand = new Command('run')
       console.log(`  ${a.id}: ${a.outcome === 'unchanged' ? 'unchanged, waiting for work' : a.outcome === 'parked' ? 'waiting for you' : a.outcome}${a.note ? ` (${a.note})` : ''}`);
       if (a.next) console.log(`    ${a.next}`);
     });
-    console.log(`  ${result.created.length} created, ${result.advanced.length} advanced${result.agents ? `, ${result.agents.filter(a => a.started).length} agent runs` : ''}`);
+    doctor.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
+    console.log(`  ${result.created.length} created, ${result.advanced.length} advanced${result.agents ? `, ${result.agents.filter(a => a.started).length} agent runs` : ''}${doctor.length ? `, ${doctor.length} doctor actions` : ''}`);
   }));

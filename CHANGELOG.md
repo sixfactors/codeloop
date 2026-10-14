@@ -25,6 +25,9 @@ when package.json names a version this file has no heading for.
 - Every Claude or Cursor session starts with the monitor: what waits for you, what is failing with
   its last check and the fix to run, and what is stale with park or drop. A done story is never
   named as the active one; the pointer is cleared instead.
+- `codeloop run --due` runs a doctor tick: a failing story gets its agent started again (under
+  three fails), and a story stuck or stale for a day gets one "Park it?" question in the inbox.
+  Each action is a line on the story's activity. `monitor: off` in config.yaml turns it off.
 
 ### Board and Home
 - Home shows what needs you, what is moving, which agents are working and what shipped this week;

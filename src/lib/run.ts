@@ -1,7 +1,11 @@
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
-import { AGENT_RUNS_DIR, briefPath, buildBrief, resolveAgent, runAgent, type AgentConfig } from './agent.js';
+import { AGENT_RUNS_DIR, briefPath, buildBrief, loadAgents, resolveAgent, runAgent, type AgentConfig } from './agent.js';
+import { appendActivity, lastActivityAt } from './activity.js';
+import { loadConfig } from './config.js';
+import { addQuestions, openQuestions } from './interview.js';
+import { storyState } from './states.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { advanceCard, awaitsApproval, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
@@ -335,4 +339,62 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify({ at, slots, git: seen }, null, 2) + '\n');
   return result;
+}
+
+// --- the doctor: what the monitor finds, something does without a person -------------------------
+
+export interface DoctorAction {
+  id: string;
+  action: 'agent-started' | 'agent-not-started' | 'suggest-park';
+  note: string;
+}
+
+const DAY_MS_DOCTOR = 24 * 60 * 60 * 1000;
+const PARK_QUESTION = 'Park it?';
+
+/** On unless `.codeloop/config.yaml` sets `monitor: off`. */
+export function monitorEnabled(projectDir: string): boolean {
+  const value = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
+  return value !== 'off' && value !== false;
+}
+
+/**
+ * One pass of the doctor: a failing story with fewer than three fails gets its agent started on
+ * its stage again (the same turn `run --agent` takes), and a stuck or stale story untouched for a
+ * day gets one "park it" question in the inbox. Each action is a line on the story's activity
+ * stream. Stories in `skip` were already worked by this run.
+ */
+export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string } = {}): Promise<DoctorAction[]> {
+  if (!monitorEnabled(projectDir)) return [];
+  const actions: DoctorAction[] = [];
+  const hasAgents = Object.keys(loadAgents(projectDir).agents).length > 0;
+  const log = (a: DoctorAction) => {
+    actions.push(a);
+    appendActivity(projectDir, a.id, { kind: 'doctor', text: a.note });
+  };
+  for (const card of readCards(projectDir).cards) {
+    if (opts.skip?.has(card.id)) continue;
+    const state = storyState(card, openQuestions(projectDir, card).length, { now: now.getTime(), lastActivityAt: lastActivityAt(projectDir, card.id) });
+    if (!state?.health) continue;
+    const fails = card.retries[card.stage] ?? 0;
+    if (state.health === 'failing' && fails < 3) {
+      if (!hasAgents) continue;
+      const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
+      const turn = await workCard(projectDir, card.id, card.stage, agent, now);
+      const started = Boolean(turn.agent?.started);
+      log({ id: card.id, action: started ? 'agent-started' : 'agent-not-started', note: started ? `doctor started agent ${agent.name} on ${card.stage} (failing, ${fails} fails); outcome ${turn.advanced.outcome}` : `doctor did not start an agent on ${card.stage}: ${turn.agent?.reason ?? turn.advanced.note ?? turn.advanced.outcome}` });
+      continue;
+    }
+    const untouched = now.getTime() - Date.parse(card.updatedAt) > DAY_MS_DOCTOR;
+    if ((state.health === 'stale' || state.health === 'stuck') && untouched) {
+      if (openQuestions(projectDir, card).some(q => q.question.startsWith(PARK_QUESTION))) continue;
+      try {
+        addQuestions(projectDir, card.id, [{ question: `${PARK_QUESTION} ${card.id} has been ${state.health} since ${card.updatedAt.slice(0, 10)}.`, recommended: `yes: \`codeloop card park ${card.id}\`` }], 'agent');
+      } catch {
+        // A story with nowhere to keep questions still gets the activity line.
+      }
+      log({ id: card.id, action: 'suggest-park', note: `doctor suggests parking ${card.id}: ${state.health} since ${card.updatedAt.slice(0, 10)}` });
+    }
+  }
+  return actions;
 }
