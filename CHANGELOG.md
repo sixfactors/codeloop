@@ -31,6 +31,9 @@ when package.json names a version this file has no heading for.
 - The monitor keeps itself running: when a project has agents configured and nothing scheduled,
   the first session installs an hourly `codeloop run --agent` in your crontab and says so.
   `codeloop schedule remove` or `monitor: off` stops it.
+- The inbox's Failing list uses the same rule, so it agrees with Home and the monitor.
+- The hub answers `GET /api/hub/attention` with each project's waiting, failing and stale counts,
+  and the sidebar's project badges show waiting plus failing.
 
 ### Board and Home
 - Home shows what needs you, what is moving, which agents are working and what shipped this week;

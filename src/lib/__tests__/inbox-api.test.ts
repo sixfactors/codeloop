@@ -87,7 +87,7 @@ describe('inbox-shaped card queries', () => {
     expect(withInbox.cards[0].events.length).toBeGreaterThan(0);
   });
 
-  it('a proposal does not count as waiting on you; a failed check appears under failing', async () => {
+  it('a proposal does not count as waiting on you; failing means two failed checks and an hour quiet, not one', async () => {
     proposeCard(dir, { lane: 'market', title: 'Maybe later', id: 'c-6' });
     writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market
 version: 1
@@ -103,11 +103,15 @@ stages:
     createCard(dir, { lane: 'market', title: 'Will fail', id: 'c-7' });
     const fail = advanceCard(dir, 'c-7');
     expect(fail.outcome).toBe('failed');
+    // One failed check while it is being worked is not failing.
+    expect(buildInbox(dir).failing).toEqual([]);
+    advanceCard(dir, 'c-7');
 
-    const inbox = buildInbox(dir);
+    // Two failed checks, read an hour and a half later with no activity since: failing.
+    const inbox = buildInbox(dir, new Date(Date.now() + 90 * 60_000));
     expect(inbox.needs_you.map(c => c.id)).not.toContain('c-6');
     expect(inbox.backlog).toMatchObject({ count: 1, oldest: { id: 'c-6' } });
-    expect(inbox.failing).toMatchObject([{ id: 'c-7', stage: 'draft', retries: 1 }]);
+    expect(inbox.failing).toMatchObject([{ id: 'c-7', stage: 'draft', retries: 2 }]);
     expect(inbox.summary).toContain('1 failing');
     expect(inbox.summary).toContain('1 in backlog');
 
@@ -115,6 +119,7 @@ stages:
     const body = await (await app.request('/api/inbox')).json();
     expect(ids(body.needsYou.cards)).not.toContain('c-6');
     expect(body.backlog).toMatchObject({ count: 1, oldest: { id: 'c-6' } });
-    expect(ids(body.failing.cards)).toEqual(['c-7']);
+    // Read now, c-7 failed seconds ago: not quiet for an hour yet, so not failing.
+    expect(ids(body.failing.cards)).toEqual([]);
   });
 });

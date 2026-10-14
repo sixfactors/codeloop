@@ -98,6 +98,11 @@ function secondaryNav(routes: Routes): NavItem[] {
  * added up from the gates+questions feed. */
 function HubNavGroups({ pathname, projects }: { pathname: string; projects?: ListedProject[] }) {
   const known = (projects ?? []).filter((p) => !p.missing);
+  const attention = useQuery({ queryKey: ['hub', 'attention'], queryFn: api.hub.attention, retry: false, refetchInterval: 15_000 });
+  const attentionOf = (id: string) => {
+    const a = attention.data?.find((x) => x.id === id);
+    return a ? a.needsYou + a.failing : 0;
+  };
   return (
     <>
       <SidebarGroup>
@@ -121,7 +126,8 @@ function HubNavGroups({ pathname, projects }: { pathname: string; projects?: Lis
                 <SidebarMenuButton tooltip={p.name} render={<a href={`/p/${encodeURIComponent(p.id)}/`} data-testid={`sidebar-nav-project-${p.id}`} />}>
                   <Boxes strokeWidth={1.5} />
                   <span className="flex-1 truncate">{p.name}</span>
-                  <CountBadge value={p.counts?.waitingOnYou ?? 0} tone="attention" />
+                  {/* What needs attention in that project: waiting on you plus failing, from the monitor. */}
+                  <CountBadge value={attentionOf(p.id)} tone="attention" />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

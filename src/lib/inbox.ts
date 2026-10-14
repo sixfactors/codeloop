@@ -7,6 +7,8 @@ import { loadLanes, substitute, type Lane } from './lane.js';
 import { openQuestions } from './interview.js';
 import { findMock } from './mock.js';
 import { cloudCopies } from './wiki.js';
+import { lastActivityAt } from './activity.js';
+import { storyState } from './states.js';
 
 export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 
@@ -36,7 +38,13 @@ export interface Inbox {
 }
 
 /** A check has failed on this stage and the card is not yet stuck: retries remain, no gate. */
-export const isFailing = (c: Card) => inLane(c) && !c.gate && (c.retries[c.stage] ?? 0) > 0;
+/**
+ * Failing by the same rule as the board and the monitor (src/lib/states.ts): two or more failed
+ * checks and an hour with no activity, or an agent run that ended on a failed check. One failed
+ * check while someone works is not failing. `lastActivity` gives the story's last activity time.
+ */
+export const isFailing = (c: Card, lastActivity: (id: string) => number | undefined = () => undefined, now = Date.now()) =>
+  inLane(c) && !c.gate && storyState(c, 0, { now, lastActivityAt: lastActivity(c.id) })?.health === 'failing';
 
 const firstPass = (c: Card) => !c.events.some(e => e.action === 'fail' || e.action === 'reject');
 
@@ -51,6 +59,8 @@ export interface InboxInput {
   mockOf: (cardId: string) => string | undefined;
   /** The card's questions without an answer. */
   openOf: (card: Card) => { question: string }[];
+  /** When the story's last activity line was written; failing needs it (an hour quiet). */
+  lastActivity?: (cardId: string) => number | undefined;
   /** The card's band and score from its feature; every card is P4 without one. */
   scoreOf?: (card: Card) => { band: Band; score?: number; feature?: string };
   /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
@@ -72,6 +82,7 @@ export function buildInbox(projectDir: string, now: Date = clock(), opts: { sort
       cloudCopies: cloudCopies(projectDir),
       mockOf: id => findMock(projectDir, id),
       openOf: card => openQuestions(projectDir, card),
+      lastActivity: id => lastActivityAt(projectDir, id),
       scoreOf: card => {
         const { band, score, feature } = chainOf(card, features);
         return { band, ...(score === undefined ? {} : { score }), ...(feature ? { feature } : {}) };
@@ -147,9 +158,9 @@ export function backlogOf(cards: Card[]): Inbox['backlog'] {
 }
 
 /** Cards whose current stage has failed at least once and are not yet stuck. */
-export function failingOf(cards: Card[]): Inbox['failing'] {
+export function failingOf(cards: Card[], lastActivity?: (id: string) => number | undefined, now = Date.now()): Inbox['failing'] {
   return cards
-    .filter(isFailing)
+    .filter(c => isFailing(c, lastActivity, now))
     .map(c => {
       const fail = c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1);
       return {
@@ -165,11 +176,11 @@ export function failingOf(cards: Card[]): Inbox['failing'] {
     .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
 }
 
-export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
+export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, lastActivity, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
   // Proposals wait in the backlog; only started work at a gate or stuck counts as waiting on you.
   const parked = cards.filter(c => c.gate && c.stage !== PROPOSED).map(c => needsYouItem(c, lanes, mockOf(c.id), scoreOf(c)));
   const waiting = sort === 'score' ? byScoreThenOldest(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
-  const failing = failingOf(cards);
+  const failing = failingOf(cards, lastActivity, now.getTime());
   const backlog = backlogOf(cards);
 
   return {

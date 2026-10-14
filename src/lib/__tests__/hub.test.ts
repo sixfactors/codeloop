@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { readCards } from '../cards.js';
@@ -110,6 +110,21 @@ describe('the hub keeps projects apart', () => {
     const body = await res.json();
     expect(body.error).toContain('does-not-exist');
     expect(body.known.sort()).toEqual([idA, idB].sort());
+  });
+
+  it('attention gives each project its needs-you, failing and stale counts from the monitor', async () => {
+    // Project B's story, off its gate and untouched for three days, is stale; A's still waits at its gate.
+    const file = join(b, '.codeloop/cards.json');
+    const cards = readCards(b);
+    const old = new Date(Date.now() - 72 * 3_600_000);
+    writeFileSync(file, JSON.stringify({ ...cards, cards: cards.cards.map(({ gate: _g, awaiting: _a, ...c }) => ({ ...c, updatedAt: old.toISOString() })) }, null, 2));
+    // Its activity is as old: the engine's own events were mirrored there when it was created.
+    const activity = join(b, '.codeloop/state/activity/c-001.jsonl');
+    if (existsSync(activity)) utimesSync(activity, old, old);
+    const body = await (await hub.app.request('/api/hub/attention')).json() as { projects: { id: string; needsYou: number; failing: number; stale: number }[] };
+    const byId = Object.fromEntries(body.projects.map(p => [p.id, p]));
+    expect(byId[idA]).toMatchObject({ needsYou: 1, failing: 0, stale: 0 });
+    expect(byId[idB]).toMatchObject({ stale: 1 });
   });
 
   it('needs-you lists items from both projects in one response, each labelled with its project', async () => {
