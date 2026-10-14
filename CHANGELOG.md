@@ -12,6 +12,7 @@ when package.json names a version this file has no heading for.
 ### Watch an agent work a story
 - A builder that holds a card and writes nothing to it for 30 minutes (`monitor.stall_minutes`) is flagged `stalled` on Home and `/api/hub/attention`, listed by `codeloop monitor stalled` and at session start, and the doctor writes one "asked for a hand-back" line per stall.
 - `codeloop card handback <card> --branch <b> --head <sha> --proof "<cmd>"` records a builder's hand-back: it runs the proof command itself and stores the exit code and output on the card, so a gate can check data instead of a claim. A failing proof is recorded, an empty one is refused.
+- `codeloop card gate <card> [--handback <sha>]` runs the proof before a story merges: it reruns the hand-back's proof (in `--worktree` when the hand-back named one), runs the stage check without advancing, and confirms the first file the hand-back names exists on its branch. The verdict and findings are stored per card (`POST /api/cards/:id/gate`, `GET /api/cards/:id/gates`); exit 1 on fail, refused when there is no hand-back.
 - Every card has an activity stream (`.codeloop/state/activity/<card>.jsonl`): the Claude Code and
   Cursor hooks record edits, commands, prompts and session start and stop on the session's active
   card; headless runs copy their log into it; checks, commits (via a `Card:` trailer and the new

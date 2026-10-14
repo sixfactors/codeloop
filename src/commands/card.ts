@@ -114,11 +114,25 @@ cardCommand
   .requiredOption('--proof <cmd>', 'The command that proves the work; it is run from the project root')
   .option('--left <text>', 'What is left to do')
   .option('--blocked <text>', 'What blocked the work')
-  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string }) => {
+  .option('--worktree <path>', 'The git worktree the work is in; the proof is run there instead of the project root')
+  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string }) => {
     const c = client();
-    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked });
+    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree: opts.worktree });
     console.log(`proof exit ${rec.proof.exit}; hand-back recorded for ${rec.card} at ${rec.stage} (${rec.branch}@${rec.head.slice(0, 8)})`);
     await c.close();
+  }));
+
+cardCommand
+  .command('gate <id>')
+  .description("Gate a card's hand-back: reruns its proof, the stage check and one claim. Exit 0 on pass, 1 on fail")
+  .option('--handback <id>', 'The hand-back to gate (its head sha); the latest by default')
+  .action(guard(async (id: string, opts: { handback?: string }) => {
+    const c = client();
+    const rec = await c.cards.gate(id, { handbackId: opts.handback });
+    console.log(`gate ${rec.verdict} for ${rec.card} at ${rec.stage} (${rec.handback.branch}@${rec.handback.head.slice(0, 8)})`);
+    for (const f of rec.findings) console.log(`  - ${f}`);
+    await c.close();
+    if (rec.verdict === 'fail') process.exit(1);
   }));
 
 cardCommand
