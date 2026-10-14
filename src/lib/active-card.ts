@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs';
+import { hostname } from 'os';
 import { dirname, join } from 'path';
 
 /** The person's own active card (a terminal with no host session): one per repo, as before. */
@@ -8,11 +9,36 @@ export const ACTIVE_SESSIONS_DIR = '.codeloop/state/active';
 /** A session that has not touched its file in this long is treated as gone. */
 const STALE_MS = 24 * 60 * 60 * 1000;
 
+export type SessionHost = 'claude' | 'cursor' | 'codex';
+
 export interface SessionCard {
   session: string;
   card: string;
   startedAt: string;
   updatedAt: string;
+  host?: SessionHost;
+  machine?: string;
+  /** What a person is shown in place of the session id: "claude on dean-mbp, since 19:01". */
+  label?: string;
+}
+
+/**
+ * Which assistant this process runs under: the hook's own input first (Cursor sends
+ * `cursor_version`, Claude Code a transcript under `.claude/`), then the environment each host sets.
+ */
+export function detectHost(input: Record<string, unknown> = {}, env: NodeJS.ProcessEnv = process.env): SessionHost | undefined {
+  if (input.cursor_version || env.CURSOR_SESSION_ID || env.CURSOR_TRACE_ID) return 'cursor';
+  if (env.CODEX_SESSION_ID || env.CODEX_SANDBOX || env.CODEX_HOME) return 'codex';
+  if ((typeof input.transcript_path === 'string' && input.transcript_path.includes('.claude')) || env.CLAUDE_CODE_SESSION_ID || env.CLAUDECODE) return 'claude';
+  return undefined;
+}
+
+const machineName = () => hostname().replace(/\.local$/, '');
+
+export function sessionLabel(s: Pick<SessionCard, 'host' | 'machine' | 'startedAt'>): string {
+  const since = new Date(s.startedAt);
+  const hhmm = Number.isNaN(since.getTime()) ? '' : `, since ${String(since.getHours()).padStart(2, '0')}:${String(since.getMinutes()).padStart(2, '0')}`;
+  return `${s.host ?? 'session'} on ${s.machine ?? 'unknown machine'}${hhmm}`;
 }
 
 /**
@@ -31,7 +57,8 @@ function readSession(file: string, now = Date.now()): SessionCard | undefined {
   try {
     if (now - statSync(file).mtimeMs > STALE_MS) return undefined;
     const parsed = JSON.parse(readFileSync(file, 'utf-8')) as SessionCard;
-    return parsed.card ? parsed : undefined;
+    // Files written before labels existed get one from what they have.
+    return parsed.card ? { ...parsed, label: parsed.label ?? sessionLabel(parsed) } : undefined;
   } catch {
     return undefined;
   }
@@ -58,13 +85,15 @@ export function getActiveCard(projectDir: string, session: string | undefined = 
   return id || undefined;
 }
 
-export function setActiveCard(projectDir: string, id: string, session: string | undefined = currentSession()): void {
+export function setActiveCard(projectDir: string, id: string, session: string | undefined = currentSession(), host: SessionHost | undefined = detectHost()): void {
   if (session) {
     const file = sessionFile(projectDir, session);
     mkdirSync(dirname(file), { recursive: true });
     const now = new Date().toISOString();
     const before = readSession(file);
-    const record: SessionCard = { session, card: id, startedAt: before?.card === id ? before.startedAt : now, updatedAt: now };
+    const startedAt = before?.card === id ? before.startedAt : now;
+    const who = { host: host ?? before?.host, machine: machineName(), startedAt };
+    const record: SessionCard = { session, card: id, startedAt, updatedAt: now, ...(who.host ? { host: who.host } : {}), machine: who.machine, label: sessionLabel(who) };
     writeFileSync(file, JSON.stringify(record, null, 2) + '\n');
     return;
   }
