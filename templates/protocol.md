@@ -1,6 +1,7 @@
 # codeloop protocol
 
-Active card: {{ACTIVE_CARD}}
+The active card is printed at session start by `codeloop guard session`, not written here: this file
+is tracked and is the same in every worktree, while each worktree or session works its own card.
 
 With no active card, do not start from the chat: run `codeloop card list --band P1` (then P2) and
 `codeloop card activate <id>` on the top one, or `codeloop start "<title>"` when the person asks for

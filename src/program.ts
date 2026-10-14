@@ -8,6 +8,10 @@ import { openCommand } from './commands/open.js';
 import { hubCommand } from './commands/hub.js';
 import { projectsCommand } from './commands/projects.js';
 import { storeCommand } from './commands/store.js';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { assertStoreReady } from './lib/store-home.js';
+import { projectRoot } from './lib/project-root.js';
 import { watchCommand } from './commands/watch.js';
 import { installCommand } from './commands/install.js';
 import { searchCommand } from './commands/search.js';
@@ -55,6 +59,12 @@ export function buildProgram(): Command {
     let top = action;
     while (top.parent && top.parent !== program) top = top.parent;
     syncBeforeCommand(top.name());
+    // store.home: user keeps the board outside the repo, reached through links in the main tree;
+    // every command but `store` itself needs them in place first.
+    if (top.name() !== 'store') {
+      const root = projectRoot();
+      if (existsSync(join(root, '.codeloop'))) assertStoreReady(root);
+    }
   });
 
   // Project management

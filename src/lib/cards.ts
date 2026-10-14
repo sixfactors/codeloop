@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { followLink } from './store-home.js';
 import { join } from 'path';
 import { appendActivity, MIRRORED_EVENTS } from './activity.js';
 import { CloudConflictError, writeCloudBoard } from './cloud.js';
@@ -166,7 +167,8 @@ export function readCards(projectDir: string): CardFile {
  * version on disk has moved, so two agents working from the same read cannot both land.
  */
 export function writeCards(projectDir: string, read: CardFile, cards: Card[]): CardFile {
-  const file = join(projectDir, CARDS_PATH);
+  // In store.home user mode cards.json is a link into the per-project store: write through it.
+  const file = followLink(join(projectDir, CARDS_PATH));
   // The lock covers the re-read, the version check and the rename as one step. A connected cloud
   // store is written inside it too, so its revision record cannot be interleaved either.
   return withLock(file, () => {

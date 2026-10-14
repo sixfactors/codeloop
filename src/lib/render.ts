@@ -1,8 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { getActiveCard } from './active-card.js';
-import { findCardOrNone, readCards } from './cards.js';
 import { loadLanes, loadSkillsIndex, type Lane, type SkillEntry, type Stage } from './lane.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -60,18 +58,13 @@ function files(lanes: Lane[], skills: SkillEntry[], host: Host): Record<string, 
   return out;
 }
 
-/** The active-card line the protocol template's `{{ACTIVE_CARD}}` is filled with at render time. */
-function activeCardLine(projectDir: string): string {
-  const id = getActiveCard(projectDir);
-  if (!id) return 'none, run `codeloop start "<title>"` or `codeloop card activate <id>` before doing any work.';
-  const card = findCardOrNone(readCards(projectDir).cards, id);
-  return card ? `${card.id}, ${card.title} (stage ${card.stage})` : `${id} (not found; run \`codeloop card activate <id>\` with a real id)`;
-}
-
-/** `templates/protocol.md` with the active-card line filled in. Same text for every host's marked block. */
-function protocolText(projectDir: string): string {
-  const template = readFileSync(join(PACKAGE_ROOT, 'templates/protocol.md'), 'utf-8');
-  return template.replace('{{ACTIVE_CARD}}', activeCardLine(projectDir));
+/**
+ * `templates/protocol.md` as is: the same text for every host's marked block and in every worktree.
+ * Anything per tree or per session (the active card) is printed by the session-start hook instead,
+ * since these files are tracked and a per-tree line kept every worktree dirty.
+ */
+function protocolText(_projectDir: string): string {
+  return readFileSync(join(PACKAGE_ROOT, 'templates/protocol.md'), 'utf-8');
 }
 
 function markedBlock(body: string): string {
