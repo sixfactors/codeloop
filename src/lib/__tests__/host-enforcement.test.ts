@@ -48,29 +48,23 @@ afterEach(() => {
 });
 
 describe('render: protocol block', () => {
-  it('fills the active-card line, is idempotent, and only the marked block changes when it does', () => {
+  it('renders the same bytes whatever card is active, so worktrees stay clean, and keeps the text around the block', () => {
     write('CLAUDE.md', '# My rules\n\nKeep this.\n');
     writeCard('c-1', 'spec');
 
     const first = render(dir, []);
     expect(first.written).toContain('CLAUDE.md');
-    const claudeMdV1 = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeMdV1).toContain('# My rules\n\nKeep this.\n');
-    expect(claudeMdV1).toContain('Active card: none');
+    const claudeMd = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
+    const agentsMd = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
+    expect(claudeMd).toContain('# My rules\n\nKeep this.\n');
+    expect(claudeMd).not.toMatch(/Active card: (none|c-1)/);
 
-    // Unchanged input -> unchanged output.
+    // A second tree with a different active card renders byte-identical files.
+    setActiveCard(dir, 'c-1');
     const second = render(dir, []);
     expect(second.written).toEqual([]);
-    expect(readFileSync(join(dir, 'CLAUDE.md'), 'utf-8')).toBe(claudeMdV1);
-
-    // Activating a card changes only the marked block's content, not the text around it.
-    setActiveCard(dir, 'c-1');
-    const third = render(dir, []);
-    expect(third.written).toContain('CLAUDE.md');
-    const claudeMdV2 = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeMdV2).toContain('# My rules\n\nKeep this.\n');
-    expect(claudeMdV2).toContain('Active card: c-1');
-    expect(claudeMdV2.split('<!-- codeloop:start -->')[0]).toBe(claudeMdV1.split('<!-- codeloop:start -->')[0]);
+    expect(readFileSync(join(dir, 'CLAUDE.md'), 'utf-8')).toBe(claudeMd);
+    expect(readFileSync(join(dir, 'AGENTS.md'), 'utf-8')).toBe(agentsMd);
   });
 
   it('writes .cursor/rules/codeloop.mdc with alwaysApply: true and .github/copilot-instructions.md as a marked block', () => {

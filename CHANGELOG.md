@@ -26,6 +26,10 @@ when package.json names a version this file has no heading for.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
+### Shared story store
+- `codeloop render` writes the same CLAUDE.md, AGENTS.md and host rule files in every worktree: the
+  active card line is gone from them, and the session-start hook prints the active story instead.
+
 ### Orchestrator after the merge
 - After merging a story the orchestrator runs `codeloop verify` (from the verify stage on) and the
   project's `orch.after_merge.build` and `.restart` commands on the main tree, records each as a

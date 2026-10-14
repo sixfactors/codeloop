@@ -66,7 +66,7 @@ describe('render', () => {
     expect(render(dir, ['claude', 'cursor', 'codex']).written).toEqual([]);
     expect(snapshot(dir)).toEqual(before);
     expect(before['AGENTS.md']).toMatch(/^# Agents\n\nHouse rules stay here\.\n\n<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
-    expect(before['CLAUDE.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*Active card: none[\s\S]*<!-- codeloop:end -->\n$/);
+    expect(before['CLAUDE.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*codeloop guard session[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['.github/copilot-instructions.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['.cursor/rules/codeloop.mdc']).toMatch(/alwaysApply: true/);
   });
