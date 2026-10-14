@@ -23,6 +23,7 @@ import { addQuestions, readQuestions, writeAnswer, type Question } from './inter
 import { mockHref } from './mock.js';
 import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
+import { followActivity, readActivity, type ActivityEntry } from './activity.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
@@ -37,6 +38,7 @@ export type { Question } from './interview.js';
 export type { Stats } from './stats.js';
 export type { LintResult, Page as WikiEntry } from './wiki.js';
 export type { RunRecord, RunView } from './runs.js';
+export type { ActivityEntry, ActivityLine } from './activity.js';
 export type { ProjectDetection } from './detect.js';
 export type { AdoptResult } from './skills.js';
 
@@ -229,6 +231,17 @@ export function runCard(projectDir: string, ref: string, opts: { agent?: string 
 }
 
 export const run = (projectDir: string, runId: string): RunView | undefined => getRun(projectDir, runId);
+
+/** A card's activity, oldest first, from `after` (the last cursor a caller saw); `next` when more remain. */
+export function cardActivity(projectDir: string, ref: string, opts: { after?: string; limit?: number } = {}): { id: string; items: ActivityEntry[]; next?: string } {
+  const id = findCard(readCards(projectDir).cards, ref).id;
+  return { id, ...readActivity(projectDir, id, opts) };
+}
+
+/** Every activity line on any card as it is written: the frames the change stream carries as `activity`. */
+export async function* activityStream(projectDir: string, signal?: AbortSignal): AsyncIterable<{ type: 'activity'; card: string; entry: ActivityEntry }> {
+  for await (const { card, entry } of followActivity(projectDir, signal)) yield { type: 'activity', card, entry };
+}
 export const runWait = (projectDir: string, runId: string): Promise<RunRecord> => waitRun(projectDir, runId);
 export const runStream = (projectDir: string, runId: string, signal?: AbortSignal) => streamRun(projectDir, runId, signal);
 export const runExists = (projectDir: string, runId: string): boolean => readRun(projectDir, runId) !== undefined;
@@ -720,7 +733,7 @@ export interface BoardStory {
   feature?: string;
   initiative?: string;
   openQuestions: number;
-  /** The agent session working it right now, when one is. */
+  /** Who is working it right now, as a person reads it ("claude on dean-mbp, since 19:01"), when anyone is. */
   agent?: string;
   updatedAt: string;
 }
@@ -733,7 +746,7 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, string>): BoardStory =>
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
 
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
-  const agents = new Map(activeSessions(projectDir).map(s => [s.card, s.session] as const));
+  const agents = new Map(activeSessions(projectDir).map(s => [s.card, s.label ?? s.session] as const));
   const { items } = await index.cards.list({}, undefined, 100_000);
   return items.filter(c => c.display).map(c => storyRow(c, agents));
 }
@@ -770,7 +783,7 @@ export interface HomeView {
   needsYou: BoardStory[];
   failing: BoardStory[];
   inProgress: BoardStory[];
-  agents: { session: string; card: string; title?: string; since: string }[];
+  agents: { session: string; label: string; card: string; title?: string; since: string }[];
   shipped: BoardStory[];
 }
 
@@ -782,7 +795,7 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   const failing = rows.filter(r => r.display.flags.includes('failing')).sort(newestFirst);
   const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
   const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
-  const agents = activeSessions(projectDir).map(s => ({ session: s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
+  const agents = activeSessions(projectDir).map(s => ({ session: s.session, label: s.label ?? s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
   return {
     summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
     needsYou, failing, inProgress, agents, shipped,
