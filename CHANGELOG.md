@@ -45,6 +45,10 @@ when package.json names a version this file has no heading for.
   who holds each story (Needs you, Agent, Queued); an empty phase shrinks to its header, a lane
   picker replaces the lane chips, and each card says what it is doing now and how long it has been
   in its phase. The header, the sidebar and the story pager show one story count.
+- A story page shows what the orchestrator did: its report paragraph, then one row per turn that
+  opens to the builder's hand-back and the gate's verdict. Run with orchestrator and Brief a person
+  start a turn from the page, Home lists every orchestrated story with stalled ones marked, a stuck
+  story says what Approve does, and earlier phases' evidence shows under Output.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed
