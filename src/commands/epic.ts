@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
 
-const client = () => createLocalClient(process.cwd());
+const client = () => createLocalClient(projectRoot());
 
 export const epicCommand = new Command('epic').description('Epics: outcomes that take several features');
 

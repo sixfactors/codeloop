@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { CloudConflictError, CloudError, connect, disconnect, pull, push, search, status, syncBefore } from '../lib/cloud.js';
+import { projectRoot } from '../sdk/local.js';
 
 const CONFLICT_HINT = 'Next: `codeloop cloud pull` takes the cloud board; `codeloop cloud push --force` replaces it with yours.';
 
@@ -35,7 +36,7 @@ const NO_SYNC = new Set(['cloud', 'init', 'check', 'help']);
 export function syncBeforeCommand(command: string): void {
   if (NO_SYNC.has(command) || process.env.CODELOOP_NO_SYNC) return;
   try {
-    for (const note of syncBefore(process.cwd())) console.error(chalk.dim(`  cloud: ${note}`));
+    for (const note of syncBefore(projectRoot())) console.error(chalk.dim(`  cloud: ${note}`));
   } catch (e) {
     if (e instanceof CloudConflictError) {
       console.error(chalk.red(`conflict: ${e.message}`));
@@ -56,7 +57,7 @@ cloudCommand
   .option('--workspace-name <name>', 'A label for status output')
   .option('--folder <path>', 'Workspace folder for this project\'s pages (default: codeloop)')
   .action(guardCloud((opts: { url: string; key: string; workspaceName?: string; folder?: string }) => {
-    const r = connect(process.cwd(), opts);
+    const r = connect(projectRoot(), opts);
     console.log(r.adopted
       ? `  connected: a board page already exists (revision ${r.revision}) and was left as it is`
       : `  connected: board uploaded (revision ${r.revision})`);
@@ -70,7 +71,7 @@ cloudCommand
   .description('Workspace, page revision against the local version, and each document as in-sync, local-ahead, cloud-ahead or both-changed')
   .option('--json', 'JSON output')
   .action(guardCloud((opts: { json?: boolean }) => {
-    const s = status(process.cwd());
+    const s = status(projectRoot());
     if (opts.json) {
       console.log(JSON.stringify(s, null, 2));
       return;
@@ -90,7 +91,7 @@ cloudCommand
   .description('Write the board, wiki pages and config that changed here to the cloud. Lanes are not pushed: they change through `lane promote`')
   .option('--force', 'Overwrite even if the cloud copy changed since it was last seen here')
   .action(guardCloud((opts: { force?: boolean }) => {
-    const r = push(process.cwd(), opts);
+    const r = push(projectRoot(), opts);
     console.log(`  pushed: board revision ${r.revision}, ${r.wikiPages} wiki pages`);
     r.held.forEach(p => console.log(chalk.yellow(`  not pushed: ${p} was edited here; a lane changes through \`codeloop lane promote\``)));
   }));
@@ -100,7 +101,7 @@ cloudCommand
   .description('Take the cloud board, and every other cloud copy whose local file was not edited here')
   .option('--force', 'Take the cloud copy of every document, discarding local edits')
   .action(guardCloud((opts: { force?: boolean }) => {
-    const r = pull(process.cwd(), opts);
+    const r = pull(projectRoot(), opts);
     console.log(`  pulled: board revision ${r.revision}, ${r.wikiPages} wiki pages`);
     r.notes.forEach(n => console.log(chalk.yellow(`  ${n}`)));
   }));
@@ -109,7 +110,7 @@ cloudCommand
   .command('disconnect')
   .description('Push pending writes, pull everything back into the repo, then remove cloud.json')
   .action(guardCloud(() => {
-    const r = disconnect(process.cwd());
+    const r = disconnect(projectRoot());
     console.log(`  disconnected: board (revision ${r.revision}) and ${r.wikiPages} wiki pages are back in the repo; .codeloop/cloud.json removed`);
   }));
 
@@ -118,7 +119,7 @@ cloudCommand
   .description('Search the workspace knowledge base')
   .option('--json', 'JSON output')
   .action(guardCloud((query: string, opts: { json?: boolean }) => {
-    const results = search(process.cwd(), query);
+    const results = search(projectRoot(), query);
     if (opts.json) console.log(JSON.stringify(results, null, 2));
     else if (results.length === 0) console.log('  no results');
     else results.forEach(r => console.log(`  ${r.title}`));

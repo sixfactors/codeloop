@@ -92,3 +92,33 @@ describe('layering: CLI commands reach the engine only through the SDK', () => {
     expect(violations('wiki.ts', "import { capture } from '../lib/wiki.js';\n")).toEqual([]);
   });
 });
+
+/**
+ * A builder runs inside its story worktree, whose cwd holds a stale committed copy of the board.
+ * A command that reads cards, state, wiki or config from `process.cwd()` there reads that copy
+ * (a gate once failed with `card "c-143" not found`), so board reads go through projectRoot().
+ * Only these files may name the working directory, each for a reason that is about the directory
+ * the user is standing in rather than the board.
+ */
+const CWD_ALLOWED: Record<string, string> = {
+  'init.ts': 'scaffolds a new project into the directory the user is in, before any board exists',
+  'serve.ts': 'finds the project to host by walking up from the directory the user is in',
+  'open.ts': 'finds the running server by walking up from the directory the user is in',
+  'watch.ts': 'hosts the file watcher for the directory the user started it in',
+  'publish.ts': 'publishes the skill package in the current directory',
+  'pack.ts': 'packs the skill package in the current directory and resolves --out against it',
+  'install.ts': 'installs skills into the project the user is in, not into a board',
+  'remove.ts': 'removes installed skills from the project the user is in',
+  'list.ts': 'lists installed skills of the project the user is in',
+  'update.ts': 'updates installed skills of the project the user is in',
+  'schedule.ts': 'installs the crontab entry for the repository the user is in',
+};
+
+describe('process.cwd() in commands', () => {
+  it('appears only in the allow-listed files', () => {
+    const offenders = readdirSync(COMMANDS)
+      .filter(f => f.endsWith('.ts') && !(f in CWD_ALLOWED))
+      .filter(f => /process\.cwd\(\)/.test(readFileSync(join(COMMANDS, f), 'utf-8')));
+    expect(offenders).toEqual([]);
+  });
+});

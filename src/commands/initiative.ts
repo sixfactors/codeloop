@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { DONE, type FeatureNode, type StoryRow } from '../sdk/index.js';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
-const client = () => createLocalClient(process.cwd());
+const client = () => createLocalClient(projectRoot());
 
 const story = (s: StoryRow) => {
   const state = s.gate ? chalk.yellow(`waiting: ${s.gate}`) : s.stage === DONE ? chalk.green('done') : s.stage;

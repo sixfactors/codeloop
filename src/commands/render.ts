@@ -11,6 +11,7 @@ import { installHostHooks } from '../lib/host-hooks.js';
 import { serveMcp } from '../lib/mcp.js';
 import { HOSTS, render, type Host } from '../lib/render.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 export const renderCommand = new Command('render')
   .description('Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it')
@@ -19,13 +20,13 @@ export const renderCommand = new Command('render')
   .action(guard((opts: { host: string; hooks?: boolean }) => {
     if (opts.host !== 'all' && opts.host !== 'auto' && !HOSTS.includes(opts.host as Host)) throw new RefusalError(`unknown host "${opts.host}" (claude, cursor, codex or all)`);
     const markers: Record<Host, string> = { claude: '.claude', cursor: '.cursor', codex: '.agents' };
-    const present = HOSTS.filter(h => existsSync(join(process.cwd(), markers[h])));
+    const present = HOSTS.filter(h => existsSync(join(projectRoot(), markers[h])));
     const hosts = opts.host === 'all' ? HOSTS : opts.host === 'auto' ? (present.length ? present : HOSTS) : [opts.host as Host];
-    const result = render(process.cwd(), hosts);
+    const result = render(projectRoot(), hosts);
     result.written.forEach(f => console.log(chalk.green(`  + ${f}`)));
     console.log(`  ${result.written.length} written, ${result.unchanged.length} unchanged`);
     if (opts.hooks) {
-      for (const h of installHostHooks(process.cwd())) {
+      for (const h of installHostHooks(projectRoot())) {
         console.log(h.installed ? chalk.green(`  + ${h.name}${h.reason === 'unchanged' ? ' (unchanged)' : ''}`) : chalk.yellow(`  ~ ${h.name}: ${h.reason}`));
       }
     }
@@ -34,7 +35,7 @@ export const renderCommand = new Command('render')
 export const mcpCommand = new Command('mcp')
   .description('Serve the card engine over MCP on stdio (tools: inbox, next_up, get_card, advance, approve, reject, task_done, wiki_inject, wiki_capture)')
   .action(async () => {
-    await serveMcp(process.cwd());
+    await serveMcp(projectRoot());
   });
 
 export const gateCommand = new Command('gate').description('Gate checks for CI');
@@ -44,7 +45,7 @@ gateCommand
   .description('Exit 2 unless the card has an approval for the named gate')
   .requiredOption('--require <gate>', 'Gate name, e.g. local')
   .action(guard((id: string, opts: { require: string }) => {
-    const approval = gateApproval(process.cwd(), id, opts.require);
+    const approval = gateApproval(projectRoot(), id, opts.require);
     console.log(`  gate ${opts.require} approved by ${approval.actor} at ${approval.at}`);
     if (!approval.authenticated) {
       console.log(chalk.yellow('  warning: this approval is a local event. Local roles are not authenticated, so it shows that someone ran the approve command, not who.'));
@@ -57,7 +58,7 @@ configCommand
   .command('get <path>')
   .description('Print one value by dotted path (empty when unset), for use in CI scripts')
   .action(guard((path: string) => {
-    let value: unknown = loadConfig(process.cwd());
+    let value: unknown = loadConfig(projectRoot());
     for (const key of path.split('.')) value = (value as Record<string, unknown> | undefined)?.[key];
     if (value !== undefined && value !== null) console.log(typeof value === 'string' ? value : JSON.stringify(value));
   }));
@@ -72,7 +73,7 @@ configCommand
   .description('Set the board sign-in user and password (.codeloop/local.yaml); refuses a non-loopback `codeloop serve` while the default is still in use')
   .option('--user <name>', 'Sign-in username; unchanged if not given')
   .action(guard(async (opts: { user?: string }) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const current = readBoardAuth(projectDir);
     console.log(chalk.dim(`  current user: ${current.user}${current.isDefault ? ' (default password still in use)' : ''}`));
     const password = await prompt('New board password: ');

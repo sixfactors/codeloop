@@ -3,10 +3,10 @@ import chalk from 'chalk';
 import { addCompetitor, listCompetitors } from '../lib/competitors.js';
 import { capture, learn, type Kind } from '../lib/wiki.js';
 import { type WikiEntry } from '../sdk/index.js';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
-const client = () => createLocalClient(process.cwd());
+const client = () => createLocalClient(projectRoot());
 
 const row = (p: WikiEntry) => `  ${p.severity === 'critical' ? chalk.red('critical') : 'warning '} freq ${String(p.freq).padEnd(3)} ${p.title}  ${chalk.dim(p.path)}`;
 
@@ -26,7 +26,7 @@ wikiCommand
       if (opts.quiet) return;
       throw refuse('--title is required (pass --quiet to no-op without one)');
     }
-    console.log(row(capture(process.cwd(), { ...opts, title: opts.title })));
+    console.log(row(capture(projectRoot(), { ...opts, title: opts.title })));
   }));
 
 wikiCommand
@@ -158,7 +158,7 @@ competitorCommand
   .option('--changelog <url>', 'Where they announce what shipped; `codeloop scan competitors` reads it')
   .option('--title <title>', 'Display name (default: the name)')
   .action(guard((name: string, opts: { docs?: string; changelog?: string; title?: string }) => {
-    const page = addCompetitor(process.cwd(), { name, ...opts });
+    const page = addCompetitor(projectRoot(), { name, ...opts });
     console.log(`  ${page.path}  ${chalk.dim(`docs ${page.docs ?? '-'}  changelog ${page.changelog ?? '-'}`)}`);
   }));
 
@@ -166,7 +166,7 @@ competitorCommand
   .command('list')
   .description('List competitor pages')
   .action(guard(() => {
-    const pages = listCompetitors(process.cwd());
+    const pages = listCompetitors(projectRoot());
     if (pages.length === 0) console.log('  no competitor pages; `codeloop wiki competitor add <name> --docs <url> --changelog <url>`');
     pages.forEach(c => console.log(`  ${c.title.padEnd(16)} ${chalk.dim(c.path)}  changelog ${c.changelog ?? '-'}`));
   }));
@@ -174,7 +174,7 @@ competitorCommand
 export const learnCommand = new Command('learn')
   .description('Apply frequency thresholds: critical at critical_frequency, promoted to rules.md at promote_frequency')
   .action(guard(() => {
-    const { critical, promoted } = learn(process.cwd());
+    const { critical, promoted } = learn(projectRoot());
     critical.forEach(t => console.log(`  now critical: ${t}`));
     promoted.forEach(t => console.log(`  promoted to .codeloop/rules.md: ${t}`));
     if (critical.length + promoted.length === 0) console.log('  nothing crossed a threshold');

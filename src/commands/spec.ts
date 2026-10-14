@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { RefusalError, resolveRole } from '../lib/engine.js';
 import { checkSpec, newSpec, readTasks, resolveSpecDir, tickTask } from '../lib/spec.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 export const specCommand = new Command('spec').description("A card's spec folder: research, spec, plan, tasks");
 
@@ -11,7 +12,7 @@ specCommand
   .description('Create specs/<nnn>-<slug>/ from the templates and record it on the card')
   .option('--as <role>', 'owner | reviewer | agent')
   .action(guard((cardId: string, opts: { as?: string }) => {
-    const { dir, created } = newSpec(process.cwd(), cardId, resolveRole(opts.as));
+    const { dir, created } = newSpec(projectRoot(), cardId, resolveRole(opts.as));
     console.log(`  ${dir} (${created.length} files created)`);
   }));
 
@@ -20,13 +21,13 @@ specCommand
   .description('Exit 2 unless every task is tagged, every acceptance line has a task and each task names files in its own layer')
   .option('--verbose', 'Also list file paths that sit in no configured layer')
   .action(guard((ref: string, opts: { verbose?: boolean }) => {
-    const dir = resolveSpecDir(process.cwd(), ref);
+    const dir = resolveSpecDir(projectRoot(), ref);
     const notes: string[] = [];
-    const errors = checkSpec(process.cwd(), dir, notes);
+    const errors = checkSpec(projectRoot(), dir, notes);
     if (opts.verbose) notes.forEach(n => console.log(chalk.dim(`  ${n}`)));
     errors.forEach(e => console.error(chalk.red(`  ${e}`)));
     if (errors.length) process.exit(2);
-    const { tasks } = readTasks(process.cwd(), dir);
+    const { tasks } = readTasks(projectRoot(), dir);
     console.log(`  ${dir} ok: ${tasks.length} tasks, ${tasks.filter(t => t.done).length} done`);
   }));
 
@@ -38,7 +39,7 @@ taskCommand
   .option('--layer <layer>', 'api | sdk | ui | test | docs')
   .option('--json', 'JSON output')
   .action(guard((ref: string, opts: { layer?: string; json?: boolean }) => {
-    const { tasks } = readTasks(process.cwd(), resolveSpecDir(process.cwd(), ref));
+    const { tasks } = readTasks(projectRoot(), resolveSpecDir(projectRoot(), ref));
     const mine = tasks.filter(t => !opts.layer || t.layer === opts.layer);
     if (opts.json) console.log(JSON.stringify(mine, null, 2));
     else mine.forEach(t => console.log(`  [${t.done ? 'x' : ' '}] ${t.id} ${t.accept ?? '   '} ${t.layer.padEnd(4)} ${t.text}`));
@@ -48,7 +49,7 @@ taskCommand
   .command('done <nnn> <task>')
   .description('Tick a task')
   .action(guard((ref: string, task: string) => {
-    tickTask(process.cwd(), resolveSpecDir(process.cwd(), ref), task);
+    tickTask(projectRoot(), resolveSpecDir(projectRoot(), ref), task);
     console.log(`  ${task} done`);
   }));
 
@@ -58,7 +59,7 @@ taskCommand
   .option('--all-done', 'Require every task ticked')
   .action(guard((ref: string, opts: { allDone?: boolean }) => {
     if (!opts.allDone) throw new RefusalError('usage: codeloop task check <nnn> --all-done');
-    const { tasks } = readTasks(process.cwd(), resolveSpecDir(process.cwd(), ref));
+    const { tasks } = readTasks(projectRoot(), resolveSpecDir(projectRoot(), ref));
     const open = tasks.filter(t => !t.done);
     open.forEach(t => console.error(`  open: ${t.id} [${t.layer}] ${t.text}`));
     if (open.length || tasks.length === 0) {
