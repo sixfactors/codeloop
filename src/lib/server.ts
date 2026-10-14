@@ -288,6 +288,8 @@ export function createApp(
     const body = await json(c, { handbackId: undefined as string | undefined });
     return c.json(services.runGate(projectDir, c.req.param('id'), body), 201);
   }));
+  app.post(api('/cards/:id/worktree'), writing(async c => c.json(services.ensureStoryWorktree(projectDir, c.req.param('id')), 201)));
+  app.post(api('/cards/:id/merge'), writing(async c => c.json(services.mergeStory(projectDir, c.req.param('id')), 201)));
   app.get(api('/cards/:id/gates'), handled(async c => c.json(services.listGates(projectDir, c.req.param('id')))));
   app.get(api('/cards/:id/handbacks'), handled(async c => c.json(services.listHandbacks(projectDir, c.req.param('id')))));
   app.get(api('/runs/:runId'), handled(async c => {

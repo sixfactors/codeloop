@@ -199,6 +199,8 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, (r, q) => json<CardActivity>(`/api/cards/${encodeURIComponent(r)}/activity${search({ after: q.after, limit: q.limit, t: Date.now() })}`)),
     handback: (ref, input) => post(`/api/cards/${encodeURIComponent(ref)}/handback`, input),
     gate: (ref, input) => post(`/api/cards/${encodeURIComponent(ref)}/gate`, input),
+    worktree: ref => post(`/api/cards/${encodeURIComponent(ref)}/worktree`, {}),
+    merge: ref => post(`/api/cards/${encodeURIComponent(ref)}/merge`, {}),
     gates: ref => json(`/api/cards/${encodeURIComponent(ref)}/gates?t=${Date.now()}`),
     handbacks: ref => json(`/api/cards/${encodeURIComponent(ref)}/handbacks?t=${Date.now()}`),
     stageOutput: ref => json(`/api/cards/${encodeURIComponent(ref)}/output?t=${Date.now()}`),

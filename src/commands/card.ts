@@ -136,6 +136,26 @@ cardCommand
   }));
 
 cardCommand
+  .command('worktree <id>')
+  .description("Create (or reuse) the story's own git worktree and branch; prints the path and branch")
+  .action(guard(async (id: string) => {
+    const c = client();
+    const w = await c.cards.worktree(id);
+    console.log(`${w.path}\n${w.branch}`);
+    await c.close();
+  }));
+
+cardCommand
+  .command('merge <id>')
+  .description("Merge the story's branch into the trunk once its gate passed; prints the sha. Exit 2 when refused")
+  .action(guard(async (id: string) => {
+    const c = client();
+    const m = await c.cards.merge(id);
+    console.log(m.sha);
+    await c.close();
+  }));
+
+cardCommand
   .command('activity <id>')
   .description("What happened on a card, oldest first: edits, commands, checks, commits and gates. --follow keeps printing as it happens")
   .option('--follow', 'Keep printing new lines until interrupted')
