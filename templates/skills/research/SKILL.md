@@ -120,17 +120,9 @@ verdict:
 (This mirrors `templates/spec/research.md` exactly, don't add sections the check doesn't read and
 a downstream stage doesn't expect.)
 
-## Checklist
+## Rubric
 
-See `checklist.md`. Every line is verifiable by a reviewer or by `codeloop check research`:
-
-- [ ] `exists:` line present, one of `have | unlock | port | build`
-- [ ] a path or URL given when `exists:` is not `build`
-- [ ] every competitor row's name matches an existing page under `.codeloop/wiki/competitors/`
-- [ ] `pain:` has a source, or says `assumption:` with what would confirm it
-- [ ] at least 3 lines matching `- source: <url or path> — <note>`
-- [ ] file ends with a line starting `verdict:` followed by `build`, `buy`, or `drop`
-- [ ] `codeloop check research {id} --min-sources 3` exits 0
+See `rubric.md` in this folder: the criteria `codeloop check rubric` judges this stage by. Each `attest` row needs a `- Rn pass: <evidence>` line under `## Rubric` at the end of the output, the evidence naming a path, a line, a URL or a command. The brief carries the same rows.
 
 ## Done
 

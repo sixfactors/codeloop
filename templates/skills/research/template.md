@@ -29,3 +29,10 @@ pain:
 <!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
 
 <!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
+
+## Rubric
+
+<!-- One line per attest row of rubric.md; `codeloop check rubric` refuses a missing line or evidence that names no path, line, URL or command. -->
+- R2 pass: <the grep or route list that would have found it, in backticks>
+- R5 pass: <where the options are compared, path:line>
+- R7 pass: <where the open questions are listed, path:line>

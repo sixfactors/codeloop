@@ -82,6 +82,15 @@ when package.json names a version this file has no heading for.
 - Mocks are built from a design system the project owns and are written beside the spec.
 - A promoted proposal gets its spec folder.
 
+### Stage rubrics
+- Research, interview, mock, spec, build, verify and review each have a `rubric.md` of criteria
+  judged by `check`, `attest` or `review`, replacing `checklist.md`. `codeloop check rubric <card>`
+  runs the check rows, needs a `- Rn pass: <evidence>` line naming a path, line, URL or command for
+  every attest row, and is on every stage's done command. The brief carries the rubric.
+- A stage may name `review: { agent }`: that agent judges the output after the stage's agent and
+  writes `review-<stage>.md`, which needs `verdict: accept`. Research and interview carry it commented
+  out. `cards.full` returns the rubric rows with pass, fail or pending for the gate panel.
+
 ### Wiki and hub
 - Each wiki folder has a write rule, refused with the rule named: a decision compares two or more
   options with a `## Why` and `## Consequences`, is titled by the choice and carries scope files; a

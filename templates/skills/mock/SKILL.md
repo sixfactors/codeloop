@@ -84,9 +84,9 @@ answer:
 
 See `template.md` in this folder: a full screen composed from the blocks, to copy and fill.
 
-## Checklist
+## Rubric
 
-See `checklist.md` in this folder.
+See `rubric.md` in this folder: the criteria `codeloop check rubric` judges this stage by. Each `attest` row needs a `- Rn pass: <evidence>` line under `## Rubric` at the end of the output, the evidence naming a path, a line, a URL or a command. The brief carries the same rows.
 
 ## Done
 

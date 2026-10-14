@@ -34,7 +34,8 @@ const entry = process.argv[1];
 beforeEach(() => {
   process.argv[1] = resolve('dist/index.js');
   dir = mkdtempSync(join(tmpdir(), 'codeloop-research-'));
-  write('.codeloop/lanes/build.yaml', readFileSync(resolve('templates/lanes/build.yaml'), 'utf-8'));
+  // The stages' own checks are what these tests drive; the rubric step has its own suite (rubric.test.ts).
+  write('.codeloop/lanes/build.yaml', readFileSync(resolve('templates/lanes/build.yaml'), 'utf-8').replaceAll(' && codeloop check rubric {id}', ''));
   write('.codeloop/config.yaml', 'project:\n  name: "Acme App"\n');
   startCard(dir, { lane: 'build', title: 'Add CSV export', id: 'c-001' });
 });
@@ -226,10 +227,11 @@ describe('mocks', () => {
   });
 
   it('the shipped build lane runs research, interview and mock before the spec gate and passes lint', () => {
-    const lane = parseLane(read('.codeloop/lanes/build.yaml'));
+    const lane = parseLane(readFileSync(resolve('templates/lanes/build.yaml'), 'utf-8'));
     expect(lane.stages.map(s => s.id).slice(0, 4)).toEqual(['research', 'interview', 'mock', 'spec']);
-    expect(lane.stages[1]).toMatchObject({ skill: 'interview', done: { cmd: 'codeloop check questions {id} --min 3' } });
-    expect(lane.stages[2]).toMatchObject({ skill: 'mock', done: { cmd: 'codeloop check mock {id}' } });
+    expect(lane.stages[1]).toMatchObject({ skill: 'interview', done: { cmd: 'codeloop check questions {id} --min 3 && codeloop check rubric {id}' } });
+    expect(lane.stages[2]).toMatchObject({ skill: 'mock', done: { cmd: 'codeloop check mock {id} && codeloop check rubric {id}' } });
+    expect(lane.stages.every(s => s.done?.cmd?.endsWith('&& codeloop check rubric {id}'))).toBe(true);
     expect(lintLane(lane)).toEqual([]);
   });
 

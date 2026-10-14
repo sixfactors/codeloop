@@ -6,6 +6,7 @@
  * stage, the stage's `check` decides whether the work passed, and a second agent call grades the
  * output against the skill's checklist. Records land under `.codeloop/state/skill-evals/`.
  */
+import { parseRubric } from './rubric.js';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { isAbsolute, join, resolve } from 'path';
@@ -73,14 +74,18 @@ export function loadSkillDef(projectDir: string, name: string, skillsDir?: strin
   };
 }
 
-/** The skill's `template.md` and `checklist.md`, read beside its `SKILL.md`. */
+/** The skill's `template.md` and its grading bar, read beside its `SKILL.md`: `rubric.md` rows as checklist lines where a rubric replaced `checklist.md`. */
 export function readSkillFiles(skill: SkillDef): { template: string; checklist: string } {
   const read = (name: string) => {
     const file = join(skill.dir, name);
     if (!existsSync(file)) throw new RefusalError(`skill "${skill.name}" has no ${name} at ${file}`);
     return readFileSync(file, 'utf-8');
   };
-  return { template: read('template.md'), checklist: read('checklist.md') };
+  const rubric = join(skill.dir, 'rubric.md');
+  const checklist = !existsSync(join(skill.dir, 'checklist.md')) && existsSync(rubric)
+    ? parseRubric(readFileSync(rubric, 'utf-8')).map(r => `- ${r.id} ${r.criterion}`).join('\n')
+    : read('checklist.md');
+  return { template: read('template.md'), checklist };
 }
 
 /** One `- [ ]`/`- yes/no`-style line of checklist.md, with the leading marker stripped. */

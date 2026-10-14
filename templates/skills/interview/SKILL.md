@@ -110,15 +110,9 @@ real size or a shortcut, so it earns the fifth slot.
 See `template.md`, the bare `## Q<n>` / `recommended:` / `answer:` block, written into the stage's
 output file.
 
-## Checklist
+## Rubric
 
-See `checklist.md`:
-
-- [ ] at most 5 questions in the file
-- [ ] every question has non-empty text and a non-empty `recommended:`
-- [ ] each question is tagged (in your own notes, not the file) scope, acceptance, risk, or boundary, a fifth "other" is justified, not a habit
-- [ ] every question already answered in `interview.md` is reflected in `spec.md`'s fields
-- [ ] no question restates something `research.md` already settled
+See `rubric.md` in this folder: the criteria `codeloop check rubric` judges this stage by. Each `attest` row needs a `- Rn pass: <evidence>` line under `## Rubric` at the end of the output, the evidence naming a path, a line, a URL or a command. The brief carries the same rows.
 
 ## Done
 

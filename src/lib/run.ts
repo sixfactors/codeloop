@@ -14,6 +14,7 @@ import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
+import { reviewBrief } from './rubric.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
@@ -169,7 +170,32 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   const run = await runAgent(projectDir, agent, brief, join(projectDir, log));
   const note = run.timedOut ? `timed out after ${agent.timeoutMinutes} minutes` : run.exit === null ? 'was killed' : undefined;
   recordEvent(projectDir, id, () => ({ action: 'agent-run', agent: agent.name, exit: run.exit, durationMs: run.durationMs, log, ...(note ? { note } : {}) }), new Date(now.getTime() + run.durationMs));
-  return { ...step, started: true, exit: run.exit, durationMs: run.durationMs, log };
+  const reviewed = run.exit === 0 && stage.review ? await reviewStep(projectDir, id, stage, log, new Date(now.getTime() + run.durationMs)) : 0;
+  return { ...step, started: true, exit: run.exit, durationMs: run.durationMs + reviewed, log };
+}
+
+/**
+ * A stage with `review: { agent }`: a second agent reads the output against the rubric's review and
+ * attest rows and writes `{spec}/review-<stage>.md`, which `check rubric` reads. Runs after the
+ * stage's own agent and before the check, so the advance judges both.
+ */
+async function reviewStep(projectDir: string, id: string, stage: Stage, workLog: string, now: Date): Promise<number> {
+  const card = findCard(readCards(projectDir).cards, id);
+  let reviewer: AgentConfig;
+  try {
+    reviewer = resolveAgent(projectDir, stage.review!.agent);
+  } catch (e) {
+    if (!(e instanceof RefusalError)) throw e;
+    recordEvent(projectDir, id, () => ({ action: 'review-skipped', note: e.message }), now);
+    return 0;
+  }
+  const brief = join(projectDir, briefPath(card).replace(/\.md$/, '-review.md'));
+  mkdirSync(dirname(brief), { recursive: true });
+  writeFileSync(brief, reviewBrief(projectDir, card, stage));
+  const log = workLog.replace(/\.log$/, '-review.log');
+  const run = await runAgent(projectDir, reviewer, brief, join(projectDir, log));
+  recordEvent(projectDir, id, () => ({ action: 'review-run', agent: reviewer.name, exit: run.exit, durationMs: run.durationMs, log }), new Date(now.getTime() + run.durationMs));
+  return run.durationMs;
 }
 
 /** One card's turn in a run: the agent first when its check does not pass, then one advance. */
