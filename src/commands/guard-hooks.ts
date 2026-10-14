@@ -16,6 +16,7 @@ import { openQuestions } from '../lib/interview.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
 import { cardCommand } from './card.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../lib/project-root.js';
 
 const PRESENCE_DIR = '.codeloop/state/presence';
 const safeFile = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -81,9 +82,9 @@ cardCommand
   .command('activate <id>')
   .description('Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this')
   .action(guard(async (id: string) => {
-    const card = findCard(readCards(process.cwd()).cards, id);
+    const card = findCard(readCards(projectRoot()).cards, id);
     const session = currentSession();
-    setActiveCard(process.cwd(), card.id, session);
+    setActiveCard(projectRoot(), card.id, session);
     console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
   }));
 
@@ -93,7 +94,7 @@ guardCommand
   .command('edit [path]')
   .description('PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate')
   .action(async (pathArg?: string) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const input = await readStdinJson();
     const toolInput = input.tool_input as { file_path?: string; path?: string } | undefined;
     const path = pathArg ?? toolInput?.file_path ?? toolInput?.path;
@@ -160,7 +161,7 @@ guardCommand
   .command('session')
   .description('SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active')
   .action(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
@@ -220,7 +221,7 @@ guardCommand
       // An owner action is not logged here: it runs only if the person allows it, and the engine
       // event it writes is mirrored into the stream then.
       const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
-      if (command && existsSync(join(process.cwd(), '.codeloop'))) appendActivity(process.cwd(), getActiveCard(process.cwd(), session), { session, kind: 'cmd', text: command });
+      if (command && existsSync(join(projectRoot(), '.codeloop'))) appendActivity(projectRoot(), getActiveCard(projectRoot(), session), { session, kind: 'cmd', text: command });
       if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
       return;
     }
@@ -240,15 +241,15 @@ guardCommand
   .action(async () => {
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
-    if (session && existsSync(join(process.cwd(), '.codeloop'))) appendActivity(process.cwd(), getActiveCard(process.cwd(), session), { session, kind: 'end' });
-    if (session) clearActiveCard(process.cwd(), session);
+    if (session && existsSync(join(projectRoot(), '.codeloop'))) appendActivity(projectRoot(), getActiveCard(projectRoot(), session), { session, kind: 'end' });
+    if (session) clearActiveCard(projectRoot(), session);
   });
 
 guardCommand
   .command('stop')
   .description("Stop hook: records in the active story's activity that the session finished a turn")
   .action(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
@@ -259,7 +260,7 @@ guardCommand
   .command('commit')
   .description("post-commit hook: records the commit in the activity of each card its `Card:` (or `Feature:`) trailer names")
   .action(() => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
     if (log.status !== 0) return;
@@ -277,7 +278,7 @@ guardCommand
   .command('prompt')
   .description("UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)")
   .action(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
     const activeId = getActiveCard(projectDir, session);
@@ -316,7 +317,7 @@ guardCommand
   .description("Pre-commit hook: lists changed files outside the active card's plan; exits 1 when any are found and the plan has a files list")
   .option('--staged', 'Compare the git index instead of the working tree', false)
   .action(guard((opts: { staged?: boolean }) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const activeId = getActiveCard(projectDir);
     if (!activeId) return;
     let card;
@@ -348,7 +349,7 @@ presenceCommand
   .command('start')
   .description('sessionStart hook: records host, session id and machine')
   .action(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const input = await readStdinJson();
     const sessionId = sessionIdFrom(input);
     const dir = join(projectDir, PRESENCE_DIR);
@@ -360,7 +361,7 @@ presenceCommand
   .command('end')
   .description('sessionEnd hook: clears the presence file')
   .action(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const input = await readStdinJson();
     const file = join(projectDir, PRESENCE_DIR, `${safeFile(sessionIdFrom(input))}.json`);
     if (existsSync(file)) unlinkSync(file);
@@ -370,7 +371,7 @@ presenceCommand
   .command('event <kind>')
   .description('subagentStart/subagentStop hooks: appends an event line to the session\'s presence log')
   .action(async (kind: string) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const input = await readStdinJson();
     const dir = join(projectDir, PRESENCE_DIR);
     mkdirSync(dir, { recursive: true });
@@ -380,7 +381,7 @@ presenceCommand
 export const whoamiCommand = new Command('whoami')
   .description("This repo's active card, your git identity and role, and who else is present (from Cursor session hooks)")
   .action(() => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const active = getActiveCard(projectDir);
     console.log(active ? `  active card: ${active}` : '  active card: none');
     const name = spawnSync('git', ['config', 'user.name'], { cwd: projectDir, encoding: 'utf-8' }).stdout.trim();
@@ -408,6 +409,6 @@ monitorCommand
   .command('stalled')
   .description('Builders holding a card that have written nothing to it for monitor.stall_minutes (default 30)')
   .action(() => {
-    const rows = stalledBuilders(process.cwd());
+    const rows = stalledBuilders(projectRoot());
     for (const line of rows.length ? stalledLines(rows) : ['No stalled builders.']) console.log(line);
   });

@@ -9,6 +9,7 @@ import * as services from '../lib/services.js';
 import { openStore, type Store } from '../lib/store/index.js';
 import { CodeloopClient, followCardActivity, type Transport } from './client.js';
 import type { LiveEvent, Role, RoleOption } from './types.js';
+import { projectRoot } from '../lib/project-root.js';
 
 export interface LocalOptions {
   /** The role every write acts as when the call names none; otherwise `--as`, CODELOOP_ROLE, then the terminal decide. */
@@ -171,8 +172,8 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
   };
 }
 
-/** A client over the project's own files: `createLocalClient(process.cwd())`. */
-export const createLocalClient = (projectDir: string, options: LocalOptions = {}) => new CodeloopClient(localTransport(projectDir, options));
+/** A client over the project's own files: `createLocalClient(projectRoot())`. */
+export const createLocalClient = (projectDir: string = projectRoot(), options: LocalOptions = {}) => new CodeloopClient(localTransport(projectDir, options));
 
 export { CodeloopClient };
 /** The `## Q<n>` block parser and the per-card limit, for a CLI reading questions from a file. */
