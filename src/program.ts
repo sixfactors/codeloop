@@ -69,7 +69,8 @@ export function buildProgram(): Command {
 
   // Lane engine
   program.addCommand(laneCommand);
-  cardCommand.addCommand(cardDiffCommand);
+  // cardCommand is a module singleton and buildProgram runs more than once in tests, so add it once.
+  if (!cardCommand.commands.some(c => c.name() === 'diff')) cardCommand.addCommand(cardDiffCommand);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
   program.addCommand(shapeCommand);
