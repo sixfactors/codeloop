@@ -31,8 +31,9 @@ take by just saying so. Bad work asks five questions whose answers are already o
    where the draft has a genuine fork.
 3. `specs/{id}/interview.md`, if one already exists, read what's open before adding more;
    `addQuestions` refuses past five total.
-4. `src/lib/interview.ts`, the format it parses: `## Q<n> <question>` then `recommended:` and
-   `answer:` lines, nothing else. `MAX_QUESTIONS = 5` is enforced there, not just a convention.
+4. `src/lib/interview.ts`, the format it parses: `## Q<n> <question>`, an optional `options:` list
+   (`- A: <text>` to `- D: <text>`), then `recommended:` and `answer:` lines, nothing else.
+   `MAX_QUESTIONS = 5` is enforced there, and so is a recommended letter matching an option.
 
 ## Procedure
 
@@ -50,8 +51,12 @@ take by just saying so. Bad work asks five questions whose answers are already o
 4. Write each question the same way:
    - a full question ending in `?`, readable on its own (never a label like "Acceptance matrix"),
    - one plain sentence on why it matters,
-   - `recommended:` the option you would take and why, in one or two sentences,
-   - two to five mutually exclusive options, or a short answer of at most five words.
+   - where the fork is real, two to four mutually exclusive options under `options:` as
+     `- A: <text>`, `- B: <text>`, and `recommended:` the letter you would take; otherwise no
+     options, and `recommended:` the answer you would take and why, in one or two sentences.
+   Leave every `answer:` empty. Answers are the owner's: they answer one by one, pick an option,
+   or take every recommendation at once with `codeloop answer {id} --accept-all`. An answer you
+   write into the file yourself does not count, and the interview check refuses it.
    In a chat with the person, ask **one question at a time** and wait; never show the queue.
    Headless, write all of them to the output file and stop.
 5. Write the `## Qn` blocks straight into this stage's output file, the path the brief names

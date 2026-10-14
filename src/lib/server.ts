@@ -242,16 +242,23 @@ export function createApp(
   };
   app.get(api('/cards/:id/questions'), handled(async c => c.json(services.questions(projectDir, c.req.param('id')))));
   app.post(api('/cards/:id/questions'), writing(async c => {
-    const body = await json(c, { questions: [] as { question: string; recommended?: string }[] });
+    const body = await json(c, { questions: [] as { question: string; recommended?: string; options?: string[] }[] });
     const added = services.ask(projectDir, c.req.param('id'), body.questions ?? [], role);
     await patchQuestions(c.req.param('id'));
     return c.json(added, 201);
   }));
+  // Every open question's recommendation at once: the owner's decision, the same standing as an answer.
+  app.post(api('/cards/:id/questions/accept-all'), writing(async c => {
+    if (!owner) return readOnly(c, 'answer');
+    const { answered, skipped } = services.acceptAll(projectDir, c.req.param('id'), 'owner');
+    await patchQuestions(c.req.param('id'));
+    return c.json({ accepted: answered.length, skipped: skipped.map(q => q.n), ...services.questions(projectDir, c.req.param('id')) });
+  }));
   // An answer is the owner's decision, so it needs the same standing as an approval.
   app.post(api('/cards/:id/questions/:n/answer'), writing(async c => {
     if (!owner) return readOnly(c, 'answer');
-    const body = await json(c, {} as { text?: string; accept?: boolean });
-    services.answer(projectDir, c.req.param('id'), parseInt(c.req.param('n'), 10), { text: body.text, accept: body.accept === true }, 'owner');
+    const body = await json(c, {} as { text?: string; accept?: boolean; option?: string });
+    services.answer(projectDir, c.req.param('id'), parseInt(c.req.param('n'), 10), { text: body.text, accept: body.accept === true, ...(body.option ? { option: body.option } : {}) }, 'owner');
     await patchQuestions(c.req.param('id'));
     return c.json(services.questions(projectDir, c.req.param('id')));
   }));

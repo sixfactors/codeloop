@@ -1,5 +1,8 @@
 ## Q1 <scope question: what is and isn't in this card>
-recommended: <your best default>
+options:
+- A: <the narrow cut>
+- B: <the wider cut>
+recommended: A
 answer:
 
 ## Q2 <acceptance question: what proves it, in which layer>

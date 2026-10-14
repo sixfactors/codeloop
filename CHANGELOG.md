@@ -36,6 +36,14 @@ when package.json names a version this file has no heading for.
 - The hub answers `GET /api/hub/attention` with each project's waiting, failing and stale counts,
   and the sidebar's project badges show waiting plus failing.
 
+### Questions
+- A question with a real fork carries two to four options, and its recommendation names one by
+  letter. `codeloop answer <id> <n> --option B` answers with that option, and
+  `codeloop answer <id> --accept-all` (or `POST /api/cards/:id/questions/accept-all`,
+  `questions.acceptAll` in the SDK) takes every open recommendation at once.
+- An answer an agent writes into interview.md itself no longer passes the interview: each answer
+  needs the owner's answer event behind it.
+
 ### Board and Home
 - Home shows what needs you, what is moving, which agents are working and what shipped this week;
   the board reads as six states, each screen loads with one call.

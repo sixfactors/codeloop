@@ -5,7 +5,7 @@ import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { checkMock, findMock } from '../lib/mock.js';
 import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.js';
 import { checkStory } from '../lib/story.js';
-import { readQuestions } from '../lib/interview.js';
+import { questionProblems, questionsNotDecided, readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
@@ -141,6 +141,9 @@ checkCommand
     const questions = readQuestions(process.cwd(), found);
     const errors: string[] = [];
     if (questions.length < Number(options.min)) errors.push(`${found.id} has ${questions.length} question(s); the stage needs ${options.min}. Run the interview skill, then \`codeloop ask ${found.id} --file <questions.md>\``);
+    errors.push(...questionProblems(questions).map(p => `${found.id} ${p}`));
     for (const q of questions) if (!q.answer) errors.push(`${found.id} Q${q.n} has no answer: \`codeloop answer ${found.id} ${q.n} --accept\` or give one`);
+    // An answer typed into the file by an agent is not the owner's decision.
+    for (const n of questionsNotDecided(process.cwd(), found.id)) errors.push(`${found.id} Q${n} has an answer no person gave; the owner answers with \`codeloop answer ${found.id} ${n}\` or \`codeloop answer ${found.id} --accept-all\``);
     return errors;
   })());
