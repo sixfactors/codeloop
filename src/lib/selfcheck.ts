@@ -25,11 +25,13 @@ export function runSelfcheck(projectDir: string, cardRef: string, work: string =
   const card = findCard(readCards(projectDir).cards, cardRef);
   const stage = currentStage(loadLane(projectDir, card.lane), card);
   const steps: SelfcheckStep[] = [];
+  // The story is measured up to the work tree's head, the same ref the gate uses, so a pass here means the same thing there.
+  const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: work, encoding: 'utf8' }).stdout.trim();
 
-  const checked = runCheck(projectDir, card, stage, work);
+  const checked = runCheck(projectDir, card, stage, work, head || undefined);
   steps.push({ name: 'stage', pass: checked ? checked.passed : true, detail: checked ? (checked.passed ? `${stage.id} check passed` : `${stage.id} check failed: ${lastLine(checked.output)}`) : `${stage.id} has no check` });
 
-  const scope = checkScope(projectDir, card.id);
+  const scope = checkScope(projectDir, card.id, { ref: head || undefined });
   steps.push({ name: 'scope', pass: scope.length === 0, detail: scope.length ? firstProblem(scope) : 'every changed file is in the plan or has a Scope row' });
 
   const rubric = evaluateRubric(projectDir, card.id).problems;
@@ -38,7 +40,6 @@ export function runSelfcheck(projectDir: string, cardRef: string, work: string =
   const budget = checkBudget(projectDir, card.id, card.size);
   steps.push({ name: 'budget', pass: budget.pass, detail: budget.message });
 
-  const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: work, encoding: 'utf8' }).stdout.trim();
   const failing = steps.filter(s => !s.pass).map(s => s.name);
   const result: SelfcheckResult = { card: card.id, stage: card.stage, head, pass: failing.length === 0, failing, steps };
   appendActivity(projectDir, card.id, { session: currentSession(), kind: 'selfcheck', stage: card.stage, head, pass: result.pass, failing });

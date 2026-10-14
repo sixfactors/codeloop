@@ -128,11 +128,11 @@ const approved = (card: Card, stage: Stage) => approval(card, stage) !== undefin
 export const awaitsApproval = (card: Card, stage: Stage) => !!stage.gate?.outward && !approved(card, stage);
 
 /** Runs the stage's done command without touching the card. null when the stage has no command. */
-export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string): { passed: boolean; output: string } | null {
+export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string): { passed: boolean; output: string } | null {
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
-  const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work } : checkEnv();
+  const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : checkEnv();
   const run = spawnSync(substitute(stage.done.cmd, card, { shell: true }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
   return { passed: run.status === 0, output: tail(`${run.stdout ?? ''}${run.stderr ?? ''}`) };
 }

@@ -82,16 +82,20 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   const findings: string[] = [];
   const workDir = hb.worktree || projectDir;
 
-  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env: hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env: hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree, CODELOOP_STORY_REF: hb.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const proof = { cmd: hb.proof.cmd, exit: ran.status ?? 1, output: `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL) };
-  if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}`);
+  const why = (out: string) => {
+    const tail = out.trim().split('\n').slice(-4).join(' | ').slice(-500);
+    return tail ? `: ${tail}` : '';
+  };
+  if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}${why(proof.output)}`);
 
   const stage = currentStage(loadLane(projectDir, card.lane), card);
   // A selfcheck that passed at this exact head already ran the stage check, scope, rubric and budget
   // there; only the proof is rerun. A failed or missing selfcheck changes nothing.
   const skipCheck = hb.selfcheck?.pass === true;
-  const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined);
-  if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed`);
+  const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined, hb.head);
+  if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed${why(checked.output)}`);
 
   let claim: GateRecord['claim'] = null;
   const onHead = (p: string) => spawnSync('git', ['cat-file', '-e', `${hb.head}:${p}`], { cwd: workDir, encoding: 'utf8' }).status === 0;

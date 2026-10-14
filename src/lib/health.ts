@@ -171,14 +171,14 @@ function git(cwd: string, args: string[]): string {
  * Where a story started: the merge-base of HEAD with the trunk when the story sits on its own branch,
  * else the commit before its first `Card:`/`Feature:` commit. Undefined when neither can be found.
  */
-export function storyBase(projectDir: string, cardId: string): string | undefined {
-  const head = git(projectDir, ['rev-parse', 'HEAD']);
+export function storyBase(projectDir: string, cardId: string, ref: string = 'HEAD'): string | undefined {
+  const head = git(projectDir, ['rev-parse', ref]);
   const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk;
   const trunk = configured ?? 'main';
-  const mb = git(projectDir, ['merge-base', 'HEAD', trunk]);
+  const mb = git(projectDir, ['merge-base', ref, trunk]);
   if (mb && mb !== head) return mb;
   const sep = '\u0001';
-  const log = git(projectDir, ['log', '--reverse', `--format=${sep}%H%n%b`]);
+  const log = git(projectDir, ['log', '--reverse', ...(ref === 'HEAD' ? [] : [ref]), `--format=${sep}%H%n%b`]);
   for (const chunk of log.split(sep).slice(1)) {
     const [sha, ...body] = chunk.split('\n');
     if (body.some(l => new RegExp(`^(?:Card|Feature):\\s*${cardId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`).test(l))) {
@@ -199,11 +199,12 @@ export interface HealthVerdict {
   base?: string;
 }
 
-export function checkHealth(projectDir: string, cardId: string): HealthVerdict {
+export function checkHealth(projectDir: string, cardId: string, opts: { ref?: string } = {}): HealthVerdict {
   const s = healthSettings(projectDir);
   if (s.off) return { state: 'off', tolerance: 0, pass: true };
-  const base = storyBase(projectDir, cardId);
-  const head = git(projectDir, ['rev-parse', 'HEAD']);
+  const ref = opts.ref ?? 'HEAD';
+  const base = storyBase(projectDir, cardId, ref);
+  const head = git(projectDir, ['rev-parse', ref]);
   if (!base || !head) return { state: 'no-base', tolerance: s.tolerance, pass: true };
   const before = projectHealth(projectDir, { ref: base });
   const after = projectHealth(projectDir, { ref: head });

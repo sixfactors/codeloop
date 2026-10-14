@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url';
 import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { orchTurn } from '../orch.js';
+import { recordHandback } from '../handback.js';
+import { runGate } from '../gate.js';
+import { ensureStoryWorktree, mergeStory } from '../worktree.js';
 import { checkResearch } from '../research.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
@@ -76,4 +79,27 @@ describe('CODELOOP_WORK_DIR', () => {
       delete process.env.CODELOOP_WORK_DIR;
     }
   });
+});
+
+describe('the gate measures scope on the builder\'s branch', () => {
+  it('fails an out-of-plan file at the gate and merges nothing', async () => {
+    const lane = `id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "node ${CLI} check scope {id}" }\n`;
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), lane);
+    writeFileSync(join(dir, SPEC, 'plan.md'), '# Plan\n\n## Files\n\n- `src/a.ts`\n');
+    sh(`git add -A && ${GIT} commit -qm plan`);
+    const cards = readCards(dir);
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify({ ...cards, cards: cards.cards.map(c => ({ ...c, stage: 'build', spec: SPEC })) }));
+    const wt = ensureStoryWorktree(dir, 'c-001');
+    mkdirSync(join(wt.path, 'src'), { recursive: true });
+    writeFileSync(join(wt.path, 'src/a.ts'), 'a\n');
+    writeFileSync(join(wt.path, 'src/unplanned.ts'), 'b\n');
+    sh(`git add -A && ${GIT} commit -qm "feat: build" -m "Card: c-001"`, wt.path);
+    const before = sh('git rev-parse HEAD');
+    recordHandback(dir, 'c-001', { branch: wt.branch, head: sh('git rev-parse HEAD', wt.path), proof: `node ${CLI} check scope c-001`, left: 'src/a.ts', worktree: wt.path });
+    const gate = runGate(dir, 'c-001');
+    expect(gate.verdict).toBe('fail');
+    expect(gate.findings.join(' ')).toContain('src/unplanned.ts');
+    expect(() => mergeStory(dir, 'c-001')).toThrow(/gate for c-001 is fail/);
+    expect(sh('git rev-parse HEAD')).toBe(before);
+  }, 60_000);
 });

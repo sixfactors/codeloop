@@ -613,6 +613,7 @@ settled data-model
 expect 0 "data-model: check data-model passes" codeloop check data-model c-001
 json "build: first turn failed on the scope check, the second merged" "d.turns.filter(t=>t.stage==='build').map(t=>t.outcome).join()==='failed,merged'" cat .codeloop/state/orch/c-001.json
 json "build: the failing turn's findings name the out-of-plan file and the missing Scope row" "(f=>f.includes('src/unplanned-helper.ts')&&f.includes('## Scope'))(d.turns.find(t=>t.stage==='build'&&t.outcome==='failed').findings.join(' '))" cat .codeloop/state/orch/c-001.json
+json "build: the failing turn failed at the gate, before any merge" "(t=>!t.merge&&t.gate&&t.gate.verdict==='fail')(d.turns.find(t=>t.stage==='build'&&t.outcome==='failed'))" cat .codeloop/state/orch/c-001.json
 settled build
 settled verify
 expect 0 "build: every task is ticked on main" codeloop task check c-001 --all-done

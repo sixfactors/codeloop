@@ -37,6 +37,19 @@ describe('scopeCreep', () => {
   });
 });
 
+describe('scopeCreep on a ref', () => {
+  it('measures the commits reachable from the given ref, not the checked-out branch', () => {
+    git('checkout', '-q', '-b', 'story');
+    put('src/c.ts', 'c\n');
+    git('add', '-A'); git('commit', '-q', '-m', 'feat: more', '-m', 'Card: c-001');
+    const head = git('rev-parse', 'HEAD').trim();
+    git('checkout', '-q', '-');
+    git('branch', '-q', '-f', 'main2', 'HEAD');
+    expect(scopeCreep(dir, 'c-001').map(f => f.path)).toEqual(['src/b.ts']);
+    expect(scopeCreep(dir, 'c-001', { ref: head }).map(f => f.path)).toEqual(['src/b.ts', 'src/c.ts']);
+  });
+});
+
 describe('checkScope', () => {
   it('fails naming src/b.ts when there is no review.md', () => {
     const problems = checkScope(dir, 'c-001');
