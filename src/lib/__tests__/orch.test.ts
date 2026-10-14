@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSy
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { projectRoot } from '../project-root.js';
@@ -112,4 +113,46 @@ describe('projectRoot', () => {
       else process.env.CODELOOP_PROJECT_DIR = before;
     }
   });
+});
+
+describe('after the merge', () => {
+  const afterMerge = (build: string, restart = 'echo restarted > restarted.txt') =>
+    writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}orch:\n  after_merge:\n    build: "${build}"\n    restart: "${restart}"\n`);
+
+  it('runs the project build and restart on the main tree and records each as a post-merge line', async () => {
+    project(TWO_STAGE, WORKING_AGENT);
+    afterMerge('test -f built.txt && echo build-ok > marker.txt');
+    const turn = await orchTurn(dir, 'c-001');
+    expect(turn.outcome).toBe('merged');
+    expect(turn.postMerge).toEqual([{ name: 'build', cmd: 'test -f built.txt && echo build-ok > marker.txt', exit: 0 }, { name: 'restart', cmd: 'echo restarted > restarted.txt', exit: 0 }]);
+    expect(readFileSync(join(dir, 'marker.txt'), 'utf-8')).toBe('build-ok\n');
+    const lines = readActivity(dir, 'c-001').items.filter(l => l.kind === 'post-merge');
+    expect(lines.map(l => [l.step, l.exit])).toEqual([['build', 0], ['restart', 0]]);
+  }, 60_000);
+
+  it('a failing build parks the story stuck with the output tail, and the restart does not run', async () => {
+    project(TWO_STAGE, WORKING_AGENT);
+    afterMerge('echo tsc found 2 errors; exit 3');
+    const turn = await orchTurn(dir, 'c-001');
+    expect(turn.outcome).toBe('stuck');
+    expect(turn.findings[0]).toMatch(/after the merge, build .* exited 3: tsc found 2 errors/);
+    expect(readCards(dir).cards[0].gate).toBe('stuck');
+    expect(existsSync(join(dir, 'restarted.txt'))).toBe(false);
+    expect(readActivity(dir, 'c-001').items.find(l => l.kind === 'post-merge')).toMatchObject({ step: 'build', exit: 3, text: expect.stringContaining('tsc found 2 errors') });
+  }, 60_000);
+
+  it('a project without git guard hooks gets none from its story worktree', async () => {
+    project(TWO_STAGE, IDLE_AGENT);
+    await orchTurn(dir, 'c-001');
+    expect(existsSync(join(dir, '.git/hooks/pre-commit'))).toBe(false);
+    expect(existsSync(join(dir, '.git/hooks/post-commit'))).toBe(false);
+  }, 60_000);
+
+  it('the report names the proof and the gate of the turn that merged, not a later gate', async () => {
+    project(GATED, WORKING_AGENT);
+    await orchRun(dir, 'c-001');
+    const later = { card: 'c-001', stage: 'code', handback: { branch: 'b', head: 'h', at: new Date().toISOString() }, proof: { cmd: 'false', exit: 1, output: '' }, check: { pass: false, output: '' }, claim: null, verdict: 'fail', findings: ['later'], at: new Date().toISOString() };
+    writeFileSync(join(dir, '.codeloop/state/gates/c-001-99.json'), JSON.stringify(later));
+    expect(orchReport(dir, 'c-001').proof).toBe('`test -f built.txt` exited 0; the gate said pass');
+  }, 60_000);
 });

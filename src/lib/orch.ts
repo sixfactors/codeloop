@@ -4,6 +4,7 @@
  * merge, report); every one is an existing operation, so this file only sequences them and keeps
  * the record `.codeloop/state/orch/<card>.json`. The orchestrator itself never edits the worktree.
  */
+import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -18,6 +19,7 @@ import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
 import { loadLane } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
+import { checkEnv } from './shell.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
 
 export const ORCH_DIR = '.codeloop/state/orch';
@@ -36,6 +38,8 @@ export interface OrchTurn {
   handback?: { head: string; proofExit: number; left: string; blocked: string; at: string };
   gate?: { verdict: 'pass' | 'fail'; findings: string[]; proof?: { cmd: string; exit: number } };
   merge?: { sha: string; mode: 'ff' | 'merge' };
+  /** What ran on the main tree after the merge: verify, then the project's build and restart. */
+  postMerge?: PostMergeStep[];
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
@@ -45,6 +49,12 @@ export interface OrchTurn {
   /** Set when the hand-back gated was recorded before the turn started. */
   note?: string;
   log?: string;
+}
+
+export interface PostMergeStep {
+  name: 'verify' | 'build' | 'restart';
+  cmd: string;
+  exit: number | null;
 }
 
 export interface OrchRecord {
@@ -213,7 +223,16 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
         if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
           turn.findings.push(`stage check failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
-        } else turn.outcome = 'merged';
+        } else {
+          turn.outcome = 'merged';
+          // 6b. after the merge: what a person otherwise runs by hand on the main tree.
+          const after = postMerge(projectDir, card.id, turn.stage, merged.sha);
+          turn.postMerge = after.steps;
+          if (after.failed) {
+            turn.findings.push(after.failed);
+            turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
+          }
+        }
       } catch (e) {
         if (!(e instanceof RefusalError)) throw e;
         turn.findings.push(e.message);
@@ -229,6 +248,55 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   // 7. report
   appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
   return turn;
+}
+
+const TAIL_BYTES = 4096;
+const POST_MERGE_TIMEOUT_MS = 15 * 60_000;
+
+/** `orch.after_merge` in config: the project's own build and restart commands, run on the main tree after every merge. */
+export function afterMergeCommands(projectDir: string): { build?: string; restart?: string } {
+  const orch = (loadConfig(projectDir) as { orch?: { after_merge?: { build?: unknown; restart?: unknown } } }).orch;
+  const am = orch && typeof orch === 'object' ? orch.after_merge : undefined;
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
+  return { ...(str(am?.build) ? { build: str(am?.build) } : {}), ...(str(am?.restart) ? { restart: str(am?.restart) } : {}) };
+}
+
+/**
+ * Runs, on the main tree at the merged HEAD: `codeloop verify <card>` when the merged stage is verify
+ * or later in its lane, then `orch.after_merge.build` and `.restart`. Each step writes a `post-merge`
+ * activity line with its exit and the last 4 kB of its output. The first failure stops the rest and
+ * is returned as the finding.
+ */
+function postMerge(projectDir: string, cardId: string, mergedStage: string, sha: string): { steps: PostMergeStep[]; failed?: string } {
+  const card = findCard(readCards(projectDir).cards, cardId);
+  const stages = loadLane(projectDir, card.lane).stages.map(s => s.id);
+  const at = stages.indexOf(mergedStage);
+  const verifyAt = stages.indexOf('verify');
+  const plan: { name: PostMergeStep['name']; cmd: string }[] = [];
+  if (verifyAt >= 0 && at >= verifyAt) plan.push({ name: 'verify', cmd: `codeloop verify ${cardId}` });
+  const named = afterMergeCommands(projectDir);
+  if (named.build) plan.push({ name: 'build', cmd: named.build });
+  if (named.restart) plan.push({ name: 'restart', cmd: named.restart });
+  const steps: PostMergeStep[] = [];
+  for (const step of plan) {
+    const run = spawnSync(step.cmd, { cwd: projectDir, shell: true, encoding: 'utf-8', timeout: POST_MERGE_TIMEOUT_MS, env: checkEnv() });
+    const exit = run.error && !run.status ? null : run.status;
+    const tail = Buffer.from(`${run.stdout ?? ''}${run.stderr ?? ''}`).subarray(-TAIL_BYTES).toString('utf-8');
+    steps.push({ ...step, exit });
+    appendActivity(projectDir, cardId, { kind: 'post-merge', step: step.name, cmd: step.cmd, exit, sha, text: tail });
+    if (exit !== 0) return { steps, failed: `after the merge, ${step.name} (\`${step.cmd}\`) exited ${exit ?? 'without finishing'}: ${tail.trim().split('\n').slice(-5).join(' | ').slice(-600)}` };
+  }
+  return { steps };
+}
+
+/** A post-merge failure parks the story for its owner: the merge stands, but nobody is told it works. */
+function parkAfterMerge(projectDir: string, id: string, finding: string): 'stuck' {
+  const file = readCards(projectDir);
+  const card = findCard(file.cards, id);
+  const now = clock().toISOString();
+  const next: Card = { ...card, gate: 'stuck', awaiting: 'owner', events: [...card.events, { at: now, actor: 'engine', human: false, action: 'stuck', stage: card.stage, note: finding }], updatedAt: now };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === card.id ? next : c)));
+  return 'stuck';
 }
 
 function upsertTurn(record: OrchRecord, turn: OrchTurn): void {
@@ -399,7 +467,9 @@ export function orchReport(projectDir: string, cardRef: string): OrchReport {
   const hb = good?.handback;
   const proofCmd = hb ? (listHandbacks(projectDir, card.id).find(h => h.head === hb.head)?.proof.cmd ?? '') : '';
   const works = good ? `${good.stage} is on the trunk at ${good.merge?.sha.slice(0, 8)} (turn ${good.n}, ${good.branch})` : 'nothing has merged yet';
-  const proof = hb ? `\`${proofCmd}\` exited ${hb.proofExit}${gateRec ? `; the gate said ${gateRec.verdict}` : ''}` : 'no passing hand-back yet';
+  // The verdict of the gate that let this turn merge, not whichever gate ran last on the card.
+  const verdict = good?.gate?.verdict ?? (hb ? gateRec?.verdict : undefined);
+  const proof = hb ? `\`${proofCmd}\` exited ${hb.proofExit}${verdict ? `; the gate said ${verdict}` : ''}` : 'no passing hand-back yet';
   const left = hb ? hb.left || 'nothing was reported' : record.turns.at(-1)?.findings.join('; ') || 'the first turn has not run';
   let nextGate: string;
   if (card.stage === DONE) nextGate = 'none, the story is done';

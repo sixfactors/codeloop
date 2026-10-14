@@ -26,6 +26,13 @@ when package.json names a version this file has no heading for.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
+### Orchestrator after the merge
+- After merging a story the orchestrator runs `codeloop verify` (from the verify stage on) and the
+  project's `orch.after_merge.build` and `.restart` commands on the main tree, records each as a
+  `post-merge` activity line, and parks the story stuck when one fails. A story worktree installs git
+  guard hooks only when the main tree already has them, and `orch report` shows the merged turn's
+  gate verdict rather than the latest gate's.
+
 ### Watch an agent work a story
 - A builder that holds a card and writes nothing to it for 30 minutes (`monitor.stall_minutes`) is flagged `stalled` on Home and `/api/hub/attention`, listed by `codeloop monitor stalled` and at session start, and the doctor writes one "asked for a hand-back" line per stall.
 - `codeloop card handback <card> --branch <b> --head <sha> --proof "<cmd>"` records a builder's hand-back: it runs the proof command itself and stores the exit code and output on the card, so a gate can check data instead of a claim. A failing proof is recorded, an empty one is refused.
