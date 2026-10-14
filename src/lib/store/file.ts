@@ -62,6 +62,8 @@ abstract class ReadOnlyRepo<T extends Entity> implements Repo<T> {
  * functions the CLI uses, so nothing changes on disk the day the store arrives. A version is the
  * sha1 of the file an item lives in; a write that expects an older one is refused.
  */
+const ACTIVITY_FILE = /^\.codeloop\/state\/activity\/([^/]+)\.jsonl$/;
+
 export class FileDriver implements Store {
   cards: Repo<CardRecord>;
   lanes: Repo<Lane>;
@@ -75,7 +77,18 @@ export class FileDriver implements Store {
   config: KeyValue;
 
   private listeners = new Set<(c: Change) => void>();
+  private activityListeners = new Set<(card: string) => void>();
   private watchers: FSWatcher[] = [];
+
+  /**
+   * Called with a card id whenever its activity file grows. The activity stream is state, not a
+   * repo, so it rides this driver's watcher instead of the change stream. Returns the unsubscribe.
+   */
+  onActivity(fn: (card: string) => void): () => void {
+    this.activityListeners.add(fn);
+    this.watch();
+    return () => this.activityListeners.delete(fn);
+  }
 
   constructor(public readonly projectDir: string) {
     const emit = (repo: RepoName, id?: string) => {
@@ -136,6 +149,8 @@ export class FileDriver implements Store {
       try {
         const watcher = watch(full, { recursive: true }, (_event, name) => {
           const path = name ? toPosix(`${dir}/${name}`) : dir;
+          const card = ACTIVITY_FILE.exec(path)?.[1];
+          if (card) this.activityListeners.forEach(l => l(card));
           const repo = repoFor(path);
           if (repo) this.listeners.forEach(l => l({ repo, path, at: clock().toISOString() }));
         });
@@ -159,6 +174,7 @@ export class FileDriver implements Store {
     for (const w of this.watchers) w.close();
     this.watchers = [];
     this.listeners.clear();
+    this.activityListeners.clear();
   }
 }
 

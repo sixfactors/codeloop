@@ -6,7 +6,7 @@ import { existsSync, readFileSync, statSync } from 'fs';
 import { join, extname, resolve, sep } from 'path';
 import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
-import { getIndex, type Diff, type ProjectIndex } from './index/index.js';
+import { getIndex, type ActivityFrame, type Diff, type ProjectIndex } from './index/index.js';
 import { readInboxSeen } from './inbox.js';
 import { CARD_MOCKS_DIR, isMockPath, MOCKS_DIR } from './mock.js';
 import * as services from './services.js';
@@ -100,6 +100,10 @@ export function createApp(
   const sinks = new Set<Sink>();
   index.subscribe(diffs => {
     for (const send of sinks) send(diffs);
+  });
+  const activitySinks = new Set<(frames: ActivityFrame[]) => void>();
+  index.onActivity(frames => {
+    for (const send of activitySinks) send(frames);
   });
   // After an engine write in this process the index is patched before the response, so the
   // caller's next read sees it; the file watcher's later report of the same file is a no-op.
@@ -252,6 +256,13 @@ export function createApp(
     return c.json(services.questions(projectDir, c.req.param('id')));
   }));
 
+  // A card's activity, oldest first, paged by the byte cursor the last page ended at.
+  app.get(api('/cards/:id/activity'), handled(async c => {
+    const qs = query(c);
+    const page = services.cardActivity(projectDir, c.req.param('id'), { after: qs.get('after') ?? undefined, limit: int(qs.get('limit')) });
+    const last = page.lines.length ? page.lines[page.lines.length - 1].cursor : qs.get('after') ?? '0';
+    return cached(c, etag('activity', page.card, qs.toString(), last), () => page);
+  }));
   app.get(api('/cards/:id/brief'), handled(async c => c.text(services.brief(projectDir, c.req.param('id')))));
 
   // A stage run: the check, the configured agent when it fails, one advance. The run goes on after
@@ -494,14 +505,31 @@ export function createApp(
         for (const d of diffs) pending.set(`${d.repo}:${d.id}`, d);
         timer ??= setTimeout(() => void flush(), 50);
       };
+      // Activity lines are not coalesced like diffs: every line is a thing that happened, sent in order.
+      let sending: Promise<unknown> = Promise.resolve();
+      const activitySink = (frames: ActivityFrame[]) => {
+        sending = sending.then(async () => {
+          for (const frame of frames) {
+            if (!open) return;
+            try {
+              await stream.writeSSE({ data: JSON.stringify(frame) });
+            } catch {
+              open = false;
+              activitySinks.delete(activitySink);
+            }
+          }
+        });
+      };
       await index.ready;
       await stream.writeSSE({ data: JSON.stringify({ type: 'hello', versions: { ...index.versions } }) });
       sinks.add(sink);
+      activitySinks.add(activitySink);
 
       await new Promise<void>((resolve) => {
         stream.onAbort(() => {
           open = false;
           sinks.delete(sink);
+          activitySinks.delete(activitySink);
           if (timer) clearTimeout(timer);
           resolve();
         });

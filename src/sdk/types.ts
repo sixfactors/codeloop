@@ -10,7 +10,7 @@ export type { Gate, Lane, Stage } from '../lib/lane.js';
 export type { Question } from '../lib/interview.js';
 export type { BoardStory, BoardView, HomeView } from '../lib/services.js';
 export type { DisplayState, StoryState } from '../lib/states.js';
-export type { CardFilter, CardFilterKey, Diff, EpicNode, Facets, FeatureNode, IndexedCard, IndexedEpic, IndexedFeature, IndexedInitiative, IndexedPage, InboxCard, InboxPayload, InitiativeTree, Paged, Paged2, StoryRow } from '../lib/index/index.js';
+export type { ActivityFrame, CardFilter, CardFilterKey, Diff, EpicNode, Facets, FeatureNode, IndexedCard, IndexedEpic, IndexedFeature, IndexedInitiative, IndexedPage, InboxCard, InboxPayload, InitiativeTree, Paged, Paged2, StoryRow } from '../lib/index/index.js';
 export type { Inbox, LaneNumbers } from '../lib/inbox.js';
 export type { LaneMetric, Stats } from '../lib/stats.js';
 export type { AdvanceResult, Outcome, Role } from '../lib/engine.js';
@@ -43,6 +43,10 @@ export type {
   WikiShapeCount,
   RunRecord,
   RunView,
+  ActivityEntry,
+  ActivityLine,
+  CardActivity,
+  CardHolder,
   StageOutput,
   SetupStatus,
   ProjectDetection,
@@ -73,7 +77,7 @@ export interface SplitResult {
 export type RunStreamItem = { line: string } | { end: RunRecord };
 
 import type { Card } from '../lib/cards.js';
-import type { CardFilter, CardFilterKey, Diff, IndexedPage, InboxQuery as IndexInboxQuery } from '../lib/index/index.js';
+import type { ActivityFrame, CardFilter, CardFilterKey, Diff, IndexedPage, InboxQuery as IndexInboxQuery } from '../lib/index/index.js';
 import type { AdoptResult, RunRecord } from '../lib/services.js';
 
 /** The facet keys a card list can be narrowed by; the same list the index filters on. */
@@ -98,8 +102,14 @@ export interface PagesPayload {
   total: number;
 }
 
-/** One message on the live stream. The first is `hello`; the rest name one entity by id and version. */
-export type LiveEvent = { type: 'hello'; versions: Record<string, number | string> } | Diff;
+/**
+ * One message on the live stream. The first is `hello`; then a diff names one entity by id and
+ * version, and an `activity` frame carries one line appended to a card's activity.
+ */
+export type LiveEvent = { type: 'hello'; versions: Record<string, number | string> } | Diff | ActivityFrame;
+
+/** A page of a card's activity: `after` is the cursor the last page ended at, `limit` the most lines (default 200, at most 1000). */
+export type ActivityQuery = { after?: string; limit?: number };
 
 /** `as`: owner | reviewer | agent for a write; unset, the transport decides (the local one from `CODELOOP_ROLE` and the terminal, the http one from the server's `--owner`). */
 export type RoleOption = { as?: string };

@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import MiniSearch from 'minisearch';
+import { ACTIVITY_DIR, readActivity, type ActivityEntry } from '../activity.js';
 import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
 import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
@@ -16,6 +17,13 @@ const SPECS_DIR = 'specs';
 import { openStore, type Artifact, type Change, type Epic, type Feature, type Initiative, type Store, type WikiPage } from '../store/index.js';
 
 export type IndexedRepo = 'cards' | 'pages' | 'lanes' | 'initiatives' | 'epics' | 'features' | 'artifacts';
+
+/** A line appended to a card's activity stream, as the live stream carries it. */
+export interface ActivityFrame {
+  type: 'activity';
+  card: string;
+  line: ActivityEntry;
+}
 
 /** One change the index applied: what a live client patches by id and version. */
 export interface Diff {
@@ -204,6 +212,11 @@ export class ProjectIndex {
   private cardSearch = new MiniSearch<{ id: string; title: string; story: string }>({ fields: ['id', 'title', 'story'], searchOptions: SEARCH });
   private inboxCache: { key: string; needsYou: InboxCard[]; failing: InboxCard[]; backlog: Inbox['backlog']; questions: InboxCard[]; shipped: InboxCard[]; perLane: LaneNumbers[]; shippedThisWeek: number } | undefined;
   private listeners = new Set<(diffs: Diff[]) => void>();
+  private activityListeners = new Set<(frames: ActivityFrame[]) => void>();
+  /** How far into each card's activity file the stream has read; files that existed at start begin at their end. */
+  private activityOffsets = new Map<string, string>();
+  private activityQueue: Promise<unknown> = Promise.resolve();
+  private stopActivity: (() => void) | undefined;
   private queue: Promise<unknown> = Promise.resolve();
   private stopEvents: (() => void) | undefined;
   private closed = false;
@@ -217,6 +230,31 @@ export class ProjectIndex {
   subscribe(fn: (diffs: Diff[]) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /** Called with each batch of activity lines appended since the last; only lines written after the index started. */
+  onActivity(fn: (frames: ActivityFrame[]) => void): () => void {
+    this.activityListeners.add(fn);
+    return () => this.activityListeners.delete(fn);
+  }
+
+  /** Reads what the card's activity file gained and hands it to every listener. One card read at a time, in order. */
+  activityChanged(card: string): Promise<void> {
+    const run = this.activityQueue.then(() => {
+      if (this.closed) return;
+      const frames: ActivityFrame[] = [];
+      let after = this.activityOffsets.get(card);
+      for (;;) {
+        const page = readActivity(this.projectDir, card, { after, limit: 1000 });
+        for (const line of page.items) frames.push({ type: 'activity', card, line });
+        if (page.items.length) after = page.items[page.items.length - 1].cursor;
+        if (!page.next) break;
+      }
+      if (after !== undefined) this.activityOffsets.set(card, after);
+      if (frames.length) for (const fn of this.activityListeners) fn(frames);
+    }).catch(() => undefined);
+    this.activityQueue = run;
+    return run;
   }
 
   /** Applies one store change to the one collection and file it names. Patches run one at a time, in order. */
@@ -455,7 +493,9 @@ export class ProjectIndex {
   async close(): Promise<void> {
     this.closed = true;
     this.stopEvents?.();
+    this.stopActivity?.();
     this.listeners.clear();
+    this.activityListeners.clear();
     indexes.delete(resolve(this.projectDir));
     if (this.ownsStore) await this.store.close();
   }
@@ -484,6 +524,13 @@ export class ProjectIndex {
   }
 
   private follow(): void {
+    if (this.store instanceof FileDriver) {
+      const dir = join(this.projectDir, ACTIVITY_DIR);
+      if (existsSync(dir)) {
+        for (const f of readdirSync(dir)) if (f.endsWith('.jsonl')) this.activityOffsets.set(f.slice(0, -'.jsonl'.length), String(statSync(join(dir, f)).size));
+      }
+      this.stopActivity = this.store.onActivity(card => void this.activityChanged(card));
+    }
     const events = this.store.events();
     const iterator = events[Symbol.asyncIterator]();
     this.stopEvents = () => void iterator.return?.();

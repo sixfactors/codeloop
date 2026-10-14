@@ -3,8 +3,8 @@
  * so the workspace app bundles it as is. Writes carry the token `codeloop serve` printed; reads
  * send the last ETag seen for the path and reuse the cached body on a 304.
  */
-import { ApiError, CodeloopClient, type AnswerInput, type AskInput, type CardWithEvents, type Transport } from './client.js';
-import { CARD_FACETS, type CardListFilter, type CardsQuery, type InboxQuery, type LiveEvent, type NewCardInput, type PageWrite, type PagesQuery, type ProposalInput, type RoleOption, type RunRecord, type RunStreamItem, type Session } from './types.js';
+import { ApiError, CodeloopClient, followCardActivity, type AnswerInput, type AskInput, type CardWithEvents, type Transport } from './client.js';
+import { CARD_FACETS, type ActivityQuery, type CardActivity, type CardListFilter, type CardsQuery, type InboxQuery, type LiveEvent, type NewCardInput, type PageWrite, type PagesQuery, type ProposalInput, type RoleOption, type RunRecord, type RunStreamItem, type Session } from './types.js';
 
 export interface HttpOptions {
   /** `http://127.0.0.1:4040`; empty for same-origin in a browser. */
@@ -194,6 +194,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
       }
     },
     streamRun,
+    // A page past the end today has lines tomorrow, so the ETag cache is bypassed like a run's.
+    cardActivity: (ref, query: ActivityQuery = {}) => json<CardActivity>(`/api/cards/${encodeURIComponent(ref)}/activity${search({ after: query.after, limit: query.limit, t: Date.now() })}`),
+    activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, (r, q) => json<CardActivity>(`/api/cards/${encodeURIComponent(r)}/activity${search({ after: q.after, limit: q.limit, t: Date.now() })}`)),
     stageOutput: ref => json(`/api/cards/${encodeURIComponent(ref)}/output?t=${Date.now()}`),
     writeStageOutput: (ref, text) => json(`/api/cards/${encodeURIComponent(ref)}/output`, { method: 'PUT', body: JSON.stringify({ text }) }),
     splitCard: (ref, titles) => post(`/api/cards/${encodeURIComponent(ref)}/split`, { titles }),

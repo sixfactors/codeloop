@@ -23,7 +23,7 @@ import { addQuestions, readQuestions, writeAnswer, type Question } from './inter
 import { mockHref } from './mock.js';
 import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
-import { followActivity, readActivity, type ActivityEntry } from './activity.js';
+import { readActivity, type ActivityEntry } from './activity.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
@@ -39,6 +39,7 @@ export type { Stats } from './stats.js';
 export type { LintResult, Page as WikiEntry } from './wiki.js';
 export type { RunRecord, RunView } from './runs.js';
 export type { ActivityEntry, ActivityLine } from './activity.js';
+export type { ActivityFrame } from './index/index.js';
 export type { ProjectDetection } from './detect.js';
 export type { AdoptResult } from './skills.js';
 
@@ -90,7 +91,7 @@ export interface DecisionReport {
 }
 
 export interface CardShow {
-  card: Card;
+  card: Card & CardHolder;
   brief: ReturnType<typeof stageBrief>;
   hint: string;
 }
@@ -100,8 +101,14 @@ export type CardListFilter = { lane?: string; stage?: string; initiative?: strin
 /** A stored card with its chain, band and score from the feature pages. */
 export type ScoredRecord = CardRecord & CardChain;
 
+/** On a card someone is working: `agent` is who, as a person reads it; `session` is the id, for a key. */
+export interface CardHolder {
+  agent?: string;
+  session?: string;
+}
+
 export interface CardFull {
-  card: Card & { mock?: string; openQuestions: number };
+  card: Card & CardHolder & { mock?: string; openQuestions: number };
   spec: { dir: string; text: string | null } | null;
   tasks: Task[];
   questions: Question[];
@@ -233,15 +240,24 @@ export function runCard(projectDir: string, ref: string, opts: { agent?: string 
 export const run = (projectDir: string, runId: string): RunView | undefined => getRun(projectDir, runId);
 
 /** A card's activity, oldest first, from `after` (the last cursor a caller saw); `next` when more remain. */
-export function cardActivity(projectDir: string, ref: string, opts: { after?: string; limit?: number } = {}): { id: string; items: ActivityEntry[]; next?: string } {
-  const id = findCard(readCards(projectDir).cards, ref).id;
-  return { id, ...readActivity(projectDir, id, opts) };
+export function cardActivity(projectDir: string, ref: string, opts: { after?: string; limit?: number } = {}): CardActivity {
+  const card = findCard(readCards(projectDir).cards, ref).id;
+  const { items, next } = readActivity(projectDir, card, opts);
+  return { card, lines: items, next: next ?? null };
 }
 
-/** Every activity line on any card as it is written: the frames the change stream carries as `activity`. */
-export async function* activityStream(projectDir: string, signal?: AbortSignal): AsyncIterable<{ type: 'activity'; card: string; entry: ActivityEntry }> {
-  for await (const { card, entry } of followActivity(projectDir, signal)) yield { type: 'activity', card, entry };
+/** `GET /api/cards/:id/activity`: one page of the card's activity, oldest first; `next` is the cursor to pass as `after`, null at the end. */
+export interface CardActivity {
+  card: string;
+  lines: ActivityEntry[];
+  next: string | null;
 }
+
+/** Who holds each card right now: the session's label for people, its id for keys. */
+export function holders(projectDir: string): Map<string, { agent: string; session: string }> {
+  return new Map(activeSessions(projectDir).map(s => [s.card, { agent: s.label ?? s.session, session: s.session }] as const));
+}
+const holderOf = (projectDir: string, id: string) => holders(projectDir).get(id) ?? {};
 export const runWait = (projectDir: string, runId: string): Promise<RunRecord> => waitRun(projectDir, runId);
 export const runStream = (projectDir: string, runId: string, signal?: AbortSignal) => streamRun(projectDir, runId, signal);
 export const runExists = (projectDir: string, runId: string): boolean => readRun(projectDir, runId) !== undefined;
@@ -353,7 +369,7 @@ export function setupStatus(projectDir: string): SetupStatus {
 /** The card by id or number, its current stage brief and the Next line. */
 export function showCard(projectDir: string, ref: string): CardShow {
   const card = findCard(readCards(projectDir).cards, ref);
-  return { card, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
+  return { card: { ...card, ...holderOf(projectDir, card.id) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
 }
 
 /**
@@ -544,7 +560,7 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
   return {
-    card: { ...card, ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length },
+    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length },
     spec,
     tasks,
     questions: readQuestions(projectDir, card),
@@ -735,18 +751,20 @@ export interface BoardStory {
   openQuestions: number;
   /** Who is working it right now, as a person reads it ("claude on dean-mbp, since 19:01"), when anyone is. */
   agent?: string;
+  /** That session's id, for a key; never shown. */
+  session?: string;
   updatedAt: string;
 }
 
-const storyRow = (c: IndexedCardRow, agents: Map<string, string>): BoardStory => ({
+const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; session: string }>): BoardStory => ({
   id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
   epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
-  ...(agents.get(c.id) ? { agent: agents.get(c.id) } : {}), updatedAt: c.updatedAt,
+  ...agents.get(c.id), updatedAt: c.updatedAt,
 });
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
 
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
-  const agents = new Map(activeSessions(projectDir).map(s => [s.card, s.label ?? s.session] as const));
+  const agents = holders(projectDir);
   const { items } = await index.cards.list({}, undefined, 100_000);
   return items.filter(c => c.display).map(c => storyRow(c, agents));
 }

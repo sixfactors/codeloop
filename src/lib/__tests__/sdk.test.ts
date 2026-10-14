@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { ApiError, CodeloopClient, createHttpClient } from '../../sdk/index.js';
 import { createLocalClient } from '../../sdk/local.js';
+import { appendActivity } from '../activity.js';
 import { closeIndex } from '../index/index.js';
 import { createApp } from '../server.js';
 
@@ -168,5 +169,95 @@ describe('http transport: the UI path against the same services', () => {
     expect(seen).toContain('/api/p/acme/cards');
     expect(seen).toContain('/api/p/acme/cards/c-001');
     expect(seen.some(p => !p.startsWith('/api/p/acme/'))).toBe(false);
+  });
+});
+
+describe('activity: a card\'s work, the same through both transports and live on /api/events', () => {
+  const line = (kind: string, extra: Record<string, unknown> = {}) => appendActivity(dir, 'c-001', { session: 'S1', kind, ...extra });
+
+  /** The first `n` items of a stream, or a failure after two seconds instead of a hung test. */
+  async function take<T>(n: number, stream: AsyncIterable<T>, controller: AbortController): Promise<T[]> {
+    const out: T[] = [];
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      for await (const item of stream) {
+        out.push(item);
+        if (out.length === n) break;
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+    return out;
+  }
+
+  it('reads the same lines over local and http, and both streams replay then follow a new line', async () => {
+    await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });
+    line('prompt', { text: 'write the post' });
+    line('edit', { file: 'out/c-001.md' });
+    line('cmd', { text: 'npm test' });
+    const { client: http } = overHttp();
+    const fromLocal = await local().cards.activity('c-001');
+    const fromHttp = await http.cards.activity('c-001');
+    expect(fromLocal.lines.map(l => l.kind)).toEqual(['prompt', 'edit', 'cmd']);
+    expect(fromHttp).toEqual(fromLocal);
+
+    const streams = [local(), http].map(client => {
+      const controller = new AbortController();
+      return { controller, lines: take(4, client.cards.activityStream('c-001', { after: '0', signal: controller.signal }), controller) };
+    });
+    await new Promise(r => setTimeout(r, 300));
+    line('check', { pass: false, stage: 'draft', output: 'no task list yet' });
+    const [a, b] = await Promise.all(streams.map(s => s.lines));
+    streams.forEach(s => s.controller.abort());
+    expect(a.map(l => l.kind)).toEqual(['prompt', 'edit', 'cmd', 'check']);
+    expect(b).toEqual(a);
+  });
+
+  it('GET /api/cards/:id/activity pages by cursor, revalidates by ETag, and 404s an unknown card', async () => {
+    await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });
+    for (const kind of ['prompt', 'edit', 'cmd']) line(kind);
+    const { app } = createApp(dir, undefined, { token: TOKEN });
+    const first = await app.request('/api/cards/c-001/activity?limit=2');
+    const page1 = await first.json() as { card: string; lines: { kind: string; cursor: string }[]; next: string | null };
+    expect(page1.lines.map(l => l.kind)).toEqual(['prompt', 'edit']);
+    expect(page1.next).toBe(page1.lines[1].cursor);
+    const page2 = await (await app.request(`/api/cards/c-001/activity?after=${page1.next}&limit=2`)).json() as typeof page1;
+    expect(page2.lines.map(l => l.kind)).toEqual(['cmd']);
+    expect(page2.next).toBeNull();
+    expect((await app.request('/api/cards/c-001/activity?limit=2', { headers: { 'If-None-Match': first.headers.get('etag')! } })).status).toBe(304);
+    expect((await app.request('/api/cards/c-404/activity')).status).toBe(404);
+  });
+
+  it('a line appended to a card arrives on /api/events as an activity frame', async () => {
+    await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });
+    const { app } = createApp(dir, undefined, { token: TOKEN });
+    const controller = new AbortController();
+    const res = await app.request('/api/events', { signal: controller.signal });
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    const messages: Record<string, unknown>[] = [];
+    let buffer = '';
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const read = async (want: (m: Record<string, unknown>) => boolean) => {
+      for (;;) {
+        const hit = messages.find(want);
+        if (hit) return hit;
+        const { value, done } = await reader.read();
+        if (done) throw new Error('stream ended without the frame');
+        buffer += decoder.decode(value);
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+        for (const part of parts) {
+          const data = part.split('\n').find(l => l.startsWith('data:'))?.slice(5).trim();
+          if (data) messages.push(JSON.parse(data));
+        }
+      }
+    };
+    await read(m => m.type === 'hello');
+    line('commit', { sha: 'a2e5c3', subject: 'fix(kit): the thing' });
+    const frame = await read(m => m.type === 'activity');
+    clearTimeout(timer);
+    controller.abort();
+    expect(frame).toMatchObject({ type: 'activity', card: 'c-001', line: { kind: 'commit', sha: 'a2e5c3', session: 'S1' } });
   });
 });

@@ -1,4 +1,6 @@
 import type {
+  ActivityEntry,
+  ActivityQuery,
   AdoptCounts,
   BoardView,
   HomeView,
@@ -6,6 +8,7 @@ import type {
   Artifact,
   Card,
   CardCreated,
+  CardActivity,
   CardEvent,
   CardFull,
   CardListFilter,
@@ -65,6 +68,36 @@ import type {
   WikiShapeCount,
 } from './types.js';
 
+/**
+ * A card's activity as it happens, for both transports. Once the live stream says hello it is
+ * subscribed, so the replay read after that misses nothing; a line that arrives both ways is
+ * dropped by its cursor.
+ */
+export async function* followCardActivity(ref: string, opts: { after?: string; signal?: AbortSignal }, events: (signal?: AbortSignal) => AsyncIterable<LiveEvent>, page: (ref: string, query: ActivityQuery) => Promise<CardActivity>): AsyncIterable<ActivityEntry> {
+  // Resolves the card first, so an unknown one is refused before anything is subscribed.
+  const { card } = await page(ref, { limit: 1 });
+  let seen = -1;
+  for await (const event of events(opts.signal)) {
+    if (!('type' in event)) continue;
+    if (event.type === 'hello') {
+      if (opts.after === undefined) continue;
+      let after: string | null = opts.after;
+      while (after !== null) {
+        const next: CardActivity = await page(card, { after, limit: 1000 });
+        for (const line of next.lines) {
+          seen = Number(line.cursor);
+          yield line;
+        }
+        after = next.next;
+      }
+      continue;
+    }
+    if (event.type !== 'activity' || event.card !== card || Number(event.line.cursor) <= seen) continue;
+    seen = Number(event.line.cursor);
+    yield event.line;
+  }
+}
+
 /** A card as `GET /api/cards/:id` serves it: the indexed copy with its event log. */
 export type CardWithEvents = IndexedCard & { events: CardEvent[] };
 
@@ -115,6 +148,10 @@ export interface Transport {
   waitRun(runId: string): Promise<RunRecord>;
   /** The log's lines as they are written, then `{ end }` with the final record. */
   streamRun(runId: string, signal?: AbortSignal): AsyncIterable<RunStreamItem>;
+  /** One page of the card's activity, oldest first. Refused (404) for an unknown card. */
+  cardActivity(ref: string, query?: ActivityQuery): Promise<CardActivity>;
+  /** The card's activity lines as they are written; with `after`, the lines since that cursor first ('0' for all of them). */
+  activityStream(ref: string, opts?: { after?: string; signal?: AbortSignal }): AsyncIterable<ActivityEntry>;
   stageOutput(ref: string): Promise<StageOutput>;
   writeStageOutput(ref: string, text: string, opts?: RoleOption): Promise<StageOutput>;
   splitCard(ref: string, titles: string[], opts?: RoleOption): Promise<SplitResult>;
@@ -221,6 +258,10 @@ export class CodeloopClient {
     output: (ref: string) => this.transport.stageOutput(ref),
     /** Writes the current stage's output file, making its folders. The check does not run. */
     writeOutput: (ref: string, text: string, opts?: RoleOption) => this.transport.writeStageOutput(ref, text, opts),
+    /** What happened on the card, oldest first: edits, commands, checks, commits, gates. Pass `next` back as `after` for the next page. */
+    activity: (ref: string, query?: ActivityQuery) => this.transport.cardActivity(ref, query),
+    /** The card's activity as it happens, from the live stream; `after` replays from a cursor first. */
+    activityStream: (ref: string, opts?: { after?: string; signal?: AbortSignal }) => this.transport.activityStream(ref, opts),
     /** Sibling cards under the same feature, each marked `split_from`. */
     split: (ref: string, titles: string[], opts?: RoleOption) => this.transport.splitCard(ref, titles, opts),
     migrateStories: () => this.transport.migrateStories(),

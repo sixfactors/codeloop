@@ -5,7 +5,7 @@
  * the post-commit hook writes commits, and writeCards mirrors the engine's gate, answer and park
  * events. The board reads it through services.cardActivity, never from the file.
  */
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readSync, statSync, writeFileSync } from 'fs';
+import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from './config.js';
 
@@ -104,26 +104,4 @@ export function readActivity(projectDir: string, card: string, opts: { after?: s
   const all = parseLines(readFrom(activityFile(projectDir, card), offset).text, offset).entries;
   const items = all.slice(0, limit);
   return { items, ...(all.length > limit ? { next: items[items.length - 1].cursor } : {}) };
-}
-
-/**
- * Every new line on any card as it is written, polled. A caller that starts now sees only what
- * is written after it started.
- */
-export async function* followActivity(projectDir: string, signal?: AbortSignal, pollMs = 250): AsyncIterable<{ card: string; entry: ActivityEntry }> {
-  const dir = join(projectDir, ACTIVITY_DIR);
-  const offsets = new Map<string, number>();
-  const sizes = () => (existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.jsonl')) : []).map(f => [f, statSync(join(dir, f)).size] as const);
-  for (const [f, size] of sizes()) offsets.set(f, size);
-  while (!signal?.aborted) {
-    for (const [f, size] of sizes()) {
-      const from = offsets.get(f) ?? 0;
-      if (size <= from) continue;
-      const { text } = readFrom(join(dir, f), from);
-      const { entries, end } = parseLines(text, from);
-      offsets.set(f, end);
-      for (const entry of entries) yield { card: f.replace(/\.jsonl$/, ''), entry };
-    }
-    await new Promise(r => setTimeout(r, pollMs));
-  }
 }

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
-import { DONE, DROPPED, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
+import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
 import { createLocalClient } from '../sdk/local.js';
 import { guard } from './guard.js';
 
@@ -84,6 +84,55 @@ storyOptions(cardCommand
     const { card, created, hint } = await client().cards.propose({ ...opts, lane, title }, { as: opts.as });
     console.log(created ? `proposed ${card.id} for ${card.lane}: ${card.title}` : `already proposed as ${card.id}`);
     print({ lines: [hint], exitCode: 0 });
+  }));
+
+/** One activity line as a person reads it: the time, who, and what happened. */
+function activityText(l: ActivityEntry): string {
+  const at = chalk.dim(l.at.slice(11, 19));
+  const what = (() => {
+    switch (l.kind) {
+      case 'edit': return `edited ${l.file}`;
+      case 'cmd': return `ran ${l.text}`;
+      case 'prompt': return `prompt${l.text ? `: ${l.text}` : ''}`;
+      case 'check': return l.pass ? chalk.green(`check passed (${l.stage})`) : chalk.red(`check failing (${l.stage}): ${String(l.output ?? '').trim().split('\n').pop() ?? ''}`);
+      case 'commit': return `committed ${l.sha} ${l.subject}`;
+      case 'log': return chalk.dim(`${l.runId}: ${l.text}`);
+      case 'start': return 'session started';
+      case 'stop': return 'turn ended';
+      case 'end': return 'session ended';
+      default: return `${l.kind}${l.stage ? ` ${l.stage}` : ''}${l.text ? `: ${l.text}` : ''}`;
+    }
+  })();
+  return `  ${at}  ${what}`;
+}
+
+cardCommand
+  .command('activity <id>')
+  .description("What happened on a card, oldest first: edits, commands, checks, commits and gates. --follow keeps printing as it happens")
+  .option('--follow', 'Keep printing new lines until interrupted')
+  .option('--limit <n>', 'Most lines to print without --follow', '200')
+  .option('--json', 'One JSON line per activity line')
+  .action(guard(async (id: string, opts: { follow?: boolean; limit: string; json?: boolean }) => {
+    const out = (l: ActivityEntry) => console.log(opts.json ? JSON.stringify(l) : activityText(l));
+    const c = client();
+    if (!opts.follow) {
+      const { lines, next } = await c.cards.activity(id, { limit: Number(opts.limit) || 200 });
+      if (!lines.length && !opts.json) console.log(chalk.dim('  no activity yet'));
+      lines.forEach(out);
+      if (next && !opts.json) console.log(chalk.dim(`  more after cursor ${next}`));
+      await c.close();
+      return;
+    }
+    // The index's watcher does not hold the process open, so following does.
+    const keepAlive = setInterval(() => undefined, 1 << 30);
+    const controller = new AbortController();
+    process.once('SIGINT', () => controller.abort());
+    try {
+      for await (const l of c.cards.activityStream(id, { after: '0', signal: controller.signal })) out(l);
+    } finally {
+      clearInterval(keepAlive);
+      await c.close();
+    }
   }));
 
 cardCommand

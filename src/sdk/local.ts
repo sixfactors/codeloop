@@ -7,7 +7,7 @@
 import { closeIndex, getIndex, type ProjectIndex } from '../lib/index/index.js';
 import * as services from '../lib/services.js';
 import { openStore, type Store } from '../lib/store/index.js';
-import { CodeloopClient, type Transport } from './client.js';
+import { CodeloopClient, followCardActivity, type Transport } from './client.js';
 import type { LiveEvent, Role, RoleOption } from './types.js';
 
 export interface LocalOptions {
@@ -39,8 +39,13 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
       queue.push(...diffs);
       wake?.();
     });
+    const stopActivity = idx.onActivity(frames => {
+      queue.push(...frames);
+      wake?.();
+    });
     signal?.addEventListener('abort', () => {
       stop();
+      stopActivity();
       wake?.();
     });
     try {
@@ -52,6 +57,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
       }
     } finally {
       stop();
+      stopActivity();
     }
   }
 
@@ -79,6 +85,8 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     getRun: async runId => services.run(projectDir, runId),
     waitRun: runId => services.runWait(projectDir, runId),
     streamRun: (runId, signal) => services.runStream(projectDir, runId, signal),
+    cardActivity: async (ref, query = {}) => services.cardActivity(projectDir, ref, query),
+    activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, async (r, q) => services.cardActivity(projectDir, r, q)),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),
     splitCard: async (ref, titles, opts) => services.splitCard(projectDir, ref, titles, role(opts)),
