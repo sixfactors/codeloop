@@ -706,6 +706,7 @@ export type { WikiShapeCount };
 
 // --- wiki build: refresh facts, start a card in the `wiki` lane, run it -------------------------
 import { runDueWithAgent, type RunResult } from './run.js';
+import { stalledBuilders } from './stall.js';
 
 export interface WikiBuildResult {
   migrated: WikiMigrateResult;
@@ -819,13 +820,13 @@ export async function boardView(index: ProjectIndex, projectDir: string): Promis
 }
 
 export interface HomeView {
-  summary: { needsYou: number; inProgress: number; failing: number; stale: number; shippedThisWeek: number; agentsWorking: number };
+  summary: { needsYou: number; inProgress: number; failing: number; stale: number; stalled: number; shippedThisWeek: number; agentsWorking: number };
   needsYou: BoardStory[];
   failing: BoardStory[];
   /** No event and no activity for two days: park or drop. */
   stale: BoardStory[];
   inProgress: BoardStory[];
-  agents: { session: string; label: string; card: string; title?: string; since: string }[];
+  agents: { session: string; label: string; card: string; title?: string; since: string; stalled: boolean; idleMinutes?: number }[];
   shipped: BoardStory[];
 }
 
@@ -838,9 +839,10 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   const stale = rows.filter(r => r.display.health === 'stale').sort(newestFirst);
   const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
   const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
-  const agents = activeSessions(projectDir).map(s => ({ session: s.session, label: s.label ?? s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
+  const stalledNow = new Map(stalledBuilders(projectDir).map(b => [b.session, b.idleMinutes]));
+  const agents = activeSessions(projectDir).map(s => ({ session: s.session, label: s.label ?? s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt, stalled: stalledNow.has(s.session), ...(stalledNow.has(s.session) ? { idleMinutes: stalledNow.get(s.session) } : {}) }));
   return {
-    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, stale: stale.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
+    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, stale: stale.length, stalled: stalledNow.size, shippedThisWeek: shipped.length, agentsWorking: agents.length },
     needsYou, failing, stale, inProgress, agents, shipped,
   };
 }
@@ -918,3 +920,4 @@ export function monitorLines(report: MonitorReport): string[] {
   return lines;
 }
 export { listHandbacks, recordHandback, type HandbackInput, type HandbackRecord } from './handback.js';
+export { stalledBuilders, stalledLines, type StalledBuilder } from './stall.js';

@@ -161,7 +161,7 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
       if (p.missing) return [];
       try {
         const { summary } = services.monitorReport(p.path, { limit: 0 });
-        return [{ id: p.id, name: p.name, needsYou: summary.needsYou, failing: summary.failing, stale: summary.stale, working: summary.working }];
+        return [{ id: p.id, name: p.name, needsYou: summary.needsYou, failing: summary.failing, stale: summary.stale, working: summary.working, stalled: services.stalledBuilders(p.path).length }];
       } catch {
         return [];
       }
