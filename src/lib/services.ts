@@ -11,6 +11,7 @@ import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
 import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
+import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, queueCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
 import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
@@ -400,7 +401,7 @@ export function showCard(projectDir: string, ref: string): CardShow {
   const entered = lane.stages.some(x => x.id === card.stage) ? enteredAt(card.events ?? [], card.stage, lane.stages[0].id) : undefined;
   const spent = entered ? phaseTime(readAllActivity(projectDir, card.id), entered, Date.now()) : undefined;
   const time = spent ? { stage: card.stage, ...spent, text: `in ${card.stage} ${formatMinutes(spent.wallMinutes)}, working ${formatMinutes(spent.activeMinutes)}` } : undefined;
-  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
 }
 
 /**

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { cardKey, findCard, findCardOrNone, readCards } from './cards.js';
 import { loadConfig } from './config.js';
 import { globMatches } from './glob.js';
-import { annotateCard, RefusalError, type Role } from './engine.js';
+import { annotateCard, recordEvent, RefusalError, type Role } from './engine.js';
 import { cardNumber } from './lane.js';
 import { withLock } from './lock.js';
 
@@ -156,4 +156,28 @@ export function tickTask(projectDir: string, dir: string, taskId: string): void 
     lines[index] = lines[index].replace('- [ ]', '- [x]');
     writeFileSync(file, lines.join('\n'));
   });
+}
+
+/**
+ * A commit's `Task:` trailer. Ticks the line, records a `task` event on the card, and reports
+ * 'ticked', 'already' (a repeat commit changes nothing) or 'unknown' (no such id in tasks.md).
+ */
+export function tickTaskFromCommit(projectDir: string, cardId: string, taskId: string): 'ticked' | 'already' | 'unknown' {
+  let dir: string;
+  try {
+    dir = resolveSpecDir(projectDir, cardId);
+    const { tasks } = readTasks(projectDir, dir);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return 'unknown';
+    if (task.done) return 'already';
+    tickTask(projectDir, dir, taskId);
+  } catch {
+    return 'unknown';
+  }
+  try {
+    recordEvent(projectDir, cardId, () => ({ action: 'task', note: taskId }));
+  } catch {
+    // The tick landed; a board conflict must not undo it.
+  }
+  return 'ticked';
 }
