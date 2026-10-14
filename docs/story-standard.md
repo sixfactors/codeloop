@@ -113,6 +113,8 @@ The spec's `done_when:` line names a command that exits 0 or a screen a person o
 
 `plan.md` carries files, commands, flags and schema. `tasks.md` carries up to eight layer-tagged tasks in dependency order, each naming the acceptance line it satisfies. The card and `spec.md` carry none of that.
 
+A story that changes stored data also carries `specs/NNN/data-model.md`: entities with fields, the store each lives in (it must be named on the architecture data-model page), indexes, and migration. `codeloop check data-model` enforces it; a story with no `[data]` task and no `entities:` in its spec skips it.
+
 Tasks must name files in their own layer when `layers:` is configured in `.codeloop/config.yaml`; `codeloop spec check` fails a task whose tag and file paths disagree.
 
 ## Keep plumbing off the board unless it moves a metric

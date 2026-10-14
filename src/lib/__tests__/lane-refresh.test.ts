@@ -69,7 +69,7 @@ stages:
     expect(r.keptWip).toBeUndefined();
 
     expect(loadLane(dir, 'build').stages.map(s => s.id)).toEqual([
-      'research', 'interview', 'mock', 'spec', 'build', 'verify', 'review', 'staging', 'live',
+      'research', 'interview', 'mock', 'spec', 'data-model', 'build', 'verify', 'review', 'staging', 'live',
     ]);
     expect(loadLane(dir, 'build').version).toBe(2);
     expect(findCard(readCards(dir).cards, 'c-1')).toMatchObject({ stage: 'spec', gate: 'spec' });
