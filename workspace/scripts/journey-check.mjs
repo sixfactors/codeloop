@@ -9,7 +9,7 @@
 // Exits 1 when a check fails.
 //
 //   CODELOOP_URL=http://127.0.0.1:4762 CODELOOP_TOKEN=… node scripts/journey-check.mjs \
-//     --from c-048 --to c-047 [--neighbour next] [--login user:password] [--questions c-018] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
+//     [--board] --from c-048 --to c-047 [--neighbour next] [--login user:password] [--questions c-018] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
 //
 // Playwright is not a dependency of this package; PLAYWRIGHT_DIR names a project that has it.
 import { createRequire } from 'node:module';
@@ -86,6 +86,36 @@ try {
       const stale = first.text.split('\n').find((l) => /no task list|check fail/i.test(l));
       ok(`${args.from}'s check sentence is not on ${args.to}`, !stale || !second.text.includes(stale), stale ?? 'no check line on the first panel');
     }
+  }
+
+  // --board: the phase board shows its holder rows and a collapsed empty phase, and the header,
+  // the sidebar (footer and Board badge) and the drawer pager all show the board's one count.
+  if (args.board) {
+    if (args.shots) mkdirSync(resolve(String(args.shots)), { recursive: true });
+    for (const width of [1440, 900]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(withToken('/'), { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-testid="board-phase-grid"]').waitFor({ timeout: 20000 });
+      const rows = await page.locator('[data-testid^="board-row-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid').replace('board-row-', '')));
+      ok(`board at ${width} shows the holder rows`, ['needs-you', 'agent', 'queued'].every((r) => rows.includes(r)), rows.join(', '));
+      const collapsed = await page.locator('[data-testid^="board-phase-"][data-collapsed]').count();
+      ok(`board at ${width} collapses empty phases`, collapsed > 0, `${collapsed} collapsed`);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      ok(`board at ${width}: no sideways page scroll`, !overflow);
+      if (args.shots) await page.screenshot({ path: join(resolve(String(args.shots)), `board-${width}.png`), fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const num = (t) => Number(/(\d+)/.exec(t ?? '')?.[1]);
+    const header = num(await page.locator('[data-testid="board-total"]').innerText());
+    const footer = num(await page.locator('[data-testid="sidebar-story-count"]').innerText());
+    const badge = num(await page.locator('[data-testid="sidebar-nav-board"] [data-testid="sidebar-count"]').innerText().catch(() => ''));
+    const first = page.locator('[data-testid="board-phase-grid"] [data-testid^="board-card-"]').first();
+    let pager = NaN;
+    for (let i = 0; i < 10 && Number.isNaN(pager); i++) {
+      await first.click();
+      pager = await page.locator('[data-testid="detail-sheet-position"]').innerText({ timeout: 3000 }).then((t) => Number(/of (\d+)/.exec(t)[1]), () => NaN);
+    }
+    ok('header, sidebar footer, sidebar Board badge and drawer pager show one count', header > 0 && [footer, badge, pager].every((n) => n === header), `header ${header}, footer ${footer}, badge ${badge}, pager ${pager}`);
   }
 
   // --questions <id>: the "you" panel offers each question's options as buttons with the

@@ -237,7 +237,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     },
     acceptAll: ref => post(`/api/cards/${encodeURIComponent(ref)}/questions/accept-all`, {}),
     inbox: (query: InboxQuery = {}) => json(`/api/inbox${search({ ...query, needsMe: query.needsMe ? '1' : undefined })}`),
-    board: () => json('/api/board'),
+    board: (opts = {}) => json(`/api/board${search({ lane: opts.lane })}`),
     home: () => json('/api/home'),
     inboxReport: (opts = {}) => json(`/api/inbox/report${search({ sort: opts.sort })}`),
     markInboxSeen: () => post('/api/inbox/seen', {}).then(() => undefined),

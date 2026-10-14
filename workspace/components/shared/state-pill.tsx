@@ -51,6 +51,17 @@ function Pill({ tone, agentDot, children, className }: { tone: Tone; agentDot?: 
 }
 
 /**
+ * The one badge a board card carries: its health when that is bad (failing, stuck, stale), else
+ * what it waits on when a person is needed, else none, since the column already names the phase.
+ */
+export function StoryBadge({ display }: { display: StoryState }) {
+  const health = display.health && display.health !== 'working' && display.health !== 'needs-you' ? HEALTH_PILL[display.health] : undefined;
+  if (health) return <Pill tone={health.tone}>{health.label}</Pill>;
+  if (display.state === 'needs-you') return <Pill tone="you">{waitingLabel(display.waitingOn)}</Pill>;
+  return null;
+}
+
+/**
  * The status pill(s) for one story: the state (with its stage sub-label or its gate/question),
  * then one pill per flag. `agent` is the session working the story right now, only state
  * `in-progress` reads it, to decide the agent dot.

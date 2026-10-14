@@ -132,6 +132,6 @@ export const pageQueryOptions = (path: string) => ({ queryKey: QK.page(path), qu
 export const wikiShapeQueryOptions = () => ({ queryKey: QK.wikiShape, queryFn: api.wikiShape, retry: false });
 
 /** The board: one row of states for the whole project, server-grouped. Polled, like the inbox, so a gate an agent clears elsewhere clears here too. */
-export const boardQueryOptions = () => ({ queryKey: QK.board, queryFn: api.board, retry: false, refetchInterval: 15_000 });
+export const boardQueryOptions = (lane?: string) => ({ queryKey: [...QK.board, lane ?? ''] as const, queryFn: () => api.board(lane), retry: false, refetchInterval: 15_000 });
 /** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
 export const homeQueryOptions = () => ({ queryKey: QK.home, queryFn: api.home, retry: false, refetchInterval: 15_000 });

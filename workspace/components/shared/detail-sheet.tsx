@@ -112,7 +112,7 @@ export function DetailSheet({
                   <span className="flex items-center gap-1.5">Previous<Kbd>K</Kbd><Kbd>↑</Kbd></span>
                 </TooltipContent>
               </Tooltip>
-              <span className="min-w-[3.5rem] px-1 text-center text-xs text-muted-foreground tabular-nums">
+              <span className="min-w-[3.5rem] px-1 text-center text-xs text-muted-foreground tabular-nums" data-testid="detail-sheet-position">
                 {navigation.currentIndex + 1} of {navigation.totalCount}
               </span>
               <Tooltip>

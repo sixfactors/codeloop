@@ -123,7 +123,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
       return services.inboxPaged(projectDir, indexed(), { ...rest, ...(needsMe ? { needsMe: role() } : {}) });
     },
     inboxReport: async opts => services.inboxReport(projectDir, opts),
-    board: () => services.boardView(indexed(), projectDir),
+    board: (opts = {}) => services.boardView(indexed(), projectDir, opts),
     home: () => services.homeView(indexed(), projectDir),
     markInboxSeen: async () => services.inboxSeen(projectDir),
     lanes: () => indexed().lanes.list(),

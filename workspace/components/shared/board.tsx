@@ -1,24 +1,20 @@
 'use client';
 
-// The board (docs/artifacts/codeloop-ui-design.html §5 "Board"): one row of columns, Up next, In
-// progress, Needs you, Done, for the whole project, from GET /api/board. Replaces the former
-// board, which drew one row of kanban columns per lane with a stage per column; that view came
-// from GET /api/cards?lane=&stage=, which the search/filter bar narrowed. The new row is a fixed
-// shape the server already groups (DisplayState, not a lane's stages), so there is nothing left
-// for a lane/stage filter bar to narrow, it is dropped rather than kept wired to a query the new
-// endpoint does not take. The backlog strip keeps its own card list (the one thing the board view
-// does not carry, only its count) and the promote/drop actions on it, unchanged from before.
+// The board (story-journey spec §3): columns are the shown lane's journey, Up next, each phase in
+// order, then Live this week; rows are who holds the story, Needs you, Agent, Queued. A phase with
+// no story collapses to its header and a row with none is left out. GET /api/board?lane= returns
+// it grouped, with each story's holder and live line, and the one story count (`total`, `ids`)
+// the header, the sidebar and the drawer pager all show. The backlog strip keeps its own list.
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { ChevronRight, HelpCircle, Kanban, Plus, Trash2, ArrowUpRight } from 'lucide-react';
+import { ChevronRight, Kanban, Lock, Plus, Trash2, ArrowUpRight } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { BoardCard } from '@/components/shared/board-card';
-import { BandChip } from '@/components/shared/band-chip';
-import { StoryKey } from '@/components/shared/story-key';
-import { StatePill } from '@/components/shared/state-pill';
+import { StoryBadge } from '@/components/shared/state-pill';
 import { Holder } from '@/components/shared/holder';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
@@ -26,8 +22,7 @@ import { PageSkeleton } from '@/components/shared/page-skeleton';
 import { ShapeStarter } from '@/components/shared/shape-starter';
 import { backlogQuery } from '@/lib/board-columns';
 import { useBoard, useCardColumn, useNextAction, useTriage } from '@/hooks/use-api';
-import { useRoutes } from '@/components/providers/project-provider';
-import type { Band, BoardStory, Card as CardT, DisplayState } from '@/lib/types';
+import type { BoardPhase, BoardStory, BoardView, Card as CardT, DisplayState } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
@@ -36,9 +31,20 @@ const NewCardDialog = dynamic(() => import('@/components/shared/new-card-dialog'
 
 const COLUMN_LABEL: Record<DisplayState, string> = { backlog: 'Backlog', 'up-next': 'Up next', 'in-progress': 'In progress', 'needs-you': 'Needs you', done: 'Done', shipped: 'Shipped' };
 
-/** The "tile" building block (§4): title, key, priority, holder, state and its flags, open
- * questions. Nothing else, the record behind it (the peek) carries the rest. */
-function StoryTile({ story, onOpen, cardHref }: { story: BoardStory; onOpen: (id: string) => void; cardHref: string }) {
+/** "40s ago", "12 min ago", "3h ago", "2d ago". */
+export const ago = (iso?: string) => {
+  if (!iso) return undefined;
+  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 172_800 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86_400)}d ago`;
+};
+const inPhase = (iso?: string) => {
+  const a = ago(iso);
+  return a ? `in phase ${a.replace(' ago', '')}` : undefined;
+};
+
+/** The card face: title, who holds it, its live line, how long it has been in this phase, one badge. */
+function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) => void }) {
+  const who = story.holder === 'agent' ? story.agent : story.holder === 'needs-you' ? 'You' : undefined;
   return (
     <div
       role="button"
@@ -47,45 +53,94 @@ function StoryTile({ story, onOpen, cardHref }: { story: BoardStory; onOpen: (id
       onClick={() => onOpen(story.id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(story.id); } }}
       data-testid={`board-card-${story.id}`}
-      className="group flex flex-col gap-1.5 rounded-lg border bg-card p-3 text-left text-sm shadow-xs transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-holder={story.holder}
+      className="group flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-2.5 text-left text-sm shadow-xs transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="block leading-snug">{story.title}</span>
-      <span className="flex items-center gap-1.5">
-        <StoryKey id={story.id} href={cardHref} />
-        <BandChip band={story.band as Band | undefined} score={story.score} />
-        <Holder agent={story.agent} className="ml-auto" />
-      </span>
-      <span className="flex flex-wrap items-center gap-1">
-        <StatePill display={story.display} agent={story.agent} />
-        {story.openQuestions ? (
-          <Badge variant="secondary" className="shrink-0 gap-1 rounded-full" title={`${story.openQuestions} open question${story.openQuestions === 1 ? '' : 's'}`}>
-            <HelpCircle className="size-3" />{story.openQuestions}
-          </Badge>
-        ) : null}
+      {who ? (
+        <span className="flex min-w-0 items-center gap-1.5 text-xs">
+          {story.holder === 'agent' ? <Holder agent={story.agent} /> : <Avatar className="size-5"><AvatarFallback className="bg-warning/20 text-[10px] font-semibold">Y</AvatarFallback></Avatar>}
+          <span className="truncate">{who}</span>
+        </span>
+      ) : null}
+      {story.lastActivity ? (
+        <span className="line-clamp-2 text-xs text-muted-foreground" data-testid="board-card-live-line">
+          {story.lastActivity.text}{story.lastActivity.at ? ` · ${ago(story.lastActivity.at)}` : ''}
+        </span>
+      ) : null}
+      <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="font-mono">{story.id}</span>
+        {story.phaseSince && story.display.state !== 'done' && story.display.state !== 'shipped' ? <span>{inPhase(story.phaseSince)}</span> : null}
+        <span className="ml-auto"><StoryBadge display={story.display} /></span>
       </span>
     </div>
   );
 }
 
-function StateColumn({ state, label, meta, stories, onOpen, cardHref }: {
-  state: DisplayState; label: string; meta?: string; stories: BoardStory[]; onOpen: (id: string) => void; cardHref: (id: string) => string;
-}) {
+/** One column header: the phase, its gate, its count. An empty phase is only this, narrow. */
+function PhaseHeader({ phase }: { phase: BoardPhase }) {
+  const empty = phase.count === 0;
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-muted/40 p-2" data-testid={`board-column-${state}`} data-count={stories.length}>
-      <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-        <span className="truncate">{label}</span>
-        <span className="shrink-0 font-semibold text-foreground tabular-nums normal-case tracking-normal">{meta ?? stories.length}</span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto" style={{ maxHeight: '32rem' }}>
-        {stories.length === 0 ? <p className="px-1 py-2 text-xs text-muted-foreground">No stories</p> : stories.map((s) => <StoryTile key={s.id} story={s} onOpen={onOpen} cardHref={cardHref(s.id)} />)}
-      </div>
+    <div className={cn('flex gap-1 px-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase', empty ? 'flex-col-reverse items-center' : 'items-center')} title={empty ? `${phase.label}: no stories` : undefined}>
+      <span className={cn(empty ? '[writing-mode:vertical-rl] rotate-180 py-1' : 'truncate')}>{phase.label}</span>
+      {phase.gate ? <Lock className="size-3 shrink-0" aria-label={`gate ${phase.gate}`} /> : null}
+      {!empty ? <span className="ml-auto shrink-0 font-semibold text-foreground tabular-nums normal-case tracking-normal">{phase.count}</span> : null}
     </div>
+  );
+}
+
+/** The journey grid: one column per phase (empty ones narrow), one band per holder row that has stories. */
+function PhaseGrid({ view, onOpen }: { view: BoardView; onOpen: (id: string) => void }) {
+  const columns = view.phases.filter((p) => p.kind !== 'live');
+  const template = columns.map((p) => (p.count ? 'minmax(13rem, 1fr)' : 'minmax(2rem, auto)')).join(' ');
+  const rows = view.rows.filter((r) => r.count > 0);
+  return (
+    <div className="min-w-0 flex-1 overflow-x-auto" data-testid="board-phase-grid">
+      <div className="grid gap-2" style={{ gridTemplateColumns: template }}>
+        {columns.map((p) => (
+          <div key={p.id} className="rounded-md bg-muted/40 py-1.5" data-testid={`board-phase-${p.id}`} data-count={p.count} data-collapsed={p.count === 0 || undefined}>
+            <PhaseHeader phase={p} />
+          </div>
+        ))}
+        {rows.map((row) => (
+          <Fragment key={row.id}>
+            <div className="flex items-center gap-2 px-1 pt-2 text-xs font-medium" style={{ gridColumn: '1 / -1' }} data-testid={`board-row-${row.id}`} data-count={row.count}>
+              {row.label}<span className="text-muted-foreground tabular-nums">{row.count}</span>
+            </div>
+            {columns.map((p) => (
+              <div key={`${row.id}-${p.id}`} className="flex min-w-0 flex-col gap-2">
+                {p.cells[row.id].map((s) => <PhaseCard key={s.id} story={s} onOpen={onOpen} />)}
+              </div>
+            ))}
+          </Fragment>
+        ))}
+      </div>
+      {rows.length === 0 ? <p className="px-1 py-3 text-xs text-muted-foreground">Nothing is moving in this lane.</p> : null}
+    </div>
+  );
+}
+
+/** Live this week: what shipped in this lane in the last seven days, newest first. */
+function LiveColumn({ phase, onOpen }: { phase?: BoardPhase; onOpen: (id: string) => void }) {
+  if (!phase) return null;
+  const stories = [...phase.cells['needs-you'], ...phase.cells.agent, ...phase.cells.queued];
+  return (
+    <aside className="flex min-w-0 flex-col gap-2 rounded-lg border bg-muted/30 p-2 lg:basis-72 lg:shrink-0" data-testid="board-live" data-count={phase.count}>
+      <div className="flex items-center gap-1 px-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <span>{phase.label}</span><span className="ml-auto font-semibold text-foreground tabular-nums normal-case tracking-normal">{phase.count}</span>
+      </div>
+      {stories.length ? stories.map((s) => (
+        <button key={s.id} type="button" onClick={() => onOpen(s.id)} data-testid={`board-card-${s.id}`} className="flex min-w-0 items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-xs hover:bg-muted">
+          <span className="shrink-0 font-mono text-muted-foreground">{s.id}</span><span className="min-w-0 truncate">{s.title}</span>
+        </button>
+      )) : <p className="px-1 text-xs text-muted-foreground">Nothing shipped this week.</p>}
+    </aside>
   );
 }
 
 export function Board() {
-  const routes = useRoutes();
-  const { data, isLoading, error, refetch } = useBoard();
+  const [lane, setLane] = useState<string | undefined>(undefined);
+  const { data, isLoading, error, refetch } = useBoard(lane);
   const next = useNextAction();
   const triage = useTriage();
   const backlogQ = backlogQuery({});
@@ -98,9 +153,8 @@ export function Board() {
   if (error) return <InlineError title="Board failed to load" error={error} onRetry={() => refetch()} />;
   if (isLoading || !data || backlog.isLoading) return <PageSkeleton statCards={0} columns={4} />;
 
-  const totalStories = data.columns.reduce((n, c) => n + c.stories.length, 0);
-  const empty = totalStories === 0 && backlog.total === 0;
-  const allIds = data.columns.flatMap((c) => c.stories.map((s) => s.id));
+  // One count for the whole board, backlog included: the same number the sidebar and the drawer pager show.
+  const empty = data.total === 0;
 
   const promote = (c: CardT) =>
     triage.mutate({ id: c.id, action: 'promote' }, { onSuccess: () => toast.success(`Promoted ${c.id}`), onError: (e) => toast.error(`Promote failed: ${(e as Error).message}`) });
@@ -112,7 +166,14 @@ export function Board() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs text-muted-foreground tabular-nums" data-testid="board-total">{totalStories} stories</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          {data.lanes.length > 1 ? (
+            <ToggleGroup value={[data.lane ?? '']} onValueChange={(v: string[]) => { if (v[0]) setLane(v[0]); }} aria-label="Lane" data-testid="board-lane-picker">
+              {data.lanes.map((l) => <ToggleGroupItem key={l.id} value={l.id} size="sm">{l.id}<span className="ml-1 text-muted-foreground tabular-nums">{l.count}</span></ToggleGroupItem>)}
+            </ToggleGroup>
+          ) : null}
+          <span className="text-xs text-muted-foreground tabular-nums" data-testid="board-total">{data.total} stories</span>
+        </div>
         <Button size="sm" onClick={() => setCreating(true)} data-testid="board-new-card"><Plus />New story</Button>
       </div>
 
@@ -157,23 +218,14 @@ export function Board() {
             ) : null}
           </section>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            {data.columns.map((c) => (
-              <StateColumn
-                key={c.state}
-                state={c.state}
-                label={c.label}
-                meta={c.state === 'up-next' ? (data.upNext.limit ? `${data.upNext.count} of ${data.upNext.limit}` : String(data.upNext.count)) : undefined}
-                stories={c.stories}
-                onOpen={setOpen}
-                cardHref={(id) => routes.card(id)}
-              />
-            ))}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+            <PhaseGrid view={data} onOpen={setOpen} />
+            <LiveColumn phase={data.phases.find((p) => p.kind === 'live')} onOpen={setOpen} />
           </div>
         </div>
       )}
 
-      {open ? <CardDrawer id={open} onClose={() => setOpen(null)} ids={[...allIds, ...backlog.cards.map((c) => c.id)]} onNavigate={setOpen} /> : null}
+      {open ? <CardDrawer id={open} onClose={() => setOpen(null)} ids={data.ids} onNavigate={setOpen} /> : null}
       {dropping ? <DropDialog card={dropping} onClose={() => setDropping(null)} /> : null}
       {creating ? <NewCardDialog open onOpenChange={(o) => { if (!o) setCreating(false); }} onCreated={setOpen} /> : null}
     </div>
