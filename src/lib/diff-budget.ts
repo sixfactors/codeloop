@@ -27,8 +27,8 @@ function git(cwd: string, args: string[]): string {
   return run.status === 0 ? run.stdout : '';
 }
 
-/** Files and added+deleted lines across the commits reachable from HEAD that carry a `Card:` or `Feature:` trailer for this card. */
-export function storyDiff(projectDir: string, cardId: string): StoryDiff {
+/** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
+export function storyFiles(projectDir: string, cardId: string): { files: Map<string, number>; commits: number } {
   const sep = '\u0001';
   const log = git(projectDir, ['log', `--format=${sep}%H%n%b`]);
   const shas = log.split(sep).slice(1).filter(chunk => {
@@ -39,17 +39,21 @@ export function storyDiff(projectDir: string, cardId: string): StoryDiff {
     });
   }).map(chunk => chunk.split('\n')[0]);
 
-  const files = new Set<string>();
-  let lines = 0;
+  const files = new Map<string, number>();
   for (const sha of shas) {
     for (const row of git(projectDir, ['show', '--numstat', '--format=', '--no-renames', sha]).split('\n')) {
       const m = /^(\d+|-)\t(\d+|-)\t(.+)$/.exec(row);
       if (!m || EXCLUDED.some(re => re.test(m[3]))) continue;
-      files.add(m[3]);
-      lines += (m[1] === '-' ? 0 : Number(m[1])) + (m[2] === '-' ? 0 : Number(m[2]));
+      files.set(m[3], (files.get(m[3]) ?? 0) + (m[1] === '-' ? 0 : Number(m[1])) + (m[2] === '-' ? 0 : Number(m[2])));
     }
   }
-  return { files: files.size, lines, commits: shas.length };
+  return { files, commits: shas.length };
+}
+
+/** Files and added+deleted lines across the commits reachable from HEAD that carry a `Card:` or `Feature:` trailer for this card. */
+export function storyDiff(projectDir: string, cardId: string): StoryDiff {
+  const { files, commits } = storyFiles(projectDir, cardId);
+  return { files: files.size, lines: [...files.values()].reduce((a, b) => a + b, 0), commits };
 }
 
 /** The budget for a size: defaults, overridden per size by `diff_budget:` in config. `budget: off` returns undefined. */
