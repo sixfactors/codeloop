@@ -93,6 +93,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     worktree: async ref => services.ensureStoryWorktree(projectDir, ref),
     merge: async ref => services.mergeStory(projectDir, ref),
     orchRun: async (ref, opts = {}) => ({ turn: services.startOrch(projectDir, ref, opts) }),
+    orchResume: async ref => ({ turn: services.orchResume(projectDir, ref) }),
     orchStatus: async () => services.orchStatus(projectDir),
     orchView: async ref => services.orchView(projectDir, ref),
     gates: async ref => services.listGates(projectDir, ref),
