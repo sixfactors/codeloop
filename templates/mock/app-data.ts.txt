@@ -1,0 +1,4 @@
+// Mock data for {{id}} {{title}}. Real-looking rows the screens render: names, numbers, copy a user would read.
+// Replace the placeholder with the shapes the components take.
+export const screens = {
+{{entries}}} as const;

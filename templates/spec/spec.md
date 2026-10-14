@@ -16,6 +16,9 @@ acceptance:
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
 screens:
 
+<!-- App mocks only: `drop` deletes the mock page at review (`codeloop mock cleanup <card>`), `keep` leaves it in the app. Default drop. -->
+mock: drop
+
 ## Not building
 
 <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
