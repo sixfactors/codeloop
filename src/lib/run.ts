@@ -1,3 +1,4 @@
+import { builderIdle, stalledBuilders } from './stall.js';
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -345,7 +346,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'agent-started' | 'agent-not-started' | 'suggest-park';
+  action: 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder';
   note: string;
 }
 
@@ -372,6 +373,11 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     actions.push(a);
     appendActivity(projectDir, a.id, { kind: 'doctor', text: a.note });
   };
+  // A builder holding a card with a quiet stream gets one request for a hand-back per stall.
+  for (const b of stalledBuilders(projectDir, now.getTime())) {
+    if (builderIdle(projectDir, b.card, now.getTime()).nudged) continue;
+    log({ id: b.card, action: 'nudge-builder', note: `builder idle ${b.idleMinutes} min on ${b.stage}; asked for a hand-back` });
+  }
   for (const card of readCards(projectDir).cards) {
     if (opts.skip?.has(card.id)) continue;
     const state = storyState(card, openQuestions(projectDir, card).length, { now: now.getTime(), lastActivityAt: lastActivityAt(projectDir, card.id) });
