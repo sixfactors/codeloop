@@ -47,6 +47,23 @@ describe('check rubric', () => {
     expect(problems[0]).toMatch(/^R2 .*no `- R2 pass: <evidence>` line under ## Rubric in specs\/001\/research.md/);
   });
 
+  it('reads the rubric block from CODELOOP_WORK_DIR when the main tree only has the pending scaffold', () => {
+    write('specs/001/research.md', `${RESEARCH}\n## Rubric\n\n- R2 pending: criterion\n`);
+    const work = mkdtempSync(join(tmpdir(), 'codeloop-rubric-work-'));
+    mkdirSync(join(work, 'specs/001'), { recursive: true });
+    mkdirSync(join(work, 'src'), { recursive: true });
+    writeFileSync(join(work, 'src/export.ts'), 'export {};\n');
+    writeFileSync(join(work, 'specs/001/research.md'), RESEARCH + ATTEST('src/export.ts:1 holds the exporter'));
+    expect(evaluateRubric(dir, 'c-001').problems.length).toBeGreaterThan(0);
+    process.env.CODELOOP_WORK_DIR = work;
+    try {
+      expect(evaluateRubric(dir, 'c-001').problems).toEqual([]);
+    } finally {
+      delete process.env.CODELOOP_WORK_DIR;
+      rmSync(work, { recursive: true, force: true });
+    }
+  });
+
   it('fails an attest line with prose and no path, passes with evidence', () => {
     write('specs/001/research.md', RESEARCH + ATTEST('I looked around and it is not there'));
     expect(evaluateRubric(dir, 'c-001').problems).toEqual([expect.stringMatching(/^R2 .*evidence names no path, line, URL or command/)]);

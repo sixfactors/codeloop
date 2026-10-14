@@ -71,7 +71,7 @@ export const doctorCommand = new Command('doctor')
   .description('Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories')
   .option('--json', 'JSON output')
   .action(guard(async (opts: { json?: boolean }) => {
-    const actions = await doctorTick(process.cwd(), clock());
+    const actions = await doctorTick(projectRoot(), clock());
     if (opts.json) {
       console.log(JSON.stringify(actions, null, 2));
       return;
