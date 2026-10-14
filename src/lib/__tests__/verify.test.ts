@@ -266,6 +266,7 @@ describe('stats', () => {
       done: 1,
       human_turns_per_card: 2,
       unattended_span_hours: 4,
+      trivial_cycle_time_hours: null,
       cycle_time_hours: 10,
       rework: 0.5,
       stuck_rate: 0.5,

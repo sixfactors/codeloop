@@ -8,7 +8,7 @@ import { budgetLine, checkBudget, type BudgetVerdict } from './diff-budget.js';
 import { checkHealth, healthLine, type HealthVerdict } from './health.js';
 import { cardKey, findCardOrNone, readCards, safeName } from './cards.js';
 import { loadConfig } from './config.js';
-import { annotateCard, RefusalError } from './engine.js';
+import { annotateCard, RefusalError, resizeTrivial } from './engine.js';
 import { cardNumber } from './lane.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
 import { checkEnv } from './shell.js';
@@ -241,6 +241,10 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   }
   if (!passed) return { ...result, exitCode: 1 };
   if (budget) result.budget = budget;
+  if (budget && !budget.pass && card?.size === 'trivial' && opts.record !== false) {
+    const moved = resizeTrivial(projectDir, card.id, budget.message);
+    return { ...result, exitCode: 1, problem: `${budget.message}; ${card.id} is re-sized to S and parked at the ${moved.gate ?? moved.stage} gate` };
+  }
   if (budget && !budget.pass) return { ...result, exitCode: 1, problem: budget.message };
   if (health) result.health = health;
   if (health && !health.pass) return { ...result, exitCode: 1, problem: `health score fell from ${health.before!.score} to ${health.after!.score} (delta ${health.delta}, tolerance ${health.tolerance}); fix what got worse` };

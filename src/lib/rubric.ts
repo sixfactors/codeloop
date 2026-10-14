@@ -119,7 +119,7 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
     const problems: string[] = [];
     if (!story && checkStory(c.projectDir, c.card).length) problems.push('spec.md has no `Story: As a <persona>, I can <what>, so that <why>` line');
     else if (story && !knownPersonas(c.projectDir).includes(story[1].trim().toLowerCase())) problems.push(`persona "${story[1].trim()}" is not a known persona`);
-    if (!/^size:[ \t]*[SML]\b/m.test(spec) && !c.card.size) problems.push('no `size:` of S, M or L');
+    if (!/^size:[ \t]*(trivial|[SML])\b/m.test(spec) && !c.card.size) problems.push('no `size:` of trivial, S, M or L');
     if (!/^metric:[ \t]*\S/m.test(spec)) problems.push('no `metric:`');
     if (!/^done_when:[ \t]*\S/m.test(spec)) problems.push('no `done_when:`');
     return problems;

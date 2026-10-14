@@ -44,6 +44,7 @@ function print(label: string, s: Stats): void {
   console.log(`  human turns per card   ${n(s.human_turns_per_card)}`);
   console.log(`  unattended span        ${n(s.unattended_span_hours, 'h')}`);
   console.log(`  cycle time             ${n(s.cycle_time_hours, 'h')}`);
+  console.log(`  trivial cycle time     ${n(s.trivial_cycle_time_hours, 'h')}`);
   console.log(`  rework (rejects/approvals) ${n(s.rework)}`);
   console.log(`  stuck rate             ${pct(s.stuck_rate)}`);
   for (const [gate, rate] of Object.entries(s.first_pass_rate_by_gate)) console.log(`  first pass at ${gate.padEnd(16)} ${pct(rate)}`);

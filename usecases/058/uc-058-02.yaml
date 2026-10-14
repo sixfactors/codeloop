@@ -1,0 +1,5 @@
+id: uc-058-02
+accept: US2
+failure_mode: "the board shows trivial as an S, so the founder cannot tell ceremony was skipped"
+layers:
+  cli: { run: "grep -q \"size: trivial, skipped research/spec\" ui/components/card-detail.tsx && grep -q \"'trivial'\" ui/lib/types.ts", expect: { exit: 0 } }

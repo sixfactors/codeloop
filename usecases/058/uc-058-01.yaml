@@ -1,0 +1,5 @@
+id: uc-058-01
+accept: US1
+failure_mode: "lane when: is on some ceremony stages only, so a trivial card still runs interview or mock"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/trivial-ceremony.test.ts -t 'enters at build'", expect: { exit: 0 } }

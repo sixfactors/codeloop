@@ -158,6 +158,9 @@ export function CardDetail({ card, owner, read, lastCheck, onDecide, onQuestions
                 {read ? <>Read <span className="font-mono text-accent/80">{read}</span>. </> : null}
                 Last check: {lastCheck ?? 'unknown'}.
               </p>
+              {card.size === 'trivial' && (
+                <p className="text-sm text-foreground/80 mt-1">size: trivial, skipped research/spec</p>
+              )}
               {owner ? (
                 <div className="mt-3 space-y-2">
                   <textarea

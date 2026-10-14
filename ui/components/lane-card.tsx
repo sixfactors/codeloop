@@ -16,7 +16,12 @@ export function CardBadges({ card }: { card: LaneCardType }) {
   return (
     <div className="flex flex-wrap gap-1 mt-2">
       {sizing && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-border text-foreground/80">{sizing}</span>
+        <span
+          className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${card.size === 'trivial' && card.points === undefined ? 'bg-accent/20 text-accent' : 'bg-border text-foreground/80'}`}
+          title={card.size === 'trivial' ? 'size: trivial, skipped research/spec' : undefined}
+        >
+          {sizing}
+        </span>
       )}
       {card.bet && (
         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-planned/20 text-purple-300 max-w-[160px] truncate" title={card.bet}>

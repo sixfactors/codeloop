@@ -1,0 +1,5 @@
+id: uc-058-04
+accept: US4
+failure_mode: "stats averages trivial cards in with the rest, so their cycle time is never visible"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/trivial-ceremony.test.ts -t 'trivial cycle time'", expect: { exit: 0 } }

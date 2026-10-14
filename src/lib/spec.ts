@@ -124,7 +124,7 @@ export function checkSpec(projectDir: string, dir: string, notes?: string[]): st
   const storyLine = spec.split('\n').find(l => /^Story:/.test(l)) ?? '';
   if (!/As an? .+, I (can|get|want) .+, so that .+/.test(storyLine) || /<persona>|<what>|<pain relieved>/.test(storyLine)) errors.push(`${dir}/spec.md Story line must read "As a <persona>, I can <what>, so that <outcome>" with every part filled in`);
   const size = field('size');
-  if (!size || !/^[SML]$/.test(size)) errors.push(`${dir}/spec.md size: must be S, M or L (found "${size ?? ''}")`);
+  if (!size || !/^(trivial|[SML])$/.test(size)) errors.push(`${dir}/spec.md size: must be trivial, S, M or L (found "${size ?? ''}")`);
   const metric = field('metric');
   if (!metric || /^<.*>$/.test(metric)) errors.push(`${dir}/spec.md metric: names the one stage metric this card moves (or no-data)`);
   const doneWhen = field('done_when');

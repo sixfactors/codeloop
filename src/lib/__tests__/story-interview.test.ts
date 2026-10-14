@@ -46,7 +46,7 @@ describe('story standard', () => {
 
   it('refuses a story missing its so-that, and card new carries the fields', () => {
     expect(() => storyFields('Export the list', { persona: 'founder', can: 'export' })).toThrow(/all three parts/);
-    expect(() => storyFields('Export the list', { ...STORY, size: 'XL' })).toThrow(/not S, M or L/);
+    expect(() => storyFields('Export the list', { ...STORY, size: 'XL' })).toThrow(/not trivial, S, M or L/);
     expect(() => storyFields('Export the list', { ...STORY, points: '4' })).toThrow(/not one of 1, 2, 3, 5, 8/);
     const card = findCard(readCards(dir).cards, 'c-001');
     expect(card).toMatchObject({ story: { as: 'founder', can: STORY.can, so: STORY.so }, persona: 'founder', size: 'M', points: 3, initiative: 'finance-self-serve', metric: 'exports per week' });
