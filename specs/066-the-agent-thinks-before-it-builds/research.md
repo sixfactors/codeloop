@@ -25,3 +25,9 @@ pain:
 <!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
 
 <!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
+
+## Rubric
+
+- R2 pending: The `exists:` verdict is proven: a grep or route list, named, that would have found the thing if it existed
+- R5 pending: At least two options compared, with the one taken and why the other lost
+- R7 pending: Open questions are listed for the interview, not guessed

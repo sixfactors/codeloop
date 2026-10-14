@@ -8,3 +8,8 @@ One line per task, each owned by one layer and tied to an acceptance line:
 Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in parallel.
 `codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
 -->
+
+## Rubric
+
+- S3 pending: Every interview answer appears in a field, named
+- S6 pending: `not_building:` lists what the interview put out of scope
