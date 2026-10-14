@@ -27,18 +27,51 @@ function git(cwd: string, args: string[]): string {
   return run.status === 0 ? run.stdout : '';
 }
 
-/** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
-export function storyFiles(projectDir: string, cardId: string): { files: Map<string, number>; commits: number } {
-  const sep = '\u0001';
-  const log = git(projectDir, ['log', `--format=${sep}%H%n%b`]);
-  const shas = log.split(sep).slice(1).filter(chunk => {
-    const [, ...body] = chunk.split('\n');
-    return body.some(l => {
-      const m = /^(?:Card|Feature):\s*(\S+)\s*$/.exec(l);
-      return m?.[1] === cardId;
-    });
-  }).map(chunk => chunk.split('\n')[0]);
+export interface StoryCommit {
+  sha: string;
+  subject: string;
+  /** Local branches that hold the commit, the trunk left out. */
+  branches: string[];
+  /** Reachable from the trunk. */
+  merged: boolean;
+  /** Commit time, epoch ms. */
+  at: number;
+}
 
+const trailerOf = (cardId: string) => (l: string) => {
+  const m = /^(?:Card|Feature):\s*(\S+)\s*$/.exec(l);
+  return m?.[1] === cardId;
+};
+
+function trunkRef(projectDir: string): string {
+  const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
+  return git(projectDir, ['rev-parse', '--verify', '--quiet', `refs/heads/${configured}`]).trim() ? configured : 'HEAD';
+}
+
+/** Commits carrying a `Card:` or `Feature:` trailer for the card, newest first, from HEAD only or (`branches`) from every local branch and worktree branch. */
+function scan(projectDir: string, cardId: string, all: boolean): { sha: string; subject: string; at: number; decorations: string }[] {
+  const log = git(projectDir, ['log', ...(all ? ['--all'] : []), '--format=%H%x00%s%x00%b%x00%D%x00%ct%x01']);
+  const out: { sha: string; subject: string; at: number; decorations: string }[] = [];
+  for (const rec of log.split('\u0001')) {
+    const [sha, subject, body, decorations, ct] = rec.replace(/^\n/, '').split('\u0000');
+    if (!sha || !body || !body.split('\n').some(trailerOf(cardId))) continue;
+    out.push({ sha, subject, decorations: decorations ?? '', at: Number(ct) * 1000 });
+  }
+  return out;
+}
+
+export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
+  const trunk = trunkRef(projectDir);
+  return scan(projectDir, cardId, true).map(c => {
+    const held = git(projectDir, ['branch', '--contains', c.sha, '--format=%(refname:short)']).split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('('));
+    const merged = spawnSync('git', ['merge-base', '--is-ancestor', c.sha, trunk], { cwd: projectDir }).status === 0;
+    return { sha: c.sha, subject: c.subject, at: c.at, merged, branches: held.filter(b => b !== trunk) };
+  });
+}
+
+/** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
+export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean } = {}): { files: Map<string, number>; commits: number } {
+  const shas = scan(projectDir, cardId, Boolean(opts.branches)).map(c => c.sha);
   const files = new Map<string, number>();
   for (const sha of shas) {
     for (const row of git(projectDir, ['show', '--numstat', '--format=', '--no-renames', sha]).split('\n')) {
@@ -50,9 +83,9 @@ export function storyFiles(projectDir: string, cardId: string): { files: Map<str
   return { files, commits: shas.length };
 }
 
-/** Files and added+deleted lines across the commits reachable from HEAD that carry a `Card:` or `Feature:` trailer for this card. */
-export function storyDiff(projectDir: string, cardId: string): StoryDiff {
-  const { files, commits } = storyFiles(projectDir, cardId);
+/** Files and added+deleted lines across the commits reachable from HEAD (or, with `branches`, from any branch) that carry a `Card:` or `Feature:` trailer for this card. */
+export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean } = {}): StoryDiff {
+  const { files, commits } = storyFiles(projectDir, cardId, opts);
   return { files: files.size, lines: [...files.values()].reduce((a, b) => a + b, 0), commits };
 }
 

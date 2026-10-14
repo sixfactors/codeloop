@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { openStore, pendingMigrations, readStoreRecord, runMigrations } from '../lib/store/index.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 export const storeCommand = new Command('store').description('The store under the board: which driver, which migrations have run');
 
@@ -9,7 +10,7 @@ storeCommand
   .description('Show the driver in use and the migrations applied and pending')
   .option('--json', 'JSON output')
   .action(guard(async (opts: { json?: boolean }) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const store = openStore(projectDir);
     await store.close();
     const status = { driver: store.constructor.name.replace(/Driver$/, '').toLowerCase(), applied: readStoreRecord(projectDir).applied, pending: pendingMigrations(projectDir).map(m => m.id) };
@@ -25,7 +26,7 @@ storeCommand
   .command('migrate')
   .description('Apply the pending migrations and record them in .codeloop/store.json')
   .action(guard(async () => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const store = openStore(projectDir);
     const ran = await runMigrations(projectDir, store);
     await store.close();

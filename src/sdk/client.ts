@@ -203,6 +203,7 @@ export interface Transport {
   ask(ref: string, items: AskInput[], opts?: RoleOption): Promise<{ path: string; added: Question[] }>;
   answer(ref: string, n: number, reply: AnswerInput, opts?: RoleOption): Promise<Question>;
   acceptAll(ref: string, opts?: RoleOption): Promise<AcceptAllResult>;
+  rubricScaffold(ref: string): Promise<{ path: string | null; added: string[] }>;
   inbox(query?: InboxQuery): Promise<InboxPayload>;
   /** The board for one lane (the busiest when none is named): phase columns, holder rows, the one story count. */
   board(opts?: { lane?: string }): Promise<BoardView>;
@@ -355,6 +356,9 @@ export class CodeloopClient {
     /** Accept every open question's recommended answer in one write. */
     acceptAll: (ref: string, opts?: RoleOption) => this.transport.acceptAll(ref, opts),
   };
+
+  /** A stage's rubric: scaffold writes `- Rn pending:` lines for the attest rows a card in flight still owes. */
+  readonly rubric = { scaffold: (ref: string) => this.transport.rubricScaffold(ref) };
 
   /** The board: every story in one row of the six states, already grouped by the server. */
   readonly board = { get: (opts?: { lane?: string }) => this.transport.board(opts) };

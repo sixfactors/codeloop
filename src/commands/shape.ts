@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
 
-const client = () => createLocalClient(process.cwd());
+const client = () => createLocalClient(projectRoot());
 
 export const shapeCommand = new Command('shape')
   .description('Turn a problem into an epic of shippable stories: brief → interview → breakdown → rank, then queued into the build lane')

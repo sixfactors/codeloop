@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { specPath } from './project-root.js';
 import { dirname, isAbsolute, join } from 'path';
 import { fileURLToPath } from 'url';
 import { cardKey, findCard, readCards, type Card } from './cards.js';
@@ -53,7 +54,7 @@ export function rubricPath(projectDir: string, stage: Stage): string | null {
   for (const name of names) {
     const source = index.find(s => s.name === name)?.source;
     if (!source) continue;
-    const file = join(dirname(isAbsolute(source) ? source : join(projectDir, source)), 'rubric.md');
+    const file = join(dirname(isAbsolute(source) ? source : specPath(projectDir, source)), 'rubric.md');
     if (existsSync(file)) return file;
   }
   for (const name of names) {
@@ -82,7 +83,7 @@ interface Ctx {
   stage: Stage;
 }
 
-const read = (projectDir: string, path: string | null) => (path && existsSync(join(projectDir, path)) ? readFileSync(join(projectDir, path), 'utf-8') : '');
+const read = (projectDir: string, path: string | null) => (path && existsSync(specPath(projectDir, path)) ? readFileSync(specPath(projectDir, path), 'utf-8') : '');
 const specText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/spec.md` : null);
 const researchText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/research.md` : null);
 const evidence = (c: Ctx, file: string) => read(c.projectDir, `evidence/${cardKey(c.card)}/${file}`);
@@ -141,7 +142,7 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
   V1: c => (/^result:\s*pass\b/im.test(evidence(c, 'verify.md')) ? [] : [`evidence/${cardKey(c.card)}/verify.md does not say \`result: pass\``]),
   V2: c => {
     const lines = c.card.spec ? readAcceptance(c.projectDir, c.card.spec) : [];
-    const dir = join(c.projectDir, 'usecases', cardKey(c.card));
+    const dir = specPath(c.projectDir, 'usecases', cardKey(c.card));
     const named = new Set(existsSync(dir) ? readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf-8').matchAll(/^accept:\s*(US\d+)/gm)].map(m => m[1])) : []);
     return lines.map((_, i) => `US${i + 1}`).filter(us => !named.has(us)).map(us => `${us} has no use case naming it`);
   },
@@ -157,6 +158,13 @@ export function attestLines(text: string): Map<string, string> {
   const lines = new Map<string, string>();
   for (const m of block.matchAll(/^\s*-\s*([A-Z]\d+)\s+pass:\s*(.*)$/gm)) lines.set(m[1], m[2].trim());
   return lines;
+}
+
+/** The `- Rn pending:` lines `rubric scaffold` wrote and nobody has attested yet. */
+export function pendingLines(text: string): Set<string> {
+  const at = text.lastIndexOf('\n## Rubric');
+  const block = at >= 0 ? text.slice(at) : text.startsWith('## Rubric') ? text : '';
+  return new Set([...block.matchAll(/^\s*-\s*([A-Z]\d+)\s+pending:/gm)].map(m => m[1]));
 }
 
 /** Evidence names something a second person can open or run: a path, a path:line, a URL or a command in backticks. */
@@ -184,7 +192,9 @@ export function evaluateRubric(projectDir: string, ref: string, stageId?: string
   if (!path) return { ...empty, stage: stage.id };
   const ctx: Ctx = { projectDir, card, stage };
   const attestFile = attestPath(card, stage);
-  const attested = attestLines(read(projectDir, attestFile));
+  const attestText = read(projectDir, attestFile);
+  const attested = attestLines(attestText);
+  const pending = pendingLines(attestText);
   const review = stage.review ? { agent: stage.review.agent, file: reviewFile(card, stage) } : null;
   const reviewText = review ? read(projectDir, review.file) : '';
   const verdict = /^verdict:\s*(\S+)/im.exec(reviewText)?.[1]?.toLowerCase();
@@ -209,7 +219,8 @@ export function evaluateRubric(projectDir: string, ref: string, stageId?: string
     }
     const line = attested.get(row.id);
     const attestedCheck = row.judged === 'check';
-    if (line === undefined) return { ...row, status: 'fail', finding: `no \`- ${row.id} pass: <evidence>\` line under ## Rubric in ${attestFile}`, ...(attestedCheck ? { attestedCheck } : {}) };
+    if (line === undefined && pending.has(row.id)) return { ...row, status: 'fail', finding: `pending: scaffolded in ${attestFile}, not yet attested; replace \`- ${row.id} pending:\` with \`- ${row.id} pass: <evidence>\``, ...(attestedCheck ? { attestedCheck } : {}) };
+    if (line === undefined) return { ...row, status: 'fail', finding: `missing: no \`- ${row.id} pass: <evidence>\` line under ## Rubric in ${attestFile}`, ...(attestedCheck ? { attestedCheck } : {}) };
     if (!line || !concreteEvidence(line)) return { ...row, status: 'fail', finding: `${row.id}'s evidence names no path, line, URL or command`, evidence: line, ...(attestedCheck ? { attestedCheck } : {}) };
     return { ...row, status: 'pass', evidence: line, ...(attestedCheck ? { attestedCheck } : {}) };
   });
@@ -255,4 +266,48 @@ export function reviewBrief(projectDir: string, card: Card, stage: Stage): strin
     '',
     read(projectDir, output),
   ].join('\n');
+}
+
+/** The rows a person or agent attests by hand at this stage: attest rows, and check rows with no check yet. */
+export function attestRows(projectDir: string, stage: Stage): RubricRow[] {
+  return stageRubric(projectDir, stage).filter(r => r.judged === 'attest' || (r.judged === 'check' && !CHECKS[r.id]));
+}
+
+/**
+ * Appends a `## Rubric` block with a `- Rn pending:` line for each attest row of the card's stage
+ * that has no line yet, so a card already in flight when a rubric arrives shows what it owes instead
+ * of failing as if it ignored the rubric. Writes nothing when every row has a line.
+ */
+export function scaffoldRubric(projectDir: string, ref: string): { path: string | null; added: string[] } {
+  const card = findCard(readCards(projectDir).cards, ref);
+  const stage = loadLane(projectDir, card.lane).stages.find(s => s.id === card.stage);
+  const path = stage ? attestPath(card, stage) : null;
+  if (!stage || !path) return { path: null, added: [] };
+  const text = read(projectDir, path);
+  const have = new Set([...attestLines(text).keys(), ...pendingLines(text)]);
+  const missing = attestRows(projectDir, stage).filter(r => !have.has(r.id));
+  if (!missing.length) return { path, added: [] };
+  const lines = missing.map(r => `- ${r.id} pending: ${r.criterion}`).join('\n');
+  const hasBlock = /(^|\n)## Rubric\s*\n/.test(text);
+  const next = hasBlock ? `${text.replace(/\s*$/, '')}\n${lines}\n` : `${text.replace(/\s*$/, '')}${text.trim() ? '\n\n' : ''}## Rubric\n\n${lines}\n`;
+  mkdirSync(dirname(specPath(projectDir, path)), { recursive: true });
+  writeFileSync(specPath(projectDir, path), next);
+  return { path, added: missing.map(r => r.id) };
+}
+
+/** Cards in a lane whose current stage has attest rows with no line at all: what `rubric scaffold` would fill. */
+export function cardsNeedingRubric(projectDir: string, laneId?: string): { id: string; stage: string; rows: string[] }[] {
+  const out: { id: string; stage: string; rows: string[] }[] = [];
+  for (const card of readCards(projectDir).cards) {
+    if (laneId && card.lane !== laneId) continue;
+    if (['proposed', 'queued', 'done', 'dropped'].includes(card.stage)) continue;
+    try {
+      const report = evaluateRubric(projectDir, card.id);
+      const rows = report.rows.filter(r => r.finding?.startsWith('missing:')).map(r => r.id);
+      if (rows.length) out.push({ id: card.id, stage: report.stage, rows });
+    } catch {
+      // A card whose lane no longer loads is reported by lane lint, not here.
+    }
+  }
+  return out;
 }

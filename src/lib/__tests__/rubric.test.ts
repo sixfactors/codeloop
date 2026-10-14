@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -45,6 +45,23 @@ describe('check rubric', () => {
     const { problems } = evaluateRubric(dir, 'c-001');
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(/^R2 .*no `- R2 pass: <evidence>` line under ## Rubric in specs\/001\/research.md/);
+  });
+
+  it('reads the rubric block from CODELOOP_WORK_DIR when the main tree only has the pending scaffold', () => {
+    write('specs/001/research.md', `${RESEARCH}\n## Rubric\n\n- R2 pending: criterion\n`);
+    const work = mkdtempSync(join(tmpdir(), 'codeloop-rubric-work-'));
+    mkdirSync(join(work, 'specs/001'), { recursive: true });
+    mkdirSync(join(work, 'src'), { recursive: true });
+    writeFileSync(join(work, 'src/export.ts'), 'export {};\n');
+    writeFileSync(join(work, 'specs/001/research.md'), RESEARCH + ATTEST('src/export.ts:1 holds the exporter'));
+    expect(evaluateRubric(dir, 'c-001').problems.length).toBeGreaterThan(0);
+    process.env.CODELOOP_WORK_DIR = work;
+    try {
+      expect(evaluateRubric(dir, 'c-001').problems).toEqual([]);
+    } finally {
+      delete process.env.CODELOOP_WORK_DIR;
+      rmSync(work, { recursive: true, force: true });
+    }
   });
 
   it('fails an attest line with prose and no path, passes with evidence', () => {
@@ -111,5 +128,28 @@ describe('spec rows read spec.md', () => {
     expect(rows()).toMatchObject({ S1: 'pass', S2: 'pass' });
     write('specs/001/spec.md', spec.replace('when I export, ', ''));
     expect(rows()).toMatchObject({ S2: 'fail' });
+  });
+});
+
+describe('rubric scaffold, for a card in flight when its rubric arrives', () => {
+  it('appends pending lines once, check reports them as pending not missing, and evidence replaces them', async () => {
+    const { scaffoldRubric, cardsNeedingRubric } = await import('../rubric.js');
+    write('specs/001/research.md', RESEARCH);
+    expect(cardsNeedingRubric(dir)).toEqual([{ id: 'c-001', stage: 'research', rows: ['R2', 'R5', 'R7'] }]);
+    expect(evaluateRubric(dir, 'c-001').problems.every(p => /missing: /.test(p))).toBe(true);
+
+    expect(scaffoldRubric(dir, 'c-001')).toEqual({ path: 'specs/001/research.md', added: ['R2', 'R5', 'R7'] });
+    const once = readFileSync(join(dir, 'specs/001/research.md'), 'utf-8');
+    expect(once.match(/^## Rubric$/gm)).toHaveLength(1);
+    expect(scaffoldRubric(dir, 'c-001')).toEqual({ path: 'specs/001/research.md', added: [] });
+    expect(readFileSync(join(dir, 'specs/001/research.md'), 'utf-8')).toBe(once);
+
+    const { problems } = evaluateRubric(dir, 'c-001');
+    expect(problems).toHaveLength(3);
+    expect(problems[0]).toMatch(/^R2 .*: pending: scaffolded in specs\/001\/research.md, not yet attested/);
+    expect(cardsNeedingRubric(dir)).toEqual([]);
+
+    write('specs/001/research.md', once.replace(/^- R2 pending: .*$/m, '- R2 pass: `grep -rn csv src/`'));
+    expect(evaluateRubric(dir, 'c-001').problems.map(p => p.slice(0, 2))).toEqual(['R5', 'R7']);
   });
 });

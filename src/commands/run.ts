@@ -4,6 +4,7 @@ import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
 import { doctorTick, planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 interface RunOptions {
   due?: boolean;
@@ -26,7 +27,7 @@ export const runCommand = new Command('run')
   .option('--now <iso>', 'Treat this as the current time')
   .option('--json', 'JSON output')
   .action(guard(async (opts: RunOptions) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const now = opts.now ? new Date(opts.now) : clock();
     if (Number.isNaN(now.getTime())) throw new RefusalError(`--now "${opts.now}" is not a date`);
     const requested = opts.agent ?? loadAgents(projectDir).runByDefault;
@@ -64,4 +65,17 @@ export const runCommand = new Command('run')
     });
     doctor.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
     console.log(`  ${result.created.length} created, ${result.advanced.length} advanced${result.agents ? `, ${result.agents.filter(a => a.started).length} agent runs` : ''}${doctor.length ? `, ${doctor.length} doctor actions` : ''}`);
+  }));
+
+export const doctorCommand = new Command('doctor')
+  .description('Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories')
+  .option('--json', 'JSON output')
+  .action(guard(async (opts: { json?: boolean }) => {
+    const actions = await doctorTick(projectRoot(), clock());
+    if (opts.json) {
+      console.log(JSON.stringify(actions, null, 2));
+      return;
+    }
+    if (!actions.length) console.log('doctor: nothing to do');
+    actions.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
   }));

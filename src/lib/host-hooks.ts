@@ -82,10 +82,13 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push' | 'p
  * (written to `.cursor/hooks.json`), the pre-commit/pre-push git guards, and the post-commit hook
  * that records each commit in its card's activity.
  */
-export function installHostHooks(projectDir: string): HookInstall[] {
+export function installHostHooks(projectDir: string, opts: { hostsOf?: string } = {}): HookInstall[] {
   // Only the hosts init set up get hook files; a repo with neither folder gets Claude's, the default host.
-  const hasCursor = existsSync(join(projectDir, '.cursor'));
-  const hasClaude = existsSync(join(projectDir, '.claude')) || !hasCursor;
+  // `hostsOf` names the tree whose folders say which hosts are set up: a story worktree is a fresh
+  // checkout, so the main tree decides.
+  const decides = opts.hostsOf ?? projectDir;
+  const hasCursor = existsSync(join(decides, '.cursor'));
+  const hasClaude = existsSync(join(decides, '.claude')) || !hasCursor;
   const out: HookInstall[] = [];
   if (hasClaude) {
     const claude = mergeHooksFile(projectDir, '.claude/settings.json', 'claude-hooks.json');

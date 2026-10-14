@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import type { FeatureNode, IndexedFeature, Rice } from '../sdk/index.js';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
-const client = () => createLocalClient(process.cwd());
+const client = () => createLocalClient(projectRoot());
 
 const RICE_FLAGS = [
   ['--reach <n>', 'How many users it touches, 1–10'],

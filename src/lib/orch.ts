@@ -34,7 +34,7 @@ export interface OrchTurn {
   branch: string;
   /** What the builder reported, when it reported. */
   handback?: { head: string; proofExit: number; left: string; blocked: string; at: string };
-  gate?: { verdict: 'pass' | 'fail'; findings: string[] };
+  gate?: { verdict: 'pass' | 'fail'; findings: string[]; proof?: { cmd: string; exit: number } };
   merge?: { sha: string; mode: 'ff' | 'merge' };
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
@@ -42,6 +42,8 @@ export interface OrchTurn {
   outcome: 'merged' | 'failed' | 'stuck' | 'briefed';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
+  /** Set when the hand-back gated was recorded before the turn started. */
+  note?: string;
   log?: string;
 }
 
@@ -184,15 +186,23 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   const card = findCard(readCards(projectDir).cards, record.card);
   const started = Date.parse(turn.startedAt);
   // 4. hand-back: the newest one for this card recorded after the turn started
-  const hb: HandbackRecord | undefined = listHandbacks(projectDir, card.id).find(h => Date.parse(h.at) >= started && h.stage === card.stage);
+  const all = listHandbacks(projectDir, card.id).filter(h => h.stage === card.stage);
+  let hb: HandbackRecord | undefined = all.find(h => Date.parse(h.at) >= started);
+  if (!hb) {
+    // A hand-back stamped before the turn began (clock skew, or the builder handed back early) is
+    // still the builder's work unless it is the one the last turn already gated.
+    const lastGated = record.turns.at(-1)?.handback?.head;
+    hb = all.find(h => h.head !== lastGated);
+    if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
+  }
   if (!hb) {
     turn.findings.push(noHandback);
   } else {
     turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at };
     // 5. gate
     const gate = runGate(projectDir, card.id, { handbackId: hb.head });
-    turn.gate = { verdict: gate.verdict, findings: gate.findings };
-    if (gate.verdict === 'fail') turn.findings.push(...gate.findings);
+    turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
+    if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
     else {
       // 6. merge, then the engine's own advance
       try {

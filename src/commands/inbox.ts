@@ -22,6 +22,7 @@ export const inboxCommand = new Command('inbox')
         // The band rides along only when the card has a score: an unscored board reads as it always did.
         console.log(`  ${c.id}  ${c.title}: ${c.lane}/${c.stage}, gate ${chalk.yellow(c.gate)}${c.score === undefined ? '' : `  ${chalk.dim(`${c.band} ${c.score}`)}`}`);
         console.log(chalk.dim(`        read: ${c.read ?? 'nothing written for this stage'}   last check: ${c.last_check}`));
+        if (c.moving_since) console.log(chalk.dim(`        moving since ${new Date(c.moving_since).toTimeString().slice(0, 5)}`));
         if (c.mock) console.log(chalk.dim(`        mock: ${c.mock}`));
         console.log(chalk.dim(`        codeloop approve ${c.id}   or   codeloop reject ${c.id} "<what to change>"`));
       }
@@ -34,6 +35,7 @@ export const inboxCommand = new Command('inbox')
         for (const c of inbox.failing) {
           console.log(`  ${c.id}  ${c.title}: ${c.lane}/${c.stage}, ${c.retries} fail${c.retries === 1 ? '' : 's'}`);
           console.log(chalk.dim(`        last check: ${c.last_check}`));
+          if (c.moving_since) console.log(chalk.dim(`        moving since ${new Date(c.moving_since).toTimeString().slice(0, 5)}`));
           console.log(chalk.dim(`        fix the work, then \`codeloop next ${c.id}\``));
         }
       }

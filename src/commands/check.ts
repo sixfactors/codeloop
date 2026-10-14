@@ -84,13 +84,13 @@ checkCommand
   .command('rubric <card>')
   .description("Exit 1 unless the card's stage meets its rubric: every check row passes, every attest row has a `- Rn pass: <evidence>` line under ## Rubric naming a path, line, URL or command, and a stage with `review:` has its review file with `verdict: accept`")
   .option('--stage <id>', "The stage to judge; defaults to the card's stage")
-  .action((card: string, opts: { stage?: string }) => failing(() => evaluateRubric(process.cwd(), card, opts.stage).problems)());
+  .action((card: string, opts: { stage?: string }) => failing(() => evaluateRubric(projectRoot(), card, opts.stage).problems)());
 
 checkCommand
   .command('wiki-landed <card>')
   .description("Exit 1 unless the stage's findings reached the wiki: a research that compared options has a decision page (or makes a valid one), a review's repeat-mistake fix-now finding has a gotcha page")
   .option('--stage <id>', 'research or review; defaults to the card\'s stage')
-  .action((card: string, opts: { stage?: string }) => failing(() => wikiLanded(process.cwd(), card, opts.stage))());
+  .action((card: string, opts: { stage?: string }) => failing(() => wikiLanded(projectRoot(), card, opts.stage))());
 
 checkCommand
   .command('mock <card>')

@@ -19,12 +19,14 @@ import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
-import { evaluateRubric, type RubricReport, type RubricResult } from './rubric.js';
+import { evaluateRubric, scaffoldRubric, type RubricReport, type RubricResult } from './rubric.js';
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
 import { lastActivityAt, readActivity, type ActivityEntry } from './activity.js';
+import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
+import { storyCommits, type StoryCommit } from './diff-budget.js';
 import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
@@ -99,6 +101,11 @@ export interface CardShow {
   card: Card & CardHolder & { display?: StoryState };
   brief: ReturnType<typeof stageBrief>;
   hint: string;
+  /** The tasks now in tasks.md with their ticks, and the evidence files with their modification times. */
+  tasks: ReturnType<typeof storyTasks>;
+  evidenceFiles: EvidenceFile[];
+  /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
+  commits: StoryCommit[];
 }
 
 export type CardListFilter = { lane?: string; stage?: string; initiative?: string; epic?: string; feature?: string; band?: string; persona?: string; size?: string; points?: string | number; all?: boolean };
@@ -124,6 +131,9 @@ export interface CardFull {
   page: WikiPage | null;
   /** The current stage's rubric rows with pass, fail or pending and the finding, for the gate panel; null when the stage has no rubric. */
   rubric: { stage: string; rows: RubricResult[]; review: RubricReport['review'] } | null;
+  /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
+  commits: StoryCommit[];
+  evidenceFiles: EvidenceFile[];
 }
 
 export interface PageWrite {
@@ -384,7 +394,7 @@ export function setupStatus(projectDir: string): SetupStatus {
 export function showCard(projectDir: string, ref: string): CardShow {
   const card = findCard(readCards(projectDir).cards, ref);
   const display = liveState(projectDir, card, openQuestions(projectDir, card).length);
-  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
 }
 
 /**
@@ -487,6 +497,8 @@ export const ask = (projectDir: string, ref: string, items: { question: string; 
 export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean; option?: string }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
 /** Every open question's recommended answer, accepted in one write. The owner's decision, like any answer. */
 export const acceptAll = (projectDir: string, ref: string, who: Role) => acceptAllAnswers(projectDir, ref, who);
+/** A `## Rubric` block of `- Rn pending:` lines for the card's stage, added once. */
+export const rubricScaffold = (projectDir: string, ref: string) => scaffoldRubric(projectDir, ref);
 
 // --- inbox ----------------------------------------------------------------------------------
 
@@ -591,6 +603,8 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     page,
     journey: journeyOf(projectDir, card, { tasks, health: display?.health }),
     rubric: rubricOf(projectDir, card.id),
+    commits: storyCommits(projectDir, card.id).slice(0, 20),
+    evidenceFiles: evidenceFiles(projectDir, card),
   };
 }
 
@@ -819,7 +833,7 @@ type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'
  */
 export function liveState(projectDir: string, card: Card, openQuestions: number, now = Date.now(), held?: Set<string>): StoryState | undefined {
   const holding = held ?? new Set(activeSessions(projectDir).map(s => s.card));
-  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id), held: holding.has(card.id) });
+  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id), held: holding.has(card.id), progressAt: () => progressSince(projectDir, card) });
 }
 
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
@@ -1004,6 +1018,8 @@ export interface MonitorItem {
   stage: string;
   /** The last failed check's last line, for a failing story. */
   lastCheck?: string;
+  /** ISO time of the newest work on the story since its check failed: it is stuck or failing and still moving. */
+  movingSince?: string;
   /** What to do next: the same hint `codeloop next` prints. */
   fix?: string;
 }
@@ -1029,7 +1045,8 @@ export function monitorReport(projectDir: string, opts: { limit?: number; now?: 
   const lastFail = (card: Card) => card.events.filter(e => e.action === 'fail' && e.stage === card.stage).at(-1)?.note?.split('\n').filter(Boolean).at(-1);
   const item = (card: Card, withFix = false): MonitorItem => {
     const check = lastFail(card);
-    return { id: card.id, title: card.title, stage: card.stage, ...(check ? { lastCheck: check } : {}), ...(withFix ? { fix: nextHint(projectDir, card, check) } : {}) };
+    const moved = rows.find(r => r.card.id === card.id)?.state.movingAt;
+    return { id: card.id, title: card.title, stage: card.stage, ...(check ? { lastCheck: check } : {}), ...(moved ? { movingSince: new Date(moved).toISOString() } : {}), ...(withFix ? { fix: nextHint(projectDir, card, check) } : {}) };
   };
   const newest = (a: { card: Card }, b: { card: Card }) => b.card.updatedAt.localeCompare(a.card.updatedAt);
   const of = (h: string) => rows.filter(r => r.state.health === h).sort(newest);
@@ -1044,6 +1061,11 @@ export function monitorReport(projectDir: string, opts: { limit?: number; now?: 
   };
 }
 
+const hhmm = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 /** The monitor as the lines a session-start hook prints. */
 export function monitorLines(report: MonitorReport): string[] {
   const { summary: s } = report;
@@ -1051,14 +1073,14 @@ export function monitorLines(report: MonitorReport): string[] {
   if (report.needsYou.length) {
     lines.push('Waiting for you:');
     for (const c of report.needsYou) {
-      lines.push(`  ${c.id} ${c.title} (${c.stage}${c.fix ? ', stuck' : ''})${c.lastCheck && c.fix ? `: ${c.lastCheck}` : ''}`);
+      lines.push(`  ${c.id} ${c.title} (${c.stage}${c.fix ? ', stuck' : ''})${c.lastCheck && c.fix ? `: ${c.lastCheck}` : ''}${c.movingSince ? `, moving since ${hhmm(c.movingSince)}` : ''}`);
       if (c.fix) lines.push(`    ${c.fix}`);
     }
   }
   if (report.failing.length) {
     lines.push('Failing:');
     for (const c of report.failing) {
-      lines.push(`  ${c.id} ${c.title} (${c.stage})${c.lastCheck ? `: ${c.lastCheck}` : ''}`);
+      lines.push(`  ${c.id} ${c.title} (${c.stage})${c.lastCheck ? `: ${c.lastCheck}` : ''}${c.movingSince ? `, moving since ${hhmm(c.movingSince)}` : ''}`);
       if (c.fix) lines.push(`    ${c.fix}`);
     }
   }

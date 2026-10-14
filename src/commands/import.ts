@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { importBmad, importSpecKit, type ImportResult } from '../lib/import.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 function report(result: ImportResult): void {
   result.cards.forEach(c => console.log(`  ${c.id} at ${c.stage}: ${c.title}  ${chalk.dim(c.spec ?? '')}`));
@@ -18,10 +19,10 @@ importCommand
   .command('speckit [dir]')
   .description('One card per specs/NNN* feature, tasks rewritten with layer tags')
   .option('--lane <id>', 'Lane to create cards in', 'build')
-  .action(guard((dir: string | undefined, opts: { lane: string }) => report(importSpecKit(process.cwd(), dir ?? '.', opts.lane))));
+  .action(guard((dir: string | undefined, opts: { lane: string }) => report(importSpecKit(projectRoot(), dir ?? '.', opts.lane))));
 
 importCommand
   .command('bmad [dir]')
   .description('One card per story in sprint-status.yaml, status mapped to a stage')
   .option('--lane <id>', 'Lane to create cards in', 'build')
-  .action(guard((dir: string | undefined, opts: { lane: string }) => report(importBmad(process.cwd(), dir ?? '.', opts.lane))));
+  .action(guard((dir: string | undefined, opts: { lane: string }) => report(importBmad(projectRoot(), dir ?? '.', opts.lane))));

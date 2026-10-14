@@ -9,6 +9,7 @@ import { parseVersion, compareVersions } from '../lib/version.js';
 import { parse as parseYaml } from 'yaml';
 import { listPages, thresholds, WIKI_DIR } from '../lib/wiki.js';
 import { getServeStatus } from './serve.js';
+import { projectRoot } from '../sdk/local.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -218,7 +219,7 @@ export function validateConfig(projectDir: string): string[] {
 export const statusCommand = new Command('status')
   .description('Show codeloop status and knowledge stats')
   .action(() => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
 
     console.log();
     console.log(chalk.bold('Codeloop Status'));

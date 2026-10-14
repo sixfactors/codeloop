@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { scanCompetitors } from '../lib/scan.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 export const scanCommand = new Command('scan').description('Look outside the repo for what to build next');
 
@@ -11,7 +12,7 @@ scanCommand
   .option('--from-file <path>', 'Use this file as the changelog text instead of fetching the URL')
   .option('--only <name>', 'Scan one competitor')
   .action(guard(async (opts: { fromFile?: string; only?: string }) => {
-    const results = await scanCompetitors(process.cwd(), opts);
+    const results = await scanCompetitors(projectRoot(), opts);
     if (results.length === 0) console.log('  no competitor page has a changelog link; `codeloop wiki competitor add <name> --changelog <url>`');
     for (const r of results) {
       const said = r.outcome === 'proposed' ? chalk.green(`proposed ${r.card}; \`codeloop approve ${r.card}\` puts it in the plan lane`)
