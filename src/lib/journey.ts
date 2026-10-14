@@ -61,7 +61,7 @@ export interface Journey {
   steps: JourneyStep[];
   holder: StoryHolder;
   check?: CheckSummary;
-  tasks?: { done: number; total: number };
+  tasks?: { done: number; total: number; /** The tasks now in tasks.md. */ items?: { id: string; done: boolean; layer?: string; text?: string }[] };
 }
 
 const to = (e: CardEvent) => /^to (\S+)/.exec(e.note ?? '')?.[1];
@@ -165,7 +165,7 @@ function changedSince(projectDir: string, card: Card, lane: Lane, at: string): b
   return readActivity(projectDir, card.id, { limit: 1000 }).items.some(i => i.kind !== 'check' && Date.parse(i.at) > checked);
 }
 
-export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean }[]; health?: string } = {}): Journey {
+export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean; id?: string; layer?: string; text?: string }[]; health?: string } = {}): Journey {
   const lane = opts.lane ?? loadLane(projectDir, card.lane);
   const events = card.events ?? [];
   const stages = lane.stages;
@@ -248,6 +248,6 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
     ...(card.gate ? { gate: card.gate, awaiting: card.awaiting } : {}),
     ...(last ? { last: { at: last.at, kind: last.kind, text: activityText(last) } } : {}),
   };
-  const tasks = opts.tasks ? { done: opts.tasks.filter(t => t.done).length, total: opts.tasks.length } : undefined;
+  const tasks = opts.tasks ? { done: opts.tasks.filter(t => t.done).length, total: opts.tasks.length, items: opts.tasks.filter(t => t.id).map(t => ({ id: t.id!, done: t.done, layer: t.layer, text: t.text })) } : undefined;
   return { steps, holder, ...(check ? { check } : {}), ...(tasks ? { tasks } : {}) };
 }
