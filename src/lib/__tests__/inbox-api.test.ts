@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { appendActivity } from '../activity.js';
 import { advanceCard, createCard, proposeCard } from '../engine.js';
 import { buildInbox } from '../inbox.js';
 import { closeIndex } from '../index/index.js';
@@ -105,6 +106,7 @@ stages:
     expect(fail.outcome).toBe('failed');
     // One failed check while it is being worked is not failing.
     expect(buildInbox(dir).failing).toEqual([]);
+    appendActivity(dir, 'c-7', { kind: 'edit', file: 'brief.md' });
     advanceCard(dir, 'c-7');
 
     // Two failed checks, read an hour and a half later with no activity since: failing.
