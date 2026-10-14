@@ -242,16 +242,23 @@ export function createApp(
   };
   app.get(api('/cards/:id/questions'), handled(async c => c.json(services.questions(projectDir, c.req.param('id')))));
   app.post(api('/cards/:id/questions'), writing(async c => {
-    const body = await json(c, { questions: [] as { question: string; recommended?: string }[] });
+    const body = await json(c, { questions: [] as { question: string; recommended?: string; options?: string[] }[] });
     const added = services.ask(projectDir, c.req.param('id'), body.questions ?? [], role);
     await patchQuestions(c.req.param('id'));
     return c.json(added, 201);
   }));
+  // Every open question's recommendation at once: the owner's decision, the same standing as an answer.
+  app.post(api('/cards/:id/questions/accept-all'), writing(async c => {
+    if (!owner) return readOnly(c, 'answer');
+    const { answered, skipped } = services.acceptAll(projectDir, c.req.param('id'), 'owner');
+    await patchQuestions(c.req.param('id'));
+    return c.json({ accepted: answered.length, skipped: skipped.map(q => q.n), ...services.questions(projectDir, c.req.param('id')) });
+  }));
   // An answer is the owner's decision, so it needs the same standing as an approval.
   app.post(api('/cards/:id/questions/:n/answer'), writing(async c => {
     if (!owner) return readOnly(c, 'answer');
-    const body = await json(c, {} as { text?: string; accept?: boolean });
-    services.answer(projectDir, c.req.param('id'), parseInt(c.req.param('n'), 10), { text: body.text, accept: body.accept === true }, 'owner');
+    const body = await json(c, {} as { text?: string; accept?: boolean; option?: string });
+    services.answer(projectDir, c.req.param('id'), parseInt(c.req.param('n'), 10), { text: body.text, accept: body.accept === true, ...(body.option ? { option: body.option } : {}) }, 'owner');
     await patchQuestions(c.req.param('id'));
     return c.json(services.questions(projectDir, c.req.param('id')));
   }));
@@ -272,6 +279,17 @@ export function createApp(
     const started = services.runCard(projectDir, c.req.param('id'), { agent: body.agent || undefined });
     return c.json({ runId: started.runId }, 202);
   }));
+  // A hand-back runs its proof command here and records the exit code; a failing proof is still a 201.
+  app.post(api('/cards/:id/handback'), writing(async c => {
+    const body = await json(c, { branch: '', head: '', proof: '', left: undefined as string | undefined, blocked: undefined as string | undefined, session: undefined as string | undefined, worktree: undefined as string | undefined });
+    return c.json(services.recordHandback(projectDir, c.req.param('id'), body), 201);
+  }));
+  app.post(api('/cards/:id/gate'), writing(async c => {
+    const body = await json(c, { handbackId: undefined as string | undefined });
+    return c.json(services.runGate(projectDir, c.req.param('id'), body), 201);
+  }));
+  app.get(api('/cards/:id/gates'), handled(async c => c.json(services.listGates(projectDir, c.req.param('id')))));
+  app.get(api('/cards/:id/handbacks'), handled(async c => c.json(services.listHandbacks(projectDir, c.req.param('id')))));
   app.get(api('/runs/:runId'), handled(async c => {
     const found = services.run(projectDir, c.req.param('runId'));
     if (!found) return notFound(c, `run ${c.req.param('runId')}`);

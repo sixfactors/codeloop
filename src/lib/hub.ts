@@ -154,6 +154,21 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
     return c.json({ projects });
   });
 
+  // What each project needs: waiting on a person, failing, stale, from the same monitor every
+  // session starts with (services.monitorReport), read from the project's files, never a context.
+  app.get('/api/hub/attention', c => {
+    const projects = listProjects().flatMap(p => {
+      if (p.missing) return [];
+      try {
+        const { summary } = services.monitorReport(p.path, { limit: 0 });
+        return [{ id: p.id, name: p.name, needsYou: summary.needsYou, failing: summary.failing, stale: summary.stale, working: summary.working, stalled: services.stalledBuilders(p.path).length }];
+      } catch {
+        return [];
+      }
+    });
+    return c.json({ projects });
+  });
+
   // "Needs you" across every registered, existing project in one response, each item labelled with
   // its project: computed from each project's own files directly (services.inboxReport), not from
   // a ProjectContext, so listing it never opens a context or touches another project's watcher.

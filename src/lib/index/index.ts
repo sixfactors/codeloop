@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import MiniSearch from 'minisearch';
-import { ACTIVITY_DIR, readActivity, type ActivityEntry } from '../activity.js';
+import { ACTIVITY_DIR, lastActivityAt, readActivity, type ActivityEntry } from '../activity.js';
 import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
 import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
@@ -314,7 +314,7 @@ export class ProjectIndex {
         );
         const all = [...this.cardsById.values()].map(c => this.withEvents(c));
         const scoped = Object.keys(narrow).length ? all.filter(c => this.filterCards(narrow).some(n => n.id === c.id)) : all;
-        const failingRows = failingOf(scoped).filter(f => mine(this.cardsById.get(f.id)!));
+        const failingRows = failingOf(scoped, id => lastActivityAt(this.projectDir, id)).filter(f => mine(this.cardsById.get(f.id)!));
         const failing: InboxCard[] = failingRows.map(f => {
           const c = this.cardsById.get(f.id)!;
           return { ...c, last_check: f.last_check, since: f.since };

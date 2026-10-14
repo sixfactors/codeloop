@@ -208,8 +208,19 @@ export const api = {
   hub: {
     projects: async (): Promise<ListedProject[]> => (await fetch(`${base()}/api/hub/projects`, { cache: 'no-store' }).then(r => r.json())).projects,
     needsYou: async (): Promise<HubNeedsYou> => fetch(`${base()}/api/hub/needs-you`, { cache: 'no-store' }).then(r => r.json()),
+    /** Per project: waiting on a person, failing, stale and working, from the monitor (GET /api/hub/attention). */
+    attention: async (): Promise<HubAttention[]> => (await fetch(`${base()}/api/hub/attention`, { cache: 'no-store' }).then(r => r.json())).projects,
   },
 };
+
+export interface HubAttention {
+  id: string;
+  name: string;
+  needsYou: number;
+  failing: number;
+  stale: number;
+  working: number;
+}
 
 export interface ListedProject {
   id: string;

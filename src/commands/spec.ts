@@ -17,10 +17,13 @@ specCommand
 
 specCommand
   .command('check <nnn>')
-  .description('Exit 2 unless every task is tagged and every acceptance line has a task')
-  .action(guard((ref: string) => {
+  .description('Exit 2 unless every task is tagged, every acceptance line has a task and each task names files in its own layer')
+  .option('--verbose', 'Also list file paths that sit in no configured layer')
+  .action(guard((ref: string, opts: { verbose?: boolean }) => {
     const dir = resolveSpecDir(process.cwd(), ref);
-    const errors = checkSpec(process.cwd(), dir);
+    const notes: string[] = [];
+    const errors = checkSpec(process.cwd(), dir, notes);
+    if (opts.verbose) notes.forEach(n => console.log(chalk.dim(`  ${n}`)));
     errors.forEach(e => console.error(chalk.red(`  ${e}`)));
     if (errors.length) process.exit(2);
     const { tasks } = readTasks(process.cwd(), dir);

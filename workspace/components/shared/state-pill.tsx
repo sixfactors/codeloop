@@ -21,8 +21,14 @@ const TONE_CLASS: Record<Tone, string> = {
   warn: 'border-transparent bg-warning/15 font-medium text-warning-foreground dark:text-warning',
 };
 
-const FLAG_LABEL: Record<StateFlag, string> = { failing: 'Failing', blocked: 'Blocked', stuck: 'Stuck' };
-const FLAG_TONE: Record<StateFlag, Tone> = { failing: 'bad', blocked: 'warn', stuck: 'bad' };
+const FLAG_LABEL: Record<StateFlag, string> = { blocked: 'Blocked' };
+const FLAG_TONE: Record<StateFlag, Tone> = { blocked: 'warn' };
+// Health beside the state, only when it says something the state does not: working is the
+// in-progress pill itself, needs-you and stuck are the waiting pill.
+const HEALTH_PILL: Partial<Record<NonNullable<StoryState['health']>, { label: string; tone: Tone }>> = {
+  failing: { label: 'Failing', tone: 'bad' },
+  stale: { label: 'Stale', tone: 'warn' },
+};
 
 const titleCase = (s: string) => s.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -50,7 +56,8 @@ function Pill({ tone, agentDot, children, className }: { tone: Tone; agentDot?: 
  * `in-progress` reads it, to decide the agent dot.
  */
 export function StatePill({ display, agent, className }: { display: StoryState; agent?: string; className?: string }) {
-  const flags = display.flags.filter((f) => !(f === 'stuck' && display.state === 'needs-you' && display.waitingOn === 'stuck'));
+  const flags = display.flags;
+  const health = display.health ? HEALTH_PILL[display.health] : undefined;
   let label: string;
   let tone: Tone;
   let dot = false;
@@ -69,6 +76,7 @@ export function StatePill({ display, agent, className }: { display: StoryState; 
   return (
     <span className={cn('inline-flex flex-wrap items-center gap-1', className)}>
       <Pill tone={tone} agentDot={dot}>{label}</Pill>
+      {health ? <Pill tone={health.tone}>{health.label}</Pill> : null}
       {flags.map((f) => <Pill key={f} tone={FLAG_TONE[f]}>{FLAG_LABEL[f]}</Pill>)}
     </span>
   );

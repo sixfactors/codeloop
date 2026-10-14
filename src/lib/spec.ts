@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { cardKey, findCard, findCardOrNone, readCards } from './cards.js';
+import { loadConfig } from './config.js';
+import { globMatches } from './glob.js';
 import { annotateCard, RefusalError, type Role } from './engine.js';
 import { cardNumber } from './lane.js';
 import { withLock } from './lock.js';
@@ -83,7 +85,32 @@ function specSize(projectDir: string, dir: string): string | undefined {
   return value && /^[SML]$/.test(value) ? value : undefined;
 }
 
-export function checkSpec(projectDir: string, dir: string): string[] {
+/** Same path shape `agent.ts` reads task text for: at least one directory segment. */
+const TASK_PATH = /(?:[\w.-]+\/)+[\w.-]+/g;
+
+/**
+ * A task tagged [api] may not name a file that `layers:` in config.yaml puts in another layer.
+ * A layer with no globs is not checked; a path in no layer is reported only through `notes`.
+ */
+function layerErrors(projectDir: string, tasks: Task[], notes?: string[]): string[] {
+  const configured = loadConfig(projectDir).layers;
+  if (typeof configured !== 'object' || configured === null || Array.isArray(configured)) return [];
+  const globsOf = (layer: string): string[] => (Array.isArray(configured[layer]) ? configured[layer].filter((g: unknown): g is string => typeof g === 'string') : []);
+  const errors: string[] = [];
+  for (const task of tasks) {
+    const own = globsOf(task.layer);
+    if (own.length === 0) continue;
+    for (const path of new Set(task.text.match(TASK_PATH) ?? [])) {
+      if (own.some(g => globMatches(g, path))) continue;
+      const other = Object.keys(configured).find(l => l !== task.layer && globsOf(l).some(g => globMatches(g, path)));
+      if (other) errors.push(`${task.id} [${task.layer}] names ${path}, which is in the ${other} layer`);
+      else notes?.push(`${task.id} [${task.layer}] names ${path}, which is in no configured layer`);
+    }
+  }
+  return errors;
+}
+
+export function checkSpec(projectDir: string, dir: string, notes?: string[]): string[] {
   const acceptance = readAcceptance(projectDir, dir);
   const { tasks, malformed } = readTasks(projectDir, dir);
   const errors: string[] = [];
@@ -114,6 +141,7 @@ export function checkSpec(projectDir: string, dir: string): string[] {
   for (const task of tasks) {
     if (task.accept && !acceptance.includes(task.accept)) errors.push(`task ${task.id} cites ${task.accept}, which spec.md does not have`);
   }
+  errors.push(...layerErrors(projectDir, tasks, notes));
   return errors;
 }
 

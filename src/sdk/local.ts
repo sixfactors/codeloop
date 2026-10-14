@@ -87,6 +87,10 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     streamRun: (runId, signal) => services.runStream(projectDir, runId, signal),
     cardActivity: async (ref, query = {}) => services.cardActivity(projectDir, ref, query),
     activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, async (r, q) => services.cardActivity(projectDir, r, q)),
+    handback: async (ref, input) => services.recordHandback(projectDir, ref, input),
+    gate: async (ref, input) => services.runGate(projectDir, ref, input),
+    gates: async ref => services.listGates(projectDir, ref),
+    handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),
     splitCard: async (ref, titles, opts) => services.splitCard(projectDir, ref, titles, role(opts)),
@@ -104,6 +108,10 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     questions: async ref => services.questions(projectDir, ref).questions,
     ask: async (ref, items, opts) => services.ask(projectDir, ref, items, role(opts)),
     answer: async (ref, n, reply, opts) => services.answer(projectDir, ref, n, reply, role(opts)),
+    acceptAll: async (ref, opts) => {
+      const { answered, skipped } = services.acceptAll(projectDir, ref, role(opts));
+      return { accepted: answered.length, skipped: skipped.map(q => q.n), questions: services.questions(projectDir, ref).questions };
+    },
     inbox: (query = {}) => {
       const { needsMe, ...rest } = query;
       return services.inboxPaged(projectDir, indexed(), { ...rest, ...(needsMe ? { needsMe: role() } : {}) });

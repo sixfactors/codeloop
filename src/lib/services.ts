@@ -19,11 +19,11 @@ import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
-import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
+import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
-import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
+import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
-import { readActivity, type ActivityEntry } from './activity.js';
+import { lastActivityAt, readActivity, type ActivityEntry } from './activity.js';
 import { activityText, journeyOf, lastActivity, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
@@ -93,7 +93,8 @@ export interface DecisionReport {
 }
 
 export interface CardShow {
-  card: Card & CardHolder;
+  /** `display`: the state and health a person sees, worked out now. */
+  card: Card & CardHolder & { display?: StoryState };
   brief: ReturnType<typeof stageBrief>;
   hint: string;
 }
@@ -110,7 +111,7 @@ export interface CardHolder {
 }
 
 export interface CardFull {
-  card: Card & CardHolder & { mock?: string; openQuestions: number };
+  card: Card & CardHolder & { mock?: string; openQuestions: number; display?: StoryState };
   /** The lane's phases with where this story is in them, who holds it, and its last check in words. */
   journey: Journey;
   spec: { dir: string; text: string | null } | null;
@@ -378,7 +379,8 @@ export function setupStatus(projectDir: string): SetupStatus {
 /** The card by id or number, its current stage brief and the Next line. */
 export function showCard(projectDir: string, ref: string): CardShow {
   const card = findCard(readCards(projectDir).cards, ref);
-  return { card: { ...card, ...holderOf(projectDir, card.id) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
+  const display = liveState(projectDir, card, openQuestions(projectDir, card).length);
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
 }
 
 /**
@@ -478,7 +480,9 @@ export function questions(projectDir: string, ref: string): { id: string; questi
 
 export const ask = (projectDir: string, ref: string, items: { question: string; recommended?: string }[], who: Role): { path: string; added: Question[] } => addQuestions(projectDir, ref, items, who);
 
-export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
+export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean; option?: string }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
+/** Every open question's recommended answer, accepted in one write. The owner's decision, like any answer. */
+export const acceptAll = (projectDir: string, ref: string, who: Role) => acceptAllAnswers(projectDir, ref, who);
 
 // --- inbox ----------------------------------------------------------------------------------
 
@@ -569,7 +573,7 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
   return {
-    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length },
+    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display: liveState(projectDir, card, index.openQuestions(card.id).length) },
     spec,
     tasks,
     questions: readQuestions(projectDir, card),
@@ -712,6 +716,7 @@ export type { WikiShapeCount };
 
 // --- wiki build: refresh facts, start a card in the `wiki` lane, run it -------------------------
 import { runDueWithAgent, type RunResult } from './run.js';
+import { stalledBuilders } from './stall.js';
 
 export interface WikiBuildResult {
   migrated: WikiMigrateResult;
@@ -773,10 +778,28 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; sessio
 });
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
 
+/**
+ * The story's state with its health, worked out now: health depends on the clock and on the last
+ * activity line, which no index version tracks, so it is computed per request, not cached.
+ */
+export function liveState(projectDir: string, card: Card, openQuestions: number, now = Date.now(), held?: Set<string>): StoryState | undefined {
+  const holding = held ?? new Set(activeSessions(projectDir).map(s => s.card));
+  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id), held: holding.has(card.id) });
+}
+
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
   const agents = holders(projectDir);
   const { items } = await index.cards.list({}, undefined, 100_000);
-  return items.filter(c => c.display).map(c => storyRow(c, agents));
+  const raw = new Map(readCards(projectDir).cards.map(c => [c.id, c] as const));
+  const now = Date.now();
+  const held = new Set(activeSessions(projectDir).map(s => s.card));
+  return items
+    .map(c => {
+      const card = raw.get(c.id);
+      const display = card ? liveState(projectDir, card, c.openQuestions, now, held) : c.display;
+      return display ? storyRow({ ...c, display }, agents) : undefined;
+    })
+    .filter((r): r is BoardStory => Boolean(r));
 }
 
 const byRank = (a: BoardStory, b: BoardStory) => (b.score ?? -1) - (a.score ?? -1) || a.updatedAt.localeCompare(b.updatedAt);
@@ -814,14 +837,19 @@ export interface AgentTile {
   title?: string;
   stage?: string;
   since: string;
-  state: 'working' | 'check failing' | 'idle' | 'stopped';
+  state: 'working' | 'stalled' | 'check failing' | 'idle' | 'stopped';
+  /** Past the stall threshold with no activity: the monitor's call, with how long it has been quiet. */
+  stalled: boolean;
+  idleMinutes?: number;
   last?: { at: string; text: string };
 }
 
 export interface HomeView {
-  summary: { needsYou: number; inProgress: number; failing: number; shippedThisWeek: number; agentsWorking: number };
+  summary: { needsYou: number; inProgress: number; failing: number; stale: number; stalled: number; shippedThisWeek: number; agentsWorking: number };
   needsYou: BoardStory[];
   failing: BoardStory[];
+  /** No event and no activity for two days: park or drop. */
+  stale: BoardStory[];
   inProgress: BoardStory[];
   agents: AgentTile[];
   shipped: BoardStory[];
@@ -832,18 +860,101 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   const rows = await storyRows(index, projectDir);
   const week = Date.now() - 7 * 86_400_000;
   const needsYou = rows.filter(r => r.display.state === 'needs-you').sort(byRank);
-  const failing = rows.filter(r => r.display.flags.includes('failing')).sort(newestFirst);
+  const failing = rows.filter(r => r.display.health === 'failing').sort(newestFirst);
+  const stale = rows.filter(r => r.display.health === 'stale').sort(newestFirst);
   const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
   const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
+  const stalledNow = new Map(stalledBuilders(projectDir).map(b => [b.session, b.idleMinutes]));
   const agents = activeSessions(projectDir).map((s): AgentTile => {
     const row = rows.find(r => r.id === s.card);
     const last = lastActivity(projectDir, s.card);
     const quiet = last ? Date.now() - Date.parse(last.at) : Date.now() - Date.parse(s.updatedAt);
-    const state: AgentTile['state'] = last?.kind === 'end' ? 'stopped' : last?.kind === 'check' && !last.pass ? 'check failing' : quiet > 10 * 60_000 ? 'idle' : 'working';
-    return { session: s.session, label: s.label ?? s.session, card: s.card, title: row?.title, stage: row?.stage, since: s.startedAt, state, ...(last ? { last: { at: last.at, text: activityText(last) } } : {}) };
+    const stalled = stalledNow.has(s.session);
+    const state: AgentTile['state'] = last?.kind === 'end' ? 'stopped' : stalled ? 'stalled' : last?.kind === 'check' && !last.pass ? 'check failing' : quiet > 10 * 60_000 ? 'idle' : 'working';
+    return {
+      session: s.session, label: s.label ?? s.session, card: s.card, title: row?.title, stage: row?.stage, since: s.startedAt, state, stalled,
+      ...(stalled ? { idleMinutes: stalledNow.get(s.session) } : {}),
+      ...(last ? { last: { at: last.at, text: activityText(last) } } : {}),
+    };
   });
   return {
-    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
-    needsYou, failing, inProgress, agents, shipped,
+    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, stale: stale.length, stalled: stalledNow.size, shippedThisWeek: shipped.length, agentsWorking: agents.length },
+    needsYou, failing, stale, inProgress, agents, shipped,
   };
 }
+
+// --- monitor: what a session sees first --------------------------------------------------------
+
+export interface MonitorItem {
+  id: string;
+  title: string;
+  stage: string;
+  /** The last failed check's last line, for a failing story. */
+  lastCheck?: string;
+  /** What to do next: the same hint `codeloop next` prints. */
+  fix?: string;
+}
+
+export interface MonitorReport {
+  summary: { needsYou: number; failing: number; stale: number; working: number };
+  needsYou: MonitorItem[];
+  failing: MonitorItem[];
+  stale: MonitorItem[];
+}
+
+/**
+ * The monitor every session starts with: what waits on a person, what is failing and how to fix
+ * it, what is stale. Read straight from cards.json, so a hook does not need the index.
+ */
+export function monitorReport(projectDir: string, opts: { limit?: number; now?: number } = {}): MonitorReport {
+  const limit = opts.limit ?? 5;
+  const now = opts.now ?? Date.now();
+  const held = new Set(activeSessions(projectDir).map(s => s.card));
+  const rows = readCards(projectDir).cards
+    .map(card => ({ card, state: liveState(projectDir, card, openQuestions(projectDir, card).length, now, held) }))
+    .filter((r): r is { card: Card; state: StoryState } => Boolean(r.state?.health));
+  const lastFail = (card: Card) => card.events.filter(e => e.action === 'fail' && e.stage === card.stage).at(-1)?.note?.split('\n').filter(Boolean).at(-1);
+  const item = (card: Card, withFix = false): MonitorItem => {
+    const check = lastFail(card);
+    return { id: card.id, title: card.title, stage: card.stage, ...(check ? { lastCheck: check } : {}), ...(withFix ? { fix: nextHint(projectDir, card, check) } : {}) };
+  };
+  const newest = (a: { card: Card }, b: { card: Card }) => b.card.updatedAt.localeCompare(a.card.updatedAt);
+  const of = (h: string) => rows.filter(r => r.state.health === h).sort(newest);
+  const needsYou = [...of('needs-you'), ...of('stuck')];
+  const failing = of('failing');
+  const stale = of('stale');
+  return {
+    summary: { needsYou: needsYou.length, failing: failing.length, stale: stale.length, working: of('working').length },
+    needsYou: needsYou.slice(0, limit).map(r => item(r.card, r.state.health === 'stuck')),
+    failing: failing.slice(0, limit).map(r => item(r.card, true)),
+    stale: stale.slice(0, limit).map(r => item(r.card)),
+  };
+}
+
+/** The monitor as the lines a session-start hook prints. */
+export function monitorLines(report: MonitorReport): string[] {
+  const { summary: s } = report;
+  const lines = [`codeloop monitor: ${s.needsYou} waiting for you, ${s.failing} failing, ${s.stale} stale, ${s.working} working`];
+  if (report.needsYou.length) {
+    lines.push('Waiting for you:');
+    for (const c of report.needsYou) {
+      lines.push(`  ${c.id} ${c.title} (${c.stage}${c.fix ? ', stuck' : ''})${c.lastCheck && c.fix ? `: ${c.lastCheck}` : ''}`);
+      if (c.fix) lines.push(`    ${c.fix}`);
+    }
+  }
+  if (report.failing.length) {
+    lines.push('Failing:');
+    for (const c of report.failing) {
+      lines.push(`  ${c.id} ${c.title} (${c.stage})${c.lastCheck ? `: ${c.lastCheck}` : ''}`);
+      if (c.fix) lines.push(`    ${c.fix}`);
+    }
+  }
+  if (report.stale.length) {
+    lines.push('Stale, nothing for two days (park or drop):');
+    for (const c of report.stale) lines.push(`  ${c.id} ${c.title} (${c.stage}): \`codeloop card park ${c.id}\` or \`codeloop card drop ${c.id} "<why>"\``);
+  }
+  return lines;
+}
+export { listHandbacks, recordHandback, type HandbackInput, type HandbackRecord } from './handback.js';
+export { stalledBuilders, stalledLines, type StalledBuilder } from './stall.js';
+export { listGates, runGate, type GateInput, type GateRecord } from './gate.js';

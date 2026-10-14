@@ -6,8 +6,11 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveCard, setActiveCard } from '../lib/active-card.js';
 import { appendActivity } from '../lib/activity.js';
-import { findCard, inLane, readCards, type Card } from '../lib/cards.js';
-import { listCards } from '../lib/services.js';
+import { DONE, DROPPED, findCard, findCardOrNone, inLane, readCards, type Card } from '../lib/cards.js';
+import { listCards, monitorLines, monitorReport, stalledBuilders, stalledLines } from '../lib/services.js';
+import { ensureMonitorSchedule } from '../lib/schedule.js';
+import { monitorEnabled } from '../lib/run.js';
+import { loadAgents } from '../lib/agent.js';
 import { resolveRole } from '../lib/engine.js';
 import { openQuestions } from '../lib/interview.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
@@ -161,7 +164,21 @@ guardCommand
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
-    const activeId = getActiveCard(projectDir, session);
+    // The monitor first: what waits on a person, what is failing and its fix, what is stale.
+    for (const line of monitorLines(monitorReport(projectDir))) console.log(line);
+    for (const line of stalledLines(stalledBuilders(projectDir))) console.log(line);
+    // And make sure something keeps acting on it between sessions.
+    const scheduled = ensureMonitorSchedule(projectDir, { hasAgents: Object.keys(loadAgents(projectDir).agents).length > 0, monitorOn: monitorEnabled(projectDir) });
+    if (scheduled) console.log(scheduled);
+    let activeId = getActiveCard(projectDir, session);
+    const pointed = activeId ? findCardOrNone(readCards(projectDir).cards, activeId) : undefined;
+    // A finished story is never the one a session works: clear the pointer instead of naming it.
+    if (activeId && pointed && (pointed.stage === DONE || pointed.stage === DROPPED)) {
+      clearActiveCard(projectDir, session);
+      if (getActiveCard(projectDir, session) === activeId) clearActiveCard(projectDir, undefined);
+      console.log(`codeloop: ${pointed.id} is ${pointed.stage}, so it is no longer the active story`);
+      activeId = undefined;
+    }
     if (activeId) {
       appendActivity(projectDir, activeId, { session, kind: 'start', ...(detectHost(input) ? { host: detectHost(input) } : {}) });
       let card;
@@ -384,4 +401,13 @@ export const whoamiCommand = new Command('whoami')
         // a malformed presence file is skipped, not fatal to whoami
       }
     }
+  });
+
+export const monitorCommand = new Command('monitor').description('What the monitor sees');
+monitorCommand
+  .command('stalled')
+  .description('Builders holding a card that have written nothing to it for monitor.stall_minutes (default 30)')
+  .action(() => {
+    const rows = stalledBuilders(process.cwd());
+    for (const line of rows.length ? stalledLines(rows) : ['No stalled builders.']) console.log(line);
   });

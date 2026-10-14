@@ -9,6 +9,10 @@ import type {
   Card,
   CardCreated,
   CardActivity,
+  GateInput,
+  GateRecord,
+  HandbackInput,
+  HandbackRecord,
   CardEvent,
   CardFull,
   CardListFilter,
@@ -103,10 +107,15 @@ export type CardWithEvents = IndexedCard & { events: CardEvent[] };
 
 export interface AskInput {
   question: string;
+  /** With options, the letter of the one to take; otherwise free text. */
   recommended?: string;
+  /** Two to four choices when the fork is real; lettered A, B, C, D in order. */
+  options?: string[];
 }
 
-export type AnswerInput = { text?: string; accept?: boolean };
+export type AnswerInput = { text?: string; accept?: boolean; option?: string };
+/** What accepting every recommendation did: how many were answered, which had none to take, and the questions after. */
+export type AcceptAllResult = { accepted: number; skipped: number[]; questions: Question[] };
 
 /**
  * A refused or failed operation. `status` follows HTTP whatever the transport: 400 a refusal,
@@ -152,6 +161,12 @@ export interface Transport {
   cardActivity(ref: string, query?: ActivityQuery): Promise<CardActivity>;
   /** The card's activity lines as they are written; with `after`, the lines since that cursor first ('0' for all of them). */
   activityStream(ref: string, opts?: { after?: string; signal?: AbortSignal }): AsyncIterable<ActivityEntry>;
+  /** Runs the proof command and records the hand-back; a failing proof is recorded with its exit code. */
+  handback(ref: string, input: HandbackInput): Promise<HandbackRecord>;
+  handbacks(ref: string): Promise<HandbackRecord[]>;
+  /** Reruns the latest hand-back's proof, the stage check and one claim; records a pass or fail verdict. Refused when there is no hand-back. */
+  gate(ref: string, input: GateInput): Promise<GateRecord>;
+  gates(ref: string): Promise<GateRecord[]>;
   stageOutput(ref: string): Promise<StageOutput>;
   writeStageOutput(ref: string, text: string, opts?: RoleOption): Promise<StageOutput>;
   splitCard(ref: string, titles: string[], opts?: RoleOption): Promise<SplitResult>;
@@ -171,6 +186,7 @@ export interface Transport {
   questions(ref: string): Promise<Question[]>;
   ask(ref: string, items: AskInput[], opts?: RoleOption): Promise<{ path: string; added: Question[] }>;
   answer(ref: string, n: number, reply: AnswerInput, opts?: RoleOption): Promise<Question>;
+  acceptAll(ref: string, opts?: RoleOption): Promise<AcceptAllResult>;
   inbox(query?: InboxQuery): Promise<InboxPayload>;
   board(): Promise<BoardView>;
   home(): Promise<HomeView>;
@@ -254,6 +270,14 @@ export class CodeloopClient {
     brief: (ref: string) => this.transport.brief(ref),
     /** Runs the current stage: the check first, the agent (named or configured) when it fails, then one advance. */
     run: (ref: string, opts?: { agent?: string }) => this.transport.runCard(ref, opts),
+    /** What a builder reports when it stops: the proof command is run here and its exit code and output stored. */
+    handback: (ref: string, input: HandbackInput) => this.transport.handback(ref, input),
+    /** The card's hand-backs, newest first. */
+    handbacks: (ref: string) => this.transport.handbacks(ref),
+    /** Gates the card's latest (or named) hand-back: the proof is rerun, not believed. */
+    gate: (ref: string, input: GateInput = {}) => this.transport.gate(ref, input),
+    /** The card's gate records, newest first. */
+    gates: (ref: string) => this.transport.gates(ref),
     /** The current stage's output file: path and text, or null text when it is not written yet. */
     output: (ref: string) => this.transport.stageOutput(ref),
     /** Writes the current stage's output file, making its folders. The check does not run. */
@@ -293,6 +317,8 @@ export class CodeloopClient {
     list: (ref: string) => this.transport.questions(ref),
     ask: (ref: string, items: AskInput[], opts?: RoleOption) => this.transport.ask(ref, items, opts),
     answer: (ref: string, n: number, reply: AnswerInput, opts?: RoleOption) => this.transport.answer(ref, n, reply, opts),
+    /** Accept every open question's recommended answer in one write. */
+    acceptAll: (ref: string, opts?: RoleOption) => this.transport.acceptAll(ref, opts),
   };
 
   /** The board: every story in one row of the six states, already grouped by the server. */

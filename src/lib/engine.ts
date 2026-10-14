@@ -106,7 +106,7 @@ function tail(text: string): string {
   return text.trimEnd().split('\n').slice(-20).join('\n').slice(-2000);
 }
 
-function currentStage(lane: Lane, card: Card): Stage {
+export function currentStage(lane: Lane, card: Card): Stage {
   const stage = lane.stages.find(s => s.id === card.stage);
   if (!stage) throw new RefusalError(`card ${card.id} is at stage "${card.stage}", which lane ${lane.id} v${lane.version} does not have`);
   return stage;

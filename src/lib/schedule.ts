@@ -1,6 +1,7 @@
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, statSync } from 'fs';
-import { dirname, join } from 'path';
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join, sep } from 'path';
 import { RefusalError } from './cards.js';
 import { cronError } from './cron.js';
 
@@ -69,4 +70,24 @@ export function scheduleStatus(projectDir: string, crontab = 'crontab'): { line?
     line: readTable(crontab).find(mine(projectDir)),
     ...(ran ? { lastRun: statSync(log).mtime, lastOutput: readFileSync(log, 'utf-8').trimEnd().split('\n').slice(-5).join('\n') } : {}),
   };
+}
+
+/**
+ * What `guard session` does so the monitor keeps running without a person: when this repo has
+ * agents configured and no crontab entry, install an hourly `run --agent`. Skipped with
+ * `monitor: off`, with CODELOOP_NO_SCHEDULE=1, and for a project under the system temp folder (a
+ * test fixture must never reach the user's crontab). Returns the one line to print, or undefined.
+ */
+export function ensureMonitorSchedule(projectDir: string, opts: { crontab?: string; hasAgents: boolean; monitorOn: boolean; entry?: string }): string | undefined {
+  if (!opts.monitorOn || !opts.hasAgents || process.env.CODELOOP_NO_SCHEDULE === '1') return undefined;
+  const real = realpathSync(projectDir);
+  if (real.startsWith(realpathSync(tmpdir()) + sep)) return undefined;
+  const crontab = opts.crontab ?? 'crontab';
+  try {
+    if (scheduleStatus(projectDir, crontab).line) return undefined;
+    installSchedule(projectDir, scheduleLine(projectDir, { cron: everyToCron('1h'), agent: true, ...(opts.entry ? { entry: opts.entry } : {}) }), crontab);
+    return 'codeloop monitor: installed an hourly `codeloop run --agent` in your crontab (doctor tick included); `codeloop schedule remove` or `monitor: off` in config.yaml stops it';
+  } catch (e) {
+    return `codeloop monitor: not scheduled (${e instanceof Error ? e.message : String(e)}); \`codeloop schedule install --every 1h\` sets it up`;
+  }
 }

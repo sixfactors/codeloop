@@ -29,6 +29,7 @@ import type { BoardStory } from '@/lib/types';
 const AGENT_STATE: Record<AgentTile['state'], string> = {
   working: 'border-transparent bg-ai/15 text-ai',
   'check failing': 'border-transparent bg-destructive/15 text-destructive',
+  stalled: 'border-transparent bg-warning/15 text-warning',
   idle: 'text-muted-foreground',
   stopped: 'text-muted-foreground',
 };

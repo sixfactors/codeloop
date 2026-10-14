@@ -14,3 +14,4 @@ workspace/out/
 .codeloop/state/
 .serena/
 .next-dev/
+.vitest-monitor-fixture/

@@ -105,6 +105,8 @@ The spec's `done_when:` line names a command that exits 0 or a screen a person o
 
 `plan.md` carries files, commands, flags and schema. `tasks.md` carries up to eight layer-tagged tasks in dependency order, each naming the acceptance line it satisfies. The card and `spec.md` carry none of that.
 
+Tasks must name files in their own layer when `layers:` is configured in `.codeloop/config.yaml`; `codeloop spec check` fails a task whose tag and file paths disagree.
+
 ## Keep plumbing off the board unless it moves a metric
 
 Branch protection, CI setup, refactors and renames are logistics. They are cards only when they move a lane metric; otherwise they are tasks under a story that does.
