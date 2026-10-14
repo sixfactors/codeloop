@@ -65,3 +65,16 @@ export const runCommand = new Command('run')
     doctor.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
     console.log(`  ${result.created.length} created, ${result.advanced.length} advanced${result.agents ? `, ${result.agents.filter(a => a.started).length} agent runs` : ''}${doctor.length ? `, ${doctor.length} doctor actions` : ''}`);
   }));
+
+export const doctorCommand = new Command('doctor')
+  .description('Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories')
+  .option('--json', 'JSON output')
+  .action(guard(async (opts: { json?: boolean }) => {
+    const actions = await doctorTick(process.cwd(), clock());
+    if (opts.json) {
+      console.log(JSON.stringify(actions, null, 2));
+      return;
+    }
+    if (!actions.length) console.log('doctor: nothing to do');
+    actions.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
+  }));
