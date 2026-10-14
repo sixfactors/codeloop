@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
-import { projectRoot } from '../lib/project-root.js';
 
 export const inboxCommand = new Command('inbox')
   .description('What needs you, what shipped, and the numbers per lane')

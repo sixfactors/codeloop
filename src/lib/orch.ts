@@ -273,3 +273,35 @@ export function orchReport(projectDir: string, cardRef: string): OrchReport {
   const text = `${card.id} is at ${card.stage}. Works now: ${works}. Proof: ${proof}. Left: ${left}. Next gate: ${nextGate}.`;
   return { card: card.id, stage: card.stage, works, proof, left, nextGate, text };
 }
+
+/** What `POST /api/cards/:id/orch` answers with: the turn that has begun, not its result. */
+export interface OrchStarted {
+  card: string;
+  n: number;
+  status: 'running';
+}
+
+/** `GET /api/cards/:id/orch`. */
+export interface OrchView {
+  record: OrchRecord;
+  report: OrchReport;
+}
+
+const running = new Set<string>();
+
+/** Starts a turn (or, with `until`, a run) in the background and returns at once; read the result from the record. */
+export function startOrch(projectDir: string, cardRef: string, opts: OrchOptions = {}): OrchStarted {
+  const id = findCard(readCards(projectDir).cards, cardRef).id;
+  const key = `${projectDir}\0${id}`;
+  if (running.has(key)) throw new RefusalError(`${id} already has an orchestrated turn running`);
+  const card = findCard(readCards(projectDir).cards, id);
+  if (card.gate) throw new RefusalError(`card ${id} is waiting at gate "${card.gate}" (${card.awaiting} approves)`);
+  const started: OrchStarted = { card: id, n: readOrch(projectDir, id).turns.length + 1, status: 'running' };
+  running.add(key);
+  (opts.until ? orchRun(projectDir, id, opts) : orchTurn(projectDir, id, opts))
+    .catch(e => appendActivity(projectDir, id, { kind: 'orch', outcome: 'error', text: (e as Error).message }))
+    .finally(() => running.delete(key));
+  return started;
+}
+
+export const orchView = (projectDir: string, cardRef: string): OrchView => ({ record: readOrch(projectDir, cardRef), report: orchReport(projectDir, cardRef) });

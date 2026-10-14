@@ -2,9 +2,8 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
-import { projectRoot } from '../lib/project-root.js';
 
 const client = () => createLocalClient(projectRoot());
 

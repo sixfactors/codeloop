@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
-import { createLocalClient, MAX_QUESTIONS, parseQuestions } from '../sdk/local.js';
+import { createLocalClient, MAX_QUESTIONS, parseQuestions, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
-import { projectRoot } from '../lib/project-root.js';
 
 export const askCommand = new Command('ask')
   .description(`Ask the owner up to ${MAX_QUESTIONS} questions about a card: \`codeloop ask <card> "<question>" --recommended "<answer>"\`, or --file with \`## Q1\` blocks`)
