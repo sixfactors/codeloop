@@ -5,7 +5,7 @@ capacity:
 agents:
   default: claude
   cursor:
-    cmd: "cursor-agent -p --force --output-format text \"$(cat {brief})\""
+    cmd: "agent -p --force --output-format text \"$(cat {brief})\""
     timeout_minutes: 20
     max_runs_per_day: 40
   claude-sonnet:
@@ -16,3 +16,6 @@ agents:
     cmd: "claude -p --permission-mode acceptEdits < {brief}"
     timeout_minutes: 10
     max_runs_per_day: 50
+
+git:
+  trunk: feat/cli-lanes-gates-agent-runs
