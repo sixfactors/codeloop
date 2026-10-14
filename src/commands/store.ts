@@ -47,7 +47,7 @@ storeCommand
     if (opts.json) return console.log(JSON.stringify(where, null, 2));
     console.log(`store.home: ${where.home}`);
     console.log(`store: ${where.dir}`);
-    for (const i of where.items) console.log(`  ${i.item.padEnd(22)} ${i.resolved}${i.link ? ' (linked)' : ''}`);
+    for (const i of where.items) console.log(`  ${i.item.padEnd(22)} ${i.home.padEnd(5)} ${i.resolved}${i.link ? ' (linked)' : ''}`);
   }));
 
 storeCommand

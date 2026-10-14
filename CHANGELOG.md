@@ -35,6 +35,8 @@ when package.json names a version this file has no heading for.
   `store.home: user` keeps cards.json, specs, evidence, shape, mocks and `.codeloop/state` under
   `~/.codeloop/projects/<id>/`, shared by every worktree; `codeloop store move --to user|repo` copies
   them across and `codeloop store where` prints where each path resolves.
+- `store.move` names which of cards, state, mocks, specs, shape, evidence and docs-mocks `user` home
+  takes, default all; the rest stay in the repo, and `store where` prints each path's home.
 
 ### Orchestrator after the merge
 - After merging a story the orchestrator runs `codeloop verify` (from the verify stage on) and the
