@@ -8,6 +8,8 @@ import { researchSummary } from './research.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
+import { appendActivity } from './activity.js';
+import { currentSession } from './active-card.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
@@ -564,6 +566,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
 
   const check = runCheck(projectDir, card, stage);
   const output = check?.output ?? '';
+  if (check) appendActivity(projectDir, id, { session: currentSession(), kind: 'check', stage: stage.id, pass: check.passed, output });
   // A check may itself write the board: the scan stage proposes cards, and `verify` records its
   // evidence on this card. The advance is then written on the board as the check left it. A card
   // that was moved or parked meanwhile is someone else's decision, and that is a conflict.

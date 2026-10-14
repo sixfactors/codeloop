@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { appendActivity, MIRRORED_EVENTS } from './activity.js';
 import { CloudConflictError, writeCloudBoard } from './cloud.js';
 import { withLock } from './lock.js';
 
@@ -184,8 +185,20 @@ export function writeCards(projectDir: string, read: CardFile, cards: Card[]): C
     const tmp = `${file}.${process.pid}.tmp`;
     writeFileSync(tmp, content);
     renameSync(tmp, file);
+    mirrorEvents(projectDir, current.cards, cards);
     return next;
   });
+}
+
+/** Copies the gate, answer and park events this write added into each card's activity stream. */
+function mirrorEvents(projectDir: string, before: Card[], after: Card[]): void {
+  const seen = new Map(before.map(c => [c.id, c.events?.length ?? 0] as const));
+  for (const card of after) {
+    for (const e of (card.events ?? []).slice(seen.get(card.id) ?? 0)) {
+      if (!MIRRORED_EVENTS.has(e.action)) continue;
+      appendActivity(projectDir, card.id, { at: e.at, kind: e.action, actor: e.actor, ...(e.stage ? { stage: e.stage } : {}), ...(e.note ? { text: e.note } : {}) });
+    }
+  }
 }
 
 export function nextCardId(cards: Card[]): string {
