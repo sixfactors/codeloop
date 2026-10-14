@@ -37,7 +37,7 @@ import { configCommand, gateCommand, mcpCommand, renderCommand } from './command
 import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
 import { mockCommand, mocksCommand } from './commands/mock.js';
 import { artifactCommand, artifactsCommand } from './commands/artifact.js';
-import { guardCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
+import { guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
 import { scanCommand } from './commands/scan.js';
 
 export function buildProgram(): Command {
@@ -104,6 +104,7 @@ export function buildProgram(): Command {
   program.addCommand(configCommand);
   program.addCommand(cloudCommand);
   program.addCommand(guardCommand);
+  program.addCommand(monitorCommand);
   program.addCommand(presenceCommand);
   program.addCommand(whoamiCommand);
 

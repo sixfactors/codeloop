@@ -10,6 +10,7 @@ when package.json names a version this file has no heading for.
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
 
 ### Watch an agent work a story
+- A builder that holds a card and writes nothing to it for 30 minutes (`monitor.stall_minutes`) is flagged `stalled` on Home and `/api/hub/attention`, listed by `codeloop monitor stalled` and at session start, and the doctor writes one "asked for a hand-back" line per stall.
 - `codeloop card handback <card> --branch <b> --head <sha> --proof "<cmd>"` records a builder's hand-back: it runs the proof command itself and stores the exit code and output on the card, so a gate can check data instead of a claim. A failing proof is recorded, an empty one is refused.
 - Every card has an activity stream (`.codeloop/state/activity/<card>.jsonl`): the Claude Code and
   Cursor hooks record edits, commands, prompts and session start and stop on the session's active
