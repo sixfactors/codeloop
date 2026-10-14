@@ -21,6 +21,8 @@ export interface Health {
 export interface Weights { tests: number; lint: number; types: number; gotchas: number; todo: number }
 
 export const DEFAULT_WEIGHTS: Weights = { tests: 1, lint: 1, types: 1, gotchas: 2, todo: 0.2 };
+/** Points the score may fall before verify fails: one TODO line moves a large repo by about 0.05. */
+export const DEFAULT_TOLERANCE = 1;
 export const DEFAULT_TEST_GLOBS = ['**/*.test.ts', '**/*.test.js', '**/*.test.py', '**/__tests__/**'];
 export const DEFAULT_SOURCE_GLOBS = ['src/**'];
 
@@ -45,7 +47,7 @@ const strings = (v: unknown, fallback: string[]) => (Array.isArray(v) && v.every
 export function healthSettings(projectDir: string): Settings {
   const raw = (loadConfig(projectDir) as HealthConfig).health;
   // YAML reads a bare `health: off` as false.
-  if (raw === false || raw === 'off') return { off: true, tests: [], source: [], weights: DEFAULT_WEIGHTS, tolerance: 0 };
+  if (raw === false || raw === 'off') return { off: true, tests: [], source: [], weights: DEFAULT_WEIGHTS, tolerance: DEFAULT_TOLERANCE };
   const h = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, any>;
   const w = (typeof h.weights === 'object' && h.weights !== null ? h.weights : {}) as Record<string, unknown>;
   const weights = { ...DEFAULT_WEIGHTS };
@@ -57,7 +59,7 @@ export function healthSettings(projectDir: string): Settings {
     lintCmd: typeof h.lint_cmd === 'string' && h.lint_cmd ? h.lint_cmd : undefined,
     typesCmd: typeof h.types_cmd === 'string' && h.types_cmd ? h.types_cmd : undefined,
     weights,
-    tolerance: typeof h.tolerance === 'number' && h.tolerance >= 0 ? h.tolerance : 0,
+    tolerance: typeof h.tolerance === 'number' && h.tolerance >= 0 ? h.tolerance : DEFAULT_TOLERANCE,
   };
 }
 
