@@ -169,10 +169,11 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {journey ? <JourneyStepper journey={journey} /> : !full.data && !full.error ? <Skeleton className="h-12 w-full rounded-lg" /> : null}
+      {/* Above the rail, so on a narrow screen what to do next comes before the story's details.
+          Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
+      <CurrentStepPanel key={card.id} card={card} journey={journey} />
       <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
         <div className="flex min-w-0 flex-col gap-4">
-          {/* Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
-          <CurrentStepPanel key={card.id} card={card} journey={journey} />
           <Tabs defaultValue="output" key={`tabs-${card.id}`}>
             <TabsList className="h-auto w-full flex-wrap justify-start">
               <TabsTrigger value="output" data-testid="tab-output">Output</TabsTrigger>

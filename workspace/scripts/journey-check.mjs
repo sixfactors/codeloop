@@ -9,7 +9,7 @@
 // Exits 1 when a check fails.
 //
 //   CODELOOP_URL=http://127.0.0.1:4762 CODELOOP_TOKEN=… node scripts/journey-check.mjs \
-//     --from c-048 --to c-047 [--neighbour c-010] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
+//     --from c-048 --to c-047 [--neighbour c-010] [--login user:password] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
 //
 // Playwright is not a dependency of this package; PLAYWRIGHT_DIR names a project that has it.
 import { createRequire } from 'node:module';
@@ -34,6 +34,12 @@ const panel = (page) => page.locator('[data-testid="card-sheet"] [data-testid="c
 try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
+  // --login user:password signs the browser in as the owner, so gate and write buttons are live.
+  if (args.login) {
+    const [user, ...rest] = String(args.login).split(':');
+    const res = await ctx.request.post(`${BASE}/api/session/login`, { data: { user, password: rest.join(':') }, headers: { origin: BASE } });
+    ok('signed in as owner', res.ok(), String(res.status()));
+  }
 
   if (args.from && args.to) {
     await page.goto(withToken('/'), { waitUntil: 'domcontentloaded' });

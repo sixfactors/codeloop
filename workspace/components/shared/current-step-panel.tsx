@@ -138,16 +138,19 @@ function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
   return (
     <AttributeCard title="Nobody is on this" icon={Hand} testId="panel-nobody">
       {journey.check ? <CheckLine journey={journey} /> : <p className="text-sm text-muted-foreground">No check has run in this phase yet.</p>}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => setMine((m) => !m)} data-testid="work-myself"><Hand />Work on it myself</Button>
       {canWrite ? (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <>
           <Why reason={noAgent}>
             <Button size="sm" disabled={Boolean(noAgent) || runStage.isPending || Boolean(runId)} onClick={() => runStage.mutate({ id: card.id }, { onSuccess: ({ runId: id }) => setRunId(id), onError: (e) => toast.error(`Start an agent failed: ${(e as Error).message}`) })} data-testid="start-agent"><Bot />Start an agent</Button>
           </Why>
-          <Button size="sm" variant="outline" onClick={() => setMine((m) => !m)} data-testid="work-myself"><Hand />Work on it myself</Button>
           <Button size="sm" variant="outline" disabled={park.isPending} onClick={() => park.mutate({ id: card.id }, { onSuccess: () => toast.success(`Parked ${card.id}`), onError: (e) => toast.error(`Park failed: ${(e as Error).message}`) })} data-testid="park"><ParkingSquare />Park</Button>
           <Button size="sm" variant="ghost" disabled={advance.isPending} onClick={() => advance.mutate({ id: card.id }, { onError: (e) => toast.error(`Check failed to run: ${(e as Error).message}`) })} data-testid="check-now"><Play />{advance.isPending ? 'Checking…' : 'Check now'}</Button>
-        </div>
-      ) : <p className="mt-2 text-xs text-muted-foreground">{reason}</p>}
+        </>
+      ) : null}
+      </div>
+      {!canWrite ? <p className="mt-2 text-xs text-muted-foreground">{reason}</p> : null}
       {mine ? (
         <div className="mt-2 flex flex-col gap-2" data-testid="work-myself-box">
           <p className="text-xs text-muted-foreground">In the terminal or assistant session you work in, take the story, then follow its brief:</p>
