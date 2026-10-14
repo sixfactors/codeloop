@@ -49,8 +49,18 @@ function trunkRef(projectDir: string): string {
 }
 
 /** Commits carrying a `Card:` or `Feature:` trailer for the card, newest first, from HEAD only or (`branches`) from every local branch and worktree branch. */
-function scan(projectDir: string, cardId: string, all: boolean): { sha: string; subject: string; at: number; decorations: string }[] {
-  const log = git(projectDir, ['log', ...(all ? ['--all'] : []), '--format=%H%x00%s%x00%b%x00%D%x00%ct%x01']);
+/**
+ * The commit a scope check ends at. The gate measures a builder's work on its branch before any
+ * merge, so it sets `CODELOOP_STORY_REF` to the hand-back's head for the commands it runs; unset,
+ * the story is whatever the current checkout reaches. Only `check scope` reads the variable: the
+ * budget and health numbers are written into tracked evidence by `codeloop verify`, and measuring
+ * them on the branch made that file differ between the gate's run and the main tree's, which
+ * blocked the next story merge. Both still take an explicit `{ ref }`.
+ */
+export const storyRef = (ref?: string): string | undefined => ref || process.env.CODELOOP_STORY_REF?.trim() || undefined;
+
+function scan(projectDir: string, cardId: string, all: boolean, ref?: string): { sha: string; subject: string; at: number; decorations: string }[] {
+  const log = git(projectDir, ['log', ...(ref ? [ref] : all ? ['--all'] : []), '--format=%H%x00%s%x00%b%x00%D%x00%ct%x01']);
   const out: { sha: string; subject: string; at: number; decorations: string }[] = [];
   for (const rec of log.split('\u0001')) {
     const [sha, subject, body, decorations, ct] = rec.replace(/^\n/, '').split('\u0000');
@@ -70,8 +80,8 @@ export function storyCommits(projectDir: string, cardId: string): StoryCommit[] 
 }
 
 /** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
-export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean } = {}): { files: Map<string, number>; commits: number } {
-  const shas = scan(projectDir, cardId, Boolean(opts.branches)).map(c => c.sha);
+export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): { files: Map<string, number>; commits: number } {
+  const shas = scan(projectDir, cardId, Boolean(opts.branches), opts.ref).map(c => c.sha);
   const files = new Map<string, number>();
   for (const sha of shas) {
     for (const row of git(projectDir, ['show', '--numstat', '--format=', '--no-renames', sha]).split('\n')) {
@@ -84,7 +94,7 @@ export function storyFiles(projectDir: string, cardId: string, opts: { branches?
 }
 
 /** Files and added+deleted lines across the commits reachable from HEAD (or, with `branches`, from any branch) that carry a `Card:` or `Feature:` trailer for this card. */
-export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean } = {}): StoryDiff {
+export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): StoryDiff {
   const { files, commits } = storyFiles(projectDir, cardId, opts);
   return { files: files.size, lines: [...files.values()].reduce((a, b) => a + b, 0), commits };
 }
@@ -103,9 +113,9 @@ export function budgetFor(projectDir: string, size: Size): Budget | undefined {
 
 const n = (v: number) => v.toLocaleString('en-US');
 
-export function checkBudget(projectDir: string, cardId: string, size: Size | undefined): BudgetVerdict {
+export function checkBudget(projectDir: string, cardId: string, size: Size | undefined, opts: { ref?: string } = {}): BudgetVerdict {
   const used = size ?? 'M';
-  const diff = storyDiff(projectDir, cardId);
+  const diff = storyDiff(projectDir, cardId, opts);
   const limit = budgetFor(projectDir, used);
   if (!limit) return { ...diff, size: used, limit: 'off', pass: true, message: 'budget off' };
   const pass = diff.files <= limit.files && diff.lines <= limit.lines;

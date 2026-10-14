@@ -2,7 +2,7 @@ import { specPath } from './project-root.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { cardKey, findCard, findCardOrNone, readCards } from './cards.js';
-import { storyFiles } from './diff-budget.js';
+import { storyFiles, storyRef } from './diff-budget.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from './plan-scope.js';
 
 export interface CreepFile { path: string; lines: number }
@@ -12,11 +12,11 @@ export interface CreepFile { path: string; lines: number }
  * lists no files allows everything, the same as the edit guard, so nothing is reported for it.
  * Shared paths and the story's own working papers are never creep.
  */
-export function scopeCreep(projectDir: string, cardId: string): CreepFile[] {
+export function scopeCreep(projectDir: string, cardId: string, opts: { ref?: string } = {}): CreepFile[] {
   const card = findCard(readCards(projectDir).cards, cardId);
   const allowed = planFiles(projectDir, card);
   if (!allowed) return [];
-  const { files } = storyFiles(projectDir, card.id);
+  const { files } = storyFiles(projectDir, card.id, { ref: storyRef(opts.ref) });
   return [...files]
     .filter(([path]) => !pathInPlan(projectDir, allowed, path) && !isSharedPath(projectDir, path) && !outsidePlanScope(projectDir, card, path))
     .map(([path, lines]) => ({ path, lines }))
@@ -32,9 +32,9 @@ function scopeRows(text: string): { path: string; verdict: string; reason: strin
 }
 
 /** One line per out-of-plan file that has no acceptable verdict in review.md; empty when the review answers for all of them. */
-export function checkScope(projectDir: string, cardId: string): string[] {
+export function checkScope(projectDir: string, cardId: string, opts: { ref?: string } = {}): string[] {
   const card = findCard(readCards(projectDir).cards, cardId);
-  const creep = scopeCreep(projectDir, card.id);
+  const creep = scopeCreep(projectDir, card.id, opts);
   if (!creep.length) return [];
   const review = `evidence/${cardKey(card)}/review.md`;
   const file = specPath(projectDir, review);
