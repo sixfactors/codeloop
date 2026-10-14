@@ -20,8 +20,9 @@ when package.json names a version this file has no heading for.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed
-  check while someone works no longer shows red; failing means two or more fails and an hour with
-  no activity, or an agent run that ended on a failed check. Stale means two days untouched.
+  check while someone works no longer shows red; failing means an hour with no activity after two
+  or more fails, or after one fail with nobody on the story, or an agent run that ended on a failed
+  check. Stale means two days untouched.
 - Every Claude or Cursor session starts with the monitor: what waits for you, what is failing with
   its last check and the fix to run, and what is stale with park or drop. A done story is never
   named as the active one; the pointer is cleared instead.

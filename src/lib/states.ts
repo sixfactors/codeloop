@@ -50,6 +50,8 @@ type StateInput = Pick<Card, 'stage' | 'gate' | 'retries'> & { release?: string;
 export interface HealthContext {
   now?: number;
   lastActivityAt?: number;
+  /** A live session holds the story now. */
+  held?: boolean;
 }
 
 /** True when the last agent run on the story was followed by a failed check, with no advance since. */
@@ -80,7 +82,10 @@ function inProgressHealth(card: StateInput, ctx: HealthContext): Health {
   if (now - lastTouch > STALE_MS) return 'stale';
   if (agentEndedOnFail(card.events)) return 'failing';
   const fails = card.retries?.[card.stage] ?? 0;
-  const quietSince = ctx.lastActivityAt ?? lastEvent;
-  if (fails >= 2 && now - quietSince > QUIET_MS) return 'failing';
+  const quiet = now - (ctx.lastActivityAt ?? lastEvent) > QUIET_MS;
+  if (fails >= 2 && quiet) return 'failing';
+  // One failed check is a stage being worked only while someone works it: quiet for an hour with
+  // nobody holding it, the check is simply failing.
+  if (fails >= 1 && quiet && !ctx.held) return 'failing';
   return 'working';
 }

@@ -13,6 +13,12 @@ describe('one derived state per story', () => {
     expect(s?.flags).not.toContain('failing');
   });
 
+  it('one failed check, quiet for an hour, with nobody holding it is failing; held, it is working', () => {
+    const quiet = card({ retries: { build: 1 }, updatedAt: ago(2 * HOUR) });
+    expect(storyState(quiet, 0, { now: NOW, lastActivityAt: NOW - 2 * HOUR })?.health).toBe('failing');
+    expect(storyState(quiet, 0, { now: NOW, lastActivityAt: NOW - 2 * HOUR, held: true })?.health).toBe('working');
+  });
+
   it('two failed checks and no activity for an hour is failing', () => {
     expect(storyState(card({ retries: { build: 2 }, updatedAt: ago(2 * HOUR) }), 0, { now: NOW, lastActivityAt: NOW - 2 * HOUR })?.health).toBe('failing');
   });

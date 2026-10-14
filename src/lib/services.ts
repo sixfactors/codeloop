@@ -769,8 +769,9 @@ type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'
  * The story's state with its health, worked out now: health depends on the clock and on the last
  * activity line, which no index version tracks, so it is computed per request, not cached.
  */
-export function liveState(projectDir: string, card: Card, openQuestions: number, now = Date.now()): StoryState | undefined {
-  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id) });
+export function liveState(projectDir: string, card: Card, openQuestions: number, now = Date.now(), held?: Set<string>): StoryState | undefined {
+  const holding = held ?? new Set(activeSessions(projectDir).map(s => s.card));
+  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id), held: holding.has(card.id) });
 }
 
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
@@ -778,10 +779,11 @@ async function storyRows(index: ProjectIndex, projectDir: string): Promise<Board
   const { items } = await index.cards.list({}, undefined, 100_000);
   const raw = new Map(readCards(projectDir).cards.map(c => [c.id, c] as const));
   const now = Date.now();
+  const held = new Set(activeSessions(projectDir).map(s => s.card));
   return items
     .map(c => {
       const card = raw.get(c.id);
-      const display = card ? liveState(projectDir, card, c.openQuestions, now) : c.display;
+      const display = card ? liveState(projectDir, card, c.openQuestions, now, held) : c.display;
       return display ? storyRow({ ...c, display }, agents) : undefined;
     })
     .filter((r): r is BoardStory => Boolean(r));
@@ -867,8 +869,9 @@ export interface MonitorReport {
 export function monitorReport(projectDir: string, opts: { limit?: number; now?: number } = {}): MonitorReport {
   const limit = opts.limit ?? 5;
   const now = opts.now ?? Date.now();
+  const held = new Set(activeSessions(projectDir).map(s => s.card));
   const rows = readCards(projectDir).cards
-    .map(card => ({ card, state: liveState(projectDir, card, openQuestions(projectDir, card).length, now) }))
+    .map(card => ({ card, state: liveState(projectDir, card, openQuestions(projectDir, card).length, now, held) }))
     .filter((r): r is { card: Card; state: StoryState } => Boolean(r.state?.health));
   const lastFail = (card: Card) => card.events.filter(e => e.action === 'fail' && e.stage === card.stage).at(-1)?.note?.split('\n').filter(Boolean).at(-1);
   const item = (card: Card, withFix = false): MonitorItem => {
@@ -882,7 +885,7 @@ export function monitorReport(projectDir: string, opts: { limit?: number; now?: 
   const stale = of('stale');
   return {
     summary: { needsYou: needsYou.length, failing: failing.length, stale: stale.length, working: of('working').length },
-    needsYou: needsYou.slice(0, limit).map(r => item(r.card)),
+    needsYou: needsYou.slice(0, limit).map(r => item(r.card, r.state.health === 'stuck')),
     failing: failing.slice(0, limit).map(r => item(r.card, true)),
     stale: stale.slice(0, limit).map(r => item(r.card)),
   };
@@ -894,7 +897,10 @@ export function monitorLines(report: MonitorReport): string[] {
   const lines = [`codeloop monitor: ${s.needsYou} waiting for you, ${s.failing} failing, ${s.stale} stale, ${s.working} working`];
   if (report.needsYou.length) {
     lines.push('Waiting for you:');
-    for (const c of report.needsYou) lines.push(`  ${c.id} ${c.title} (${c.stage})`);
+    for (const c of report.needsYou) {
+      lines.push(`  ${c.id} ${c.title} (${c.stage}${c.fix ? ', stuck' : ''})${c.lastCheck && c.fix ? `: ${c.lastCheck}` : ''}`);
+      if (c.fix) lines.push(`    ${c.fix}`);
+    }
   }
   if (report.failing.length) {
     lines.push('Failing:');
