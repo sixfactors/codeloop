@@ -24,6 +24,7 @@ import { mockHref } from './mock.js';
 import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
 import { readActivity, type ActivityEntry } from './activity.js';
+import { activityText, journeyOf, lastActivity, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
@@ -40,6 +41,7 @@ export type { LintResult, Page as WikiEntry } from './wiki.js';
 export type { RunRecord, RunView } from './runs.js';
 export type { ActivityEntry, ActivityLine } from './activity.js';
 export type { ActivityFrame } from './index/index.js';
+export type { CheckSummary, Journey, JourneyStep, StepState, StoryHolder } from './journey.js';
 export type { ProjectDetection } from './detect.js';
 export type { AdoptResult } from './skills.js';
 
@@ -109,6 +111,8 @@ export interface CardHolder {
 
 export interface CardFull {
   card: Card & CardHolder & { mock?: string; openQuestions: number };
+  /** The lane's phases with where this story is in them, who holds it, and its last check in words. */
+  journey: Journey;
   spec: { dir: string; text: string | null } | null;
   tasks: Task[];
   questions: Question[];
@@ -241,9 +245,14 @@ export const run = (projectDir: string, runId: string): RunView | undefined => g
 
 /** A card's activity, oldest first, from `after` (the last cursor a caller saw); `next` when more remain. */
 export function cardActivity(projectDir: string, ref: string, opts: { after?: string; limit?: number } = {}): CardActivity {
-  const card = findCard(readCards(projectDir).cards, ref).id;
+  const found = findCard(readCards(projectDir).cards, ref);
+  const card = found.id;
   const { items, next } = readActivity(projectDir, card, opts);
-  return { card, lines: items, next: next ?? null };
+  // Each line is stamped with the phase the story was in when it was written, so a screen can
+  // filter by phase without matching times against the journey itself.
+  const windows = journeyOf(projectDir, found).steps.filter(s => s.enteredAt && (s.state === 'done' || s.state === 'current' || s.state === 'gate'));
+  const phaseAt = (at: string) => [...windows].reverse().find(s => at >= s.enteredAt! && (s.state !== 'done' || !s.leftAt || at <= s.leftAt))?.id;
+  return { card, lines: items.map(l => ({ ...l, phase: typeof l.stage === 'string' ? l.stage : phaseAt(l.at) })), next: next ?? null };
 }
 
 /** `GET /api/cards/:id/activity`: one page of the card's activity, oldest first; `next` is the cursor to pass as `after`, null at the end. */
@@ -567,6 +576,7 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     evidence,
     mock: mock ? mockHref(mock) : null,
     page,
+    journey: journeyOf(projectDir, card, { tasks }),
   };
 }
 
@@ -796,12 +806,24 @@ export async function boardView(index: ProjectIndex, projectDir: string): Promis
   };
 }
 
+/** One agent session on Home: its story and phase, its last activity line and whether it is still going. */
+export interface AgentTile {
+  session: string;
+  label: string;
+  card: string;
+  title?: string;
+  stage?: string;
+  since: string;
+  state: 'working' | 'check failing' | 'idle' | 'stopped';
+  last?: { at: string; text: string };
+}
+
 export interface HomeView {
   summary: { needsYou: number; inProgress: number; failing: number; shippedThisWeek: number; agentsWorking: number };
   needsYou: BoardStory[];
   failing: BoardStory[];
   inProgress: BoardStory[];
-  agents: { session: string; label: string; card: string; title?: string; since: string }[];
+  agents: AgentTile[];
   shipped: BoardStory[];
 }
 
@@ -813,7 +835,13 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   const failing = rows.filter(r => r.display.flags.includes('failing')).sort(newestFirst);
   const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
   const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
-  const agents = activeSessions(projectDir).map(s => ({ session: s.session, label: s.label ?? s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
+  const agents = activeSessions(projectDir).map((s): AgentTile => {
+    const row = rows.find(r => r.id === s.card);
+    const last = lastActivity(projectDir, s.card);
+    const quiet = last ? Date.now() - Date.parse(last.at) : Date.now() - Date.parse(s.updatedAt);
+    const state: AgentTile['state'] = last?.kind === 'end' ? 'stopped' : last?.kind === 'check' && !last.pass ? 'check failing' : quiet > 10 * 60_000 ? 'idle' : 'working';
+    return { session: s.session, label: s.label ?? s.session, card: s.card, title: row?.title, stage: row?.stage, since: s.startedAt, state, ...(last ? { last: { at: last.at, text: activityText(last) } } : {}) };
+  });
   return {
     summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
     needsYou, failing, inProgress, agents, shipped,

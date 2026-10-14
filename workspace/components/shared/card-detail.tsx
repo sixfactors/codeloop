@@ -7,35 +7,33 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  CalendarDays, Check, ClipboardList, ExternalLink, FileText, Flag, Gauge, Hash, Layers, Lock, Ruler, Target, User, Waypoints, X, BookOpen, FolderOpen,
+  CalendarDays, ClipboardList, ExternalLink, FileText, Flag, Gauge, Hash, Ruler, Target, User, Waypoints, BookOpen, FolderOpen,
 } from 'lucide-react';
-import { toast } from '@/lib/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AttributeCard, RecordLayout, RecordStatRow } from '@/components/shared/record-layout';
+import { AttributeCard, RecordLayout } from '@/components/shared/record-layout';
 import { FieldRow, FieldSectionLabel } from '@/components/shared/field-row';
 import { MetaChip } from '@/components/shared/meta-chip';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
 import { BandChip } from '@/components/shared/band-chip';
-import { ToneBadge, cardTone } from '@/components/shared/board-card';
+import { ToneBadge } from '@/components/shared/board-card';
 import { Questions } from '@/components/shared/questions';
 import { Markdown } from '@/components/shared/markdown';
-import { StageCard } from '@/components/shared/stage-card';
+import { JourneyStepper } from '@/components/shared/journey-stepper';
+import { CurrentStepPanel } from '@/components/shared/current-step-panel';
+import { ActivityFeed } from '@/components/shared/activity-feed';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CardOutputTab } from '@/components/shared/card-output-tab';
 import { CardActionMenu } from '@/components/shared/card-action-menu';
-import { useCanWrite, useCard, useCardFull, useDecide, useQuestions, isMissing } from '@/hooks/use-api';
+import { useCard, useCardFull, useCardOutput, isMissing } from '@/hooks/use-api';
 import { mockUrl } from '@/lib/api';
-import { isGateWaiting } from '@/lib/cards';
 import { evidenceId } from '@/lib/routes';
 import { useRoutes } from '@/components/providers/project-provider';
 import type { Card as CardT, EvidenceFile } from '@/lib/types';
 
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : undefined);
 
 export function storyLine(card: CardT): string | undefined {
@@ -44,37 +42,9 @@ export function storyLine(card: CardT): string | undefined {
   return card.description;
 }
 
-/** The gate card: amber because a person is needed. Approve / Reject with an optional note. */
-function GateCard({ card }: { card: CardT }) {
-  const decide = useDecide();
-  const { canWrite, reason } = useCanWrite();
-  const [note, setNote] = useState('');
-  if (!isGateWaiting(card) && !(card.gate || card.awaiting)) return null;
-  const act = (action: 'approve' | 'reject') =>
-    decide.mutate(
-      { id: card.id, action, note: note || undefined },
-      { onSuccess: () => { toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${card.id}`); setNote(''); }, onError: (e) => toast.error(`${action === 'approve' ? 'Approve' : 'Reject'} failed: ${(e as Error).message}`) }
-    );
-  return (
-    <AttributeCard title="Gate" icon={Lock} className="border-warning/50" testId="gate-card">
-      <FieldRow label="Waiting on" value={card.awaiting ?? 'owner'} icon={User} />
-      <FieldRow label="Gate" value={card.gate} icon={Flag} />
-      <div className="mt-3 flex flex-col gap-2">
-        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
-        <div className="flex gap-2">
-          <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />Approve</Button>
-          <Button size="sm" variant="outline" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('reject')} data-testid="gate-reject"><X />Reject</Button>
-        </div>
-        {!canWrite ? <p className="text-xs text-muted-foreground">{reason}</p> : null}
-      </div>
-    </AttributeCard>
-  );
-}
-
 export function CardHeaderTags({ card }: { card: CardT }) {
   return (
     <>
-      <Badge variant="outline" className="rounded-full">{card.lane}</Badge>
       <Badge variant="secondary" className="rounded-full">{card.stage}</Badge>
       <BandChip band={card.band} score={card.score} />
       <ToneBadge card={card} />
@@ -109,123 +79,118 @@ export function CardDetailSkeleton() {
   );
 }
 
+/** What the current phase has produced: its output file rendered, the task list, evidence and questions, each once. */
+function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof useCardFull> }) {
+  const routes = useRoutes();
+  const output = useCardOutput(card.id);
+  const [editing, setEditing] = useState(false);
+  const tasks = full.data?.tasks ?? [];
+  const counts = full.data?.journey?.tasks;
+  const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
+  const questions = full.data?.questions ?? [];
+  return (
+    <div className="flex flex-col gap-4" data-testid="produced">
+      <section className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-medium">Output</h3>
+          {output.data?.path ? <span className="font-mono text-xs text-muted-foreground break-all">{output.data.path}</span> : null}
+          <Button size="xs" variant="ghost" className="ml-auto" onClick={() => setEditing((e) => !e)} data-testid="edit-output">{editing ? 'Done editing' : 'Edit'}</Button>
+        </div>
+        {editing ? <CardOutputTab card={card} />
+          : output.data?.text ? <div className="rounded-xl border bg-card p-4"><Markdown>{output.data.text}</Markdown></div>
+          : !output.data && !output.error ? <Skeleton className="h-16 w-full" />
+          : <EmptyState compact icon={FileText} title="Nothing written in this phase yet" description={output.data?.path ? `This phase writes ${output.data.path}.` : 'This phase has no output file.'} />}
+      </section>
+      {tasks.length ? (
+        <section className="flex flex-col gap-2" data-testid="tasks">
+          <h3 className="text-sm font-medium">Tasks{counts ? <span className="ml-2 text-xs font-normal text-muted-foreground">{counts.done} of {counts.total}</span> : null}</h3>
+          <ul className="flex flex-col gap-1 rounded-xl border bg-card p-3">
+            {tasks.map((t) => (
+              <li key={t.id} className="flex items-start gap-2 text-sm">
+                <Checkbox checked={t.done} disabled aria-label={t.done ? 'done' : 'not done'} className="mt-0.5" />
+                <span className={t.done ? 'text-muted-foreground line-through' : undefined}>{t.text}</span>
+                {t.layer ? <Badge variant="outline" className="ml-auto rounded-full">{t.layer}</Badge> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {evidence.length ? (
+        <section className="flex flex-col gap-2" data-testid="evidence">
+          <div className="flex items-center gap-2"><h3 className="text-sm font-medium">Evidence</h3><Button size="xs" variant="ghost" className="ml-auto" nativeButton={false} render={<Link href={routes.evidence(evidenceId(card.id))} />}>Open folder</Button></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {evidence.map((e, i) => {
+              const f = typeof e === 'string' ? { name: e } : e;
+              const image = f.path && /\.(png|jpe?g)$/i.test(f.name);
+              return (
+                <figure key={`${f.name}-${i}`} className="flex min-w-0 flex-col gap-1 rounded-xl border bg-card p-2">
+                  {/* Evidence is served as files by the API; next/image would need it configured as a remote. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {image ? <a href={f.path} target="_blank" rel="noreferrer"><img src={f.path} alt={f.name} className="max-h-48 w-full rounded object-contain" /></a> : null}
+                  <figcaption className="truncate font-mono text-xs text-muted-foreground" title={f.name}>{f.name}</figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+      {questions.length ? (
+        <section className="flex flex-col gap-2"><h3 className="text-sm font-medium">Questions</h3><Questions cardId={card.id} /></section>
+      ) : null}
+    </div>
+  );
+}
+
 export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boolean }) {
   const routes = useRoutes();
   const full = useCardFull(card.id);
-  const questions = useQuestions(card.id);
-  const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
-  const tasks = full.data?.tasks ?? [];
   const fullMissing = full.error && isMissing(full.error);
-  const openQ = (questions.data ?? []).filter((q) => !q.answer).length;
-  const tone = cardTone(card);
+  const journey = full.data?.journey;
+  const phases = journey?.steps.filter((s) => s.state !== 'ahead' && s.state !== 'skipped').map((s) => s.id) ?? [];
 
   const rail = (
-    <>
-      <StageCard card={card} />
-      <GateCard card={card} />
-      <AttributeCard title="Details" icon={ClipboardList} testId="card-details">
-        <FieldRow icon={Hash} label="Id" value={card.id} mono />
-        <FieldRow icon={Waypoints} label="Lane" value={card.lane} />
-        <FieldRow icon={Layers} label="Stage" value={card.stage} adornment={tone !== 'none' ? <ToneBadge card={card} /> : undefined} />
-        <FieldRow icon={Target} label="Initiative" value={card.initiative} />
-        <FieldRow icon={Flag} label="Epic" value={card.epic} href={card.epic ? routes.card(card.epic) : undefined} />
-        <FieldRow icon={FileText} label="Feature" value={card.feature} />
-        <FieldRow icon={Gauge} label="Metric" value={card.metric} />
-        <FieldSectionLabel>Sizing</FieldSectionLabel>
-        <FieldRow icon={Ruler} label="Size" value={card.size} />
-        <FieldRow icon={Ruler} label="Points" value={card.points !== undefined ? String(card.points) : undefined} mono />
-        <FieldRow icon={User} label="Persona" value={card.persona} />
-        <FieldSectionLabel>Dates</FieldSectionLabel>
-        <FieldRow icon={CalendarDays} label="Created" value={fmtDate(card.createdAt)} />
-        <FieldRow icon={CalendarDays} label="Updated" value={fmtDate(card.updatedAt)} />
-      </AttributeCard>
-    </>
+    <AttributeCard title="Details" icon={ClipboardList} testId="card-details">
+      <FieldRow icon={Hash} label="Id" value={card.id} mono />
+      <FieldRow icon={Waypoints} label="Lane" value={card.lane} />
+      <FieldRow icon={Target} label="Initiative" value={card.initiative} />
+      <FieldRow icon={Flag} label="Epic" value={card.epic} href={card.epic ? routes.card(card.epic) : undefined} />
+      <FieldRow icon={FileText} label="Feature" value={card.feature} />
+      <FieldRow icon={Gauge} label="Metric" value={card.metric} />
+      <FieldSectionLabel>Sizing</FieldSectionLabel>
+      <FieldRow icon={Ruler} label="Size" value={card.size} />
+      <FieldRow icon={Ruler} label="Points" value={card.points !== undefined ? String(card.points) : undefined} mono />
+      <FieldRow icon={User} label="Persona" value={card.persona} />
+      <FieldSectionLabel>Dates</FieldSectionLabel>
+      <FieldRow icon={CalendarDays} label="Created" value={fmtDate(card.createdAt)} />
+      <FieldRow icon={CalendarDays} label="Updated" value={fmtDate(card.updatedAt)} />
+    </AttributeCard>
   );
 
   return (
-    <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
-      <div className="flex flex-col gap-4">
-        <RecordStatRow
-          stats={[
-            { label: 'Open questions', value: !questions.data && !questions.error ? <Skeleton className="h-7 w-8" /> : openQ },
-            { label: 'Events', value: card.events?.length ?? 0 },
-            { label: 'Tasks done', value: `${tasks.filter((t) => t.done).length}/${tasks.length}` },
-            { label: 'Evidence files', value: evidence.length },
-          ]}
-        />
-        <Tabs defaultValue="questions">
-          <TabsList className="h-auto w-full flex-wrap justify-start">
-            <TabsTrigger value="questions">Questions</TabsTrigger>
-            <TabsTrigger value="output" data-testid="tab-output">Output</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="spec">Spec</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="evidence">Evidence</TabsTrigger>
-          </TabsList>
-          <TabsContent value="questions" className="pt-2"><Questions cardId={card.id} /></TabsContent>
-          <TabsContent value="output" className="pt-2"><CardOutputTab card={card} /></TabsContent>
-          <TabsContent value="history" className="pt-2">
-            {card.events?.length ? (
-              <div className="overflow-x-auto rounded-xl border">
-                <Table>
-                  <TableHeader>
-                    <TableRow><TableHead>When</TableHead><TableHead>Who</TableHead><TableHead>Action</TableHead><TableHead>Stage</TableHead><TableHead>Note</TableHead></TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...card.events].reverse().map((e, i) => (
-                      <TableRow key={`${e.at}-${i}`}>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">{fmt(e.at)}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className={e.human ? 'rounded-full' : 'rounded-full border-transparent bg-ai/15 text-ai'}>{e.actor ?? (e.human ? 'human' : 'agent')}</Badge>
-                        </TableCell>
-                        <TableCell>{e.action}</TableCell>
-                        <TableCell>{e.stage}</TableCell>
-                        <TableCell className="max-w-56 truncate text-xs text-muted-foreground" title={e.note}>{e.note}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : <EmptyState compact icon={ClipboardList} title="No events yet" description="Every advance, park and answer lands here." />}
-          </TabsContent>
-          <TabsContent value="spec" className="pt-2">
-            {full.data?.spec ? <Markdown>{full.data.spec}</Markdown>
-              : !full.data && !full.error ? <Skeleton className="h-16 w-full" />
-              : full.error && !fullMissing ? <InlineError title="Spec failed to load" error={full.error} onRetry={() => full.refetch()} />
-              : <EmptyState compact icon={FileText} title="No spec yet" description={fullMissing ? `Spec text arrives with GET /api/cards/:id/full${card.spec ? ` (folder: ${card.spec})` : ''}.` : `The spec step writes it${card.spec ? ` to ${card.spec}` : ''}.`} />}
-          </TabsContent>
-          <TabsContent value="tasks" className="pt-2">
-            {tasks.length ? (
-              <div className="overflow-x-auto rounded-xl border">
-                <Table>
-                  <TableHeader><TableRow><TableHead className="w-10">Done</TableHead><TableHead>Task</TableHead><TableHead>Layer</TableHead><TableHead>Accept</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {tasks.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{t.done ? <Check className="size-4 text-success" aria-label="done" /> : null}</TableCell>
-                        <TableCell>{t.text}</TableCell>
-                        <TableCell>{t.layer ? <Badge variant="outline" className="rounded-full">{t.layer}</Badge> : null}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{t.accept}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : <EmptyState compact icon={ClipboardList} title="No tasks" description={fullMissing ? 'Tasks arrive with GET /api/cards/:id/full.' : 'The spec step lists tasks here.'} />}
-          </TabsContent>
-          <TabsContent value="evidence" className="pt-2">
-            {evidence.length ? (
-              <div className="rounded-xl border bg-card px-4">
-                {evidence.map((e, i) => {
-                  const f = typeof e === 'string' ? { name: e } : e;
-                  return <FieldRow key={`${f.name}-${i}`} icon={FolderOpen} label={f.kind ?? 'file'} value={f.name} mono adornment={f.path ? <span className="text-xs text-muted-foreground">{f.path}</span> : undefined} />;
-                })}
-              </div>
-            ) : <EmptyState compact icon={FolderOpen} title="No evidence recorded" description="Verify writes its proof here." action={{ label: 'Open evidence folder', href: routes.evidence(evidenceId(card.id)) }} />}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </RecordLayout>
+    <div className="flex min-w-0 flex-col gap-4">
+      {journey ? <JourneyStepper journey={journey} /> : !full.data && !full.error ? <Skeleton className="h-12 w-full rounded-lg" /> : null}
+      <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
+          <CurrentStepPanel key={card.id} card={card} journey={journey} />
+          <Tabs defaultValue="output" key={`tabs-${card.id}`}>
+            <TabsList className="h-auto w-full flex-wrap justify-start">
+              <TabsTrigger value="output" data-testid="tab-output">Output</TabsTrigger>
+              <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
+              <TabsTrigger value="spec">Spec</TabsTrigger>
+            </TabsList>
+            <TabsContent value="output" className="pt-2"><ProducedByStep card={card} full={full} /></TabsContent>
+            <TabsContent value="activity" className="pt-2"><ActivityFeed cardId={card.id} phases={phases} /></TabsContent>
+            <TabsContent value="spec" className="pt-2">
+              {full.data?.spec ? <Markdown>{full.data.spec}</Markdown>
+                : !full.data && !full.error ? <Skeleton className="h-16 w-full" />
+                : full.error && !fullMissing ? <InlineError title="Spec failed to load" error={full.error} onRetry={() => full.refetch()} />
+                : <EmptyState compact icon={FileText} title="No spec yet" description={`The spec phase writes it${card.spec ? ` to ${card.spec}` : ''}.`} />}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </RecordLayout>
+    </div>
   );
 }
 

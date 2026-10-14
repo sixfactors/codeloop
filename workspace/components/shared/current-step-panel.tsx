@@ -1,0 +1,176 @@
+'use client';
+
+// The one panel under the journey: what is happening in the current phase and what can be done
+// about it, in one of three shapes chosen by who holds the story (the API's `journey.holder`):
+//   agent  - the live activity feed, elapsed time, Stop and Open brief
+//   you    - the check in one sentence, then Approve/Reject at a gate, or the open questions
+//   nobody - the check output as a sentence, then Start an agent, Work on it myself, Park, Check now
+// The caller keys it by card id, so moving the drawer to another story starts it fresh.
+
+import { useEffect, useState } from 'react';
+import { Bot, Check, CheckCircle2, FileText, Hand, Lock, ParkingSquare, Play, Square, X, XCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AttributeCard } from '@/components/shared/record-layout';
+import { ActivityFeed } from '@/components/shared/activity-feed';
+import { CopyButton } from '@/components/shared/copy-button';
+import { Holder } from '@/components/shared/holder';
+import { Questions } from '@/components/shared/questions';
+import { RunLogPane } from '@/components/shared/run-log-pane';
+import { since } from '@/components/shared/journey-stepper';
+import { useAdvance, useBrief, useCanWrite, useDecide, usePark, useRunStage, useSetupStatus } from '@/hooks/use-api';
+import { toast } from '@/lib/toast';
+import type { Card as CardT, Journey } from '@/lib/types';
+
+function Why({ reason, children }: { reason?: string; children: React.ReactNode }) {
+  if (!reason) return <>{children}</>;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex" tabIndex={0} />}>{children}</TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function useElapsed(from?: string) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (!from) return undefined;
+  const s = Math.max(0, Math.floor((now - Date.parse(from)) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+}
+
+function CheckLine({ journey }: { journey: Journey }) {
+  const check = journey.check;
+  if (!check) return null;
+  return (
+    <Alert variant={check.pass ? 'default' : 'destructive'} data-testid="check-sentence" data-pass={check.pass}>
+      {check.pass ? <CheckCircle2 /> : <XCircle />}
+      <AlertTitle>{check.sentence}</AlertTitle>
+      {!check.pass && check.output && check.output.trim() !== check.sentence ? (
+        <AlertDescription><pre className="max-h-32 w-full overflow-auto font-mono text-[11px] whitespace-pre-wrap">{check.output.trim()}</pre></AlertDescription>
+      ) : null}
+    </Alert>
+  );
+}
+
+function BriefBox({ cardId }: { cardId: string }) {
+  const brief = useBrief(cardId, true);
+  return (
+    <pre className="max-h-60 overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-[11px] leading-4 whitespace-pre-wrap" data-testid="brief">
+      {brief.data ?? (brief.error ? `Brief unavailable: ${(brief.error as Error).message}` : 'Loading the brief…')}
+    </pre>
+  );
+}
+
+function AgentShape({ card, journey }: { card: CardT; journey: Journey }) {
+  const holder = journey.holder;
+  const elapsed = useElapsed(holder.since);
+  const [brief, setBrief] = useState(false);
+  const [runOpen, setRunOpen] = useState(true);
+  return (
+    <AttributeCard title="Agent working" icon={Bot} testId="panel-agent">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Holder agent={holder.agent} />
+        <span className="font-medium">{holder.agent}</span>
+        {elapsed ? <span className="text-xs text-muted-foreground tabular-nums">{elapsed}</span> : null}
+      </div>
+      <CheckLine journey={journey} />
+      <ActivityFeed cardId={card.id} limit={12} className="mt-1" />
+      {holder.runId && runOpen ? <RunLogPane runId={holder.runId} onClose={() => setRunOpen(false)} /> : null}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Why reason="Stopping a session from the board is not built yet; stop it in the terminal it runs in.">
+          <Button size="sm" variant="outline" disabled data-testid="agent-stop"><Square />Stop</Button>
+        </Why>
+        <Button size="sm" variant="ghost" onClick={() => setBrief((b) => !b)} data-testid="open-brief"><FileText />{brief ? 'Hide brief' : 'Open brief'}</Button>
+      </div>
+      {brief ? <BriefBox cardId={card.id} /> : null}
+    </AttributeCard>
+  );
+}
+
+function YouShape({ card, journey }: { card: CardT; journey: Journey }) {
+  const decide = useDecide();
+  const { canWrite, reason } = useCanWrite();
+  const [note, setNote] = useState('');
+  const holder = journey.holder;
+  const act = (action: 'approve' | 'reject') =>
+    decide.mutate(
+      { id: card.id, action, note: note || undefined },
+      { onSuccess: () => { toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${card.id}`); setNote(''); }, onError: (e) => toast.error(`${action === 'approve' ? 'Approve' : 'Reject'} failed: ${(e as Error).message}`) }
+    );
+  return (
+    <AttributeCard title={holder.gate ? `Waiting for you at ${holder.gate}` : 'Questions for you'} icon={holder.gate ? Lock : Hand} className="border-warning/50" testId="panel-you">
+      <CheckLine journey={journey} />
+      {holder.gate ? (
+        <div className="mt-2 flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">Gate {holder.gate}, approved by the {holder.awaiting ?? 'owner'}.</p>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />Approve</Button>
+            <Button size="sm" variant="outline" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('reject')} data-testid="gate-reject"><X />Reject</Button>
+          </div>
+          {!canWrite ? <p className="text-xs text-muted-foreground">{reason}</p> : null}
+        </div>
+      ) : null}
+      {holder.openQuestions ? <div className="mt-2"><Questions cardId={card.id} compact /></div> : null}
+    </AttributeCard>
+  );
+}
+
+function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
+  const { canWrite, reason } = useCanWrite();
+  const setup = useSetupStatus();
+  const advance = useAdvance();
+  const runStage = useRunStage();
+  const park = usePark();
+  const [runId, setRunId] = useState<string | null>(null);
+  const [mine, setMine] = useState(false);
+  const noAgent = setup.data && setup.data.agentsConfigured === 0 ? 'No agent configured. Settings › Agents shows the lines to add to .codeloop/config.yaml.' : undefined;
+  const command = `codeloop card activate ${card.id}`;
+  return (
+    <AttributeCard title="Nobody is on this" icon={Hand} testId="panel-nobody">
+      {journey.check ? <CheckLine journey={journey} /> : <p className="text-sm text-muted-foreground">No check has run in this phase yet.</p>}
+      {canWrite ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Why reason={noAgent}>
+            <Button size="sm" disabled={Boolean(noAgent) || runStage.isPending || Boolean(runId)} onClick={() => runStage.mutate({ id: card.id }, { onSuccess: ({ runId: id }) => setRunId(id), onError: (e) => toast.error(`Start an agent failed: ${(e as Error).message}`) })} data-testid="start-agent"><Bot />Start an agent</Button>
+          </Why>
+          <Button size="sm" variant="outline" onClick={() => setMine((m) => !m)} data-testid="work-myself"><Hand />Work on it myself</Button>
+          <Button size="sm" variant="outline" disabled={park.isPending} onClick={() => park.mutate({ id: card.id }, { onSuccess: () => toast.success(`Parked ${card.id}`), onError: (e) => toast.error(`Park failed: ${(e as Error).message}`) })} data-testid="park"><ParkingSquare />Park</Button>
+          <Button size="sm" variant="ghost" disabled={advance.isPending} onClick={() => advance.mutate({ id: card.id }, { onError: (e) => toast.error(`Check failed to run: ${(e as Error).message}`) })} data-testid="check-now"><Play />{advance.isPending ? 'Checking…' : 'Check now'}</Button>
+        </div>
+      ) : <p className="mt-2 text-xs text-muted-foreground">{reason}</p>}
+      {mine ? (
+        <div className="mt-2 flex flex-col gap-2" data-testid="work-myself-box">
+          <p className="text-xs text-muted-foreground">In the terminal or assistant session you work in, take the story, then follow its brief:</p>
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1 font-mono text-xs"><span className="min-w-0 flex-1 truncate">{command}</span><CopyButton text={command} /></div>
+          <BriefBox cardId={card.id} />
+        </div>
+      ) : null}
+      {runId ? <RunLogPane runId={runId} onClose={() => setRunId(null)} /> : null}
+    </AttributeCard>
+  );
+}
+
+export function CurrentStepPanel({ card, journey }: { card: CardT; journey?: Journey }) {
+  if (!journey) return null;
+  const current = journey.steps.find((s) => s.state === 'current' || s.state === 'gate');
+  if (!current) return null;
+  const shape = journey.holder.kind;
+  return (
+    <div data-testid="current-step-panel" data-card={card.id} data-shape={shape} className="flex flex-col gap-1">
+      <p className="text-xs text-muted-foreground">
+        {current.id}{current.enteredAt ? ` since ${since(current.enteredAt)}` : ''}
+      </p>
+      {shape === 'agent' ? <AgentShape card={card} journey={journey} /> : shape === 'you' ? <YouShape card={card} journey={journey} /> : <NobodyShape card={card} journey={journey} />}
+    </div>
+  );
+}

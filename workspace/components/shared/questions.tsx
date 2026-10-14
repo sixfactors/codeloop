@@ -24,7 +24,7 @@ function QuestionRow({ cardId, q }: { cardId: string; q: Question }) {
           <span className="font-mono text-xs text-muted-foreground">#{q.n}</span>
           <span>{q.question}</span>
         </ItemTitle>
-        {q.recommended ? <ItemDescription>Recommended: {q.recommended}</ItemDescription> : null}
+        {q.recommended && !answered ? <ItemDescription>Recommended: {q.recommended}</ItemDescription> : null}
         {answered ? <ItemDescription className="text-foreground"><Badge variant="secondary" className="mr-1">answered</Badge>{q.answer}</ItemDescription> : null}
       </ItemContent>
       {!answered ? (

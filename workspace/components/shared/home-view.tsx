@@ -19,9 +19,25 @@ import { Holder } from '@/components/shared/holder';
 import { StatePill } from '@/components/shared/state-pill';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
+import { cn } from '@/lib/utils';
+import type { AgentTile } from '@/lib/types';
 import { useHome } from '@/hooks/use-api';
 import { useRoutes } from '@/components/providers/project-provider';
 import type { BoardStory } from '@/lib/types';
+
+const AGENT_STATE: Record<AgentTile['state'], string> = {
+  working: 'border-transparent bg-ai/15 text-ai',
+  'check failing': 'border-transparent bg-destructive/15 text-destructive',
+  idle: 'text-muted-foreground',
+  stopped: 'text-muted-foreground',
+};
+
+/** "40s ago", "12 min ago", "3h ago". */
+const ago = (iso: string) => {
+  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)}h ago`;
+};
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
 
@@ -126,24 +142,28 @@ export function HomeView() {
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <AttributeCard title="Agents now" icon={Bot} testId="home-agents">
             {data.agents.length ? (
-              <div className="flex flex-col">
+              <ItemGroup className="gap-2">
                 {data.agents.map((a) => (
-                  <FieldRow
-                    key={a.session}
-                    label={a.session}
-                    value={<Link href={routes.card(a.card)} className="truncate hover:underline">{a.title ?? a.card}</Link>}
-                    valueLeading={<Holder agent={a.session} />}
-                    testId={`home-agent-row-${a.session}`}
-                  />
+                  <Item key={a.session} variant="outline" size="sm" className="flex-col items-stretch" render={<Link href={routes.card(a.card)} />} data-testid={`home-agent-tile-${a.card}`}>
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="flex w-full min-w-0 items-center gap-2">
+                        <Holder agent={a.label} />
+                        <span className="truncate">{a.label}</span>
+                        <Badge variant="outline" className={cn('ml-auto shrink-0 rounded-full', AGENT_STATE[a.state])}>{a.state}</Badge>
+                      </ItemTitle>
+                      <ItemDescription className="truncate text-foreground">{a.card} {a.title}{a.stage ? <span className="text-muted-foreground"> · {a.stage}</span> : null}</ItemDescription>
+                      {a.last ? <ItemDescription className="truncate">{a.last.text} · {ago(a.last.at)}</ItemDescription> : null}
+                    </ItemContent>
+                  </Item>
                 ))}
-              </div>
+              </ItemGroup>
             ) : <EmptyState compact icon={Bot} title="No agent is working" description="A session working a story shows up here while it runs." />}
           </AttributeCard>
 
           <AttributeCard title="Shipped this week" icon={CheckCircle2} testId="home-shipped">
             {data.shipped.length ? (
               <div className="flex flex-col">
-                {data.shipped.map((s) => <FieldRow key={s.id} label={s.id} value={s.title} href={routes.card(s.id)} testId={`home-shipped-row-${s.id}`} />)}
+                {data.shipped.map((s) => <FieldRow key={s.id} label={s.id} value={<Link href={routes.card(s.id)} className="truncate hover:underline">{s.title}</Link>} testId={`home-shipped-row-${s.id}`} />)}
               </div>
             ) : <EmptyState compact icon={CheckCircle2} title="Nothing shipped yet" description="Stories that reach done or ship in the last 7 days show here." />}
           </AttributeCard>
