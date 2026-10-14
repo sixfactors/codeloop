@@ -9,6 +9,7 @@ when package.json names a version this file has no heading for.
 
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
 - `codeloop verify` fails a story whose diff exceeds the budget for its size (S 8 files / 300 lines, M 20 / 1,200, L 40 / 3,000; `diff_budget:` overrides, `budget: off` disables) and writes a `budget:` line to evidence; `codeloop card diff <id>` shows the numbers.
+- The build lane has a `data-model` stage between spec and build: `codeloop check data-model <card>` passes when no task is tagged `[data]` and spec.md names no `entities:`, and otherwise needs `specs/NNN/data-model.md` (Entities, Stores, Indexes, Migration) whose every store is named on `.codeloop/wiki/architecture/data-model.md`. Run `codeloop lane refresh build` to pick it up.
 - The review stage fails while a file the story changed outside its plan has no verdict: `codeloop check scope <card>` lists each one with its line count, and evidence/<nnn>/review.md needs a `## Scope` row per file saying `keep` (reason of 10+ words), `revert`, or `move to <card-id>`. Run `codeloop lane refresh build` to pick it up.
 
 ### Watch an agent work a story

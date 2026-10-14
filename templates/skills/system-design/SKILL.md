@@ -52,6 +52,17 @@ feature slice, a new service, a deployment topology change, a data-store migrati
 10. **Self-check.** `codeloop check artifact {id} --kind system-design`. Every environment named in
     `environments:` needs a deployment-topology row; every software-layer box needs a named tech.
 
+## Data-model stage
+
+The build lane's `data-model` stage runs this skill on a story that changes stored data (a task
+tagged `[data]`, or an `entities:` list in spec.md). It writes `specs/NNN/data-model.md`, not an
+artifact.
+
+1. Read `.codeloop/wiki/architecture/data-model.md` first. It names the stores the project already has.
+2. Prefer a store the page names. When a new store is justified, add it to that page in the same story and say why in `## Stores`.
+3. Write `data-model.md` in the shape of `template.md`: `## Entities` (each entity from spec.md with its fields), `## Stores` (the file, table or collection each entity lives in), `## Indexes` (may say none), `## Migration` (may say none, with why).
+4. Check: `codeloop check data-model {id}`. It fails on a store the architecture page does not name.
+
 ## Questions to ask before working
 
 ## Q1 Does this system already exist, or is this a change to one that's running?
