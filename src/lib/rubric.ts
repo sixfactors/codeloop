@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { specPath } from './project-root.js';
 import { dirname, isAbsolute, join } from 'path';
 import { fileURLToPath } from 'url';
 import { cardKey, findCard, readCards, type Card } from './cards.js';
@@ -53,7 +54,7 @@ export function rubricPath(projectDir: string, stage: Stage): string | null {
   for (const name of names) {
     const source = index.find(s => s.name === name)?.source;
     if (!source) continue;
-    const file = join(dirname(isAbsolute(source) ? source : join(projectDir, source)), 'rubric.md');
+    const file = join(dirname(isAbsolute(source) ? source : specPath(projectDir, source)), 'rubric.md');
     if (existsSync(file)) return file;
   }
   for (const name of names) {
@@ -82,7 +83,7 @@ interface Ctx {
   stage: Stage;
 }
 
-const read = (projectDir: string, path: string | null) => (path && existsSync(join(projectDir, path)) ? readFileSync(join(projectDir, path), 'utf-8') : '');
+const read = (projectDir: string, path: string | null) => (path && existsSync(specPath(projectDir, path)) ? readFileSync(specPath(projectDir, path), 'utf-8') : '');
 const specText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/spec.md` : null);
 const researchText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/research.md` : null);
 const evidence = (c: Ctx, file: string) => read(c.projectDir, `evidence/${cardKey(c.card)}/${file}`);
@@ -141,7 +142,7 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
   V1: c => (/^result:\s*pass\b/im.test(evidence(c, 'verify.md')) ? [] : [`evidence/${cardKey(c.card)}/verify.md does not say \`result: pass\``]),
   V2: c => {
     const lines = c.card.spec ? readAcceptance(c.projectDir, c.card.spec) : [];
-    const dir = join(c.projectDir, 'usecases', cardKey(c.card));
+    const dir = specPath(c.projectDir, 'usecases', cardKey(c.card));
     const named = new Set(existsSync(dir) ? readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf-8').matchAll(/^accept:\s*(US\d+)/gm)].map(m => m[1])) : []);
     return lines.map((_, i) => `US${i + 1}`).filter(us => !named.has(us)).map(us => `${us} has no use case naming it`);
   },
@@ -289,8 +290,8 @@ export function scaffoldRubric(projectDir: string, ref: string): { path: string 
   const lines = missing.map(r => `- ${r.id} pending: ${r.criterion}`).join('\n');
   const hasBlock = /(^|\n)## Rubric\s*\n/.test(text);
   const next = hasBlock ? `${text.replace(/\s*$/, '')}\n${lines}\n` : `${text.replace(/\s*$/, '')}${text.trim() ? '\n\n' : ''}## Rubric\n\n${lines}\n`;
-  mkdirSync(dirname(join(projectDir, path)), { recursive: true });
-  writeFileSync(join(projectDir, path), next);
+  mkdirSync(dirname(specPath(projectDir, path)), { recursive: true });
+  writeFileSync(specPath(projectDir, path), next);
   return { path, added: missing.map(r => r.id) };
 }
 

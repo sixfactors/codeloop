@@ -50,6 +50,23 @@ describe('runGate', () => {
     expect(rec.findings.join('\n')).toContain('src/missing.ts');
   });
 
+  it('takes a bare file name as a claim only when it resolves under the spec folder', () => {
+    mkdirSync(join(dir, 'specs/001-launch'), { recursive: true });
+    writeFileSync(join(dir, 'specs/001-launch/research.md'), 'x\n');
+    execSync('git add -A && git -c user.email=a@b -c user.name=t commit -qm spec', { cwd: dir });
+    head = execSync('git rev-parse HEAD', { cwd: dir, encoding: 'utf8' }).trim();
+    const file = readCards(dir);
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify({ ...file, cards: file.cards.map(c => ({ ...c, spec: 'specs/001-launch' })) }));
+    handback('true', 'research.md written');
+    const found = runGate(dir, 'c-001');
+    expect(found.claim).toEqual({ path: 'specs/001-launch/research.md', found: true });
+    expect(found.verdict).toBe('pass');
+    handback('true', 'also notes.md updated');
+    const none = runGate(dir, 'c-001');
+    expect(none.claim).toBeNull();
+    expect(none.verdict).toBe('pass');
+  });
+
   it('reruns the proof in the hand-back worktree', () => {
     const wt = join(dir, 'wt');
     mkdirSync(wt);

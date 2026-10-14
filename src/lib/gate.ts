@@ -53,6 +53,24 @@ export function firstRepoPath(text: string): string | undefined {
   return undefined;
 }
 
+/**
+ * The file a hand-back claims: the first path-like token that contains a folder separator, or a
+ * bare file name that exists under the card's spec folder. A bare name that matches nothing is no
+ * claim, so "research.md" in a note never reads as a file at the repo root.
+ */
+export function claimedPath(text: string, spec: string | undefined, exists: (path: string) => boolean): string | undefined {
+  for (const m of text.matchAll(PATH_TOKEN)) {
+    const token = m[0].replace(/^\.\//, '');
+    if (isAbsolute(token) || /^[A-Za-z]+:\/\//.test(token)) continue;
+    const norm = normalize(token);
+    if (norm.startsWith('..')) continue;
+    if (norm.includes('/')) return norm;
+    const inSpec = spec ? `${spec.replace(/\/$/, '')}/${norm}` : undefined;
+    if (inSpec && exists(inSpec)) return inSpec;
+  }
+  return undefined;
+}
+
 export function runGate(projectDir: string, cardRef: string, input: GateInput = {}): GateRecord {
   const card = findCard(readCards(projectDir).cards, cardRef);
   const all = listHandbacks(projectDir, card.id);
@@ -73,9 +91,10 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed`);
 
   let claim: GateRecord['claim'] = null;
-  const path = firstRepoPath(`${hb.left}\n${proof.output}`);
+  const onHead = (p: string) => spawnSync('git', ['cat-file', '-e', `${hb.head}:${p}`], { cwd: workDir, encoding: 'utf8' }).status === 0;
+  const path = claimedPath(`${hb.left}\n${proof.output}`, card.spec, onHead);
   if (path) {
-    const found = spawnSync('git', ['cat-file', '-e', `${hb.head}:${path}`], { cwd: workDir, encoding: 'utf8' }).status === 0;
+    const found = onHead(path);
     claim = { path, found };
     if (!found) findings.push(`claimed file ${path} is not on ${hb.branch}@${hb.head.slice(0, 8)}`);
   }
