@@ -8,7 +8,7 @@ import { decisionFromResearch } from './wiki-rules.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
-import { appendActivity } from './activity.js';
+import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { currentSession } from './active-card.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
@@ -537,6 +537,17 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
   return promoted;
 }
 
+/** True when the card's activity has no line other than a check since its last check line (or has no check line). */
+function quietSinceLastCheck(projectDir: string, id: string): boolean {
+  const items: ActivityEntry[] = [];
+  for (let page = readActivity(projectDir, id, { limit: 1000 }); ; page = readActivity(projectDir, id, { after: page.next, limit: 1000 })) {
+    items.push(...page.items);
+    if (!page.next) break;
+  }
+  const lastCheck = items.map(i => i.kind).lastIndexOf('check');
+  return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check');
+}
+
 export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
   let before = findCard(file.cards, ref);
@@ -558,6 +569,9 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     return { card, outcome: 'parked', started: [], because: {} };
   }
 
+  // Read before this run's own check line is appended: only work by someone since the last check
+  // makes the next failure a fresh attempt.
+  const quiet = quietSinceLastCheck(projectDir, id);
   const check = runCheck(projectDir, card, stage);
   const output = check?.output ?? '';
   if (check) appendActivity(projectDir, id, { session: currentSession(), kind: 'check', stage: stage.id, pass: check.passed, output });
@@ -585,7 +599,9 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       const fingerprint = createHash('sha1').update(work).digest('hex');
       if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
       card.failures = { ...before.failures, [stage.id]: fingerprint };
-      const failures = (card.retries[stage.id] ?? 0) + 1;
+      // The same failure with no activity since the last check is a repeated button press, not a new attempt.
+      const repeat = quiet && before.failures?.[stage.id] === fingerprint;
+      const failures = (card.retries[stage.id] ?? 0) + (repeat ? 0 : 1);
       card.retries[stage.id] = failures;
       card.events.push(event(now, 'engine', 'fail', stage.id, output));
       const stuck = failures >= lane.retries;
