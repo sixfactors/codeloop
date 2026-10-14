@@ -88,7 +88,7 @@ storyOptions(cardCommand
 
 /** One activity line as a person reads it: the time, who, and what happened. */
 function activityText(l: ActivityEntry): string {
-  const at = chalk.dim(l.at.slice(11, 19));
+  const at = chalk.dim(new Date(l.at).toTimeString().slice(0, 8));
   const what = (() => {
     switch (l.kind) {
       case 'edit': return `edited ${l.file}`;

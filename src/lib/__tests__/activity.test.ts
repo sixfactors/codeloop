@@ -56,7 +56,7 @@ describe('activity stream', () => {
     expect(hook(['guard', 'bash'], { session_id: 'S1', tool_input: { command: 'npm test' } })).toBe(0);
     expect(advanceCard(dir, 'c-1').outcome).toBe('failed');
 
-    const { items } = cardActivity(dir, 'c-1');
+    const { lines: items } = cardActivity(dir, 'c-1');
     expect(items.map(i => i.kind)).toEqual(['prompt', 'edit', 'cmd', 'check']);
     expect(items.slice(0, 3).map(i => i.session)).toEqual(['S1', 'S1', 'S1']);
     expect(items[1].file).toBe('src/a.ts');
@@ -67,7 +67,7 @@ describe('activity stream', () => {
     const cursors = items.map(i => Number(i.cursor));
     expect(cursors).toEqual([...cursors].sort((a, b) => a - b));
     const after = cardActivity(dir, 'c-1', { after: items[1].cursor });
-    expect(after.items.map(i => i.kind)).toEqual(['cmd', 'check']);
+    expect(after.lines.map(i => i.kind)).toEqual(['cmd', 'check']);
     expect(cardActivity(dir, 'c-1', { limit: 2 }).next).toBe(items[1].cursor);
   });
 
@@ -84,7 +84,7 @@ describe('activity stream', () => {
     git('init', '-q');
     git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'feat(x): wire it', '-m', 'Card: c-1\nCard: c-999');
     expect(hook(['guard', 'commit'], {})).toBe(0);
-    const { items } = cardActivity(dir, 'c-1');
+    const { lines: items } = cardActivity(dir, 'c-1');
     expect(items.map(i => i.kind)).toEqual(['commit']);
     expect(items[0].subject).toBe('feat(x): wire it');
     expect(existsSync(join(dir, ACTIVITY_DIR, 'c-999.jsonl'))).toBe(false);
@@ -93,9 +93,9 @@ describe('activity stream', () => {
   it('a headless run copies its log into the activity before it settles', async () => {
     const { finished } = startCardRun(dir, 'c-1');
     await finished;
-    const kinds = cardActivity(dir, 'c-1').items.map(i => i.kind);
+    const kinds = cardActivity(dir, 'c-1').lines.map(i => i.kind);
     expect(kinds).toContain('check');
-    const logs = cardActivity(dir, 'c-1').items.filter(i => i.kind === 'log').map(i => i.text);
+    const logs = cardActivity(dir, 'c-1').lines.filter(i => i.kind === 'log').map(i => i.text);
     expect(logs.some(t => String(t).includes('2 tests failing'))).toBe(true);
     expect(logs.some(t => String(t).startsWith('c-1: failed'))).toBe(true);
   });
