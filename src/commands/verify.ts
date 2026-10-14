@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { findCard, readCards } from '../lib/cards.js';
 import { checkBudget } from '../lib/diff-budget.js';
+import { checkHealth, formatHealth, projectHealth } from '../lib/health.js';
 import { RefusalError } from '../lib/engine.js';
 import { loadLanes } from '../lib/lane.js';
 import { computeStats, type Stats } from '../lib/stats.js';
@@ -86,4 +87,30 @@ export const cardDiffCommand = new Command('diff')
     console.log(`  files ${v.files}, lines ${v.lines}, commits ${v.commits}`);
     console.log(v.pass ? chalk.green(`  ${v.message}`) : chalk.red(`  ${v.message}`));
     if (!v.pass) process.exit(1);
+  }));
+
+export const healthCommand = new Command('health')
+  .description('Project health score: tests, lint, type errors, critical gotchas and TODOs. --ref scores an older commit')
+  .option('--ref <sha>', 'Score this commit (exported to a temp dir) instead of the working tree')
+  .action(guard((opts: { ref?: string }) => {
+    formatHealth(projectHealth(projectRoot(), { ref: opts.ref })).forEach(l => console.log(`  ${l}`));
+  }));
+
+/** Registered under `card` in program.ts. */
+export const cardHealthCommand = new Command('health')
+  .description("Health score at the start of a card's story, at HEAD, and the change. Exit 1 when it fell beyond health.tolerance")
+  .argument('<id>', 'Card number or id')
+  .action(guard((ref: string) => {
+    const projectDir = projectRoot();
+    const card = findCard(readCards(projectDir).cards, ref);
+    const v = checkHealth(projectDir, card.id);
+    if (v.state === 'off') return console.log('  health: off');
+    if (v.state === 'no-base') return console.log('  no commit before the story to compare against');
+    console.log(`  before ${v.before!.score}`);
+    console.log(`  after  ${v.after!.score}`);
+    console.log(`  delta  ${v.delta! > 0 ? '+' : ''}${v.delta}`);
+    if (!v.pass) {
+      console.error(chalk.red(`  health fell beyond tolerance ${v.tolerance}`));
+      process.exit(1);
+    }
   }));

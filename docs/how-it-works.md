@@ -73,6 +73,20 @@ Everything is configured in `.codeloop/config.yaml`:
 
 The config is read directly by the AI coding tool (it's a YAML file the LLM parses). No runtime needed.
 
+## Health score
+
+`codeloop health` scores the project from 0 to 100; `codeloop verify` scores the story's base (the merge-base with `git.trunk` when the story is on its own branch, else the commit before its first `Card:` commit) and HEAD, writes a `health:` line to `evidence/NNN/verify.md`, and fails when the score falls by more than `health.tolerance` (default 1.0 point, so a single TODO line does not block a merge). `codeloop card health <id>` shows the same numbers. Both sides are measured on a git export of the commit, so they are comparable.
+
+| Input | How it is counted |
+|---|---|
+| tests | files matching `health.tests` (default `**/*.test.{ts,js,py}`, `**/__tests__/**`) and the `it(`, `test(` and `def test_` lines in them |
+| lint | errors from `health.lint_cmd`; skipped when unset |
+| types | `error TS` lines from `health.types_cmd`; default `npx tsc --noEmit` when `tsconfig.json` exists |
+| gotchas | wiki gotcha pages with severity critical |
+| todo | TODO and FIXME lines in non-test files matching `health.source` (default `src/**`) |
+
+Formula: `t = w.tests * cases`, `tests = t / (t + 10)`, `penalty = w.lint*lint + w.types*types + w.gotchas*gotchas + w.todo*todo`, `score = 100 * tests / (1 + penalty / 10)`. Defaults for `health.weights`: tests 1, lint 1, types 1, gotchas 2, todo 0.2. `health: off` disables the check.
+
 ## Knowledge Files
 
 | File | Purpose | Written by |

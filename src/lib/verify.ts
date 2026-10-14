@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { parse as parseYaml } from 'yaml';
 import { budgetLine, checkBudget, type BudgetVerdict } from './diff-budget.js';
+import { checkHealth, healthLine, type HealthVerdict } from './health.js';
 import { cardKey, findCardOrNone, readCards, safeName } from './cards.js';
 import { loadConfig } from './config.js';
 import { annotateCard, RefusalError } from './engine.js';
@@ -42,6 +43,7 @@ export interface VerifyResult {
   vacuous: string[];
   mutate?: string;
   budget?: BudgetVerdict;
+  health?: HealthVerdict;
   /** Why nothing was run. */
   problem?: string;
 }
@@ -222,21 +224,25 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   const passed = result.cases.every(c => c.pass);
   // Measured only once the use cases pass; the line is written either way so the record shows the numbers.
   const budget = passed ? checkBudget(projectDir, card?.id ?? ref, card?.size) : undefined;
+  const health = passed && budget?.pass !== false ? checkHealth(projectDir, card?.id ?? ref) : undefined;
+  const ok = passed && budget?.pass !== false && health?.pass !== false;
   const rows = result.cases.map(c => `| ${c.id} | ${c.accept} | ${c.layers.map(l => `${l.layer} ${l.pass ? 'pass' : 'FAIL'}`).join(', ') || 'no runnable layer'} |`);
   // Only the marked block is rewritten: what a person adds to verify.md outside it (a clean-export
   // run, a table of guards) survives every later verify.
-  const block = [VERIFY_START, `# Verify ${ref}`, '', `result: ${passed && budget?.pass !== false ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, `workspace: ${workspace}`, ...(budget ? [budgetLine(budget)] : []), '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, VERIFY_END].join('\n');
+  const block = [VERIFY_START, `# Verify ${ref}`, '', `result: ${ok ? 'pass' : 'fail'}`, `sha: ${sha || 'none'}`, `env: ${opts.env ?? 'local'}`, `workspace: ${workspace}`, ...(budget ? [budgetLine(budget)] : []), ...(health ? [healthLine(health)] : []), '', '| Use case | Accepts | Layers |', '|---|---|---|', ...rows, VERIFY_END].join('\n');
   const file = join(out, 'verify.md');
   const before = existsSync(file) ? readFileSync(file, 'utf-8') : '';
   const at = before.indexOf(VERIFY_START), end = before.indexOf(VERIFY_END);
   const kept = at >= 0 && end > at ? before.slice(0, at) + block + before.slice(end + VERIFY_END.length) : `${block}\n${before ? `\n${before}` : ''}`;
   writeFileSync(file, kept.endsWith('\n') ? kept : `${kept}\n`);
   if (card && opts.record !== false) {
-    annotateCard(projectDir, card.id, { evidence: `evidence/${nnn}/verify.md` }, 'verify', { note: `result: ${passed && budget?.pass !== false ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
+    annotateCard(projectDir, card.id, { evidence: `evidence/${nnn}/verify.md` }, 'verify', { note: `result: ${ok ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
   }
   if (!passed) return { ...result, exitCode: 1 };
   if (budget) result.budget = budget;
   if (budget && !budget.pass) return { ...result, exitCode: 1, problem: budget.message };
+  if (health) result.health = health;
+  if (health && !health.pass) return { ...result, exitCode: 1, problem: `health score fell from ${health.before!.score} to ${health.after!.score} (delta ${health.delta}, tolerance ${health.tolerance}); fix what got worse` };
 
   // Use cases run against harnesses; the walk proves the real stack answers a person. Checked on a
   // local verify only: a staging run and a mutation run judge the use cases, not the walk.
