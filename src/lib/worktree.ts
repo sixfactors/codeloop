@@ -8,7 +8,7 @@ import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
 import { appendActivity } from './activity.js';
 import { currentSession } from './active-card.js';
-import { findCard, readCards, RefusalError, writeCards, type Card } from './cards.js';
+import { cardKey, findCard, readCards, RefusalError, writeCards, type Card } from './cards.js';
 import { loadConfig } from './config.js';
 import { recordEvent } from './engine.js';
 import { listGates } from './gate.js';
@@ -38,6 +38,21 @@ export interface MergeResult {
   trunk: string;
   sha: string;
   mode: 'ff' | 'merge';
+  /** Story files that conflicted with the trunk and were taken from the branch. */
+  resolved?: string[];
+}
+
+/** A conflict outside the story's own folders: the builder has to merge the trunk into its branch. */
+export class MergeConflictError extends RefusalError {
+  constructor(readonly path: string) {
+    super(`merge conflict in ${path}: merge the trunk into the branch and hand back again`);
+  }
+}
+
+/** The folders and files a story owns: its spec folder, evidence and shape files. */
+function storyPaths(card: Card): string[] {
+  const key = cardKey(card);
+  return [...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : []), `specs/${key}-`, `specs/${key}/`, `evidence/${key}/`, `shape/${card.id}/`];
 }
 
 const git = (cwd: string, args: string[]) => {
@@ -119,18 +134,48 @@ export function mergeStory(projectDir: string, cardRef: string, opts: Pick<Workt
 
   const ff = git(projectDir, ['merge', '--ff-only', branch]);
   let mode: MergeResult['mode'] = 'ff';
+  const resolved: string[] = [];
   if (!ff.ok) {
-    const merged = git(projectDir, ['-c', 'user.name=codeloop', '-c', 'user.email=codeloop@localhost', 'merge', '--no-ff', '--no-edit', branch]);
-    if (!merged.ok) {
+    const who = ['-c', 'user.name=codeloop', '-c', 'user.email=codeloop@localhost'];
+    // The main tree is never left mid-merge: every failure below aborts before it throws.
+    const abort = () => {
       git(projectDir, ['merge', '--abort']);
-      throw new RefusalError(`merge of ${branch} into ${trunk} failed: ${merged.err || merged.out}`);
+    };
+    const merged = git(projectDir, [...who, 'merge', '--no-commit', '--no-ff', branch]);
+    if (!merged.ok) {
+      const conflicted = git(projectDir, ['diff', '--name-only', '--diff-filter=U']).out.split('\n').filter(Boolean);
+      if (!conflicted.length) {
+        abort();
+        throw new RefusalError(`merge of ${branch} into ${trunk} failed: ${merged.err || merged.out}`);
+      }
+      // The builder's story files are authoritative: the trunk may only hold a scaffolded stub of them.
+      const own = storyPaths(card);
+      const outside = conflicted.find(p => !own.some(o => p === o || p.startsWith(o)));
+      if (outside) {
+        abort();
+        throw new MergeConflictError(outside);
+      }
+      for (const p of conflicted) {
+        const taken = git(projectDir, ['checkout', '--theirs', '--', p]);
+        const added = taken.ok && git(projectDir, ['add', '--', p]).ok;
+        if (!added) {
+          abort();
+          throw new RefusalError(`cannot take the branch's ${p}: ${taken.err || taken.out}`);
+        }
+        resolved.push(p);
+      }
+    }
+    const committed = git(projectDir, [...who, 'commit', '--no-edit', '-m', `Merge branch '${branch}' into ${trunk}`]);
+    if (!committed.ok) {
+      abort();
+      throw new RefusalError(`merge of ${branch} into ${trunk} failed: ${committed.err || committed.out}`);
     }
     mode = 'merge';
   }
   const sha = must(projectDir, ['rev-parse', 'HEAD'], 'cannot read the merge commit');
-  appendActivity(projectDir, card.id, { session: currentSession(), kind: 'merge', branch, trunk, sha, mode });
-  recordEvent(projectDir, card.id, () => ({ action: 'merge', note: `${branch} into ${trunk} at ${sha.slice(0, 8)} (${mode})` }));
-  return { card: card.id, branch, trunk, sha, mode };
+  appendActivity(projectDir, card.id, { session: currentSession(), kind: 'merge', branch, trunk, sha, mode, ...(resolved.length ? { resolved } : {}) });
+  recordEvent(projectDir, card.id, () => ({ action: 'merge', note: `${branch} into ${trunk} at ${sha.slice(0, 8)} (${mode})${resolved.length ? `; took the branch's ${resolved.join(', ')}` : ''}` }));
+  return { card: card.id, branch, trunk, sha, mode, ...(resolved.length ? { resolved } : {}) };
 }
 
 /** Removes the story's worktree directory once it has merged. The branch stays. */

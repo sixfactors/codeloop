@@ -8,6 +8,7 @@ import { readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { projectRoot } from '../project-root.js';
+import { ensureStoryWorktree } from '../worktree.js';
 import { orchReport, orchRun, orchStatus, orchTurn, readOrch } from '../orch.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
@@ -84,6 +85,25 @@ describe('orchTurn', () => {
     const third = await orchTurn(dir, 'c-001');
     expect(third.outcome).toBe('stuck');
     expect(readCards(dir).cards[0].gate).toBe('stuck');
+  }, 60_000);
+});
+
+describe('a merge that cannot land', () => {
+  it('is merge-failed, costs no retry, stops the run and feeds the finding into the next brief', async () => {
+    project(TWO_STAGE, WORKING_AGENT);
+    const wt = ensureStoryWorktree(dir, 'c-001');
+    expect(wt.created).toBe(true);
+    writeFileSync(join(dir, 'built.txt'), 'trunk got there first\n');
+    sh(`git add -A && ${GIT} commit -qm trunk-built`);
+    const run = await orchRun(dir, 'c-001');
+    expect(run.turns).toHaveLength(1);
+    expect(run.turns[0].outcome).toBe('merge-failed');
+    expect(run.stopped).toMatch(/merge conflict in built\.txt/);
+    expect(readCards(dir).cards[0].retries.code ?? 0).toBe(0);
+    expect(existsSync(join(dir, '.git/MERGE_HEAD'))).toBe(false);
+    expect(readCards(dir).cards[0].stage).toBe('code');
+    await orchTurn(dir, 'c-001');
+    expect(readFileSync(join(dir, '.codeloop/state/briefs/c-001-code.md'), 'utf-8')).toContain('merge conflict in built.txt');
   }, 60_000);
 });
 
