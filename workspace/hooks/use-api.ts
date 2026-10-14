@@ -270,8 +270,16 @@ export function useDecide() {
 export function useAnswer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, n, body }: { id: string; n: number; body: { text: string } | { accept: true } }) => api.answer(id, n, body),
+    mutationFn: ({ id, n, body }: { id: string; n: number; body: { text: string } | { accept: true } | { option: string } }) => api.answer(id, n, body),
     onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
+export function useAcceptAll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.acceptAll(id),
+    onSuccess: (_r, { id }) => { void qc.invalidateQueries({ queryKey: QK.questions(id) }); void refreshCard(qc, id); },
   });
 }
 

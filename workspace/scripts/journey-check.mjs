@@ -9,7 +9,7 @@
 // Exits 1 when a check fails.
 //
 //   CODELOOP_URL=http://127.0.0.1:4762 CODELOOP_TOKEN=… node scripts/journey-check.mjs \
-//     --from c-048 --to c-047 [--neighbour c-010] [--login user:password] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
+//     --from c-048 --to c-047 [--neighbour next] [--login user:password] [--questions c-018] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
 //
 // Playwright is not a dependency of this package; PLAYWRIGHT_DIR names a project that has it.
 import { createRequire } from 'node:module';
@@ -57,9 +57,11 @@ try {
       await page.locator('[data-testid="work-myself"]').click();
       await page.locator('[data-testid="work-myself-box"]').waitFor({ timeout: 5000 });
       await page.locator('[data-testid="detail-sheet-next"]').click();
-      await page.locator(`[data-testid="current-step-panel"][data-card="${args.neighbour}"]`).waitFor({ timeout: 10000 });
+      // The neighbour is whichever story the pager shows next; the board's order moves with its data.
+      await page.waitForFunction((from) => { const p = document.querySelector('[data-testid="current-step-panel"]'); return p && p.getAttribute('data-card') !== from; }, args.from, { timeout: 10000 });
+      const neighbour = await panel(page).getAttribute('data-card');
       const carried = await page.locator('[data-testid="work-myself-box"]').count();
-      ok(`${args.from}'s open box does not carry over to ${args.neighbour}`, carried === 0, `${carried} box(es) on ${args.neighbour}`);
+      ok(`${args.from}'s open box does not carry over to ${neighbour}`, carried === 0, `${carried} box(es) on ${neighbour}`);
       await page.locator('[data-testid="detail-sheet-prev"]').click();
       await page.locator(`[data-testid="current-step-panel"][data-card="${args.from}"]`).waitFor({ timeout: 10000 });
     }
@@ -84,6 +86,24 @@ try {
       const stale = first.text.split('\n').find((l) => /no task list|check fail/i.test(l));
       ok(`${args.from}'s check sentence is not on ${args.to}`, !stale || !second.text.includes(stale), stale ?? 'no check line on the first panel');
     }
+  }
+
+  // --questions <id>: the "you" panel offers each question's options as buttons with the
+  // recommended one marked, and Accept all suggested answers every open question in one click.
+  if (args.questions) {
+    const id = String(args.questions);
+    await page.goto(withToken(`/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+    const youPanel = page.locator('[data-testid="current-step-panel"][data-shape="you"]');
+    ok(`${id} opens in the you shape`, await youPanel.waitFor({ timeout: 20000 }).then(() => true, () => false));
+    const options = await youPanel.locator('[data-testid^="question-option-"]').count();
+    const marked = await youPanel.locator('[data-testid^="question-option-"][data-recommended]').count();
+    ok(`${id}'s options render as buttons, one marked recommended`, options >= 2 && marked === 1, `${options} options, ${marked} marked`);
+    if (args.shots) await page.screenshot({ path: join(resolve(String(args.shots)), `${id}-questions-1440.png`), fullPage: true });
+    const acceptAll = youPanel.locator('[data-testid="accept-all"]');
+    ok('Accept all suggested is at the top of the questions', await acceptAll.isVisible().catch(() => false));
+    await acceptAll.click();
+    const cleared = await page.waitForFunction((cid) => !document.querySelector(`[data-testid="current-step-panel"][data-card="${cid}"] [data-testid="accept-all"]`), id, { timeout: 10000 }).then(() => true, () => false);
+    ok('Accept all answered every open question', cleared);
   }
 
   if (args.live) {

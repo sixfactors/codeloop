@@ -87,7 +87,7 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
   const tasks = full.data?.tasks ?? [];
   const counts = full.data?.journey?.tasks;
   const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
-  const questions = full.data?.questions ?? [];
+  const answeredCount = (full.data?.questions ?? []).filter((q) => q.answer).length;
   return (
     <div className="flex flex-col gap-4" data-testid="produced">
       <section className="flex flex-col gap-2">
@@ -134,8 +134,8 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
           </div>
         </section>
       ) : null}
-      {questions.length ? (
-        <section className="flex flex-col gap-2"><h3 className="text-sm font-medium">Questions</h3><Questions cardId={card.id} /></section>
+      {answeredCount ? (
+        <section className="flex flex-col gap-2"><h3 className="text-sm font-medium">Answered questions</h3><Questions cardId={card.id} answered /></section>
       ) : null}
     </div>
   );

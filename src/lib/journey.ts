@@ -132,7 +132,7 @@ export function activityText(l: ActivityLine): string {
   }
 }
 
-export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean }[] } = {}): Journey {
+export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean }[]; health?: string } = {}): Journey {
   const lane = opts.lane ?? loadLane(projectDir, card.lane);
   const events = card.events ?? [];
   const stages = lane.stages;
@@ -190,7 +190,10 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
   const run = findRunningRun(projectDir);
   const ownRun = run?.cardId === card.id ? run : undefined;
   const openQuestions = readQuestions(projectDir, card).filter(q => !q.answer).length;
-  const kind: HolderKind = card.gate || openQuestions ? 'you' : session || ownRun ? 'agent' : 'nobody';
+  // The card's health decides when it has one: needs-you and stuck are the person's; otherwise an
+  // agent holds it when a session or a run is on it, and nobody does when neither is.
+  const yours = opts.health ? opts.health === 'needs-you' || opts.health === 'stuck' : Boolean(card.gate || openQuestions);
+  const kind: HolderKind = yours ? 'you' : session || ownRun ? 'agent' : 'nobody';
   const holder: StoryHolder = {
     kind,
     openQuestions,

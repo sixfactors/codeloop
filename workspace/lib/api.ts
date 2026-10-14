@@ -160,7 +160,9 @@ export const api = {
     const c = await client();
     return action === 'approve' ? c.cards.approve(id, { note }) : c.cards.reject(id, note ?? '');
   },
-  answer: async (id: string, n: number, body: { text: string } | { accept: true }) => (await client()).questions.answer(id, n, body),
+  answer: async (id: string, n: number, body: { text: string } | { accept: true } | { option: string }) => (await client()).questions.answer(id, n, body),
+  /** Answers every open question with its recommended answer in one write. */
+  acceptAll: async (id: string) => (await client()).questions.acceptAll(id),
   // Backlog triage goes through the gate routes: approve on a proposal promotes it into its lane's
   // first stage, reject drops it (engine.ts proposeCard).
   promote: async (id: string) => (await client()).cards.approve(id),

@@ -570,17 +570,18 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     tasks = existsSync(join(projectDir, dir, 'tasks.md')) ? readTasks(projectDir, dir).tasks : [];
   }
   const mock = index.mockOf(card.id);
+  const display = liveState(projectDir, card, index.openQuestions(card.id).length);
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
   return {
-    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display: liveState(projectDir, card, index.openQuestions(card.id).length) },
+    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display },
     spec,
     tasks,
     questions: readQuestions(projectDir, card),
     evidence,
     mock: mock ? mockHref(mock) : null,
     page,
-    journey: journeyOf(projectDir, card, { tasks }),
+    journey: journeyOf(projectDir, card, { tasks, health: display?.health }),
   };
 }
 
