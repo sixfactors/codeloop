@@ -39,7 +39,8 @@ export interface OrchTurn {
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
-  outcome: 'merged' | 'failed' | 'stuck' | 'briefed';
+  /** `merge-failed`: the gate passed but the merge did not; the work was right, so it costs no retry. */
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -195,6 +196,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     hb = all.find(h => h.head !== lastGated);
     if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
   }
+  let mergeFailed = false;
   if (!hb) {
     turn.findings.push(noHandback);
   } else {
@@ -217,11 +219,13 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
       } catch (e) {
         if (!(e instanceof RefusalError)) throw e;
         turn.findings.push(e.message);
+        mergeFailed = true;
       }
     }
   }
 
   if (!turn.findings.length) turn.outcome = 'merged';
+  else if (mergeFailed) turn.outcome = 'merge-failed';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
   turn.endedAt = new Date().toISOString();
   upsertTurn(record, turn);
@@ -364,6 +368,7 @@ export async function orchRun(projectDir: string, cardRef: string, opts: OrchOpt
     }
     turns.push(turn);
     if (turn.outcome === 'briefed') return { card: id, turns, stopped: 'briefed' };
+    if (turn.outcome === 'merge-failed') return { card: id, turns, stopped: `merge failed: ${turn.findings.at(-1)}` };
   }
   return { card: id, turns, stopped: 'turn cap' };
 }
