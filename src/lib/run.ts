@@ -10,6 +10,7 @@ import { storyState } from './states.js';
 import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
+import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, awaitsApproval, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
@@ -373,7 +374,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check';
+  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check';
   note: string;
 }
 
@@ -407,6 +408,14 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
   }
   for (const card of readCards(projectDir).cards) {
     if (opts.skip?.has(card.id)) continue;
+    // A story that entered build before the size rule existed is not thrown out; it is told once.
+    if (card.stage === SPLIT_BEFORE_STAGE && !card.events.some(e => e.action === 'split-nudge')) {
+      const problem = storySizeProblem(projectDir, card);
+      if (problem) {
+        recordEvent(projectDir, card.id, () => ({ action: 'split-nudge', note: problem }), now);
+        log({ id: card.id, action: 'split-nudge', note: problem });
+      }
+    }
     const state = storyState(card, openQuestions(projectDir, card).length, { now: now.getTime(), lastActivityAt: lastActivityAt(projectDir, card.id), progressAt: () => progressSince(projectDir, card) });
     if (!state?.health) continue;
     // Work landed since the check failed: rerun the check, no agent. A pass advances the story and
