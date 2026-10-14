@@ -67,7 +67,7 @@ export function ensureStoryWorktree(projectDir: string, cardRef: string, opts: W
   const card = findCard(readCards(projectDir).cards, cardRef);
   const trunk = trunkOf(projectDir, opts.trunk);
   const scope = slugify(opts.scope ?? card.feature ?? card.lane) || 'story';
-  const branch = card.branch ?? `feat/${scope}-${slugify(card.title) || card.id.toLowerCase()}`;
+  const branch = card.branch ?? `feat/${`${scope}-${slugify(card.title) || card.id.toLowerCase()}`.slice(0, 40).replace(/-+$/, "")}`;
   const path = card.worktree ?? join(dirname(projectDir), `${basename(projectDir)}-wt-${card.id.toLowerCase()}`);
 
   if (existsSync(path)) {

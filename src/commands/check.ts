@@ -9,6 +9,7 @@ import { questionProblems, questionsNotDecided, readQuestions } from '../lib/int
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
+import { checkScope } from '../lib/scope-creep.js';
 import { checkArchitecture } from '../lib/architecture-check.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
@@ -102,6 +103,11 @@ checkCommand
   .command('verify <card>')
   .description("Exit 1 unless evidence/<nnn>/verify.md has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
   .action((card: string) => failing(() => (liveWalkRequired(process.cwd()) ? checkLiveWalk(process.cwd(), card) : []))());
+
+checkCommand
+  .command('scope <card>')
+  .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in evidence/<nnn>/review.md")
+  .action((card: string) => failing(() => checkScope(process.cwd(), card))());
 
 checkCommand
   .command('story <card>')

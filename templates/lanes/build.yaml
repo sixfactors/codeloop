@@ -40,10 +40,11 @@ stages:
       - "codeloop verify rewrites only its marked block in evidence/{nnn}/verify.md; add your own runs and tables outside it." 
     gate: { name: local, approver: owner }
   # Review is a triage: every finding gets a verdict (fix now, defer, unnecessary) and evidence; deferred findings become proposals.
+  # Every changed file outside the story's plan also gets a keep / revert / move verdict in a `## Scope` table.
   - id: review
     skill: review
     output: evidence/{nnn}/review.md
-    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'" }
+    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id}" }
     gate: { name: pr, approver: reviewer }
   - id: staging
     skill: release
