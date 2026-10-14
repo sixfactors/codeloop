@@ -59,7 +59,12 @@ import type {
   Journey,
   JourneyStep,
   StoryHolder,
+  OrchStatusRow,
+  OrchTurn,
+  OrchTurnDetail,
+  OrchView,
 } from '@protoboxai/codeloop/sdk';
+export type { OrchStatusRow, OrchTurn, OrchTurnDetail, OrchView };
 
 /** One activity line as the card screen reads it: the API stamps the phase it happened in. */
 export type ActivityLine = ActivityEntry & { phase?: string };

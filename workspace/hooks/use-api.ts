@@ -96,6 +96,24 @@ export const useQuestions = (id: string) =>
 export const useCardActivity = (id: string) =>
   useQuery({ queryKey: QK.activity(id), queryFn: () => api.cardActivity(id), enabled: Boolean(id), retry: false });
 
+/** A story's orchestration, re-read every 3s while a turn is running (its files are state, not watched). */
+export const useOrch = (id: string) =>
+  useQuery({
+    queryKey: QK.orch(id), queryFn: () => api.orch(id), enabled: Boolean(id), retry: false,
+    refetchInterval: (q) => (q.state.data?.record.turns.some((t) => !t.endedAt && t.outcome !== 'briefed') ? 3000 : false),
+  });
+
+export const useOrchStatus = (enabled = true) => useQuery({ queryKey: QK.orchStatus, queryFn: api.orchStatus, enabled, retry: false, refetchInterval: 15_000 });
+
+/** Start a turn; the story's orchestration is re-read until it ends. */
+export function useOrchRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, builder, wait }: { id: string; builder: string; wait?: number | false }) => api.orchRun(id, { builder, ...(wait !== undefined ? { wait } : {}) }),
+    onSuccess: (_r, { id }) => { void qc.invalidateQueries({ queryKey: QK.orch(id) }); void qc.invalidateQueries({ queryKey: QK.orchStatus }); void refreshCard(qc, id); },
+  });
+}
+
 export const useCardFull = (id: string) =>
   useQuery({ queryKey: QK.full(id), queryFn: () => api.cardFull(id), enabled: Boolean(id), retry: false });
 

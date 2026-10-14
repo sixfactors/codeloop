@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { cn } from '@/lib/utils';
 import type { AgentTile } from '@/lib/types';
-import { useHome } from '@/hooks/use-api';
+import { useHome, useOrchStatus } from '@/hooks/use-api';
 import { useRoutes } from '@/components/providers/project-provider';
 import type { BoardStory } from '@/lib/types';
 
@@ -39,6 +39,42 @@ const ago = (iso: string) => {
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
   return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)}h ago`;
 };
+
+const ORCH_OUTCOME: Record<string, string> = {
+  merged: 'border-transparent bg-success/15 text-success',
+  failed: 'border-transparent bg-destructive/15 text-destructive',
+  stuck: 'border-transparent bg-destructive/15 text-destructive',
+  briefed: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+};
+
+/** Every story the orchestrator has taken: its stage, how many turns, the last outcome, who built it, how long it has been quiet. */
+function OrchestratingTiles() {
+  const routes = useRoutes();
+  const { data, error } = useOrchStatus();
+  return (
+    <AttributeCard title="Orchestrating" icon={Workflow} testId="home-orchestrating">
+      {error ? <p className="text-xs text-muted-foreground">Orchestration status unavailable: {(error as Error).message}</p>
+        : data?.length ? (
+          <ItemGroup className="gap-2">
+            {data.map((r) => (
+              <Item key={r.card} variant="outline" size="sm" className="flex-col items-stretch" render={<Link href={routes.card(r.card)} />} data-testid={`home-orch-tile-${r.card}`} data-stalled={r.stalled || undefined}>
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="flex w-full min-w-0 items-center gap-2">
+                    <span className="truncate">{r.card} {r.title}</span>
+                    {r.stalled ? <Badge variant="outline" className="ml-auto shrink-0 rounded-full border-transparent bg-warning/15 text-warning-foreground dark:text-warning">stalled</Badge> : null}
+                    {r.lastOutcome ? <Badge variant="outline" className={cn('shrink-0 rounded-full', !r.stalled && 'ml-auto', ORCH_OUTCOME[r.lastOutcome])}>{r.lastOutcome}</Badge> : null}
+                  </ItemTitle>
+                  <ItemDescription className="truncate">
+                    {r.stage}{r.gate ? ` · waiting at ${r.gate}` : ''} · {r.turns} turn{r.turns === 1 ? '' : 's'}{r.builderLabel ? ` · ${r.builderLabel}` : ''}{r.idleMinutes ? ` · quiet ${r.idleMinutes} min` : ''}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : <EmptyState compact icon={Workflow} title="Nothing orchestrated" description="Run with orchestrator on a story's page hands it to a builder and merges what passes the gate." />}
+    </AttributeCard>
+  );
+}
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
 
@@ -160,6 +196,8 @@ export function HomeView() {
               </ItemGroup>
             ) : <EmptyState compact icon={Bot} title="No agent is working" description="A session working a story shows up here while it runs." />}
           </AttributeCard>
+
+          <OrchestratingTiles />
 
           <AttributeCard title="Shipped this week" icon={CheckCircle2} testId="home-shipped">
             {data.shipped.length ? (

@@ -9,7 +9,7 @@
 // Exits 1 when a check fails.
 //
 //   CODELOOP_URL=http://127.0.0.1:4762 CODELOOP_TOKEN=… node scripts/journey-check.mjs \
-//     [--board] --from c-048 --to c-047 [--neighbour next] [--login user:password] [--questions c-018] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
+//     [--board] [--orch c-001] [--person c-002] [--stuck c-048] --from c-048 --to c-047 [--neighbour next] [--login user:password] [--questions c-018] [--live c-047 --project <dir> --session <id>] [--shots dir --cards c-045,c-048,c-047]
 //
 // Playwright is not a dependency of this package; PLAYWRIGHT_DIR names a project that has it.
 import { createRequire } from 'node:module';
@@ -116,6 +116,58 @@ try {
       pager = await page.locator('[data-testid="detail-sheet-position"]').innerText({ timeout: 3000 }).then((t) => Number(/of (\d+)/.exec(t)[1]), () => NaN);
     }
     ok('header, sidebar footer, sidebar Board badge and drawer pager show one count', header > 0 && [footer, badge, pager].every((n) => n === header), `header ${header}, footer ${footer}, badge ${badge}, pager ${pager}`);
+  }
+
+  // --orch <id>: Run with orchestrator twice on a story in the nobody shape, against a project whose
+  // configured agent hands back; each turn shows as merged and the stepper moves on. With
+  // --person <id>, Brief a person shows the brief path and the hand-back line to copy.
+  if (args.orch) {
+    const id = String(args.orch);
+    if (args.shots) mkdirSync(resolve(String(args.shots)), { recursive: true });
+    for (const n of [1, 2]) {
+      await page.goto(withToken(`/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+      // A step's id and state: moving on is a new phase, or the same phase now waiting at its gate.
+      const stepNow = () => page.evaluate(() => { const el = document.querySelector('[data-testid^="journey-step-"][aria-current="step"]'); return el ? `${el.getAttribute('data-testid')}:${el.getAttribute('data-state')}` : null; });
+      await page.locator('[data-testid^="journey-step-"][aria-current="step"]').first().waitFor({ timeout: 20000 });
+      const before = await stepNow();
+      const start = page.locator('[data-testid="current-step-panel"][data-shape="nobody"] [data-testid="run-orchestrator"]');
+      ok(`${id} turn ${n}: Run with orchestrator is offered`, await start.waitFor({ timeout: 20000 }).then(() => true, () => false));
+      await start.click();
+      const merged = await page.locator(`[data-testid="orch-turn-${n}"][data-outcome="merged"]`).waitFor({ timeout: 60000 }).then(() => true, () => false);
+      ok(`${id} turn ${n} shows as merged`, merged, await page.locator(`[data-testid="orch-turn-${n}"]`).getAttribute('data-outcome').catch(() => 'no row'));
+      const moved = await page.waitForFunction((b) => { const el = document.querySelector('[data-testid^="journey-step-"][aria-current="step"]'); return el && `${el.getAttribute('data-testid')}:${el.getAttribute('data-state')}` !== b; }, before, { timeout: 20000 }).then(() => true, () => false);
+      const after = await stepNow();
+      ok(`${id} turn ${n} moves the stepper`, moved, `${before} -> ${after}`);
+    }
+    await page.locator('[data-testid="orch-turn-2"] button').first().click();
+    ok('a turn opens to its hand-back and gate', await page.locator('[data-testid="orch-turn-2"] [data-testid="orch-handback"]').isVisible() && await page.locator('[data-testid="orch-turn-2"] [data-testid="orch-gate"]').isVisible());
+    if (args.shots) for (const width of [1440, 900]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: join(resolve(String(args.shots)), `${id}-two-turns-${width}.png`), fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(withToken('/home/'), { waitUntil: 'domcontentloaded' });
+    const tile = page.locator(`[data-testid="home-orch-tile-${id}"]`);
+    ok(`Home lists ${id} under Orchestrating`, await tile.waitFor({ timeout: 20000 }).then(() => true, () => false), await tile.innerText().catch(() => ''));
+    if (args.shots) await page.screenshot({ path: join(resolve(String(args.shots)), 'home-orchestrating-1440.png'), fullPage: true });
+  }
+  if (args.person) {
+    const id = String(args.person);
+    await page.goto(withToken(`/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-testid="brief-person"]').click({ timeout: 20000 });
+    const box = page.locator('[data-testid="person-brief-box"]');
+    const shown = await box.waitFor({ timeout: 20000 }).then(() => true, () => false);
+    const text = shown ? await box.innerText() : '';
+    ok(`Brief a person on ${id} shows the brief and the hand-back line`, shown && text.includes('.md') && text.includes(`codeloop card handback ${id}`), text.split('\n')[0]);
+  }
+  if (args.stuck) {
+    const id = String(args.stuck);
+    await page.goto(withToken(`/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+    const explain = page.locator('[data-testid="gate-explain"]');
+    const said = await explain.innerText({ timeout: 20000 }).catch(() => '');
+    ok(`${id}'s stuck panel says what Approve does`, /unstick/i.test(said) && /keeps the stage/.test(said), said.slice(0, 80));
+    if (args.shots) { mkdirSync(resolve(String(args.shots)), { recursive: true }); await page.screenshot({ path: join(resolve(String(args.shots)), `${id}-stuck-1440.png`), fullPage: true }); }
   }
 
   // --questions <id>: the "you" panel offers each question's options as buttons with the

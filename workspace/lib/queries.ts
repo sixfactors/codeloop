@@ -53,6 +53,8 @@ export const QK = {
   output: (id: string) => ['card', id, 'output'] as const,
   // Not under ['card', id]: a card's change refetches that prefix, and the feed grows by live frames instead.
   activity: (id: string) => ['activity', id] as const,
+  orch: (id: string) => ['card', id, 'orch'] as const,
+  orchStatus: ['orch-status'] as const,
   run: (runId: string) => ['runs', runId] as const,
   features: ['features'] as const,
   setup: ['setup'] as const,
