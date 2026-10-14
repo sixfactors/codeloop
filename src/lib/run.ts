@@ -7,6 +7,7 @@ import { appendActivity, lastActivityAt } from './activity.js';
 import { loadConfig } from './config.js';
 import { addQuestions, openQuestions } from './interview.js';
 import { storyState } from './states.js';
+import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { advanceCard, awaitsApproval, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
@@ -372,7 +373,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder';
+  action: 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check';
   note: string;
 }
 
@@ -406,8 +407,19 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
   }
   for (const card of readCards(projectDir).cards) {
     if (opts.skip?.has(card.id)) continue;
-    const state = storyState(card, openQuestions(projectDir, card).length, { now: now.getTime(), lastActivityAt: lastActivityAt(projectDir, card.id) });
+    const state = storyState(card, openQuestions(projectDir, card).length, { now: now.getTime(), lastActivityAt: lastActivityAt(projectDir, card.id), progressAt: () => progressSince(projectDir, card) });
     if (!state?.health) continue;
+    // Work landed since the check failed: rerun the check, no agent. A pass advances the story and
+    // clears stuck; a failure on unchanged work costs nothing (unattended), a changed one is recorded as always.
+    if (state.moving && (state.health === 'stuck' || state.health === 'failing')) {
+      try {
+        const r = advanceCard(projectDir, card.id, { unattended: true, rerunStuck: true, now });
+        if (r.outcome !== 'unchanged') log({ id: card.id, action: 'rerun-check', note: `doctor reran the ${card.stage} check after work landed (${state.health}): ${r.outcome}` });
+      } catch (e) {
+        log({ id: card.id, action: 'rerun-check', note: `doctor could not rerun the ${card.stage} check: ${(e as Error).message}` });
+      }
+      continue;
+    }
     const fails = card.retries[card.stage] ?? 0;
     if (state.health === 'failing' && fails < 3) {
       if (!hasAgents) continue;

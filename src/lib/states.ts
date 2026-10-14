@@ -32,6 +32,10 @@ export interface StoryState {
   waitingOn?: string;
   /** For a story in a lane: one of HEALTH. Absent for backlog, up next, done and shipped. */
   health?: Health;
+  /** A stuck or failing story that work has landed on since its check failed: the pill reads "stuck · moving". Health stays as it is. */
+  moving?: boolean;
+  /** Epoch ms of that newest work. */
+  movingAt?: number;
   flags: StateFlag[];
 }
 
@@ -52,6 +56,8 @@ export interface HealthContext {
   lastActivityAt?: number;
   /** A live session holds the story now. */
   held?: boolean;
+  /** Newest time work landed on the story since its last failed check; read only for a stuck or failing story. */
+  progressAt?: () => number | undefined;
 }
 
 /** True when the last agent run on the story was followed by a failed check, with no advance since. */
@@ -68,11 +74,17 @@ export function storyState(card: StateInput, openQuestions = 0, ctx: HealthConte
   if (card.stage === PROPOSED) return { state: 'backlog', flags };
   if (card.stage === QUEUED) return { state: 'up-next', flags };
   if (card.stage === DONE) return { state: card.release ? 'shipped' : 'done', flags };
-  if (card.gate === 'stuck') return { state: 'needs-you', stage: card.stage, waitingOn: 'stuck', health: 'stuck', flags };
+  if (card.gate === 'stuck') return { state: 'needs-you', stage: card.stage, waitingOn: 'stuck', health: 'stuck', ...movingOf(ctx), flags };
   // Needs you wins over failing and stale: the next move is a person's.
   if (card.gate) return { state: 'needs-you', stage: card.stage, waitingOn: card.gate, health: 'needs-you', flags };
   if (openQuestions > 0) return { state: 'needs-you', stage: card.stage, waitingOn: 'questions', health: 'needs-you', flags };
-  return { state: 'in-progress', stage: card.stage, health: inProgressHealth(card, ctx), flags };
+  const health = inProgressHealth(card, ctx);
+  return { state: 'in-progress', stage: card.stage, health, ...(health === 'failing' ? movingOf(ctx) : {}), flags };
+}
+
+function movingOf(ctx: HealthContext): { moving?: true; movingAt?: number } {
+  const at = ctx.progressAt?.();
+  return at ? { moving: true, movingAt: at } : {};
 }
 
 function inProgressHealth(card: StateInput, ctx: HealthContext): Health {

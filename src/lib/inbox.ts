@@ -8,6 +8,7 @@ import { openQuestions } from './interview.js';
 import { findMock } from './mock.js';
 import { cloudCopies } from './wiki.js';
 import { lastActivityAt } from './activity.js';
+import { progressSince } from './progress.js';
 import { storyState } from './states.js';
 
 export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
@@ -15,9 +16,9 @@ export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 export interface Inbox {
   summary: string;
   /** Started work waiting on a person: stage gates and stuck. Proposals are in `backlog`. */
-  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent }[];
+  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string }[];
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
-  failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string }[];
+  failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
   /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
   backlog: { count: number; oldest?: { id: string; title: string; since: string } };
   /** Wiki pages changed here and in the cloud: merge the cloud version into the local page, then delete it. */
@@ -61,6 +62,8 @@ export interface InboxInput {
   openOf: (card: Card) => { question: string }[];
   /** When the story's last activity line was written; failing needs it (an hour quiet). */
   lastActivity?: (cardId: string) => number | undefined;
+  /** Newest work on a stuck or failing story since its check failed; marks the item moving. */
+  progressAt?: (card: Card) => number | undefined;
   /** The card's band and score from its feature; every card is P4 without one. */
   scoreOf?: (card: Card) => { band: Band; score?: number; feature?: string };
   /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
@@ -83,6 +86,7 @@ export function buildInbox(projectDir: string, now: Date = clock(), opts: { sort
       mockOf: id => findMock(projectDir, id),
       openOf: card => openQuestions(projectDir, card),
       lastActivity: id => lastActivityAt(projectDir, id),
+      progressAt: card => progressSince(projectDir, card),
       scoreOf: card => {
         const { band, score, feature } = chainOf(card, features);
         return { band, ...(score === undefined ? {} : { score }), ...(feature ? { feature } : {}) };
@@ -158,12 +162,14 @@ export function backlogOf(cards: Card[]): Inbox['backlog'] {
 }
 
 /** Cards whose current stage has failed at least once and are not yet stuck. */
-export function failingOf(cards: Card[], lastActivity?: (id: string) => number | undefined, now = Date.now()): Inbox['failing'] {
+export function failingOf(cards: Card[], lastActivity?: (id: string) => number | undefined, now = Date.now(), progressAt?: (card: Card) => number | undefined): Inbox['failing'] {
   return cards
     .filter(c => isFailing(c, lastActivity, now))
     .map(c => {
       const fail = c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1);
+      const moved = progressAt?.(c);
       return {
+        ...(moved ? { moving_since: new Date(moved).toISOString() } : {}),
         id: c.id,
         title: c.title,
         lane: c.lane,
@@ -176,11 +182,15 @@ export function failingOf(cards: Card[], lastActivity?: (id: string) => number |
     .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
 }
 
-export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, lastActivity, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
+export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, lastActivity, progressAt, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
   // Proposals wait in the backlog; only started work at a gate or stuck counts as waiting on you.
-  const parked = cards.filter(c => c.gate && c.stage !== PROPOSED).map(c => needsYouItem(c, lanes, mockOf(c.id), scoreOf(c)));
+  const parked = cards.filter(c => c.gate && c.stage !== PROPOSED).map(c => {
+    const item = needsYouItem(c, lanes, mockOf(c.id), scoreOf(c));
+    const moved = c.gate === 'stuck' ? progressAt?.(c) : undefined;
+    return moved ? { ...item, moving_since: new Date(moved).toISOString() } : item;
+  });
   const waiting = sort === 'score' ? byScoreThenOldest(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
-  const failing = failingOf(cards, lastActivity, now.getTime());
+  const failing = failingOf(cards, lastActivity, now.getTime(), progressAt);
   const backlog = backlogOf(cards);
 
   return {

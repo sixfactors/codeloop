@@ -552,19 +552,30 @@ function quietSinceLastCheck(projectDir: string, id: string): boolean {
   return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check');
 }
 
-export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean } & Clock = {}): AdvanceResult {
+/**
+ * `rerunStuck` lets the doctor rerun the check of a story parked stuck, after work landed on it: a
+ * pass advances it and the stuck gate goes with it (an `unstick` event is written), a failure
+ * leaves it stuck. The gate is cleared only on the working copy, so a failure with the same
+ * fingerprint returns without writing anything.
+ */
+export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
   let before = findCard(file.cards, ref);
   const id = before.id;
   if (before.stage === DONE) throw new RefusalError(`card ${id} is already done`);
   if (before.stage === DROPPED) throw new RefusalError(`card ${id} was dropped as a proposal`);
-  if (before.gate) throw new RefusalError(`card ${id} is waiting for you at gate "${before.gate}" (${before.awaiting} approves)`);
+  const rerun = Boolean(opts.rerunStuck && before.gate === 'stuck');
+  if (before.gate && !rerun) throw new RefusalError(`card ${id} is waiting for you at gate "${before.gate}" (${before.awaiting} approves)`);
 
   const lane = loadLane(projectDir, before.lane);
   const stage = currentStage(lane, before);
   const now = opts.now ?? clock();
   const draft = (from: Card): Card => ({ ...from, retries: { ...from.retries }, events: [...from.events], evidence: [...from.evidence], updatedAt: now.toISOString() });
   let card = draft(before);
+  if (rerun) {
+    delete card.gate;
+    delete card.awaiting;
+  }
 
   // Covers a card whose outward gate was rejected, or that sat in the stage before the gate was added.
   if (awaitsApproval(card, stage)) {
@@ -591,6 +602,10 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     file = after;
     before = current;
     card = draft(current);
+    if (rerun) {
+      delete card.gate;
+      delete card.awaiting;
+    }
   }
   if (check) {
     if (!check.passed) {
@@ -640,6 +655,10 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     }
   }
 
+  if (rerun) {
+    card.retries[stage.id] = 0;
+    card.events.push(event(now, 'engine', 'unstick', stage.id, 'the check passes after work landed on the story'));
+  }
   const next = lane.stages[lane.stages.indexOf(stage) + 1];
   card.stage = next ? next.id : DONE;
   if (stage.output) card.evidence.push(substitute(stage.output, card));

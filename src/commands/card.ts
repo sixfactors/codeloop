@@ -142,6 +142,7 @@ cardCommand
     const c = client();
     const w = await c.cards.worktree(id);
     console.log(`${w.path}\n${w.branch}`);
+    for (const h of w.hooks ?? []) console.log(`hooks: ${h.name}${h.reason ? ` (${h.reason})` : ''}`);
     await c.close();
   }));
 
@@ -189,9 +190,9 @@ cardCommand
   .description('Show a card, its current stage brief and its events')
   .option('--json', 'JSON output')
   .action(guard(async (id: string, opts: { json?: boolean }) => {
-    const { card, brief: stage, hint } = await client().cards.show(id);
+    const { card, brief: stage, hint, tasks, evidenceFiles, commits } = await client().cards.show(id);
     if (opts.json) {
-      console.log(JSON.stringify({ ...card, brief: stage }, null, 2));
+      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits }, null, 2));
       return;
     }
     console.log(line(card));
@@ -209,6 +210,20 @@ cardCommand
       if (stage.done) console.log(`  check:  ${stage.done}`);
       for (const note of stage.notes) console.log(`  note:   ${note}`);
       for (const f of stage.feedback) console.log(chalk.yellow(f.kind === 'rejected' ? `  rejected: ${f.note}` : `  returned from ${f.from}: ${f.note}`));
+    }
+    const moving = card.display?.moving;
+    if (moving) console.log(chalk.yellow(`  ${card.display?.health} · moving: work landed since the check failed`));
+    if (tasks?.length) {
+      console.log(chalk.bold(`  tasks (${tasks.filter(t => t.done).length} of ${tasks.length} done)`));
+      for (const t of tasks) console.log(`    [${t.done ? 'x' : ' '}] ${t.id} [${t.layer}] ${t.text}`);
+    }
+    if (evidenceFiles?.length) {
+      console.log(chalk.bold('  evidence'));
+      for (const f of evidenceFiles) console.log(`    ${f.path}  ${chalk.dim(f.mtime)}`);
+    }
+    if (commits?.length) {
+      console.log(chalk.bold('  commits'));
+      for (const c of commits) console.log(`    ${c.sha.slice(0, 8)} ${c.subject}  ${chalk.dim(c.merged ? 'merged' : `on ${c.branches.join(', ') || 'no branch'}`)}`);
     }
     console.log();
     for (const e of card.events) {

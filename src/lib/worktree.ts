@@ -12,6 +12,7 @@ import { findCard, readCards, RefusalError, writeCards, type Card } from './card
 import { loadConfig } from './config.js';
 import { recordEvent } from './engine.js';
 import { listGates } from './gate.js';
+import { installHostHooks, type HookInstall } from './host-hooks.js';
 import { slugify } from './spec.js';
 
 export interface WorktreeOptions {
@@ -27,6 +28,8 @@ export interface StoryWorktree {
   branch: string;
   trunk: string;
   created: boolean;
+  /** What was rendered into a new worktree: host hook files and git hooks. */
+  hooks?: HookInstall[];
 }
 
 export interface MergeResult {
@@ -81,7 +84,12 @@ export function ensureStoryWorktree(projectDir: string, cardRef: string, opts: W
   must(projectDir, branchExists ? ['worktree', 'add', path, branch] : ['worktree', 'add', '-b', branch, path, trunk], 'cannot create the worktree');
   setFields(projectDir, card.id, { worktree: path, branch });
   appendActivity(projectDir, card.id, { session: currentSession(), kind: 'worktree', path, branch, trunk });
-  return { card: card.id, path, branch, trunk, created: true };
+  // A worktree is a fresh checkout: the host hooks the project rendered into its main tree (which
+  // are not always tracked) are missing there, and a builder inside it would run unguarded and
+  // write no activity.
+  const hooks = installHostHooks(path, { hostsOf: projectDir });
+  appendActivity(projectDir, card.id, { session: currentSession(), kind: 'hooks', path, text: hooks.map(h => `${h.name}${h.reason ? ` (${h.reason})` : ''}`).join(', ') });
+  return { card: card.id, path, branch, trunk, created: true, hooks };
 }
 
 export function mergeStory(projectDir: string, cardRef: string, opts: Pick<WorktreeOptions, 'trunk'> = {}): MergeResult {

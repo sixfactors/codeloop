@@ -24,7 +24,7 @@ import { epicCommand } from './commands/epic.js';
 import { initiativeCommand } from './commands/initiative.js';
 import { answerCommand, askCommand } from './commands/ask.js';
 import { orchCommand } from './commands/orch.js';
-import { runCommand } from './commands/run.js';
+import { doctorCommand, runCommand } from './commands/run.js';
 import { briefCommand } from './commands/brief.js';
 import { scheduleCommand } from './commands/schedule.js';
 import { adoptCommand } from './commands/adopt.js';
@@ -86,6 +86,7 @@ export function buildProgram(): Command {
   program.addCommand(askCommand);
   program.addCommand(answerCommand);
   program.addCommand(runCommand);
+  program.addCommand(doctorCommand);
   program.addCommand(orchCommand);
   program.addCommand(briefCommand);
   program.addCommand(scheduleCommand);
