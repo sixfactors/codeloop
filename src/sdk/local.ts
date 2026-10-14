@@ -88,6 +88,8 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     cardActivity: async (ref, query = {}) => services.cardActivity(projectDir, ref, query),
     activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, async (r, q) => services.cardActivity(projectDir, r, q)),
     handback: async (ref, input) => services.recordHandback(projectDir, ref, input),
+    gate: async (ref, input) => services.runGate(projectDir, ref, input),
+    gates: async ref => services.listGates(projectDir, ref),
     handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),

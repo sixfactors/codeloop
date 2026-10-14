@@ -97,6 +97,20 @@ describe('handback through both transports', () => {
   });
 });
 
+describe('gate through both transports', () => {
+  it('records a verdict on each, lists newest first, and refuses with no hand-back', async () => {
+    await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });
+    const { client } = overHttp();
+    await expect(client.cards.gate('c-001', {})).rejects.toMatchObject({ status: 400 });
+    await local().cards.handback('c-001', { branch: 'feat/x', head: 'abc123', proof: 'false' });
+    const viaLocal = await local().cards.gate('c-001', {});
+    const viaHttp = await client.cards.gate('c-001', {});
+    expect(viaLocal.verdict).toBe('fail');
+    expect(viaHttp.verdict).toBe('fail');
+    for (const c of [local(), client]) expect((await c.cards.gates('c-001')).length).toBe(2);
+  });
+});
+
 describe('http transport: the UI path against the same services', () => {
   it('reads what the local transport wrote, with ETag revalidation on the second read', async () => {
     await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });

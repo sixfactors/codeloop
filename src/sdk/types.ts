@@ -62,6 +62,7 @@ export interface Session {
   project: { name: string; path: string };
 }
 export type { HandbackInput, HandbackRecord } from '../lib/handback.js';
+export type { GateInput, GateRecord } from '../lib/gate.js';
 export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from '../lib/skill-eval.js';
 
 /** The counts `POST /api/setup/adopt` answers with; the entries themselves stay in the index file. */
