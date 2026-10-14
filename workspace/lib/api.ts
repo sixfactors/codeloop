@@ -4,7 +4,7 @@
 // component reaches the API's internal address (`codeloop serve`/`codeloop hub` set it), and the
 // public env var is only for a build served from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { AdvanceReport, Artifact, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
+import type { ActivityLine, AdvanceReport, Artifact, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 import { currentProjectBrowser, currentProjectServer, hubModeBrowser, hubModeServer } from './project';
 
@@ -160,7 +160,9 @@ export const api = {
     const c = await client();
     return action === 'approve' ? c.cards.approve(id, { note }) : c.cards.reject(id, note ?? '');
   },
-  answer: async (id: string, n: number, body: { text: string } | { accept: true }) => (await client()).questions.answer(id, n, body),
+  answer: async (id: string, n: number, body: { text: string } | { accept: true } | { option: string }) => (await client()).questions.answer(id, n, body),
+  /** Answers every open question with its recommended answer in one write. */
+  acceptAll: async (id: string) => (await client()).questions.acceptAll(id),
   // Backlog triage goes through the gate routes: approve on a proposal promotes it into its lane's
   // first stage, reject drops it (engine.ts proposeCard).
   promote: async (id: string) => (await client()).cards.approve(id),
@@ -179,6 +181,21 @@ export const api = {
   runStage: async (id: string, agent?: string) => (await client()).cards.run(id, agent ? { agent } : undefined),
   run: async (runId: string): Promise<Run> => missing(await (await client()).runs.get(runId), `run ${runId}`),
   /** The SSE stream of a run's log lines; the hook opens it with the browser's EventSource (same exemption as /api/events), so this stays synchronous and browser-only. */
+  park: async (id: string, note?: string) => (await client()).cards.park(id, note),
+  brief: async (id: string): Promise<string> => (await client()).cards.brief(id),
+  /** Every line of a card's activity, oldest first, paged through the cursor; the newest 2000 are kept. */
+  async cardActivity(id: string): Promise<ActivityLine[]> {
+    const c = await client();
+    const out: ActivityLine[] = [];
+    let after: string | undefined;
+    for (;;) {
+      const page = await c.cards.activity(id, { after, limit: 1000 });
+      out.push(...(page.lines as ActivityLine[]));
+      if (!page.next) break;
+      after = page.next;
+    }
+    return out.slice(-2000);
+  },
   runStreamUrl: (runId: string) => `${API_BASE}${scopedPath(`/api/runs/${encodeURIComponent(runId)}/stream`)}`,
   /** The current stage's output file: its path, and its text or null before it is written. */
   cardOutput: async (id: string): Promise<CardOutput> => (await client()).cards.output(id),

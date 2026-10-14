@@ -92,6 +92,10 @@ export function useCard(id: string) {
 export const useQuestions = (id: string) =>
   useQuery({ queryKey: QK.questions(id), queryFn: () => api.questions(id), enabled: Boolean(id) });
 
+/** A card's activity, oldest first; live lines are appended by useEvents as they arrive. */
+export const useCardActivity = (id: string) =>
+  useQuery({ queryKey: QK.activity(id), queryFn: () => api.cardActivity(id), enabled: Boolean(id), retry: false });
+
 export const useCardFull = (id: string) =>
   useQuery({ queryKey: QK.full(id), queryFn: () => api.cardFull(id), enabled: Boolean(id), retry: false });
 
@@ -243,6 +247,18 @@ export async function refreshCard(qc: QueryClient, id: string) {
   void qc.invalidateQueries({ queryKey: QK.next });
 }
 
+/** Park a story back to the inbox: nobody works it until someone picks it up again. */
+export function usePark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) => api.park(id, note),
+    onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
+export const useBrief = (id: string, enabled: boolean) =>
+  useQuery({ queryKey: [...QK.show(id), 'brief'], queryFn: () => api.brief(id), enabled: Boolean(id) && enabled, retry: false });
+
 export function useDecide() {
   const qc = useQueryClient();
   return useMutation({
@@ -254,8 +270,16 @@ export function useDecide() {
 export function useAnswer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, n, body }: { id: string; n: number; body: { text: string } | { accept: true } }) => api.answer(id, n, body),
+    mutationFn: ({ id, n, body }: { id: string; n: number; body: { text: string } | { accept: true } | { option: string } }) => api.answer(id, n, body),
     onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
+export function useAcceptAll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.acceptAll(id),
+    onSuccess: (_r, { id }) => { void qc.invalidateQueries({ queryKey: QK.questions(id) }); void refreshCard(qc, id); },
   });
 }
 

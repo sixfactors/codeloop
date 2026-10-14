@@ -51,7 +51,17 @@ import type {
   Task,
   WikiPage,
   WikiShapeCount,
+  ActivityEntry,
+  AgentTile,
+  CardHolder,
+  Journey,
+  JourneyStep,
+  StoryHolder,
 } from '@protoboxai/codeloop/sdk';
+
+/** One activity line as the card screen reads it: the API stamps the phase it happened in. */
+export type ActivityLine = ActivityEntry & { phase?: string };
+export type { AgentTile, Journey, JourneyStep, StoryHolder };
 
 export { CARD_FACETS } from '@protoboxai/codeloop/sdk';
 export type { CardEvent, Config, LiveEvent, NextAction, PagesQuery, PageWrite, Question, Session, Stats, Task, WikiShapeCount };
@@ -130,7 +140,9 @@ export type Evidence = EvidenceDetail;
 
 /** `/api/cards/:id/full` with the spec text and the evidence files lifted out, the way the card screen reads them. */
 export interface CardFull {
-  card: Card;
+  card: Card & CardHolder;
+  /** The lane's phases with this story's place in them, its holder and its last check, from the API. */
+  journey?: Journey;
   spec?: string;
   tasks?: Task[];
   questions?: Question[];

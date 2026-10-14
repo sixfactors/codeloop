@@ -24,6 +24,12 @@ when package.json names a version this file has no heading for.
   `codeloop card activity <id> --follow` in the terminal.
 - Sessions carry a host, a machine and a label ("claude on <machine>, since HH:MM"); the board and
   Home show the label instead of a UUID.
+- Open a story and see its journey: every phase done, current, waiting on you or skipped (and
+  why), with who holds it and what it did last.
+- A story page shows one panel for what to do next: watch the agent's live feed, approve the gate
+  or answer its questions, or start an agent or work on it yourself; the check is said in a sentence.
+- Home shows each working agent as a tile with its story, phase, last action and whether it is
+  working, stalled, failing a check or idle.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed

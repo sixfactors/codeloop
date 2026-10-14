@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, eventsUrl } from '@/lib/api';
 import { QK, isMissing } from '@/hooks/use-api';
 import { invalidateCardLists, invalidatePageLists, patchCard, patchPage, removeCard, removePage } from '@/lib/live-cache';
-import type { LiveEvent } from '@/lib/types';
+import type { ActivityLine, LiveEvent } from '@/lib/types';
 import { currentProjectBrowser, hubModeBrowser } from '@/lib/project';
 
 // One SSE connection per tab. Each message names one entity; the cache is patched by id, so a card
@@ -60,6 +60,16 @@ export function useEvents() {
             else void qc.invalidateQueries({ queryKey: [repo] });
           }
         }
+        return;
+      }
+      if ('type' in msg && msg.type === 'activity') {
+        // Appended to a feed that is open; a feed not loaded yet reads the whole file when it opens.
+        qc.setQueryData<ActivityLine[]>(QK.activity(msg.card), (prev) => {
+          if (!prev) return prev;
+          const last = prev.length ? Number(prev[prev.length - 1].cursor) : -1;
+          return Number(msg.line.cursor) > last ? [...prev, msg.line as ActivityLine] : prev;
+        });
+        void qc.invalidateQueries({ queryKey: QK.home });
         return;
       }
       if (!('repo' in msg) || !msg.id) return;
