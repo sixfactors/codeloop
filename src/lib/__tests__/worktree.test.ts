@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { cardActivity, ensureStoryWorktree, mergeStory, recordHandback, removeStoryWorktree, runGate } from '../services.js';
@@ -46,6 +46,40 @@ describe('ensureStoryWorktree', () => {
 
     const second = ensureStoryWorktree(dir, 'c-001');
     expect(second).toMatchObject({ created: false, path: first.path, branch: first.branch });
+  });
+});
+
+describe('mergeStory with a trunk that moved', () => {
+  const commitOn = (cwd: string, file: string, text: string) => {
+    mkdirSync(join(cwd, file, '..'), { recursive: true });
+    writeFileSync(join(cwd, file), text);
+    sh(`git add -A && ${GIT} commit -qm ${file.replace(/\W/g, '_')}`, cwd);
+  };
+  const handBack = (wt: string) => {
+    recordHandback(dir, 'c-001', { branch: sh('git rev-parse --abbrev-ref HEAD', wt), head: sh('git rev-parse HEAD', wt), proof: 'true', worktree: wt });
+    return runGate(dir, 'c-001');
+  };
+
+  it('takes the branch version of a story file the trunk also added, and names it', () => {
+    const w = ensureStoryWorktree(dir, 'c-001');
+    commitOn(w.path, 'specs/001-x/research.md', 'branch research\n');
+    commitOn(dir, 'specs/001-x/research.md', 'scaffold stub\n');
+    expect(handBack(w.path).verdict).toBe('pass');
+    const merged = mergeStory(dir, 'c-001');
+    expect(merged.resolved).toEqual(['specs/001-x/research.md']);
+    expect(readFileSync(join(dir, 'specs/001-x/research.md'), 'utf8')).toBe('branch research\n');
+    expect(existsSync(join(dir, '.git/MERGE_HEAD'))).toBe(false);
+    expect(cardActivity(dir, 'c-001').lines.find(l => l.kind === 'merge')?.resolved).toEqual(['specs/001-x/research.md']);
+  });
+
+  it('aborts on a conflict outside the story folders, leaves no merge in progress and names the file', () => {
+    const w = ensureStoryWorktree(dir, 'c-001');
+    commitOn(w.path, 'src/a.ts', 'branch\n');
+    commitOn(dir, 'src/a.ts', 'trunk\n');
+    expect(handBack(w.path).verdict).toBe('pass');
+    expect(() => mergeStory(dir, 'c-001')).toThrow(/merge conflict in src\/a\.ts: merge the trunk into the branch and hand back again/);
+    expect(existsSync(join(dir, '.git/MERGE_HEAD'))).toBe(false);
+    expect(readFileSync(join(dir, 'src/a.ts'), 'utf8')).toBe('trunk\n');
   });
 });
 
