@@ -965,3 +965,7 @@ export { listHandbacks, recordHandback, type HandbackInput, type HandbackRecord 
 export { stalledBuilders, stalledLines, type StalledBuilder } from './stall.js';
 export { listGates, runGate, type GateInput, type GateRecord } from './gate.js';
 export { ensureStoryWorktree, mergeStory, removeStoryWorktree, type MergeResult, type StoryWorktree, type WorktreeOptions } from './worktree.js';
+
+// --- the orchestrator ------------------------------------------------------------------------
+export { orchRun, orchStatus, orchReport, orchTurn, orchView, readOrch, startOrch } from './orch.js';
+export type { OrchOptions, OrchRecord, OrchReport, OrchRunResult, OrchStarted, OrchStatusRow, OrchTurn, OrchView } from './orch.js';

@@ -44,6 +44,10 @@ Deep session review (standalone, for multi-commit sessions):
 2. Check for existing entries to increment frequency
 3. Propose changes, get user approval, apply
 
+## Orchestrator
+
+`codeloop orch <card>` runs one story stage as seven steps: worktree, brief, builder, hand-back, gate, merge, record. The builder is the configured agent started inside the story's worktree with `CODELOOP_CARD` and `CODELOOP_PROJECT_DIR` set, so its hand-back lands on the main tree's board. The brief ends with the orchestration rules and the exact `codeloop card handback ... --worktree` line the builder must finish with. A turn that merges advances the card; a turn that fails keeps its findings for the next brief and costs one of the lane's retries, and the last one parks the story stuck. Each turn is recorded in `.codeloop/state/orch/<card>.json` and as an `orch` activity line. `--until <gate>` keeps going stage by stage; any gate stops the run. `codeloop orch status` and `codeloop orch report <card>` show where each story stands.
+
 ## The Learning Loop
 
 Frequency = severity. The more a gotcha recurs, the more seriously it's treated:

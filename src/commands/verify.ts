@@ -7,6 +7,7 @@ import { loadLanes } from '../lib/lane.js';
 import { computeStats, type Stats } from '../lib/stats.js';
 import { verify } from '../lib/verify.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../lib/project-root.js';
 
 export const verifyCommand = new Command('verify')
   .description('Run the use cases for a card and write evidence. Exit 2: nothing to verify, or an acceptance line has no use case; 1: a use case failed; 4: --mutate found one that cannot fail; 5: --mutate could not run')
@@ -15,7 +16,7 @@ export const verifyCommand = new Command('verify')
   .option('--env <name>', 'Environment: api use cases use deploy.<name>.base_url from config.yaml')
   .option('--no-record', 'Do not add the evidence to the card')
   .action(guard(async (ref: string, opts: { mutate?: boolean; env?: string; record: boolean }) => {
-    const result = await verify(process.cwd(), ref, opts);
+    const result = await verify(projectRoot(), ref, opts);
     if (result.problem) console.error(chalk.red(`  ${result.problem}`));
     result.missing.forEach(us => console.error(chalk.red(`  acceptance line ${us} has no use case: add a file in ${result.usecaseDir}/ whose \`accept:\` is ${us}`)));
     if (result.missing.length) {
@@ -53,7 +54,7 @@ export const statsCommand = new Command('stats')
   .option('--compare <versions...>', 'Two lane versions to compare, e.g. v1 v2')
   .option('--json', 'JSON output')
   .action(guard((opts: { card?: string; lane?: string; compare?: string[]; json?: boolean }) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const lanes = loadLanes(projectDir).filter(l => !opts.lane || l.id === opts.lane);
     const all = readCards(projectDir).cards;
     const one = opts.card ? findCard(all, opts.card).id : undefined;
@@ -79,7 +80,7 @@ export const cardDiffCommand = new Command('diff')
   .description("Files, lines and commits in a card's diff and the verdict against its size budget, without running verify. Exit 1 when over budget")
   .argument('<id>', 'Card number or id')
   .action(guard((ref: string) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const card = findCard(readCards(projectDir).cards, ref);
     const v = checkBudget(projectDir, card.id, card.size);
     console.log(`  files ${v.files}, lines ${v.lines}, commits ${v.commits}`);

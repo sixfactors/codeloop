@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
-import { createLocalClient, MAX_QUESTIONS, parseQuestions } from '../sdk/local.js';
+import { createLocalClient, MAX_QUESTIONS, parseQuestions, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
 export const askCommand = new Command('ask')
@@ -14,7 +14,7 @@ export const askCommand = new Command('ask')
   .action(guard(async (card: string, question: string | undefined, opts: { recommended?: string; option?: string[]; file?: string; as?: string }) => {
     const items = opts.file ? fromFile(opts.file) : question ? [{ question, recommended: opts.recommended, ...(opts.option?.length ? { options: opts.option } : {}) }] : [];
     if (!items.length) throw refuse('say the question, or --file <path> with `## Q1 <question>` blocks');
-    const { path, added } = await createLocalClient(process.cwd()).questions.ask(card, items, { as: opts.as });
+    const { path, added } = await createLocalClient(projectRoot()).questions.ask(card, items, { as: opts.as });
     for (const q of added) {
       console.log(`  Q${q.n} ${q.question}${q.recommended ? `  (recommended: ${q.recommended})` : ''}`);
       for (const o of q.options ?? []) console.log(`      ${o.key}: ${o.text}`);
@@ -40,7 +40,7 @@ export const answerCommand = new Command('answer')
   .option('--accept-all', 'Take the recommended answer on every open question of the card, in one write')
   .option('--as <role>', 'owner | reviewer | agent')
   .action(guard(async (card: string, n: string | undefined, text: string | undefined, opts: { accept?: boolean; option?: string; acceptAll?: boolean; as?: string }) => {
-    const client = createLocalClient(process.cwd());
+    const client = createLocalClient(projectRoot());
     if (opts.acceptAll) {
       const result = await client.questions.acceptAll(card, { as: opts.as });
       for (const q of result.questions.filter(x => x.answer)) console.log(`  Q${q.n}: ${q.answer}`);

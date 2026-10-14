@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
 
 export const briefCommand = new Command('brief')
@@ -9,7 +9,7 @@ export const briefCommand = new Command('brief')
   .argument('<card>')
   .option('--out <file>', 'Write the brief to a file')
   .action(guard(async (id: string, opts: { out?: string }) => {
-    const brief = await createLocalClient(process.cwd()).cards.brief(id);
+    const brief = await createLocalClient(projectRoot()).cards.brief(id);
     if (!opts.out) {
       process.stdout.write(brief);
       return;

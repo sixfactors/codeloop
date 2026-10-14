@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { createLocalClient } from '../sdk/local.js';
+import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
 export const inboxCommand = new Command('inbox')
@@ -10,7 +10,7 @@ export const inboxCommand = new Command('inbox')
   .option('--by <order>', 'score (highest RICE first, then oldest) or age (oldest first)', 'score')
   .action(guard(async (opts: { json?: boolean; seen?: boolean; by: string }) => {
     if (opts.by !== 'score' && opts.by !== 'age') throw refuse(`--by "${opts.by}" is not score or age`);
-    const client = createLocalClient(process.cwd());
+    const client = createLocalClient(projectRoot());
     const inbox = await client.inbox.report({ sort: opts.by });
     if (opts.json) {
       console.log(JSON.stringify(inbox, null, 2));
