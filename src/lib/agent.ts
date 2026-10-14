@@ -240,7 +240,8 @@ function cardOfBrief(briefFile: string): string | undefined {
   }
 }
 
-export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string): Promise<AgentRun> {
+/** `cwd` and `env` let the orchestrator start the agent in a story's worktree while the board stays in `projectDir`. */
+export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string, opts: { cwd?: string; env?: Record<string, string> } = {}): Promise<AgentRun> {
   mkdirSync(dirname(logFile), { recursive: true });
   // Appended, not truncated: a run started from the API writes the check's output ahead of the agent's.
   const out = openSync(logFile, 'a');
@@ -259,11 +260,11 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
     // The command's output goes straight to the file: a pipe held open by a child the agent left
     // behind would keep this process waiting after the agent itself has gone.
     const child = spawn(agent.cmd.replaceAll('{brief}', shellQuote(briefFile)), {
-      cwd: projectDir,
+      cwd: opts.cwd ?? projectDir,
       shell: true,
       detached: true,
       stdio: ['ignore', out, out],
-      env: { ...checkEnv(), CODELOOP_ROLE: 'agent', CODELOOP_AGENT_RUN: agent.name, ...(cardOfBrief(briefFile) ? { CODELOOP_CARD: cardOfBrief(briefFile) } : {}) },
+      env: { ...checkEnv(), CODELOOP_ROLE: 'agent', CODELOOP_AGENT_RUN: agent.name, ...(cardOfBrief(briefFile) ? { CODELOOP_CARD: cardOfBrief(briefFile) } : {}), ...opts.env },
     });
     const timer = setTimeout(() => {
       timedOut = true;
