@@ -5,6 +5,7 @@
  * which does the same thing per project.
  */
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { dirname, join } from 'path';
 import { codeloopHome } from './hub-registry.js';
 
@@ -21,7 +22,7 @@ const hubStatePath = () => join(codeloopHome(), 'state', 'hub.json');
 export function writeHubState(state: HubState): void {
   const file = hubStatePath();
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(state, null, 2)}\n`);
+  writeFileSync(file, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
 }
 
 export function readHubState(): HubState | undefined {
@@ -61,4 +62,37 @@ export async function hubStateAlive(state: HubState): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * The write token and the session-signing secret outlive a hub process: hub.json is deleted on
+ * stop, and a token that changes on every start invalidates every signed-in browser. Kept in its
+ * own 0600 file next to hub.json and reused until `fresh` rotates both.
+ */
+export interface HubSecrets {
+  token: string;
+  sessionSecret: string;
+}
+
+const hubSecretsPath = () => join(codeloopHome(), 'state', 'hub-secrets.json');
+
+export function loadHubSecrets(opts: { fresh?: boolean; token?: string } = {}): HubSecrets {
+  const file = hubSecretsPath();
+  let stored: Partial<HubSecrets> = {};
+  if (!opts.fresh && existsSync(file)) {
+    try {
+      stored = JSON.parse(readFileSync(file, 'utf-8')) as Partial<HubSecrets>;
+    } catch {
+      stored = {};
+    }
+  }
+  const secrets: HubSecrets = {
+    token: opts.token ?? (opts.fresh ? undefined : stored.token) ?? randomBytes(24).toString('hex'),
+    sessionSecret: stored.sessionSecret ?? randomBytes(32).toString('hex'),
+  };
+  if (secrets.token !== stored.token || secrets.sessionSecret !== stored.sessionSecret) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
+  }
+  return secrets;
 }

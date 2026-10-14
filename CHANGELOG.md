@@ -7,6 +7,7 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- Signing in to the board survives a hub restart.
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
 - `codeloop verify` fails a story whose diff exceeds the budget for its size (S 8 files / 300 lines, M 20 / 1,200, L 40 / 3,000; `diff_budget:` overrides, `budget: off` disables) and writes a `budget:` line to evidence; `codeloop card diff <id>` shows the numbers.
 - `codeloop card worktree <card>` gives a story its own git worktree (`../<repo>-wt-<card>`) and branch (`feat/<feature or lane>-<title>`) cut from `git.trunk`, recorded on the card; `codeloop card merge <card>` fast-forwards it into the trunk (merge commit when it cannot), refused unless the latest gate passed and no file the branch changed is dirty in the main tree (`POST /api/cards/:id/worktree`, `POST /api/cards/:id/merge`).
