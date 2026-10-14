@@ -105,6 +105,8 @@ Before a card enters build, research states what already exists for it:
 
 Check: `research.md` has `exists: have|unlock|port|build` with a path or URL when it is not `build`.
 
+Screens: in a project with a Next.js app, each name under `screens:` becomes a `data-screen` section on a page in that app, composed from its shared components, and `mock: keep | drop` in the spec says whether the page stays.
+
 ## Done when is a command or a screen
 
 The spec's `done_when:` line names a command that exits 0 or a screen a person opens. Never "all stories complete".
