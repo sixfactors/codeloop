@@ -840,3 +840,72 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
     needsYou, failing, stale, inProgress, agents, shipped,
   };
 }
+
+// --- monitor: what a session sees first --------------------------------------------------------
+
+export interface MonitorItem {
+  id: string;
+  title: string;
+  stage: string;
+  /** The last failed check's last line, for a failing story. */
+  lastCheck?: string;
+  /** What to do next: the same hint `codeloop next` prints. */
+  fix?: string;
+}
+
+export interface MonitorReport {
+  summary: { needsYou: number; failing: number; stale: number; working: number };
+  needsYou: MonitorItem[];
+  failing: MonitorItem[];
+  stale: MonitorItem[];
+}
+
+/**
+ * The monitor every session starts with: what waits on a person, what is failing and how to fix
+ * it, what is stale. Read straight from cards.json, so a hook does not need the index.
+ */
+export function monitorReport(projectDir: string, opts: { limit?: number; now?: number } = {}): MonitorReport {
+  const limit = opts.limit ?? 5;
+  const now = opts.now ?? Date.now();
+  const rows = readCards(projectDir).cards
+    .map(card => ({ card, state: liveState(projectDir, card, openQuestions(projectDir, card).length, now) }))
+    .filter((r): r is { card: Card; state: StoryState } => Boolean(r.state?.health));
+  const lastFail = (card: Card) => card.events.filter(e => e.action === 'fail' && e.stage === card.stage).at(-1)?.note?.split('\n').filter(Boolean).at(-1);
+  const item = (card: Card, withFix = false): MonitorItem => {
+    const check = lastFail(card);
+    return { id: card.id, title: card.title, stage: card.stage, ...(check ? { lastCheck: check } : {}), ...(withFix ? { fix: nextHint(projectDir, card, check) } : {}) };
+  };
+  const newest = (a: { card: Card }, b: { card: Card }) => b.card.updatedAt.localeCompare(a.card.updatedAt);
+  const of = (h: string) => rows.filter(r => r.state.health === h).sort(newest);
+  const needsYou = [...of('needs-you'), ...of('stuck')];
+  const failing = of('failing');
+  const stale = of('stale');
+  return {
+    summary: { needsYou: needsYou.length, failing: failing.length, stale: stale.length, working: of('working').length },
+    needsYou: needsYou.slice(0, limit).map(r => item(r.card)),
+    failing: failing.slice(0, limit).map(r => item(r.card, true)),
+    stale: stale.slice(0, limit).map(r => item(r.card)),
+  };
+}
+
+/** The monitor as the lines a session-start hook prints. */
+export function monitorLines(report: MonitorReport): string[] {
+  const { summary: s } = report;
+  const lines = [`codeloop monitor: ${s.needsYou} waiting for you, ${s.failing} failing, ${s.stale} stale, ${s.working} working`];
+  if (report.needsYou.length) {
+    lines.push('Waiting for you:');
+    for (const c of report.needsYou) lines.push(`  ${c.id} ${c.title} (${c.stage})`);
+  }
+  if (report.failing.length) {
+    lines.push('Failing:');
+    for (const c of report.failing) {
+      lines.push(`  ${c.id} ${c.title} (${c.stage})${c.lastCheck ? `: ${c.lastCheck}` : ''}`);
+      if (c.fix) lines.push(`    ${c.fix}`);
+    }
+  }
+  if (report.stale.length) {
+    lines.push('Stale, nothing for two days (park or drop):');
+    for (const c of report.stale) lines.push(`  ${c.id} ${c.title} (${c.stage}): \`codeloop card park ${c.id}\` or \`codeloop card drop ${c.id} "<why>"\``);
+  }
+  return lines;
+}

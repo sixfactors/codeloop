@@ -323,6 +323,25 @@ describe('guard session (SessionStart hook)', () => {
     expect(result.stdout).toMatch(/codeloop card activate c-7/);
   });
 
+  it('prints the monitor: what waits on you, what is failing with its fix, what is stale; never a done story as active', () => {
+    const at = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    const card = (id: string, stage: string, extra: Record<string, unknown> = {}) => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage, retries: {}, evidence: [], events: [], createdAt: at(80), updatedAt: at(1), ...extra });
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [
+      card('c-1', 'done'),
+      card('c-2', 'spec', { retries: { spec: 2 }, updatedAt: at(3), events: [{ at: at(3), actor: 'engine', human: false, action: 'fail', stage: 'spec', note: 'refused: specs/002/tasks.md is missing' }] }),
+      card('c-3', 'spec', { updatedAt: at(72) }),
+      card('c-4', 'spec', { gate: 'spec', awaiting: 'owner' }),
+    ] }, null, 2));
+    setActiveCard(dir, 'c-1');
+    const result = cli(['guard', 'session']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toMatch(/active story c-1/);
+    expect(result.stdout).toMatch(/Waiting for you[\s\S]*c-4/);
+    expect(result.stdout).toMatch(/Failing[\s\S]*c-2 Card c-2[\s\S]*tasks\.md is missing[\s\S]*Next:/);
+    expect(result.stdout).toMatch(/Stale[^\n]*park or drop[\s\S]*c-3[^\n]*codeloop card park c-3/);
+    expect(getActiveCard(dir)).toBeUndefined();
+  });
+
   it('is installed as a SessionStart hook by the Claude hooks template', () => {
     const template = JSON.parse(readFileSync(join(ROOT, 'templates/hooks/claude-hooks.json'), 'utf-8'));
     expect(JSON.stringify(template.hooks.SessionStart)).toContain('codeloop guard session');

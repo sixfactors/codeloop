@@ -6,6 +6,11 @@ With no active card, do not start from the chat: run `codeloop card list --band 
 `codeloop card activate <id>` on the top one, or `codeloop start "<title>"` when the person asks for
 something new that fits one story.
 
+Every session starts with the codeloop monitor block (`codeloop guard session` prints it): what
+waits for the person, what is failing with its fix, what is stale. Read it first. If your own story
+is failing, fix that before anything else, using the fix line it prints. Tell the person what is
+waiting for them; do not approve it yourself.
+
 Before any work, run `codeloop brief <active card>`. It names the stage, the skill, the output
 path and the check that must pass. Work only that stage, and write only its output.
 
