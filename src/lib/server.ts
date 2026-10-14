@@ -290,6 +290,14 @@ export function createApp(
   }));
   app.post(api('/cards/:id/worktree'), writing(async c => c.json(services.ensureStoryWorktree(projectDir, c.req.param('id')), 201)));
   app.post(api('/cards/:id/merge'), writing(async c => c.json(services.mergeStory(projectDir, c.req.param('id')), 201)));
+  // One orchestrated turn (a run to `until` when given) goes on after the response; the record shows its result.
+  app.post(api('/cards/:id/orch'), writing(async c => {
+    const body = await json(c, { agent: undefined as string | undefined, until: undefined as string | undefined, builder: undefined as string | undefined, wait: undefined as number | false | undefined });
+    return c.json({ turn: services.startOrch(projectDir, c.req.param('id'), { agent: body.agent || undefined, until: body.until || undefined, builder: body.builder || undefined, wait: body.wait === false ? false : typeof body.wait === 'number' ? body.wait : undefined }) }, 202);
+  }));
+  app.post(api('/cards/:id/orch/resume'), writing(async c => c.json({ turn: services.orchResume(projectDir, c.req.param('id')) })));
+  app.get(api('/orch/status'), handled(async c => c.json(services.orchStatus(projectDir))));
+  app.get(api('/cards/:id/orch'), handled(async c => c.json(services.orchView(projectDir, c.req.param('id')))));
   app.get(api('/cards/:id/gates'), handled(async c => c.json(services.listGates(projectDir, c.req.param('id')))));
   app.get(api('/cards/:id/handbacks'), handled(async c => c.json(services.listHandbacks(projectDir, c.req.param('id')))));
   app.get(api('/runs/:runId'), handled(async c => {
@@ -395,7 +403,7 @@ export function createApp(
 
   app.get(api('/artifacts'), handled(async c => cached(c, etag('artifacts', v.artifacts), async () => ({ artifacts: await services.artifacts(index) }))));
   // Not cached: the agent working each story comes from live sessions, which no index version tracks.
-  app.get(api('/board'), handled(async c => c.json(await services.boardView(index, projectDir))));
+  app.get(api('/board'), handled(async c => c.json(await services.boardView(index, projectDir, { lane: query(c).get('lane') ?? undefined }))));
   app.get(api('/home'), handled(async c => c.json(await services.homeView(index, projectDir))));
   app.get(api('/stats'), handled(async c => cached(c, etag('stats', v.cards, v.lanes), () => services.stats(index))));
   app.get(api('/config'), handled(async c => c.json({ config: await services.publicConfig(store) })));

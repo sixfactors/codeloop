@@ -23,6 +23,7 @@ import { featureCommand } from './commands/feature.js';
 import { epicCommand } from './commands/epic.js';
 import { initiativeCommand } from './commands/initiative.js';
 import { answerCommand, askCommand } from './commands/ask.js';
+import { orchCommand } from './commands/orch.js';
 import { runCommand } from './commands/run.js';
 import { briefCommand } from './commands/brief.js';
 import { scheduleCommand } from './commands/schedule.js';
@@ -31,7 +32,7 @@ import { checkCommand } from './commands/check.js';
 import { packCommand } from './commands/pack.js';
 import { specCommand, taskCommand } from './commands/spec.js';
 import { importCommand } from './commands/import.js';
-import { cardDiffCommand, statsCommand, verifyCommand } from './commands/verify.js';
+import { cardDiffCommand, cardHealthCommand, healthCommand, statsCommand, verifyCommand } from './commands/verify.js';
 import { learnCommand, wikiCommand } from './commands/wiki.js';
 import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
 import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
@@ -68,7 +69,10 @@ export function buildProgram(): Command {
 
   // Lane engine
   program.addCommand(laneCommand);
-  cardCommand.addCommand(cardDiffCommand);
+  // cardCommand is a module singleton and buildProgram runs more than once in tests, so add each once.
+  for (const sub of [cardDiffCommand, cardHealthCommand]) {
+    if (!cardCommand.commands.some(c => c.name() === sub.name())) cardCommand.addCommand(sub);
+  }
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
   program.addCommand(shapeCommand);
@@ -82,6 +86,7 @@ export function buildProgram(): Command {
   program.addCommand(askCommand);
   program.addCommand(answerCommand);
   program.addCommand(runCommand);
+  program.addCommand(orchCommand);
   program.addCommand(briefCommand);
   program.addCommand(scheduleCommand);
   program.addCommand(adoptCommand);
@@ -96,6 +101,7 @@ export function buildProgram(): Command {
   program.addCommand(taskCommand);
   program.addCommand(importCommand);
   program.addCommand(verifyCommand);
+  program.addCommand(healthCommand);
   program.addCommand(statsCommand);
   program.addCommand(wikiCommand);
   program.addCommand(learnCommand);

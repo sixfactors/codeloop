@@ -10,7 +10,7 @@
  */
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { randomBytes, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { existsSync } from 'fs';
 import { checkHubPassword, readHubAuth } from './hub-auth.js';
 import { findProject, listProjects, type ListedProject } from './hub-registry.js';
@@ -32,6 +32,8 @@ interface ProjectContext {
 export interface HubOptions {
   /** Sent as `x-codeloop-token`, same header as a project server, same meaning: an agent or the SDK's standing write credential. Printed once at startup. */
   token?: string;
+  /** Signs session cookies. Persisted by the caller so a signed-in browser survives a restart; random per app when omitted (tests). */
+  sessionSecret?: string;
   anyHost?: boolean;
   /** Overrides the 30-minute idle close, for tests. */
   idleMs?: number;
@@ -56,11 +58,25 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   const token = opts.token ?? randomBytes(24).toString('hex');
   const idleMs = opts.idleMs ?? IDLE_CLOSE_MS;
   const SESSION_COOKIE = 'codeloop_hub_session';
-  const sessions = new Set<string>();
+  const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+  const sessionSecret = opts.sessionSecret ?? randomBytes(32).toString('hex');
+  // Stateless `<expiry ms>.<hmac>` cookie: nothing in memory, so a restart that keeps the secret keeps the session.
+  const sign = (exp: string) => createHmac('sha256', sessionSecret).update(exp).digest('hex');
+  const issueSession = () => {
+    const exp = String(Date.now() + SESSION_MS);
+    return `${exp}.${sign(exp)}`;
+  };
+  const validSession = (sid: string | undefined) => {
+    if (!sid) return false;
+    const [exp, mac] = sid.split('.');
+    if (!exp || !mac || !(Number(exp) > Date.now())) return false;
+    const want = sign(exp);
+    return mac.length === want.length && timingSafeEqual(Buffer.from(mac), Buffer.from(want));
+  };
   const sameToken = (given: string | undefined) => !!given && given.length === token.length && timingSafeEqual(Buffer.from(given), Buffer.from(token));
   const signedIn = (c: Context) => {
     const sid = getCookie(c, SESSION_COOKIE);
-    return !!sid && sessions.has(sid);
+    return validSession(sid);
   };
   const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
   const sameHost = (origin: string, host: string) => {
@@ -207,14 +223,10 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
     const body = await c.req.json<{ user?: string; password?: string }>().catch(() => ({}) as { user?: string; password?: string });
     const auth = readHubAuth();
     if (body.user !== auth.user || !checkHubPassword(auth, body.password ?? '')) return c.json({ error: 'wrong username or password' }, 401);
-    const sid = randomBytes(24).toString('hex');
-    sessions.add(sid);
-    setCookie(c, SESSION_COOKIE, sid, { httpOnly: true, sameSite: 'Strict', path: '/' });
+    setCookie(c, SESSION_COOKIE, issueSession(), { httpOnly: true, sameSite: 'Strict', path: '/', maxAge: SESSION_MS / 1000 });
     return c.json({ ok: true });
   });
   app.post('/api/hub/session/logout', c => {
-    const sid = getCookie(c, SESSION_COOKIE);
-    if (sid) sessions.delete(sid);
     deleteCookie(c, SESSION_COOKIE, { path: '/' });
     return c.json({ ok: true });
   });

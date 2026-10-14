@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import dynamic from 'next/dynamic';
-import { useCardCount, useCards, useCanWrite, useConfig, useHome, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
+import { useBoard, useCanWrite, useConfig, useHome, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { useProject, useRoutes } from '@/components/providers/project-provider';
 import { routesFor, type Routes } from '@/lib/routes';
 import { api, type ListedProject } from '@/lib/api';
@@ -237,8 +237,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const routes = useRoutes();
   const groups = React.useMemo(() => navGroups(routes), [routes]);
   const secondary = React.useMemo(() => secondaryNav(routes), [routes]);
-  // Counts come from the server (the inbox totals and one filtered count), not from a walk over the cards.
-  const { total } = useCards({}, { enabled: !atHubHome });
+  // Counts come from the server, not from a walk over the cards. The story count is the board's own
+  // `total`, so the sidebar, the board header and the drawer pager can never disagree.
+  const board = useBoard(undefined, !atHubHome);
+  const total = board.data?.total ?? 0;
   const { canWrite } = useCanWrite();
   const session = useSession();
   const config = useConfig(!atHubHome);
@@ -247,7 +249,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const needsYouCount = home.data?.summary.needsYou ?? 0;
   const gates = inbox.data?.needsYou.total ?? 0;
   const questions = inbox.data?.questions.total ?? 0;
-  const backlog = useCardCount({ stage: ['proposed'] }, !atHubHome).data ?? 0;
   const hubProjects = useQuery({ queryKey: ['hub', 'projects'], queryFn: api.hub.projects, retry: false, enabled: atHubHome });
   const knownProjects = (hubProjects.data ?? []).filter((p) => !p.missing);
   const cfg = config.data as { product?: string; name?: string } | undefined;
@@ -260,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const indicators: Record<string, React.ReactNode> = {
     // The same number Home leads with, so the badge and the page never disagree.
     home: needsYouCount > 0 ? <CountBadge value={needsYouCount} tone="attention" /> : null,
-    board: <CountBadge value={backlog} />,
+    board: board.data ? <CountBadge value={total} /> : null,
   };
 
   return (
@@ -317,7 +318,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate font-medium">{canWrite ? 'Owner' : 'Read only'}</span>
-              <span className="truncate text-xs text-muted-foreground tabular-nums">
+              <span className="truncate text-xs text-muted-foreground tabular-nums" data-testid="sidebar-story-count">
                 {atHubHome ? `${knownProjects.length} project${knownProjects.length === 1 ? '' : 's'}` : `${total} stories`}
               </span>
             </div>

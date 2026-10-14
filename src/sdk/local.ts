@@ -9,6 +9,7 @@ import * as services from '../lib/services.js';
 import { openStore, type Store } from '../lib/store/index.js';
 import { CodeloopClient, followCardActivity, type Transport } from './client.js';
 import type { LiveEvent, Role, RoleOption } from './types.js';
+import { projectRoot } from '../lib/project-root.js';
 
 export interface LocalOptions {
   /** The role every write acts as when the call names none; otherwise `--as`, CODELOOP_ROLE, then the terminal decide. */
@@ -91,6 +92,10 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     gate: async (ref, input) => services.runGate(projectDir, ref, input),
     worktree: async ref => services.ensureStoryWorktree(projectDir, ref),
     merge: async ref => services.mergeStory(projectDir, ref),
+    orchRun: async (ref, opts = {}) => ({ turn: services.startOrch(projectDir, ref, opts) }),
+    orchResume: async ref => ({ turn: services.orchResume(projectDir, ref) }),
+    orchStatus: async () => services.orchStatus(projectDir),
+    orchView: async ref => services.orchView(projectDir, ref),
     gates: async ref => services.listGates(projectDir, ref),
     handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
@@ -119,7 +124,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
       return services.inboxPaged(projectDir, indexed(), { ...rest, ...(needsMe ? { needsMe: role() } : {}) });
     },
     inboxReport: async opts => services.inboxReport(projectDir, opts),
-    board: () => services.boardView(indexed(), projectDir),
+    board: (opts = {}) => services.boardView(indexed(), projectDir, opts),
     home: () => services.homeView(indexed(), projectDir),
     markInboxSeen: async () => services.inboxSeen(projectDir),
     lanes: () => indexed().lanes.list(),
@@ -173,9 +178,11 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
   };
 }
 
-/** A client over the project's own files: `createLocalClient(process.cwd())`. */
-export const createLocalClient = (projectDir: string, options: LocalOptions = {}) => new CodeloopClient(localTransport(projectDir, options));
+/** A client over the project's own files: `createLocalClient(projectRoot())`. */
+export const createLocalClient = (projectDir: string = projectRoot(), options: LocalOptions = {}) => new CodeloopClient(localTransport(projectDir, options));
 
 export { CodeloopClient };
 /** The `## Q<n>` block parser and the per-card limit, for a CLI reading questions from a file. */
 export { MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
+/** The directory holding the board: CODELOOP_PROJECT_DIR when a builder runs in a worktree, else the working directory. */
+export { projectRoot } from '../lib/project-root.js';

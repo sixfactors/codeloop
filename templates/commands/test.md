@@ -4,7 +4,7 @@ argument-hint: [suite] [--watch] [--coverage]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
-<!-- codeloop-version: 0.4.3 -->
+<!-- codeloop-version: 0.5.0 -->
 
 # /test
 

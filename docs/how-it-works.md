@@ -44,6 +44,12 @@ Deep session review (standalone, for multi-commit sessions):
 2. Check for existing entries to increment frequency
 3. Propose changes, get user approval, apply
 
+## Orchestrator
+
+`codeloop orch <card>` runs one story stage as seven steps: worktree, brief, builder, hand-back, gate, merge, record. The builder is the configured agent started inside the story's worktree with `CODELOOP_CARD` and `CODELOOP_PROJECT_DIR` set, so its hand-back lands on the main tree's board. The brief ends with the orchestration rules and the exact `codeloop card handback ... --worktree` line the builder must finish with. A turn that merges advances the card; a turn that fails keeps its findings for the next brief and costs one of the lane's retries, and the last one parks the story stuck. Each turn is recorded in `.codeloop/state/orch/<card>.json` and as an `orch` activity line. `--until <gate>` keeps going stage by stage; any gate stops the run. `codeloop orch status` and `codeloop orch report <card>` show where each story stands.
+
+The builder is an agent by default. `--builder session:<id-or-label-prefix>` or `--builder person` starts nothing: the orchestrator writes the brief, appends it to `.codeloop/state/orch/outbox/<session>.md` (or `person.md`), writes an `orch-brief` activity line with `to`, prints the brief path and the hand-back line, and polls for a hand-back recorded after the turn began, every 15 seconds, up to `orch.wait_minutes` (default 120) or `--wait <min>`. A builder quiet for `monitor.stall_minutes` gets one `doctor` nudge line. No hand-back in time fails the turn with "no hand-back within the wait" and costs a retry. `--no-wait` returns at once with outcome `briefed`; `codeloop orch resume <card>` gates, merges and advances once the hand-back exists, and `codeloop orch inbox` prints the briefs addressed to this session or to the person that are still unanswered.
+
 ## The Learning Loop
 
 Frequency = severity. The more a gotcha recurs, the more seriously it's treated:
@@ -66,6 +72,20 @@ Everything is configured in `.codeloop/config.yaml`:
 - **Commit types** define allowed conventional commit prefixes
 
 The config is read directly by the AI coding tool (it's a YAML file the LLM parses). No runtime needed.
+
+## Health score
+
+`codeloop health` scores the project from 0 to 100; `codeloop verify` scores the story's base (the merge-base with `git.trunk` when the story is on its own branch, else the commit before its first `Card:` commit) and HEAD, writes a `health:` line to `evidence/NNN/verify.md`, and fails when the score falls by more than `health.tolerance` (default 1.0 point, so a single TODO line does not block a merge). `codeloop card health <id>` shows the same numbers. Both sides are measured on a git export of the commit, so they are comparable.
+
+| Input | How it is counted |
+|---|---|
+| tests | files matching `health.tests` (default `**/*.test.{ts,js,py}`, `**/__tests__/**`) and the `it(`, `test(` and `def test_` lines in them |
+| lint | errors from `health.lint_cmd`; skipped when unset |
+| types | `error TS` lines from `health.types_cmd`; default `npx tsc --noEmit` when `tsconfig.json` exists |
+| gotchas | wiki gotcha pages with severity critical |
+| todo | TODO and FIXME lines in non-test files matching `health.source` (default `src/**`) |
+
+Formula: `t = w.tests * cases`, `tests = t / (t + 10)`, `penalty = w.lint*lint + w.types*types + w.gotchas*gotchas + w.todo*todo`, `score = 100 * tests / (1 + penalty / 10)`. Defaults for `health.weights`: tests 1, lint 1, types 1, gotchas 2, todo 0.2. `health: off` disables the check.
 
 ## Knowledge Files
 

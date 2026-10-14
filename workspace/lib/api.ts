@@ -131,7 +131,7 @@ export const api = {
   /** The one thing the board's first screen leads with. */
   next: async (): Promise<NextAction> => (await client()).next(),
   /** The board: every story in one row of states (up next, in progress, needs you, done), already grouped server side. */
-  board: async (): Promise<BoardView> => (await client()).board.get(),
+  board: async (lane?: string): Promise<BoardView> => (await client()).board.get(lane ? { lane } : undefined),
   /** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
   home: async (): Promise<HomeView> => (await client()).home.get(),
   async login(user: string, password: string) {

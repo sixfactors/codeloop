@@ -196,7 +196,7 @@ export function useCanWrite() {
 export const useNextAction = () => useQuery({ queryKey: QK.next, queryFn: api.next, retry: false });
 
 /** The board: one row of states for the whole project, server-grouped (GET /api/board). */
-export const useBoard = () => useQuery(boardQueryOptions());
+export const useBoard = (lane?: string, enabled = true) => useQuery({ ...boardQueryOptions(lane), enabled });
 /** Home: what needs you, what is failing, what is moving, which agents are working, what shipped (GET /api/home). */
 export const useHome = (enabled = true) => useQuery({ ...homeQueryOptions(), enabled });
 

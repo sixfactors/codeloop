@@ -23,7 +23,7 @@ export default async function BoardPage() {
   ]);
   return (
     <HydrationBoundary state={dehydrated(qc)}>
-      <PageLayout icon={Kanban} title="Board" description="Every story in one row of states: up next, in progress, needs you, done.">
+      <PageLayout icon={Kanban} title="Board" description="Each story in the phase it has reached, grouped by who holds it: you, an agent, or nobody yet.">
         <Board />
       </PageLayout>
     </HydrationBoundary>

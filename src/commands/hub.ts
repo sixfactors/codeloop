@@ -1,11 +1,10 @@
 import { Command } from 'commander';
-import { randomBytes } from 'crypto';
 import chalk from 'chalk';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createHubApp } from '../lib/hub.js';
 import { findWorkspaceBuild, hubListener, loadNext, staticChunks } from '../lib/next-server.js';
-import { hubStateAlive, hubUrl, readHubState, removeHubState, writeHubState, type HubState } from '../lib/hub-state.js';
+import { hubStateAlive, hubUrl, loadHubSecrets, readHubState, removeHubState, writeHubState, type HubState } from '../lib/hub-state.js';
 import { openUrl } from '../lib/serve-state.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +19,8 @@ export const hubCommand = new Command('hub')
   .option('--host <host>', 'Address to listen on', '127.0.0.1')
   .option('--stop', 'Stop the hub')
   .option('--open', 'Open the browser after starting')
-  .action(async (options: { port: string; host: string; stop?: boolean; open?: boolean }) => {
+  .option('--new-token', 'Issue a new token and sign every browser out (default: reuse the last run\'s)')
+  .action(async (options: { port: string; host: string; stop?: boolean; open?: boolean; newToken?: boolean }) => {
     if (options.stop) {
       const state = readHubState();
       removeHubState();
@@ -45,7 +45,7 @@ export const hubCommand = new Command('hub')
       return;
     }
 
-    await runHubForeground(port, options.host, { open: options.open, token: process.env.CODELOOP_SERVE_TOKEN });
+    await runHubForeground(port, options.host, { open: options.open, token: process.env.CODELOOP_SERVE_TOKEN, newToken: options.newToken });
   });
 
 /**
@@ -53,13 +53,13 @@ export const hubCommand = new Command('hub')
  * plus the one shared workspace UI, on one port. Exits the process on listen failure; the caller
  * (this command, or `ensureHubRunning` forking a background copy) decides what "failure" means.
  */
-export async function runHubForeground(port: number, host: string, opts: { open?: boolean; token?: string } = {}): Promise<void> {
-  const token = opts.token ?? randomBytes(24).toString('hex');
+export async function runHubForeground(port: number, host: string, opts: { open?: boolean; token?: string; newToken?: boolean } = {}): Promise<void> {
+  const { token, sessionSecret } = loadHubSecrets({ fresh: opts.newToken, token: opts.token });
   const url = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
   process.env.CODELOOP_PORT = String(port);
   process.env.CODELOOP_API_INTERNAL = `http://127.0.0.1:${port}`;
 
-  const hub = createHubApp({ token });
+  const hub = createHubApp({ token, sessionSecret });
   const workspaceBuild = findWorkspaceBuild(PACKAGE_ROOT);
   const pages = workspaceBuild ? await loadNext(workspaceBuild, { hostname: host, port }) : undefined;
   if (!pages) {
@@ -114,11 +114,10 @@ export async function ensureHubRunning(port = DEFAULT_HUB_PORT, host = '127.0.0.
     if (existing) return existing; // something is already on the port; trust the recorded state
     throw new Error(`port ${port} is already in use by something else, and no hub is recorded there. See what holds it with \`lsof -iTCP:${port} -sTCP:LISTEN\`, or pass a different port.`);
   }
-  const token = randomBytes(24).toString('hex');
   const child = fork(process.argv[1], ['hub', '--port', String(port), '--host', host], {
     detached: true,
     stdio: 'ignore',
-    env: { ...process.env, CODELOOP_SERVE_TOKEN: token },
+    env: process.env,
   });
   child.unref();
 

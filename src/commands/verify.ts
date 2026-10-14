@@ -2,11 +2,13 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { findCard, readCards } from '../lib/cards.js';
 import { checkBudget } from '../lib/diff-budget.js';
+import { checkHealth, formatHealth, projectHealth } from '../lib/health.js';
 import { RefusalError } from '../lib/engine.js';
 import { loadLanes } from '../lib/lane.js';
 import { computeStats, type Stats } from '../lib/stats.js';
 import { verify } from '../lib/verify.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../lib/project-root.js';
 
 export const verifyCommand = new Command('verify')
   .description('Run the use cases for a card and write evidence. Exit 2: nothing to verify, or an acceptance line has no use case; 1: a use case failed; 4: --mutate found one that cannot fail; 5: --mutate could not run')
@@ -15,7 +17,7 @@ export const verifyCommand = new Command('verify')
   .option('--env <name>', 'Environment: api use cases use deploy.<name>.base_url from config.yaml')
   .option('--no-record', 'Do not add the evidence to the card')
   .action(guard(async (ref: string, opts: { mutate?: boolean; env?: string; record: boolean }) => {
-    const result = await verify(process.cwd(), ref, opts);
+    const result = await verify(projectRoot(), ref, opts);
     if (result.problem) console.error(chalk.red(`  ${result.problem}`));
     result.missing.forEach(us => console.error(chalk.red(`  acceptance line ${us} has no use case: add a file in ${result.usecaseDir}/ whose \`accept:\` is ${us}`)));
     if (result.missing.length) {
@@ -53,7 +55,7 @@ export const statsCommand = new Command('stats')
   .option('--compare <versions...>', 'Two lane versions to compare, e.g. v1 v2')
   .option('--json', 'JSON output')
   .action(guard((opts: { card?: string; lane?: string; compare?: string[]; json?: boolean }) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const lanes = loadLanes(projectDir).filter(l => !opts.lane || l.id === opts.lane);
     const all = readCards(projectDir).cards;
     const one = opts.card ? findCard(all, opts.card).id : undefined;
@@ -79,10 +81,36 @@ export const cardDiffCommand = new Command('diff')
   .description("Files, lines and commits in a card's diff and the verdict against its size budget, without running verify. Exit 1 when over budget")
   .argument('<id>', 'Card number or id')
   .action(guard((ref: string) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const card = findCard(readCards(projectDir).cards, ref);
     const v = checkBudget(projectDir, card.id, card.size);
     console.log(`  files ${v.files}, lines ${v.lines}, commits ${v.commits}`);
     console.log(v.pass ? chalk.green(`  ${v.message}`) : chalk.red(`  ${v.message}`));
     if (!v.pass) process.exit(1);
+  }));
+
+export const healthCommand = new Command('health')
+  .description('Project health score: tests, lint, type errors, critical gotchas and TODOs. --ref scores an older commit')
+  .option('--ref <sha>', 'Score this commit (exported to a temp dir) instead of the working tree')
+  .action(guard((opts: { ref?: string }) => {
+    formatHealth(projectHealth(projectRoot(), { ref: opts.ref })).forEach(l => console.log(`  ${l}`));
+  }));
+
+/** Registered under `card` in program.ts. */
+export const cardHealthCommand = new Command('health')
+  .description("Health score at the start of a card's story, at HEAD, and the change. Exit 1 when it fell beyond health.tolerance")
+  .argument('<id>', 'Card number or id')
+  .action(guard((ref: string) => {
+    const projectDir = projectRoot();
+    const card = findCard(readCards(projectDir).cards, ref);
+    const v = checkHealth(projectDir, card.id);
+    if (v.state === 'off') return console.log('  health: off');
+    if (v.state === 'no-base') return console.log('  no commit before the story to compare against');
+    console.log(`  before ${v.before!.score}`);
+    console.log(`  after  ${v.after!.score}`);
+    console.log(`  delta  ${v.delta! > 0 ? '+' : ''}${v.delta}`);
+    if (!v.pass) {
+      console.error(chalk.red(`  health fell beyond tolerance ${v.tolerance}`));
+      process.exit(1);
+    }
   }));

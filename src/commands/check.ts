@@ -14,6 +14,7 @@ import { blockingGotchas } from '../lib/wiki.js';
 import { checkScope } from '../lib/scope-creep.js';
 import { checkArchitecture } from '../lib/architecture-check.js';
 import { checkDataModel } from '../lib/data-model.js';
+import { projectRoot } from '../lib/project-root.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
 export function fileProblem(path: string, has: string[]): string | null {
@@ -44,7 +45,7 @@ checkCommand
   .requiredOption('--files <path...>', 'Changed files')
   .option('--ack <title...>', 'Titles of critical pages that were read and handled', [])
   .action((opts: { files: string[]; ack: string[] }) => {
-    const blocking = blockingGotchas(process.cwd(), opts.files, opts.ack);
+    const blocking = blockingGotchas(projectRoot(), opts.files, opts.ack);
     for (const p of blocking) console.error(`critical: ${p.title} (freq ${p.freq}, ${p.path})\n${p.body}\n`);
     if (blocking.length) {
       console.error(`${blocking.length} critical wiki page(s) apply. Read them, then re-run with --ack "<title>" for each.`);
@@ -75,7 +76,7 @@ checkCommand
   .action((card: string, opts: { minSources: string; online?: boolean }) => failing(async () => {
     const min = parseInt(opts.minSources, 10);
     if (!Number.isInteger(min) || min < 0) return [`--min-sources "${opts.minSources}" is not a number`];
-    const { errors, urls } = checkResearch(process.cwd(), card, min);
+    const { errors, urls } = checkResearch(projectRoot(), card, min);
     return opts.online ? [...errors, ...(await checkOnline(urls))] : errors;
   })());
 
@@ -94,7 +95,7 @@ checkCommand
 checkCommand
   .command('mock <card>')
   .description("Exit 1 unless the card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names")
-  .action((card: string) => failing(() => checkMock(process.cwd(), card))());
+  .action((card: string) => failing(() => checkMock(projectRoot(), card))());
 
 checkCommand
   .command('artifact <card>')
@@ -106,10 +107,10 @@ checkCommand
       // The mock kind lives beside the spec via the original template/checker (`check mock`
       // is the same check under a different name); system-design and workflow live under
       // docs/artifacts via the newer, shared artifact engine.
-      if (kind === 'mock') return checkMock(process.cwd(), card);
-      if (kind) return checkArtifact(process.cwd(), card, kind);
-      if (findMock(process.cwd(), card)) return checkMock(process.cwd(), card);
-      if (findArtifact(process.cwd(), card)) return checkArtifact(process.cwd(), card);
+      if (kind === 'mock') return checkMock(projectRoot(), card);
+      if (kind) return checkArtifact(projectRoot(), card, kind);
+      if (findMock(projectRoot(), card)) return checkMock(projectRoot(), card);
+      if (findArtifact(projectRoot(), card)) return checkArtifact(projectRoot(), card);
       return [`no artifact for ${card} beside its spec or under docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
     })(),
   );
@@ -117,35 +118,35 @@ checkCommand
 checkCommand
   .command('verify <card>')
   .description("Exit 1 unless evidence/<nnn>/verify.md has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
-  .action((card: string) => failing(() => (liveWalkRequired(process.cwd()) ? checkLiveWalk(process.cwd(), card) : []))());
+  .action((card: string) => failing(() => (liveWalkRequired(projectRoot()) ? checkLiveWalk(projectRoot(), card) : []))());
 
 checkCommand
   .command('scope <card>')
   .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in evidence/<nnn>/review.md")
-  .action((card: string) => failing(() => checkScope(process.cwd(), card))());
+  .action((card: string) => failing(() => checkScope(projectRoot(), card))());
 
 checkCommand
   .command('story <card>')
   .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
-  .action((card: string) => failing(() => checkStory(process.cwd(), findCard(readCards(process.cwd()).cards, card)))());
+  .action((card: string) => failing(() => checkStory(projectRoot(), findCard(readCards(projectRoot()).cards, card)))());
 
 checkCommand
   .command('brief <card>')
   .description("Exit 1 unless the card's shape brief has problem:, users: and exists: filled in, and at least 3 `- source:` lines")
-  .action((card: string) => failing(() => checkBrief(process.cwd(), card).errors)());
+  .action((card: string) => failing(() => checkBrief(projectRoot(), card).errors)());
 
 checkCommand
   .command('breakdown <card>')
   .description("Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on")
   .option('--ranked', 'Also require a `rice:` part on every story')
-  .action((card: string, opts: { ranked?: boolean }) => failing(() => checkBreakdown(process.cwd(), card, { ranked: !!opts.ranked }).errors)());
+  .action((card: string, opts: { ranked?: boolean }) => failing(() => checkBreakdown(projectRoot(), card, { ranked: !!opts.ranked }).errors)());
 
 checkCommand
   .command('architecture')
   .description('Exit 1 unless the five architecture pages exist, name only real paths, cover every top-level folder, stay inside the noise limits, and carry no scanner leftovers')
   .option('--dir <wikiDir>', 'The architecture folder, relative to the project root', '.codeloop/wiki/architecture')
   .action((opts: { dir: string }) => {
-    const problems = checkArchitecture(process.cwd(), { dir: opts.dir });
+    const problems = checkArchitecture(projectRoot(), { dir: opts.dir });
     if (problems.length) {
       problems.forEach(p => console.error(p));
       process.exit(1);
@@ -157,7 +158,7 @@ checkCommand
   .command('data-model <card>')
   .description("Exit 1 unless a story that changes data has a data-model.md whose stores the architecture data-model page names")
   .action((card: string) => failing(() => {
-    const { problems, message } = checkDataModel(process.cwd(), card);
+    const { problems, message } = checkDataModel(projectRoot(), card);
     if (!problems.length && message) console.log(message);
     return problems;
   })());
@@ -167,13 +168,13 @@ checkCommand
   .description("Exit 1 unless the card's interview has at least --min questions and every one of them has an answer")
   .option('--min <n>', 'Questions the interview must hold', '1')
   .action((card: string, options: { min: string }) => failing(() => {
-    const found = findCard(readCards(process.cwd()).cards, card);
-    const questions = readQuestions(process.cwd(), found);
+    const found = findCard(readCards(projectRoot()).cards, card);
+    const questions = readQuestions(projectRoot(), found);
     const errors: string[] = [];
     if (questions.length < Number(options.min)) errors.push(`${found.id} has ${questions.length} question(s); the stage needs ${options.min}. Run the interview skill, then \`codeloop ask ${found.id} --file <questions.md>\``);
     errors.push(...questionProblems(questions).map(p => `${found.id} ${p}`));
     for (const q of questions) if (!q.answer) errors.push(`${found.id} Q${q.n} has no answer: \`codeloop answer ${found.id} ${q.n} --accept\` or give one`);
     // An answer typed into the file by an agent is not the owner's decision.
-    for (const n of questionsNotDecided(process.cwd(), found.id)) errors.push(`${found.id} Q${n} has an answer no person gave; the owner answers with \`codeloop answer ${found.id} ${n}\` or \`codeloop answer ${found.id} --accept-all\``);
+    for (const n of questionsNotDecided(projectRoot(), found.id)) errors.push(`${found.id} Q${n} has an answer no person gave; the owner answers with \`codeloop answer ${found.id} ${n}\` or \`codeloop answer ${found.id} --accept-all\``);
     return errors;
   })());

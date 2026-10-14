@@ -6,11 +6,11 @@
  */
 import { closeSync, existsSync, openSync, readSync, statSync } from 'fs';
 import { join } from 'path';
-import { ACTIVITY_DIR, type ActivityLine } from './activity.js';
+import { ACTIVITY_DIR, readActivity, type ActivityLine } from './activity.js';
 import { activeSessions } from './active-card.js';
 import { DONE, DROPPED, PROPOSED, QUEUED, type Card, type CardEvent } from './cards.js';
 import { readQuestions } from './interview.js';
-import { loadLane, type Lane } from './lane.js';
+import { loadLane, substitute, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
 
 export type StepState = 'done' | 'current' | 'gate' | 'skipped' | 'ahead';
@@ -35,6 +35,8 @@ export interface CheckSummary {
   /** The check's output as a person reads it. */
   sentence: string;
   output: string;
+  /** True when the stage's output or the card's activity changed after this check ran. */
+  stale?: boolean;
 }
 
 export type HolderKind = 'agent' | 'you' | 'nobody';
@@ -65,7 +67,7 @@ export interface Journey {
 const to = (e: CardEvent) => /^to (\S+)/.exec(e.note ?? '')?.[1];
 
 /** The time the card came into `stage`: an advance into it, a placement or promotion to it, or its creation. */
-function enteredAt(events: CardEvent[], stage: string, firstStage: string): string | undefined {
+export function enteredAt(events: CardEvent[], stage: string, firstStage: string): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.action === 'advance' && to(e) === stage) return e.at;
@@ -90,6 +92,24 @@ export function checkSentence(output: string, skipped: string[] = []): string {
 }
 
 const listOf = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+/**
+ * The one line a board card shows under its title: what the agent did last, what the failing check
+ * said, or since when it has waited on a person. `at` lets the screen say "40s ago".
+ */
+export function storyLiveLine(projectDir: string, card: Card, health: string | undefined): { text: string; at?: string } | undefined {
+  const events = card.events ?? [];
+  if (card.gate) {
+    const parked = [...events].reverse().find(e => e.action === 'park' || e.action === 'stuck');
+    return { text: card.gate === 'stuck' ? 'stuck: the check failed three times' : `waiting for you at ${card.gate}`, ...(parked ? { at: parked.at } : {}) };
+  }
+  if (health === 'failing') {
+    const fail = [...events].reverse().find(e => e.action === 'fail' && e.stage === card.stage);
+    if (fail) return { text: `check failing: ${checkSentence(fail.note ?? '').replace(/^The check failed: /, '').replace(/\.$/, '')}`, at: fail.at };
+  }
+  const last = lastActivity(projectDir, card.id);
+  return last ? { text: activityText(last), at: last.at } : undefined;
+}
 
 /** The last line of a card's activity, read from the file's tail. */
 export function lastActivity(projectDir: string, card: string): ActivityLine | undefined {
@@ -130,6 +150,19 @@ export function activityText(l: ActivityLine): string {
     case 'answer': return `answered ${l.text ?? 'a question'}`;
     default: return `${l.kind}${l.text ? `: ${l.text}` : ''}`;
   }
+}
+
+/** Whether the stage's output file or the card's own activity moved after the check at `at`. */
+function changedSince(projectDir: string, card: Card, lane: Lane, at: string): boolean {
+  const checked = Date.parse(at);
+  if (Number.isNaN(checked)) return false;
+  const stage = lane.stages.find(s => s.id === card.stage);
+  if (stage?.output) {
+    try {
+      if (statSync(join(projectDir, substitute(stage.output, card))).mtimeMs > checked) return true;
+    } catch { /* no output file yet */ }
+  }
+  return readActivity(projectDir, card.id, { limit: 1000 }).items.some(i => i.kind !== 'check' && Date.parse(i.at) > checked);
 }
 
 export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean }[]; health?: string } = {}): Journey {
@@ -186,14 +219,27 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
     check = { pass: true, at: lastAdvance.at, output: '', sentence: `The ${card.stage} check passed${sha ? ` at ${sha}` : ''}.` };
   }
 
+  if (check && !check.pass) {
+    const changed = changedSince(projectDir, card, lane, check.at);
+    if (changed) {
+      const t = opts.tasks;
+      const now = t?.length ? `${t.filter(x => x.done).length} of ${t.length} tasks done` : 'the work has changed';
+      const hm = new Date(check.at);
+      const clock = `${String(hm.getHours()).padStart(2, '0')}:${String(hm.getMinutes()).padStart(2, '0')}`;
+      const was = (check.output.trim().split('\n').map(l => l.trim()).filter(Boolean).pop() ?? 'it failed without saying why').replace(/\.$/, '');
+      check = { ...check, stale: true, sentence: `The check failed at ${clock}: ${was}. Changed since: ${now}; run Check now.` };
+    }
+  }
+
   const session = activeSessions(projectDir).find(s => s.card === card.id);
   const run = findRunningRun(projectDir);
   const ownRun = run?.cardId === card.id ? run : undefined;
   const openQuestions = readQuestions(projectDir, card).filter(q => !q.answer).length;
   // The card's health decides when it has one: needs-you and stuck are the person's; otherwise an
   // agent holds it when a session or a run is on it, and nobody does when neither is.
+  // A session or run on the card holds it, even parked stuck: the agent is the one who can act on it.
   const yours = opts.health ? opts.health === 'needs-you' || opts.health === 'stuck' : Boolean(card.gate || openQuestions);
-  const kind: HolderKind = yours ? 'you' : session || ownRun ? 'agent' : 'nobody';
+  const kind: HolderKind = session || ownRun ? 'agent' : yours ? 'you' : 'nobody';
   const holder: StoryHolder = {
     kind,
     openQuestions,

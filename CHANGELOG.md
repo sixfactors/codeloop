@@ -7,11 +7,18 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- `codeloop orch <card> --builder session:<id-or-label-prefix> | person | agent[:name]` hands the brief to a live session or a person instead of spawning an agent: it goes to `.codeloop/state/orch/outbox/<session>.md` (`codeloop orch inbox` prints what is waiting) with an `orch-brief` activity line, then orch waits for the hand-back (`orch.wait_minutes`, default 120, or `--wait <min>`) and gates and merges as for an agent; `--no-wait` returns `briefed` and `codeloop orch resume <card>` finishes the turn (`orch.run` takes `builder` and `wait`, `orch.resume(id)`, `POST /api/cards/:id/orch/resume`).
+- Signing in to the board survives a hub restart.
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
 - `codeloop verify` fails a story whose diff exceeds the budget for its size (S 8 files / 300 lines, M 20 / 1,200, L 40 / 3,000; `diff_budget:` overrides, `budget: off` disables) and writes a `budget:` line to evidence; `codeloop card diff <id>` shows the numbers.
+- `codeloop verify` fails a story that lowers the project health score (tests up; lint and type errors, critical gotchas and TODO/FIXME lines down) between the story's base and HEAD, and writes a `health:` line to evidence; a drop of up to `health.tolerance` points (default 1.0) is allowed, `health: off` disables; `codeloop health [--ref <sha>]` prints the breakdown and `codeloop card health <id>` the before, after and delta.
 - `codeloop card worktree <card>` gives a story its own git worktree (`../<repo>-wt-<card>`) and branch (`feat/<feature or lane>-<title>`) cut from `git.trunk`, recorded on the card; `codeloop card merge <card>` fast-forwards it into the trunk (merge commit when it cannot), refused unless the latest gate passed and no file the branch changed is dirty in the main tree (`POST /api/cards/:id/worktree`, `POST /api/cards/:id/merge`).
 - The build lane has a `data-model` stage between spec and build: `codeloop check data-model <card>` passes when no task is tagged `[data]` and spec.md names no `entities:`, and otherwise needs `specs/NNN/data-model.md` (Entities, Stores, Indexes, Migration) whose every store is named on `.codeloop/wiki/architecture/data-model.md`. Run `codeloop lane refresh build` to pick it up.
 - The review stage fails while a file the story changed outside its plan has no verdict: `codeloop check scope <card>` lists each one with its line count, and evidence/<nnn>/review.md needs a `## Scope` row per file saying `keep` (reason of 10+ words), `revert`, or `move to <card-id>`. Run `codeloop lane refresh build` to pick it up.
+- `codeloop orch <card> [--until <gate>] [--agent <name>] [--dry-run]` runs a story's current stage through a builder agent in the story's worktree, gates its newest hand-back, merges on a pass and advances the card; a failed gate or a missing hand-back costs a retry and its findings go into the next brief ("Latest gate findings"), and the last retry parks the story stuck. `codeloop orch status` lists stories under orchestration, `codeloop orch report <card>` prints what works now, proof, what is left and the next gate (`POST /api/cards/:id/orch`, `GET /api/orch/status`, `GET /api/cards/:id/orch`, `orch.run/status/report` on both SDK transports).
+- `CODELOOP_PROJECT_DIR` points card, hook, verify, check, inbox, ask and brief commands at the main tree's board when a builder runs inside a story worktree.
+- A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
+- The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
 ### Watch an agent work a story
 - A builder that holds a card and writes nothing to it for 30 minutes (`monitor.stall_minutes`) is flagged `stalled` on Home and `/api/hub/attention`, listed by `codeloop monitor stalled` and at session start, and the doctor writes one "asked for a hand-back" line per stall.
@@ -32,6 +39,10 @@ when package.json names a version this file has no heading for.
   or answer its questions, or start an agent or work on it yourself; the check is said in a sentence.
 - Home shows each working agent as a tile with its story, phase, last action and whether it is
   working, stalled, failing a check or idle.
+- The board's columns are the lane's phases (Up next, each phase, Live this week) and its rows are
+  who holds each story (Needs you, Agent, Queued); an empty phase shrinks to its header, a lane
+  picker replaces the lane chips, and each card says what it is doing now and how long it has been
+  in its phase. The header, the sidebar and the story pager show one story count.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed

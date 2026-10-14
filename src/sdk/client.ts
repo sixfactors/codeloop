@@ -15,6 +15,11 @@ import type {
   StoryWorktree,
   HandbackInput,
   HandbackRecord,
+  OrchOptions,
+  OrchTurn,
+  OrchStarted,
+  OrchStatusRow,
+  OrchView,
   CardEvent,
   CardFull,
   CardListFilter,
@@ -173,6 +178,11 @@ export interface Transport {
   worktree(ref: string): Promise<StoryWorktree>;
   /** Merges the story's branch into the trunk; refused unless the latest gate passed and no overlapping file is dirty. */
   merge(ref: string): Promise<MergeResult>;
+  /** Starts one orchestrated turn (a run to `opts.until` when given) in the background and returns at once; read the result with `orchView`. */
+  orchRun(ref: string, opts?: OrchOptions): Promise<{ turn: OrchStarted }>;
+  orchResume(ref: string): Promise<{ turn: OrchTurn }>;
+  orchStatus(): Promise<OrchStatusRow[]>;
+  orchView(ref: string): Promise<OrchView>;
   stageOutput(ref: string): Promise<StageOutput>;
   writeStageOutput(ref: string, text: string, opts?: RoleOption): Promise<StageOutput>;
   splitCard(ref: string, titles: string[], opts?: RoleOption): Promise<SplitResult>;
@@ -194,7 +204,8 @@ export interface Transport {
   answer(ref: string, n: number, reply: AnswerInput, opts?: RoleOption): Promise<Question>;
   acceptAll(ref: string, opts?: RoleOption): Promise<AcceptAllResult>;
   inbox(query?: InboxQuery): Promise<InboxPayload>;
-  board(): Promise<BoardView>;
+  /** The board for one lane (the busiest when none is named): phase columns, holder rows, the one story count. */
+  board(opts?: { lane?: string }): Promise<BoardView>;
   home(): Promise<HomeView>;
   inboxReport(opts?: { sort?: 'score' | 'age' }): Promise<Inbox>;
   markInboxSeen(): Promise<void>;
@@ -304,6 +315,18 @@ export class CodeloopClient {
     migrateFeatures: (mappingFile?: string) => this.transport.migrateFeatures(mappingFile),
   };
 
+  /** The orchestrator: a builder agent takes a story's stage through the gate and merge. */
+  readonly orch = {
+    /** Starts one turn (a run to `until` when given) and returns at once. */
+    run: (ref: string, opts?: OrchOptions) => this.transport.orchRun(ref, opts),
+    /** Finishes a briefed turn (session or person builder) once its hand-back exists: gate, merge, advance. */
+    resume: (ref: string) => this.transport.orchResume(ref),
+    /** Every story under orchestration: stage, turns, last outcome, builder, idle minutes. */
+    status: () => this.transport.orchStatus(),
+    /** The story's turn record and the owner's report: what works now, proof, what is left, the next gate. */
+    report: (ref: string) => this.transport.orchView(ref),
+  };
+
   /** Stage runs started with `cards.run`. */
   readonly runs = {
     get: (runId: string) => this.transport.getRun(runId),
@@ -334,7 +357,7 @@ export class CodeloopClient {
   };
 
   /** The board: every story in one row of the six states, already grouped by the server. */
-  readonly board = { get: () => this.transport.board() };
+  readonly board = { get: (opts?: { lane?: string }) => this.transport.board(opts) };
 
   /** Home: what needs you, what is failing, what is moving, the agents working and what shipped. */
   readonly home = { get: () => this.transport.home() };
