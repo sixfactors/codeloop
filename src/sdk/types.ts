@@ -8,7 +8,7 @@ export type { Artifact, CardRecord, Epic, Evidence, EvidenceKind, Feature, Initi
 export type { Band, CardChain, Scored } from '../lib/features.js';
 export type { Gate, Lane, Stage } from '../lib/lane.js';
 export type { Question } from '../lib/interview.js';
-export type { BoardStory, BoardView, HomeView } from '../lib/services.js';
+export type { BoardPhase, BoardRow, BoardStory, BoardView, HomeView } from '../lib/services.js';
 export type { DisplayState, StoryState } from '../lib/states.js';
 export type { ActivityFrame, CardFilter, CardFilterKey, Diff, EpicNode, Facets, FeatureNode, IndexedCard, IndexedEpic, IndexedFeature, IndexedInitiative, IndexedPage, InboxCard, InboxPayload, InitiativeTree, Paged, Paged2, StoryRow } from '../lib/index/index.js';
 export type { Inbox, LaneNumbers } from '../lib/inbox.js';

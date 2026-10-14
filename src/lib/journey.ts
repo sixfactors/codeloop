@@ -65,7 +65,7 @@ export interface Journey {
 const to = (e: CardEvent) => /^to (\S+)/.exec(e.note ?? '')?.[1];
 
 /** The time the card came into `stage`: an advance into it, a placement or promotion to it, or its creation. */
-function enteredAt(events: CardEvent[], stage: string, firstStage: string): string | undefined {
+export function enteredAt(events: CardEvent[], stage: string, firstStage: string): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.action === 'advance' && to(e) === stage) return e.at;
@@ -90,6 +90,24 @@ export function checkSentence(output: string, skipped: string[] = []): string {
 }
 
 const listOf = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+/**
+ * The one line a board card shows under its title: what the agent did last, what the failing check
+ * said, or since when it has waited on a person. `at` lets the screen say "40s ago".
+ */
+export function storyLiveLine(projectDir: string, card: Card, health: string | undefined): { text: string; at?: string } | undefined {
+  const events = card.events ?? [];
+  if (card.gate) {
+    const parked = [...events].reverse().find(e => e.action === 'park' || e.action === 'stuck');
+    return { text: card.gate === 'stuck' ? 'stuck: the check failed three times' : `waiting for you at ${card.gate}`, ...(parked ? { at: parked.at } : {}) };
+  }
+  if (health === 'failing') {
+    const fail = [...events].reverse().find(e => e.action === 'fail' && e.stage === card.stage);
+    if (fail) return { text: `check failing: ${checkSentence(fail.note ?? '').replace(/^The check failed: /, '').replace(/\.$/, '')}`, at: fail.at };
+  }
+  const last = lastActivity(projectDir, card.id);
+  return last ? { text: activityText(last), at: last.at } : undefined;
+}
 
 /** The last line of a card's activity, read from the file's tail. */
 export function lastActivity(projectDir: string, card: string): ActivityLine | undefined {

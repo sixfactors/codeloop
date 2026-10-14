@@ -32,6 +32,10 @@ when package.json names a version this file has no heading for.
   or answer its questions, or start an agent or work on it yourself; the check is said in a sentence.
 - Home shows each working agent as a tile with its story, phase, last action and whether it is
   working, stalled, failing a check or idle.
+- The board's columns are the lane's phases (Up next, each phase, Live this week) and its rows are
+  who holds each story (Needs you, Agent, Queued); an empty phase shrinks to its header, a lane
+  picker replaces the lane chips, and each card says what it is doing now and how long it has been
+  in its phase. The header, the sidebar and the story pager show one story count.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed

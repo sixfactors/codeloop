@@ -24,7 +24,7 @@ import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
 import { lastActivityAt, readActivity, type ActivityEntry } from './activity.js';
-import { activityText, journeyOf, lastActivity, type Journey } from './journey.js';
+import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
@@ -774,14 +774,29 @@ export interface BoardStory {
   agent?: string;
   /** That session's id, for a key; never shown. */
   session?: string;
+  /** The board row it sits in: waiting on a person, held by an agent, or queued for anyone. */
+  holder: BoardRow;
+  /** The one line under the title: the agent's last action, the failing check, or since when it waits. */
+  lastActivity?: { text: string; at?: string };
+  /** When it entered the phase it is in. */
+  phaseSince?: string;
   updatedAt: string;
 }
 
-const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; session: string }>): BoardStory => ({
-  id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
-  epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
-  ...agents.get(c.id), updatedAt: c.updatedAt,
-});
+export type BoardRow = 'needs-you' | 'agent' | 'queued';
+
+const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; session: string }>, ctx?: { projectDir: string; card: Card; firstStage?: string }): BoardStory => {
+  const held = agents.get(c.id);
+  const health = c.display?.health;
+  const holder: BoardRow = health === 'needs-you' || health === 'stuck' || c.display?.state === 'needs-you' ? 'needs-you' : held ? 'agent' : 'queued';
+  const line = ctx ? storyLiveLine(ctx.projectDir, ctx.card, health) : undefined;
+  const since = ctx?.firstStage ? enteredAt(ctx.card.events ?? [], ctx.card.stage, ctx.firstStage) : undefined;
+  return {
+    id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
+    epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
+    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), updatedAt: c.updatedAt,
+  };
+};
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
 
 /**
@@ -799,11 +814,18 @@ async function storyRows(index: ProjectIndex, projectDir: string): Promise<Board
   const raw = new Map(readCards(projectDir).cards.map(c => [c.id, c] as const));
   const now = Date.now();
   const held = new Set(activeSessions(projectDir).map(s => s.card));
+  const firstStage = new Map<string, string | undefined>();
+  const first = (lane: string) => {
+    if (!firstStage.has(lane)) {
+      try { firstStage.set(lane, loadLane(projectDir, lane).stages[0]?.id); } catch { firstStage.set(lane, undefined); }
+    }
+    return firstStage.get(lane);
+  };
   return items
     .map(c => {
       const card = raw.get(c.id);
       const display = card ? liveState(projectDir, card, c.openQuestions, now, held) : c.display;
-      return display ? storyRow({ ...c, display }, agents) : undefined;
+      return display ? storyRow({ ...c, display }, agents, card ? { projectDir, card, firstStage: first(card.lane) } : undefined) : undefined;
     })
     .filter((r): r is BoardStory => Boolean(r));
 }
@@ -815,10 +837,41 @@ export interface BoardView {
   columns: { state: DisplayState; label: string; stories: BoardStory[] }[];
   backlog: number;
   upNext: { count: number; limit?: number };
+  /** Every lane with a story on the board, for the picker, and the one shown. */
+  lanes: { id: string; count: number }[];
+  lane: string | null;
+  /** The shown lane's journey: Up next, each phase in order, then Live this week. Each column holds its stories by row. */
+  phases: BoardPhase[];
+  /** Needs you, Agent, Queued, each with its count in the shown lane outside Live this week; a screen hides a row with none. */
+  rows: { id: BoardRow; label: string; count: number }[];
+  /** How many stories the board holds across every lane, backlog included: the one count every screen shows. */
+  total: number;
+  /** Those stories in board order (the shown lane's columns first, then the other lanes, then the backlog): the drawer pager's list. */
+  ids: string[];
 }
 
-/** The board: one row of states for the whole project, not one board per workflow. */
-export async function boardView(index: ProjectIndex, projectDir: string): Promise<BoardView> {
+export interface BoardPhase {
+  id: string;
+  label: string;
+  kind: 'up-next' | 'phase' | 'live';
+  /** On a phase that waits for a person once its check passes. */
+  gate?: string;
+  count: number;
+  cells: Record<BoardRow, BoardStory[]>;
+}
+
+const ROWS: { id: BoardRow; label: string }[] = [
+  { id: 'needs-you', label: 'Needs you' },
+  { id: 'agent', label: 'Agent' },
+  { id: 'queued', label: 'Queued' },
+];
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * The board: the shown lane's journey as columns (Up next, its phases, Live this week) and who holds
+ * each story as rows. `columns` keeps the earlier four-state shape for callers that read it.
+ */
+export async function boardView(index: ProjectIndex, projectDir: string, opts: { lane?: string } = {}): Promise<BoardView> {
   const rows = await storyRows(index, projectDir);
   const of = (s: DisplayState) => rows.filter(r => r.display.state === s);
   const done = [...of('done'), ...of('shipped')].sort(newestFirst).slice(0, 30);
@@ -832,6 +885,46 @@ export async function boardView(index: ProjectIndex, projectDir: string): Promis
     ],
     backlog: of('backlog').length,
     upNext: { count: of('up-next').length, ...(limit ? { limit } : {}) },
+    ...phaseBoard(projectDir, rows, opts.lane),
+  };
+}
+
+function phaseBoard(projectDir: string, rows: BoardStory[], wanted?: string): Pick<BoardView, 'lanes' | 'lane' | 'phases' | 'rows' | 'total' | 'ids'> {
+  const week = Date.now() - WEEK_MS;
+  const live = (r: BoardStory) => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week;
+  const active = (r: BoardStory) => r.display.state === 'up-next' || r.display.state === 'in-progress' || r.display.state === 'needs-you';
+  const onBoard = rows.filter(r => active(r) || live(r));
+  const backlog = rows.filter(r => r.display.state === 'backlog').sort(byRank);
+  const counts = new Map<string, number>();
+  for (const r of onBoard) counts.set(r.lane, (counts.get(r.lane) ?? 0) + 1);
+  // The lane asked for, else the one with the most stories still moving.
+  const moving = new Map<string, number>();
+  for (const r of onBoard.filter(active)) moving.set(r.lane, (moving.get(r.lane) ?? 0) + 1);
+  const lane = (wanted && counts.has(wanted) ? wanted : [...moving.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? [...counts.keys()][0]) ?? null;
+  let stages: { id: string; gate?: { name: string } }[] = [];
+  try { stages = lane ? loadLane(projectDir, lane).stages : []; } catch { stages = []; }
+  const inLane = onBoard.filter(r => r.lane === lane);
+  const cells = (stories: BoardStory[]) => Object.fromEntries(ROWS.map(row => [row.id, stories.filter(s => s.holder === row.id).sort(byRank)])) as Record<BoardRow, BoardStory[]>;
+  const column = (id: string, label: string, kind: BoardPhase['kind'], stories: BoardStory[], gate?: string): BoardPhase => ({ id, label, kind, ...(gate ? { gate } : {}), count: stories.length, cells: cells(stories) });
+  const phases: BoardPhase[] = [
+    column('up-next', STATE_LABELS['up-next'], 'up-next', inLane.filter(r => r.display.state === 'up-next')),
+    ...stages.map(s => column(s.id, s.id, 'phase', inLane.filter(r => (r.display.state === 'in-progress' || r.display.state === 'needs-you') && r.stage === s.id), s.gate?.name)),
+    // Not 'live': a lane may name its own last phase that.
+    column('live-this-week', 'Live this week', 'live', inLane.filter(live).sort(newestFirst)),
+  ];
+  const order = (p: BoardPhase[]) => p.flatMap(c => ROWS.flatMap(row => c.cells[row.id].map(s => s.id)));
+  const shown = order(phases);
+  const seen = new Set(shown);
+  const others = onBoard.filter(r => !seen.has(r.id)).sort((a, b) => a.lane.localeCompare(b.lane) || byRank(a, b)).map(r => r.id);
+  const ids = [...shown, ...others, ...backlog.map(r => r.id)];
+  return {
+    lanes: [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([id, count]) => ({ id, count })),
+    lane,
+    phases,
+    // Shipped stories are counted in their column, not in a holder row: nobody holds a finished story.
+    rows: ROWS.map(row => ({ ...row, count: phases.filter(p => p.kind !== 'live').reduce((n, p) => n + p.cells[row.id].length, 0) })),
+    total: ids.length,
+    ids,
   };
 }
 

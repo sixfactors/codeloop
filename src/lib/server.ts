@@ -395,7 +395,7 @@ export function createApp(
 
   app.get(api('/artifacts'), handled(async c => cached(c, etag('artifacts', v.artifacts), async () => ({ artifacts: await services.artifacts(index) }))));
   // Not cached: the agent working each story comes from live sessions, which no index version tracks.
-  app.get(api('/board'), handled(async c => c.json(await services.boardView(index, projectDir))));
+  app.get(api('/board'), handled(async c => c.json(await services.boardView(index, projectDir, { lane: query(c).get('lane') ?? undefined }))));
   app.get(api('/home'), handled(async c => c.json(await services.homeView(index, projectDir))));
   app.get(api('/stats'), handled(async c => cached(c, etag('stats', v.cards, v.lanes), () => services.stats(index))));
   app.get(api('/config'), handled(async c => c.json({ config: await services.publicConfig(store) })));
