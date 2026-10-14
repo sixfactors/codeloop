@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
@@ -60,7 +61,7 @@ function mockPathFor(projectDir: string, cardId: string): string {
 }
 
 function legacyMock(projectDir: string, cardId: string): string | undefined {
-  const root = join(projectDir, MOCKS_DIR);
+  const root = specPath(projectDir, MOCKS_DIR);
   if (!existsSync(root)) return undefined;
   for (const project of dirs(root)) {
     for (const topic of dirs(join(root, project))) {
@@ -73,11 +74,11 @@ function legacyMock(projectDir: string, cardId: string): string | undefined {
 /** The card's mock: beside its spec, then under .codeloop/mocks, then an older one under docs/mocks. */
 export function findMock(projectDir: string, cardId: string): string | undefined {
   const app = appMockPath(projectDir, cardId);
-  if (app && existsSync(join(projectDir, app))) return app;
+  if (app && existsSync(specPath(projectDir, app))) return app;
   const spec = resolveSpecDirOrNone(projectDir, cardId);
-  if (spec && existsSync(join(projectDir, spec, MOCK_FILE))) return `${spec}/${MOCK_FILE}`;
+  if (spec && existsSync(specPath(projectDir, spec, MOCK_FILE))) return `${spec}/${MOCK_FILE}`;
   const own = `${CARD_MOCKS_DIR}/${cardId}.html`;
-  if (existsSync(join(projectDir, own))) return own;
+  if (existsSync(specPath(projectDir, own))) return own;
   return legacyMock(projectDir, cardId);
 }
 
@@ -121,7 +122,7 @@ export const mockScreens = (html: string) => screenBlocks(html).map(m => m[1]);
 function latestMock(projectDir: string, project: string, topic: string, except: string): { id: string; path: string } | undefined {
   return allMocks(projectDir)
     .filter(m => m.id !== except)
-    .map(m => ({ ...m, meta: mockMeta(readFileSync(join(projectDir, m.path), 'utf-8')), at: statSync(join(projectDir, m.path)).mtimeMs }))
+    .map(m => ({ ...m, meta: mockMeta(readFileSync(specPath(projectDir, m.path), 'utf-8')), at: statSync(specPath(projectDir, m.path)).mtimeMs }))
     .filter(m => m.meta.project === project && m.meta.topic === topic)
     .sort((a, b) => b.at - a.at)[0];
 }
@@ -153,19 +154,19 @@ export function newMock(projectDir: string, ref: string, topic: string, from: st
     parent = { id: source.id, path: found };
   }
 
-  const parentHtml = parent ? readFileSync(join(projectDir, parent.path), 'utf-8') : '';
+  const parentHtml = parent ? readFileSync(specPath(projectDir, parent.path), 'utf-8') : '';
   const lineage = parent ? [card.id, ...(mockLineage(parentHtml).length ? mockLineage(parentHtml) : [parent.id, 'base'])] : [card.id, 'base'];
   const inherited = parent ? screenBlocks(parentHtml).map(m => m[0].replace(/^<section\b([^>]*?)(\sdata-from=["'][^"']*["'])?([^>]*)>/, `<section$1$3 data-from="${parent!.id}">`)) : [];
   const have = new Set(mockScreens(parentHtml));
-  const specFile = parent ? join(projectDir, resolveSpecDirOrNone(projectDir, card.id) ?? '', 'spec.md') : '';
+  const specFile = parent ? specPath(projectDir, resolveSpecDirOrNone(projectDir, card.id) ?? '', 'spec.md') : '';
   const named = parent && specFile && existsSync(specFile) ? specScreens(readFileSync(specFile, 'utf-8')) : [];
   const fresh = named === 'none' ? [] : named.filter(s => !have.has(s)).map(s => `<section data-screen="${escape(s)}" data-from="new">\n  <h2>${escape(s)}</h2>\n  <div class="frame"></div>\n</section>`);
   const sections = [...inherited, ...fresh].map(s => `    ${s}\n`).join('');
 
   const values: Record<string, string> = { id: card.id, title: escape(card.title), project, topic, lineage: lineage.join(' <- ') };
-  mkdirSync(dirname(join(projectDir, path)), { recursive: true });
+  mkdirSync(dirname(specPath(projectDir, path)), { recursive: true });
   const html = template(projectDir).replace(/\{\{(id|title|project|topic|lineage)\}\}/g, (_, key: string) => values[key]).replace('  </main>', `${sections}  </main>`);
-  writeFileSync(join(projectDir, path), html);
+  writeFileSync(specPath(projectDir, path), html);
   return { path, created: true, ...(parent ? { from: parent.id } : {}) };
 }
 
@@ -210,7 +211,7 @@ function specList(spec: string, key: string): string[] | 'none' {
 export function checkMock(projectDir: string, ref: string): string[] {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   const specDir = resolveSpecDir(projectDir, ref);
-  const specFile = join(projectDir, specDir, 'spec.md');
+  const specFile = specPath(projectDir, specDir, 'spec.md');
   const screens = existsSync(specFile) ? specScreens(readFileSync(specFile, 'utf-8')) : [];
   if (screens === 'none') return [];
   // An untouched spec template names nothing, so it cannot pass.
@@ -220,7 +221,7 @@ export function checkMock(projectDir: string, ref: string): string[] {
   const path = findMock(projectDir, id);
   if (!path) return [`no mock for ${id} (expected ${appMockPath(projectDir, id) ?? mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
   if (path.endsWith(APP_PAGE)) return checkAppMock(projectDir, path, screens);
-  const html = readFileSync(join(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
+  const html = readFileSync(specPath(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
   if (!html.includes(MARKER)) return [`${path} does not carry the template marker ${MARKER}`];
   const expected = template(projectDir);
   const source = designSystem(projectDir).source;
@@ -241,7 +242,7 @@ export function checkMock(projectDir: string, ref: string): string[] {
   if (parentPath) {
     const drawn = new Set(mockScreens(html));
     const removed = existsSync(specFile) ? specScreensRemoved(readFileSync(specFile, 'utf-8')) : [];
-    for (const screen of mockScreens(readFileSync(join(projectDir, parentPath), 'utf-8'))) {
+    for (const screen of mockScreens(readFileSync(specPath(projectDir, parentPath), 'utf-8'))) {
       if (!drawn.has(screen) && !removed.includes(screen)) errors.push(`${path} dropped <section data-screen="${screen}"> inherited from ${parentId}; list it under \`screens_removed:\` in the spec if that is meant`);
     }
   }
@@ -253,14 +254,14 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
   const { cards } = readCards(projectDir);
   const listed = allMocks(projectDir);
   // Older mocks under docs/mocks whose card is gone still belong in the gallery.
-  const legacyRoot = join(projectDir, MOCKS_DIR);
+  const legacyRoot = specPath(projectDir, MOCKS_DIR);
   const orphans = (existsSync(legacyRoot) ? dirs(legacyRoot) : []).flatMap(project =>
     dirs(join(legacyRoot, project)).flatMap(topic =>
       readdirSync(join(legacyRoot, project, topic)).filter(f => f.endsWith('.html')).map(f => ({ id: f.replace(/\.html$/, ''), path: `${MOCKS_DIR}/${project}/${topic}/${f}` })),
     ),
   ).filter(o => !listed.some(m => m.path === o.path));
   const found = [...listed, ...orphans].map(({ id, path }) => {
-    const full = join(projectDir, path);
+    const full = specPath(projectDir, path);
     const html = readFileSync(full, 'utf-8');
     const meta = mockMeta(html);
     const title = cards.find(c => c.id === id)?.title ?? /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? id;
@@ -293,8 +294,8 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
     .replace('{{id}} · {{project}} · {{topic}}', `${found.length} ${found.length === 1 ? 'mock' : 'mocks'}, newest first`)
     .replace(/<main class="screens">[\s\S]*<\/main>/, `<main class="screens">\n${body || '<p class="muted">No mocks yet. `codeloop mock new &lt;card&gt; --topic &lt;topic&gt;` creates one.</p>'}\n</main>`);
   const path = `${CARD_MOCKS_DIR}/index.html`;
-  mkdirSync(join(projectDir, CARD_MOCKS_DIR), { recursive: true });
-  writeFileSync(join(projectDir, path), html);
+  mkdirSync(specPath(projectDir, CARD_MOCKS_DIR), { recursive: true });
+  writeFileSync(specPath(projectDir, path), html);
   return { path, mocks: found.length };
 }
 
@@ -310,7 +311,7 @@ const LAYOUT_PROP = /^(display|gap|rowGap|columnGap|minWidth|padding\w*|grid\w*)
 export function mockAppDir(projectDir: string): string | undefined {
   const configured = loadConfig(projectDir).mock?.app_dir;
   if (typeof configured === 'string' && configured.trim()) return configured.trim().replace(/^\.\//, '').replace(/\/+$/, '');
-  return APP_DIRS.find(d => existsSync(join(projectDir, d)));
+  return APP_DIRS.find(d => existsSync(specPath(projectDir, d)));
 }
 
 /** `app` for a project with next and an app directory, else `html`; `mock.target` overrides. */
@@ -341,7 +342,7 @@ function newAppMock(projectDir: string, card: { id: string; title: string }, top
   const path = appMockPath(projectDir, card.id);
   if (!path) throw new RefusalError('mock.target is app but no app directory exists; set `mock.app_dir` in .codeloop/config.yaml');
   const specDir = resolveSpecDirOrNone(projectDir, card.id);
-  const specFile = specDir ? join(projectDir, specDir, 'spec.md') : '';
+  const specFile = specDir ? specPath(projectDir, specDir, 'spec.md') : '';
   const spec = specFile && existsSync(specFile) ? readFileSync(specFile, 'utf-8') : '';
   const named = specScreens(spec);
   const screens = named === 'none' ? [] : named;
@@ -351,15 +352,15 @@ function newAppMock(projectDir: string, card: { id: string; title: string }, top
   const sections = screens.map(s => `      <section data-screen="${attr(s)}">\n        <h2>${jsx(s)}</h2>\n        {/* Compose this screen from the shared components, rendering screens[${key(s)}]. */}\n      </section>\n`).join('');
   const entries = screens.map(s => `  ${key(s)}: { note: ${key(`Replace with the rows the ${s} screen renders.`)} },\n`).join('');
   const values = { id: card.id, title: jsx(card.title), story: jsx(story), components: mockComponents(projectDir), pascal: pascal(card.id) + pascal(topic), sections, entries };
-  mkdirSync(dirname(join(projectDir, path)), { recursive: true });
-  writeFileSync(join(projectDir, path), fill(read('app-page.tsx.txt'), values));
-  writeFileSync(join(projectDir, dirname(path), APP_DATA), fill(read('app-data.ts.txt'), values));
+  mkdirSync(dirname(specPath(projectDir, path)), { recursive: true });
+  writeFileSync(specPath(projectDir, path), fill(read('app-page.tsx.txt'), values));
+  writeFileSync(specPath(projectDir, dirname(path), APP_DATA), fill(read('app-data.ts.txt'), values));
   return { path, created: true };
 }
 
 /** Why an app-target mock page does not pass. */
 function checkAppMock(projectDir: string, path: string, screens: string[]): string[] {
-  const src = readFileSync(join(projectDir, path), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const src = readFileSync(specPath(projectDir, path), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const errors: string[] = [];
   const components = mockComponents(projectDir);
   for (const screen of screens) {
@@ -393,9 +394,9 @@ export function cleanupMock(projectDir: string, ref: string): { path?: string; a
   const path = findMock(projectDir, card.id);
   if (!path || !path.endsWith(`/${APP_PAGE}`)) return { action: 'none' };
   const specDir = resolveSpecDirOrNone(projectDir, card.id);
-  const specFile = specDir ? join(projectDir, specDir, 'spec.md') : '';
+  const specFile = specDir ? specPath(projectDir, specDir, 'spec.md') : '';
   const decision = specFile && existsSync(specFile) ? specMockDecision(readFileSync(specFile, 'utf-8')) : 'drop';
   if (decision === 'keep') return { path, action: 'kept' };
-  rmSync(join(projectDir, dirname(path)), { recursive: true, force: true });
+  rmSync(specPath(projectDir, dirname(path)), { recursive: true, force: true });
   return { path, action: 'dropped' };
 }

@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 /**
  * The shape workflow: a problem in, an epic of small, ordered, independently shippable stories
  * out (docs/plans/codeloop/2026-10-09-shape-workflow.md). This module parses and checks
@@ -29,9 +30,9 @@ export function newShape(projectDir: string, cardId: string, problem: string, ro
   const card = findCard(readCards(projectDir).cards, cardId);
   const dir = card.spec ?? `shape/${card.id}`;
   const created: string[] = [];
-  mkdirSync(join(projectDir, dir), { recursive: true });
+  mkdirSync(specPath(projectDir, dir), { recursive: true });
   for (const name of ['brief.md', 'breakdown.md', 'interview.md']) {
-    const dest = join(projectDir, dir, name);
+    const dest = specPath(projectDir, dir, name);
     if (existsSync(dest)) continue;
     const template = readFileSync(join(PACKAGE_ROOT, 'templates/shape', name), 'utf-8');
     const filled = template.replaceAll('{{id}}', card.id).replaceAll('{{title}}', card.title).replaceAll('{{problem}}', problem);
@@ -48,8 +49,8 @@ export function newShape(projectDir: string, cardId: string, problem: string, ro
 
 export function checkBrief(projectDir: string, ref: string): { file: string; errors: string[] } {
   const file = `${resolveSpecDir(projectDir, ref)}/brief.md`;
-  if (!existsSync(join(projectDir, file))) return { file, errors: [`missing file: ${file}`] };
-  const text = readFileSync(join(projectDir, file), 'utf-8');
+  if (!existsSync(specPath(projectDir, file))) return { file, errors: [`missing file: ${file}`] };
+  const text = readFileSync(specPath(projectDir, file), 'utf-8');
   // [ \t]*, not \s*: \s matches a newline too, which would let an empty "problem:" line count as
   // filled in by reading past it into whatever non-blank text follows on the next line.
   const errors: string[] = [];
@@ -142,8 +143,8 @@ export function parseBreakdown(text: string): ShapeBreakdown {
  */
 export function checkBreakdown(projectDir: string, ref: string, opts: { ranked?: boolean } = {}): { file: string; errors: string[] } {
   const file = `${resolveSpecDir(projectDir, ref)}/breakdown.md`;
-  if (!existsSync(join(projectDir, file))) return { file, errors: [`missing file: ${file}`] };
-  const breakdown = parseBreakdown(readFileSync(join(projectDir, file), 'utf-8'));
+  if (!existsSync(specPath(projectDir, file))) return { file, errors: [`missing file: ${file}`] };
+  const breakdown = parseBreakdown(readFileSync(specPath(projectDir, file), 'utf-8'));
   const errors: string[] = [];
   if (!breakdown.hypothesis) errors.push(`${file} has no "hypothesis:" line on the epic`);
   if (!breakdown.metric) errors.push(`${file} has no "metric:" line on the epic`);
@@ -209,7 +210,7 @@ export interface QueueResult {
 export function queueBreakdown(projectDir: string, shapeCardId: string, targetLane: string, now: Date): QueueResult {
   const shapeCard = findCard(readCards(projectDir).cards, shapeCardId);
   const dir = resolveSpecDir(projectDir, shapeCard.id);
-  const file = join(projectDir, dir, 'breakdown.md');
+  const file = specPath(projectDir, dir, 'breakdown.md');
   if (!existsSync(file)) throw new RefusalError(`${dir}/breakdown.md is missing; the rank stage should have written it`);
   const breakdown = parseBreakdown(readFileSync(file, 'utf-8'));
   if (breakdown.stories.length === 0) throw new RefusalError(`${dir}/breakdown.md has no stories to queue`);

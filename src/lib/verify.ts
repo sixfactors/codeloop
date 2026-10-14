@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { spawnSync } from 'child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -56,7 +57,7 @@ function git(cwd: string, args: string[]): string {
 }
 
 function loadUseCases(projectDir: string, nnn: string): UseCase[] {
-  const dir = join(projectDir, 'usecases', nnn);
+  const dir = specPath(projectDir, 'usecases', nnn);
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter(f => f.endsWith('.yaml')).sort().map(f => {
     const uc = parseYaml(readFileSync(join(dir, f), 'utf-8')) as UseCase;
@@ -200,7 +201,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   if (result.missing.length) return { ...result, exitCode: 2 };
 
   const baseUrl = baseUrlFor(projectDir, opts.env);
-  const out = join(projectDir, 'evidence', nnn);
+  const out = specPath(projectDir, 'evidence', nnn);
   mkdirSync(out, { recursive: true });
   // Evidence is written to the tree, but only this card's own evidence folder.
   const exported = verifyWorkspace(projectDir) === 'export' ? exportHead(projectDir, nnn, resolveSpecDir(projectDir, ref)) : undefined;

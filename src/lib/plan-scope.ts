@@ -1,3 +1,4 @@
+import { specPath, workDir } from './project-root.js';
 import { loadConfig } from './config.js';
 import { existsSync, readFileSync } from 'fs';
 import { isAbsolute, join, relative } from 'path';
@@ -10,7 +11,7 @@ import { cardKey, type Card } from './cards.js';
  */
 export function planFiles(projectDir: string, card: Card): string[] | undefined {
   if (!card.spec) return undefined;
-  const planPath = join(projectDir, card.spec, 'plan.md');
+  const planPath = specPath(projectDir, card.spec, 'plan.md');
   if (!existsSync(planPath)) return undefined;
   const text = readFileSync(planPath, 'utf-8');
   // Every `## Files` section counts: the template ships one empty, and a second one appended
@@ -38,7 +39,7 @@ function planEntryPath(entry: string): string | undefined {
 
 /** True when `path` (absolute under the project, or already relative to it) is inside one of `files`: an exact path, a folder, or a glob. */
 export function pathInPlan(projectDir: string, files: string[], path: string): boolean {
-  const rel = (isAbsolute(path) ? relative(projectDir, path) : path).replace(/^\.\//, '');
+  const rel = (isAbsolute(path) ? relative(workDir(projectDir), path) : path).replace(/^\.\//, '');
   return files.some(entry => {
     const f = entry.replace(/\/$/, '');
     if (/[*?]/.test(f)) return globToRegExp(f).test(rel);
@@ -53,7 +54,7 @@ export function pathInPlan(projectDir: string, files: string[], path: string): b
  */
 export function isSharedPath(projectDir: string, path: string): boolean {
   const shared = (loadConfig(projectDir).leases?.shared ?? []) as unknown[];
-  const rel = isAbsolute(path) ? relative(projectDir, path) : path;
+  const rel = isAbsolute(path) ? relative(workDir(projectDir), path) : path;
   return shared.filter((p): p is string => typeof p === 'string' && p.trim() !== '').some(pattern => {
     if (!/[*?]/.test(pattern)) return rel === pattern || rel.startsWith(`${pattern.replace(/\/$/, '')}/`);
     return globToRegExp(pattern).test(rel);
@@ -83,8 +84,8 @@ function globToRegExp(glob: string): RegExp {
  * The plan lists the source files a story changes, not where its author drafts.
  */
 export function outsidePlanScope(projectDir: string, card: Card, path: string): boolean {
-  const abs = isAbsolute(path) ? path : join(projectDir, path);
-  const rel = relative(projectDir, abs);
+  const abs = isAbsolute(path) ? path : specPath(projectDir, path);
+  const rel = relative(workDir(projectDir), abs);
   if (!rel || rel.startsWith('..') || isAbsolute(rel)) return rel !== '';
   const nnn = cardKey(card);
   const own = ['.codeloop/', `evidence/${nnn}/`, `usecases/${nnn}/`, `shape/${card.id}/`, ...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : [])];

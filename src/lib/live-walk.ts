@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { cardKey, findCardOrNone, readCards } from './cards.js';
@@ -73,7 +74,7 @@ export function checkLiveWalk(projectDir: string, ref: string): string[] {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   const nnn = card ? cardKey(card) : cardNumber(ref);
   const path = `evidence/${nnn}/verify.md`;
-  const file = join(projectDir, path);
+  const file = specPath(projectDir, path);
   const howTo = 'drive the feature as a user in the browser on the normal dev stack and record it (see the verify skill)';
   if (!existsSync(file)) return [`${path} is missing; ${howTo}`];
   const body = section(readFileSync(file, 'utf-8'));

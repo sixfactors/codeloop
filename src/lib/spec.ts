@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -33,8 +34,8 @@ export function resolveSpecDir(projectDir: string, ref: string): string {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   if (card?.spec) return card.spec;
   const key = card ? cardKey(card) : cardNumber(ref);
-  if (existsSync(join(projectDir, 'specs', key))) return `specs/${key}`;
-  const specs = join(projectDir, 'specs');
+  if (existsSync(specPath(projectDir, 'specs', key))) return `specs/${key}`;
+  const specs = specPath(projectDir, 'specs');
   const found = existsSync(specs) ? readdirSync(specs).filter(d => d.startsWith(`${key}-`)) : [];
   if (found.length === 1) return `specs/${found[0]}`;
   throw new RefusalError(found.length ? `specs/${key}-* matches ${found.length} folders; pass the card id` : `no spec folder for ${ref}; run \`codeloop spec new <card-id>\``);
@@ -44,9 +45,9 @@ export function newSpec(projectDir: string, cardId: string, role: Role = 'agent'
   const card = findCard(readCards(projectDir).cards, cardId);
   const dir = card.spec ?? `specs/${cardKey(card)}-${slugify(card.title)}`;
   const created: string[] = [];
-  mkdirSync(join(projectDir, dir), { recursive: true });
+  mkdirSync(specPath(projectDir, dir), { recursive: true });
   for (const name of ['research.md', 'spec.md', 'plan.md', 'tasks.md']) {
-    const dest = join(projectDir, dir, name);
+    const dest = specPath(projectDir, dir, name);
     if (existsSync(dest)) continue;
     const template = readFileSync(join(PACKAGE_ROOT, 'templates/spec', name), 'utf-8');
     writeFileSync(dest, template.replaceAll('{{id}}', card.id).replaceAll('{{title}}', card.title));
@@ -57,7 +58,7 @@ export function newSpec(projectDir: string, cardId: string, role: Role = 'agent'
 }
 
 function read(projectDir: string, dir: string, name: string): string {
-  const file = join(projectDir, dir, name);
+  const file = specPath(projectDir, dir, name);
   if (!existsSync(file)) throw new RefusalError(`${dir}/${name} is missing`);
   return readFileSync(file, 'utf-8');
 }
@@ -146,7 +147,7 @@ export function checkSpec(projectDir: string, dir: string, notes?: string[]): st
 }
 
 export function tickTask(projectDir: string, dir: string, taskId: string): void {
-  const file = join(projectDir, dir, 'tasks.md');
+  const file = specPath(projectDir, dir, 'tasks.md');
   // Builders on different layers tick tasks in the same file at the same time.
   withLock(file, () => {
     const lines = read(projectDir, dir, 'tasks.md').split('\n');
