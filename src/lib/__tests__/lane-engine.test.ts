@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { appendActivity } from '../activity.js';
 import { ConflictError, readCards, writeCards } from '../cards.js';
 import { advanceCard, approveCard, createCard, rejectCard, RefusalError } from '../engine.js';
 import { lintLane, loadLane, parseLane } from '../lane.js';
@@ -60,6 +61,7 @@ describe('engine', () => {
     expect(first.card.stage).toBe('draft');
     expect(first.card.gate).toBeUndefined();
 
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
     const second = advanceCard(dir, 'c-1');
     expect(second.outcome).toBe('stuck');
     expect(second.card).toMatchObject({ stage: 'draft', gate: 'stuck', awaiting: 'owner' });

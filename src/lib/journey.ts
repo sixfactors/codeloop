@@ -6,11 +6,11 @@
  */
 import { closeSync, existsSync, openSync, readSync, statSync } from 'fs';
 import { join } from 'path';
-import { ACTIVITY_DIR, type ActivityLine } from './activity.js';
+import { ACTIVITY_DIR, readActivity, type ActivityLine } from './activity.js';
 import { activeSessions } from './active-card.js';
 import { DONE, DROPPED, PROPOSED, QUEUED, type Card, type CardEvent } from './cards.js';
 import { readQuestions } from './interview.js';
-import { loadLane, type Lane } from './lane.js';
+import { loadLane, substitute, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
 
 export type StepState = 'done' | 'current' | 'gate' | 'skipped' | 'ahead';
@@ -35,6 +35,8 @@ export interface CheckSummary {
   /** The check's output as a person reads it. */
   sentence: string;
   output: string;
+  /** True when the stage's output or the card's activity changed after this check ran. */
+  stale?: boolean;
 }
 
 export type HolderKind = 'agent' | 'you' | 'nobody';
@@ -132,6 +134,19 @@ export function activityText(l: ActivityLine): string {
   }
 }
 
+/** Whether the stage's output file or the card's own activity moved after the check at `at`. */
+function changedSince(projectDir: string, card: Card, lane: Lane, at: string): boolean {
+  const checked = Date.parse(at);
+  if (Number.isNaN(checked)) return false;
+  const stage = lane.stages.find(s => s.id === card.stage);
+  if (stage?.output) {
+    try {
+      if (statSync(join(projectDir, substitute(stage.output, card))).mtimeMs > checked) return true;
+    } catch { /* no output file yet */ }
+  }
+  return readActivity(projectDir, card.id, { limit: 1000 }).items.some(i => i.kind !== 'check' && Date.parse(i.at) > checked);
+}
+
 export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean }[]; health?: string } = {}): Journey {
   const lane = opts.lane ?? loadLane(projectDir, card.lane);
   const events = card.events ?? [];
@@ -186,14 +201,27 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
     check = { pass: true, at: lastAdvance.at, output: '', sentence: `The ${card.stage} check passed${sha ? ` at ${sha}` : ''}.` };
   }
 
+  if (check && !check.pass) {
+    const changed = changedSince(projectDir, card, lane, check.at);
+    if (changed) {
+      const t = opts.tasks;
+      const now = t?.length ? `${t.filter(x => x.done).length} of ${t.length} tasks done` : 'the work has changed';
+      const hm = new Date(check.at);
+      const clock = `${String(hm.getHours()).padStart(2, '0')}:${String(hm.getMinutes()).padStart(2, '0')}`;
+      const was = (check.output.trim().split('\n').map(l => l.trim()).filter(Boolean).pop() ?? 'it failed without saying why').replace(/\.$/, '');
+      check = { ...check, stale: true, sentence: `The check failed at ${clock}: ${was}. Changed since: ${now}; run Check now.` };
+    }
+  }
+
   const session = activeSessions(projectDir).find(s => s.card === card.id);
   const run = findRunningRun(projectDir);
   const ownRun = run?.cardId === card.id ? run : undefined;
   const openQuestions = readQuestions(projectDir, card).filter(q => !q.answer).length;
   // The card's health decides when it has one: needs-you and stuck are the person's; otherwise an
   // agent holds it when a session or a run is on it, and nobody does when neither is.
+  // A session or run on the card holds it, even parked stuck: the agent is the one who can act on it.
   const yours = opts.health ? opts.health === 'needs-you' || opts.health === 'stuck' : Boolean(card.gate || openQuestions);
-  const kind: HolderKind = yours ? 'you' : session || ownRun ? 'agent' : 'nobody';
+  const kind: HolderKind = session || ownRun ? 'agent' : yours ? 'you' : 'nobody';
   const holder: StoryHolder = {
     kind,
     openQuestions,
