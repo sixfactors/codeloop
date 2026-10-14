@@ -52,6 +52,17 @@ After a merge the orchestrator does what a person otherwise runs by hand on the 
 
 The builder is an agent by default. `--builder session:<id-or-label-prefix>` or `--builder person` starts nothing: the orchestrator writes the brief, appends it to `.codeloop/state/orch/outbox/<session>.md` (or `person.md`), writes an `orch-brief` activity line with `to`, prints the brief path and the hand-back line, and polls for a hand-back recorded after the turn began, every 15 seconds, up to `orch.wait_minutes` (default 120) or `--wait <min>`. A builder quiet for `monitor.stall_minutes` gets one `doctor` nudge line. No hand-back in time fails the turn with "no hand-back within the wait" and costs a retry. `--no-wait` returns at once with outcome `briefed`; `codeloop orch resume <card>` gates, merges and advances once the hand-back exists, and `codeloop orch inbox` prints the briefs addressed to this session or to the person that are still unanswered.
 
+## One board for every worktree
+
+A command run in a linked worktree with no `CODELOOP_PROJECT_DIR` resolves the project to the repository's main tree (`git rev-parse --git-common-dir`), so every worktree reads and writes the one board. Where the board and story files live is `store.home` in `.codeloop/config.yaml`:
+
+| store.home | cards.json, specs/, evidence/, shape/, mocks, .codeloop/state | Story files while a story is on a branch |
+|---|---|---|
+| `repo` (default) | in the repository | in the story's worktree (`CODELOOP_WORK_DIR`, else the worktree the command runs in) until the merge |
+| `user` | `~/.codeloop/projects/<id>/` (the hub registry id, else the main tree's folder name), reached through symlinks in the main tree | in that one store, whatever the checkout; the work-dir split does nothing |
+
+The wiki, lanes and config stay in the repository in both modes. `codeloop store move --to user` copies the files to the per-project folder and sets `store.home: user`; the repo copies are left for you to delete (it prints the `git rm` and `.gitignore` lines), and until they are gone every command refuses rather than read a stale copy. Once they are gone the next command links each path into the store. `codeloop store move --to repo` copies them back. `codeloop store where` prints the resolved paths.
+
 ## The Learning Loop
 
 Frequency = severity. The more a gotcha recurs, the more seriously it's treated:

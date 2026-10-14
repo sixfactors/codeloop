@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
-import { projectRoot } from '../project-root.js';
+import { mainTreeOf, projectRoot } from '../project-root.js';
 import { ensureStoryWorktree } from '../worktree.js';
 import { orchReport, orchRun, orchStatus, orchTurn, readOrch } from '../orch.js';
 
@@ -125,7 +125,8 @@ describe('projectRoot', () => {
     const before = process.env.CODELOOP_PROJECT_DIR;
     try {
       delete process.env.CODELOOP_PROJECT_DIR;
-      expect(projectRoot()).toBe(process.cwd());
+      // With no env, a linked worktree (this checkout may be one) resolves to its main tree.
+      expect(projectRoot()).toBe(mainTreeOf(process.cwd()) ?? process.cwd());
       process.env.CODELOOP_PROJECT_DIR = '/somewhere/else';
       expect(projectRoot()).toBe('/somewhere/else');
     } finally {
