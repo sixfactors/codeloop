@@ -247,6 +247,8 @@ export function createApp(
     await patchQuestions(c.req.param('id'));
     return c.json(added, 201);
   }));
+  // Writes into the stage output, so it needs the standing any other write does.
+  app.post(api('/cards/:id/rubric/scaffold'), writing(async c => c.json(services.rubricScaffold(projectDir, c.req.param('id')))));
   // Every open question's recommendation at once: the owner's decision, the same standing as an answer.
   app.post(api('/cards/:id/questions/accept-all'), writing(async c => {
     if (!owner) return readOnly(c, 'answer');

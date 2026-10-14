@@ -29,6 +29,7 @@ import { briefCommand } from './commands/brief.js';
 import { scheduleCommand } from './commands/schedule.js';
 import { adoptCommand } from './commands/adopt.js';
 import { checkCommand } from './commands/check.js';
+import { rubricCommand } from './commands/rubric.js';
 import { packCommand } from './commands/pack.js';
 import { specCommand, taskCommand } from './commands/spec.js';
 import { importCommand } from './commands/import.js';
@@ -92,6 +93,7 @@ export function buildProgram(): Command {
   program.addCommand(scheduleCommand);
   program.addCommand(adoptCommand);
   program.addCommand(checkCommand);
+  program.addCommand(rubricCommand);
   program.addCommand(packCommand);
   program.addCommand(specCommand);
   program.addCommand(mockCommand);

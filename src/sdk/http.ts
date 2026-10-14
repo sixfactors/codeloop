@@ -236,6 +236,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
       if (!q) throw new ApiError(404, `${ref} has no question Q${n}`);
       return q;
     },
+    rubricScaffold: ref => post(`/api/cards/${encodeURIComponent(ref)}/rubric/scaffold`, {}),
     acceptAll: ref => post(`/api/cards/${encodeURIComponent(ref)}/questions/accept-all`, {}),
     inbox: (query: InboxQuery = {}) => json(`/api/inbox${search({ ...query, needsMe: query.needsMe ? '1' : undefined })}`),
     board: (opts = {}) => json(`/api/board${search({ lane: opts.lane })}`),

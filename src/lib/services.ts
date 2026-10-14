@@ -19,7 +19,7 @@ import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
-import { evaluateRubric, type RubricReport, type RubricResult } from './rubric.js';
+import { evaluateRubric, scaffoldRubric, type RubricReport, type RubricResult } from './rubric.js';
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
@@ -497,6 +497,8 @@ export const ask = (projectDir: string, ref: string, items: { question: string; 
 export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean; option?: string }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
 /** Every open question's recommended answer, accepted in one write. The owner's decision, like any answer. */
 export const acceptAll = (projectDir: string, ref: string, who: Role) => acceptAllAnswers(projectDir, ref, who);
+/** A `## Rubric` block of `- Rn pending:` lines for the card's stage, added once. */
+export const rubricScaffold = (projectDir: string, ref: string) => scaffoldRubric(projectDir, ref);
 
 // --- inbox ----------------------------------------------------------------------------------
 

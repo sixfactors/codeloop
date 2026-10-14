@@ -96,6 +96,9 @@ when package.json names a version this file has no heading for.
 - A stage may name `review: { agent }`: that agent judges the output after the stage's agent and
   writes `review-<stage>.md`, which needs `verdict: accept`. Research and interview carry it commented
   out. `cards.full` returns the rubric rows with pass, fail or pending for the gate panel.
+- `codeloop rubric scaffold <card>` appends a `## Rubric` block with a `- Rn pending:` line for each
+  attest row the card's stage still owes, once. `check rubric` reports those rows as pending, apart
+  from missing ones, and `lane refresh` lists the cards in flight that need the scaffold.
 
 ### Wiki and hub
 - Each wiki folder has a write rule, refused with the rule named: a decision compares two or more
