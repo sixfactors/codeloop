@@ -14,7 +14,7 @@ import { appendActivity } from './activity.js';
 import { DONE, findCard, readCards, RefusalError, safeName, writeCards, type Card } from './cards.js';
 import { clock } from './clock.js';
 import { currentStage, advanceCard, recordEvent, type Outcome } from './engine.js';
-import { listGates, runGate } from './gate.js';
+import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
 import { loadLane } from './lane.js';
@@ -36,7 +36,7 @@ export interface OrchTurn {
   branch: string;
   /** What the builder reported, when it reported. */
   handback?: { head: string; proofExit: number; left: string; blocked: string; at: string };
-  gate?: { verdict: 'pass' | 'fail'; findings: string[] };
+  gate?: { verdict: 'pass' | 'fail'; findings: string[]; proof?: { cmd: string; exit: number } };
   merge?: { sha: string; mode: 'ff' | 'merge' };
   /** What ran on the main tree after the merge: verify, then the project's build and restart. */
   postMerge?: PostMergeStep[];
@@ -46,6 +46,8 @@ export interface OrchTurn {
   outcome: 'merged' | 'failed' | 'stuck' | 'briefed';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
+  /** Set when the hand-back gated was recorded before the turn started. */
+  note?: string;
   log?: string;
 }
 
@@ -115,7 +117,11 @@ export interface OrchStatusRow {
   turns: number;
   lastOutcome?: OrchTurn['outcome'];
   builder?: string;
+  /** Who built the last turn, as a person reads it: "agent claude", "claude on dean-mbp", "a person". */
+  builderLabel?: string;
   idleMinutes: number;
+  /** Quiet longer than `monitor.stall_minutes`. */
+  stalled: boolean;
 }
 
 export interface OrchReport {
@@ -190,15 +196,23 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   const card = findCard(readCards(projectDir).cards, record.card);
   const started = Date.parse(turn.startedAt);
   // 4. hand-back: the newest one for this card recorded after the turn started
-  const hb: HandbackRecord | undefined = listHandbacks(projectDir, card.id).find(h => Date.parse(h.at) >= started && h.stage === card.stage);
+  const all = listHandbacks(projectDir, card.id).filter(h => h.stage === card.stage);
+  let hb: HandbackRecord | undefined = all.find(h => Date.parse(h.at) >= started);
+  if (!hb) {
+    // A hand-back stamped before the turn began (clock skew, or the builder handed back early) is
+    // still the builder's work unless it is the one the last turn already gated.
+    const lastGated = record.turns.at(-1)?.handback?.head;
+    hb = all.find(h => h.head !== lastGated);
+    if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
+  }
   if (!hb) {
     turn.findings.push(noHandback);
   } else {
     turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at };
     // 5. gate
     const gate = runGate(projectDir, card.id, { handbackId: hb.head });
-    turn.gate = { verdict: gate.verdict, findings: gate.findings };
-    if (gate.verdict === 'fail') turn.findings.push(...gate.findings);
+    turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
+    if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
     else {
       // 6. merge, then the engine's own advance
       try {
@@ -437,7 +451,8 @@ export function orchStatus(projectDir: string): OrchStatusRow[] {
     const card = cards.find(c => c.id === rec.card);
     if (!card) continue;
     const last = rec.turns.at(-1);
-    rows.push({ card: card.id, title: card.title, stage: card.stage, ...(card.gate ? { gate: card.gate } : {}), turns: rec.turns.length, lastOutcome: last?.outcome, builder: last?.agent, idleMinutes: builderIdle(projectDir, card.id).idleMinutes });
+    const idle = builderIdle(projectDir, card.id);
+    rows.push({ card: card.id, title: card.title, stage: card.stage, ...(card.gate ? { gate: card.gate } : {}), turns: rec.turns.length, lastOutcome: last?.outcome, builder: last?.agent, ...(last ? { builderLabel: builderLabel(last) } : {}), idleMinutes: idle.idleMinutes, stalled: idle.stalled });
   }
   return rows.sort((a, b) => a.card.localeCompare(b.card));
 }
@@ -475,10 +490,30 @@ export interface OrchStarted {
   status: 'running';
 }
 
+/** One turn as the story page shows it: who built it, and the full hand-back and gate it produced. */
+export interface OrchTurnDetail {
+  n: number;
+  builder: string;
+  handback?: HandbackRecord;
+  gate?: GateRecord;
+  /** On a turn handed to a person or session and not yet answered: where the brief is, and the line that reports back. */
+  brief?: string;
+  handbackLine?: string;
+}
+
 /** `GET /api/cards/:id/orch`. */
 export interface OrchView {
   record: OrchRecord;
   report: OrchReport;
+  /** Per turn, matched here by stage and head so a screen joins nothing. */
+  details: OrchTurnDetail[];
+}
+
+/** A builder as a person reads it. Session turns already carry the session's label. */
+export function builderLabel(turn: Pick<OrchTurn, 'agent' | 'builderKind'>): string {
+  if (turn.builderKind === 'person' || turn.agent === 'person') return 'a person';
+  if (turn.builderKind === 'session') return turn.agent;
+  return `agent ${turn.agent}`;
 }
 
 const running = new Set<string>();
@@ -498,4 +533,20 @@ export function startOrch(projectDir: string, cardRef: string, opts: OrchOptions
   return started;
 }
 
-export const orchView = (projectDir: string, cardRef: string): OrchView => ({ record: readOrch(projectDir, cardRef), report: orchReport(projectDir, cardRef) });
+export function orchView(projectDir: string, cardRef: string): OrchView {
+  const record = readOrch(projectDir, cardRef);
+  const handbacks = listHandbacks(projectDir, record.card);
+  const gates = listGates(projectDir, record.card);
+  const card = findCard(readCards(projectDir).cards, record.card);
+  const details = record.turns.map((t): OrchTurnDetail => {
+    if (t.outcome === 'briefed' && !t.endedAt) {
+      const line = `codeloop card handback ${card.id} --branch ${t.branch} --head $(git -C ${t.worktree} rev-parse HEAD) --proof "<the command that proves it>" --worktree ${t.worktree}`;
+      return { n: t.n, builder: builderLabel(t), ...(t.stage === card.stage ? { brief: briefPath(card) } : {}), handbackLine: line };
+    }
+    const head = t.handback?.head;
+    const handback = head ? [...handbacks].reverse().find(h => h.head === head && h.stage === t.stage) ?? [...handbacks].reverse().find(h => h.head === head) : undefined;
+    const gate = head ? [...gates].reverse().find(g => g.handback.head === head) : undefined;
+    return { n: t.n, builder: builderLabel(t), ...(handback ? { handback } : {}), ...(gate ? { gate } : {}) };
+  });
+  return { record, report: orchReport(projectDir, cardRef), details };
+}

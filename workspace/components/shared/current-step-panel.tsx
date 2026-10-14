@@ -4,11 +4,13 @@
 // about it, in one of three shapes chosen by who holds the story (the API's `journey.holder`):
 //   agent  - the live activity feed, elapsed time, Stop and Open brief
 //   you    - the check in one sentence, then Approve/Reject at a gate, or the open questions
-//   nobody - the check output as a sentence, then Start an agent, Work on it myself, Park, Check now
+//   nobody - the check output as a sentence, then Run with orchestrator, Brief a person, Work on it
+//            myself, Park, Check now
 // The caller keys it by card id, so moving the drawer to another story starts it fresh.
 
 import { useEffect, useState } from 'react';
-import { Bot, Check, CheckCircle2, FileText, Hand, Lock, ParkingSquare, Play, Square, X, XCircle } from 'lucide-react';
+import { Bot, Check, CheckCircle2, FileText, Hand, Lock, ParkingSquare, Play, Square, UserRound, Workflow, X, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +22,7 @@ import { Holder } from '@/components/shared/holder';
 import { Questions } from '@/components/shared/questions';
 import { RunLogPane } from '@/components/shared/run-log-pane';
 import { since } from '@/components/shared/journey-stepper';
-import { useAdvance, useBrief, useCanWrite, useDecide, usePark, useRunStage, useSetupStatus } from '@/hooks/use-api';
+import { useAdvance, useBrief, useCanWrite, useDecide, useOrch, useOrchRun, usePark, useSetupStatus } from '@/hooks/use-api';
 import { toast } from '@/lib/toast';
 import type { Card as CardT, Journey } from '@/lib/types';
 
@@ -53,7 +55,7 @@ function CheckLine({ journey }: { journey: Journey }) {
   return (
     <Alert variant={check.pass ? 'default' : 'destructive'} data-testid="check-sentence" data-pass={check.pass}>
       {check.pass ? <CheckCircle2 /> : <XCircle />}
-      <AlertTitle>{check.sentence}</AlertTitle>
+      <AlertTitle className="flex flex-wrap items-start gap-2">{check.stale ? <Badge variant="outline" className="rounded-full" data-testid="check-stale">stale</Badge> : null}<span>{check.sentence}</span></AlertTitle>
       {!check.pass && check.output && check.output.trim() !== check.sentence ? (
         <AlertDescription><pre className="max-h-32 w-full overflow-auto font-mono text-[11px] whitespace-pre-wrap">{check.output.trim()}</pre></AlertDescription>
       ) : null}
@@ -111,10 +113,14 @@ function YouShape({ card, journey }: { card: CardT; journey: Journey }) {
       <CheckLine journey={journey} />
       {holder.gate ? (
         <div className="mt-2 flex flex-col gap-2">
-          <p className="text-xs text-muted-foreground">Gate {holder.gate}, approved by the {holder.awaiting ?? 'owner'}.</p>
+          <p className="text-xs text-muted-foreground" data-testid="gate-explain">
+            {holder.gate === 'stuck'
+              ? 'The check failed three times. Approve unsticks it: it clears the three fails and keeps the stage, so the next run starts fresh. Reject parks it.'
+              : `Gate ${holder.gate}, approved by the ${holder.awaiting ?? 'owner'}.`}
+          </p>
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />Approve</Button>
+            <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />{holder.gate === 'stuck' ? 'Approve: unstick' : 'Approve'}</Button>
             <Button size="sm" variant="outline" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('reject')} data-testid="gate-reject"><X />Reject</Button>
           </div>
           {!canWrite ? <p className="text-xs text-muted-foreground">{reason}</p> : null}
@@ -129,10 +135,22 @@ function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
   const { canWrite, reason } = useCanWrite();
   const setup = useSetupStatus();
   const advance = useAdvance();
-  const runStage = useRunStage();
+  const orchRun = useOrchRun();
+  const orch = useOrch(card.id);
   const park = usePark();
-  const [runId, setRunId] = useState<string | null>(null);
   const [mine, setMine] = useState(false);
+  const [briefed, setBriefed] = useState(false);
+  // The person's brief and report-back line come from the orchestration record once the turn is written.
+  const latest = orch.data?.details.at(-1);
+  const personBrief = briefed && latest?.handbackLine ? latest : undefined;
+  const run = (builder: 'agent' | 'person') =>
+    orchRun.mutate(
+      { id: card.id, builder, ...(builder === 'person' ? { wait: false as const } : {}) },
+      {
+        onSuccess: ({ turn }) => { if (builder === 'person') setBriefed(true); toast.success(builder === 'agent' ? `Turn ${turn.n} started on ${card.id}` : `Brief written for turn ${turn.n}`); },
+        onError: (e) => toast.error(`${builder === 'agent' ? 'Run with orchestrator' : 'Brief a person'} failed: ${(e as Error).message}`),
+      }
+    );
   const noAgent = setup.data && setup.data.agentsConfigured === 0 ? 'No agent configured. Settings › Agents shows the lines to add to .codeloop/config.yaml.' : undefined;
   const command = `codeloop card activate ${card.id}`;
   return (
@@ -143,8 +161,9 @@ function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
       {canWrite ? (
         <>
           <Why reason={noAgent}>
-            <Button size="sm" disabled={Boolean(noAgent) || runStage.isPending || Boolean(runId)} onClick={() => runStage.mutate({ id: card.id }, { onSuccess: ({ runId: id }) => setRunId(id), onError: (e) => toast.error(`Start an agent failed: ${(e as Error).message}`) })} data-testid="start-agent"><Bot />Start an agent</Button>
+            <Button size="sm" disabled={Boolean(noAgent) || orchRun.isPending} onClick={() => run('agent')} data-testid="run-orchestrator"><Workflow />Run with orchestrator</Button>
           </Why>
+          <Button size="sm" variant="outline" disabled={orchRun.isPending} onClick={() => run('person')} data-testid="brief-person"><UserRound />Brief a person</Button>
           <Button size="sm" variant="outline" disabled={park.isPending} onClick={() => park.mutate({ id: card.id }, { onSuccess: () => toast.success(`Parked ${card.id}`), onError: (e) => toast.error(`Park failed: ${(e as Error).message}`) })} data-testid="park"><ParkingSquare />Park</Button>
           <Button size="sm" variant="ghost" disabled={advance.isPending} onClick={() => advance.mutate({ id: card.id }, { onError: (e) => toast.error(`Check failed to run: ${(e as Error).message}`) })} data-testid="check-now"><Play />{advance.isPending ? 'Checking…' : 'Check now'}</Button>
         </>
@@ -158,7 +177,12 @@ function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
           <BriefBox cardId={card.id} />
         </div>
       ) : null}
-      {runId ? <RunLogPane runId={runId} onClose={() => setRunId(null)} /> : null}
+      {personBrief ? (
+        <div className="mt-2 flex flex-col gap-2" data-testid="person-brief-box">
+          <p className="text-xs text-muted-foreground">Give {personBrief.brief ? <span className="font-mono">{personBrief.brief}</span> : 'the brief'} to the person doing the work. They report back with:</p>
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1 font-mono text-[11px]"><span className="min-w-0 flex-1 break-all">{personBrief.handbackLine}</span><CopyButton text={personBrief.handbackLine!} /></div>
+        </div>
+      ) : briefed ? <p className="mt-2 text-xs text-muted-foreground">Writing the brief…</p> : null}
     </AttributeCard>
   );
 }

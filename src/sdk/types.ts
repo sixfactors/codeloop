@@ -69,7 +69,7 @@ export interface Session {
 }
 export type { HandbackInput, HandbackRecord } from '../lib/handback.js';
 export type { GateInput, GateRecord } from '../lib/gate.js';
-export type { OrchOptions, OrchRecord, OrchReport, OrchStarted, OrchStatusRow, OrchTurn, OrchView } from '../lib/orch.js';
+export type { OrchOptions, OrchRecord, OrchReport, OrchStarted, OrchStatusRow, OrchTurn, OrchTurnDetail, OrchView } from '../lib/orch.js';
 export type { MergeResult, StoryWorktree } from '../lib/worktree.js';
 export type { FixtureEvalResult, GradedLine, SkillDef, SkillEvalOptions, SkillEvalReport } from '../lib/skill-eval.js';
 

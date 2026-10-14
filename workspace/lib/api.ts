@@ -4,7 +4,7 @@
 // component reaches the API's internal address (`codeloop serve`/`codeloop hub` set it), and the
 // public env var is only for a build served from somewhere else.
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
-import type { ActivityLine, AdvanceReport, Artifact, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
+import type { ActivityLine, AdvanceReport, Artifact, OrchStatusRow, OrchView, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
 import { currentProjectBrowser, currentProjectServer, hubModeBrowser, hubModeServer } from './project';
 
@@ -181,6 +181,11 @@ export const api = {
   runStage: async (id: string, agent?: string) => (await client()).cards.run(id, agent ? { agent } : undefined),
   run: async (runId: string): Promise<Run> => missing(await (await client()).runs.get(runId), `run ${runId}`),
   /** The SSE stream of a run's log lines; the hook opens it with the browser's EventSource (same exemption as /api/events), so this stays synchronous and browser-only. */
+  /** The story's orchestration: its turns, each with its hand-back and gate, and the owner's paragraph. */
+  orch: async (id: string): Promise<OrchView> => (await client()).orch.report(id),
+  orchStatus: async (): Promise<OrchStatusRow[]> => (await client()).orch.status(),
+  /** Starts one orchestrated turn; `builder` is agent, agent:<name>, session:<x> or person. Returns before it ends. */
+  orchRun: async (id: string, opts: { builder: string; wait?: number | false }) => (await client()).orch.run(id, opts),
   park: async (id: string, note?: string) => (await client()).cards.park(id, note),
   brief: async (id: string): Promise<string> => (await client()).cards.brief(id),
   /** Every line of a card's activity, oldest first, paged through the cursor; the newest 2000 are kept. */

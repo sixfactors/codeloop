@@ -24,6 +24,7 @@ import { Questions } from '@/components/shared/questions';
 import { Markdown } from '@/components/shared/markdown';
 import { JourneyStepper } from '@/components/shared/journey-stepper';
 import { CurrentStepPanel } from '@/components/shared/current-step-panel';
+import { OrchestrationSection } from '@/components/shared/orchestration-section';
 import { ActivityFeed } from '@/components/shared/activity-feed';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CardOutputTab } from '@/components/shared/card-output-tab';
@@ -88,6 +89,8 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
   const counts = full.data?.journey?.tasks;
   const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
   const answeredCount = (full.data?.questions ?? []).filter((q) => q.answer).length;
+  // What earlier phases wrote (the card's own evidence list), shown when this phase has written nothing yet.
+  const earlier = (card.evidence ?? []).filter((p) => p !== output.data?.path);
   return (
     <div className="flex flex-col gap-4" data-testid="produced">
       <section className="flex flex-col gap-2">
@@ -99,6 +102,13 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
         {editing ? <CardOutputTab card={card} />
           : output.data?.text ? <div className="rounded-xl border bg-card p-4"><Markdown>{output.data.text}</Markdown></div>
           : !output.data && !output.error ? <Skeleton className="h-16 w-full" />
+          : earlier.length ? (
+            <div className="flex flex-col gap-1.5 rounded-xl border bg-card p-3" data-testid="earlier-evidence">
+              <p className="text-xs text-muted-foreground">{output.data?.path ? `This phase writes ${output.data.path}; until it does, here is what earlier phases produced.` : 'This phase writes no file; here is what earlier phases produced.'}</p>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase">Earlier evidence</h4>
+              <ul className="flex flex-col gap-1">{earlier.map((p) => <li key={p} className="font-mono text-xs break-all">{p}</li>)}</ul>
+            </div>
+          )
           : <EmptyState compact icon={FileText} title="Nothing written in this phase yet" description={output.data?.path ? `This phase writes ${output.data.path}.` : 'This phase has no output file.'} />}
       </section>
       {tasks.length ? (
@@ -172,6 +182,7 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
       {/* Above the rail, so on a narrow screen what to do next comes before the story's details.
           Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
       <CurrentStepPanel key={card.id} card={card} journey={journey} />
+      <OrchestrationSection cardId={card.id} />
       <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
         <div className="flex min-w-0 flex-col gap-4">
           <Tabs defaultValue="output" key={`tabs-${card.id}`}>

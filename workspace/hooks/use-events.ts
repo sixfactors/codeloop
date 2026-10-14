@@ -33,6 +33,8 @@ export function useEvents() {
       }
       void qc.invalidateQueries({ queryKey: QK.questions(id) });
       void qc.invalidateQueries({ queryKey: QK.full(id) });
+      void qc.invalidateQueries({ queryKey: QK.orch(id) });
+      void qc.invalidateQueries({ queryKey: QK.orchStatus });
       void qc.invalidateQueries({ queryKey: QK.stats });
     };
 
