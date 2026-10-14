@@ -5,6 +5,7 @@ import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { checkMock, findMock } from '../lib/mock.js';
 import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.js';
 import { checkStory } from '../lib/story.js';
+import { wikiLanded } from '../lib/wiki-rules.js';
 import { questionProblems, questionsNotDecided, readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
@@ -74,6 +75,12 @@ checkCommand
     const { errors, urls } = checkResearch(process.cwd(), card, min);
     return opts.online ? [...errors, ...(await checkOnline(urls))] : errors;
   })());
+
+checkCommand
+  .command('wiki-landed <card>')
+  .description("Exit 1 unless the stage's findings reached the wiki: a research that compared options has a decision page (or makes a valid one), a review's repeat-mistake fix-now finding has a gotcha page")
+  .option('--stage <id>', 'research or review; defaults to the card\'s stage')
+  .action((card: string, opts: { stage?: string }) => failing(() => wikiLanded(process.cwd(), card, opts.stage))());
 
 checkCommand
   .command('mock <card>')

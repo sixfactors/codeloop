@@ -8,7 +8,7 @@ stages:
   - id: research
     skill: research
     output: "{spec}/research.md"
-    done: { cmd: "codeloop check research {id} --min-sources 3" }
+    done: { cmd: "codeloop check research {id} --min-sources 3 && codeloop check wiki-landed {id} --stage research" }
   # The agent asks before it designs: up to five questions with a recommended answer each, answered
   # from the inbox or the board. The stage waits until every question has an answer.
   - id: interview
@@ -43,7 +43,7 @@ stages:
   - id: review
     skill: review
     output: evidence/{nnn}/review.md
-    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'" }
+    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check wiki-landed {id} --stage review" }
     gate: { name: pr, approver: reviewer }
   - id: staging
     skill: release
