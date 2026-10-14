@@ -115,6 +115,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     questions: async ref => services.questions(projectDir, ref).questions,
     ask: async (ref, items, opts) => services.ask(projectDir, ref, items, role(opts)),
     answer: async (ref, n, reply, opts) => services.answer(projectDir, ref, n, reply, role(opts)),
+    rubricScaffold: async ref => services.rubricScaffold(projectDir, ref),
     acceptAll: async (ref, opts) => {
       const { answered, skipped } = services.acceptAll(projectDir, ref, role(opts));
       return { accepted: answered.length, skipped: skipped.map(q => q.n), questions: services.questions(projectDir, ref).questions };

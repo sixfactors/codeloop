@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { cardsNeedingRubric } from '../lib/rubric.js';
 import chalk from 'chalk';
 import { resolveRole } from '../lib/engine.js';
 import { lintLane, loadLane, loadLanes, loadSkillsIndex, refreshLane } from '../lib/lane.js';
@@ -70,6 +71,13 @@ laneCommand
     if (r.addedStages.length) console.log(chalk.dim(`  added stages: ${r.addedStages.join(', ')}`));
     if (r.keptWip !== undefined) {
       console.log(chalk.yellow(`  kept wip: ${r.keptWip} (workable cards exceed the template's wip)`));
+    }
+    // A card already in a stage when its rubric arrives fails `check rubric` until its output has a
+    // `## Rubric` block; name each one so the refresh does not leave the board silently red.
+    const owing = cardsNeedingRubric(process.cwd(), r.id);
+    if (owing.length) {
+      console.log(chalk.yellow(`  ${owing.length} card(s) in flight owe a ## Rubric block; run \`codeloop rubric scaffold <card>\` on each:`));
+      for (const c of owing) console.log(`    ${c.id} (${c.stage}): ${c.rows.join(', ')}`);
     }
   }));
 
