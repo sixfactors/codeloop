@@ -78,6 +78,14 @@ A card ships in under a week. Bigger is a feature with several stories: split wi
 
 Check: `size:` is S, M or L; L cards cannot pass the spec gate unsplit.
 
+| Size | Diff budget `codeloop verify` enforces |
+|---|---|
+| S | 8 files, 300 lines |
+| M | 20 files, 1,200 lines (also used when a card has no size) |
+| L | 40 files, 3,000 lines |
+
+The diff is every commit with a `Card:` or `Feature:` trailer for the card, files counted once, lines added plus deleted, excluding `evidence/`, `specs/`, `.codeloop/` and `CHANGELOG.md`. Override per size under `diff_budget:` in config.yaml, or set `budget: off`. `codeloop card diff <id>` shows the numbers without running verify.
+
 ## One metric per card
 
 The card names the stage metric it moves, threaded up: story → feature → metric → initiative goal → north star. `no-data` means instrument first, not guess. Lanes already carry a `metric:`; a card may override it.

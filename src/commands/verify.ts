@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { findCard, readCards } from '../lib/cards.js';
+import { checkBudget } from '../lib/diff-budget.js';
 import { RefusalError } from '../lib/engine.js';
 import { loadLanes } from '../lib/lane.js';
 import { computeStats, type Stats } from '../lib/stats.js';
@@ -71,4 +72,17 @@ export const statsCommand = new Command('stats')
     const stats = computeStats(cards, lanes);
     if (opts.json) console.log(JSON.stringify(stats, null, 2));
     else print(opts.card ?? opts.lane ?? 'all cards', stats);
+  }));
+
+/** Registered under `card` in program.ts; it lives here because it shares verify's budget check. */
+export const cardDiffCommand = new Command('diff')
+  .description("Files, lines and commits in a card's diff and the verdict against its size budget, without running verify. Exit 1 when over budget")
+  .argument('<id>', 'Card number or id')
+  .action(guard((ref: string) => {
+    const projectDir = process.cwd();
+    const card = findCard(readCards(projectDir).cards, ref);
+    const v = checkBudget(projectDir, card.id, card.size);
+    console.log(`  files ${v.files}, lines ${v.lines}, commits ${v.commits}`);
+    console.log(v.pass ? chalk.green(`  ${v.message}`) : chalk.red(`  ${v.message}`));
+    if (!v.pass) process.exit(1);
   }));
