@@ -22,6 +22,21 @@ export function workDir(projectDir: string): string {
   return dir || projectDir;
 }
 
+/**
+ * Runs `fn` with story files resolved against the project root. The interview (questions and
+ * their answers) is board state: a person answers it in the main tree while the builder's branch
+ * is not merged yet, so a builder asking from its worktree must still write there.
+ */
+export function onBoardTree<T>(fn: () => T): T {
+  const saved = process.env.CODELOOP_WORK_DIR;
+  delete process.env.CODELOOP_WORK_DIR;
+  try {
+    return fn();
+  } finally {
+    if (saved !== undefined) process.env.CODELOOP_WORK_DIR = saved;
+  }
+}
+
 /** `join(workDir(projectDir), ...parts)`: the path of a story file, wherever the story's work is. */
 export function specPath(projectDir: string, ...parts: string[]): string {
   return join(workDir(projectDir), ...parts);

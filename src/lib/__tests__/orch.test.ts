@@ -8,6 +8,7 @@ import { readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { projectRoot } from '../project-root.js';
+import { acceptAllAnswers } from '../interview.js';
 import { ensureStoryWorktree } from '../worktree.js';
 import { orchReport, orchRun, orchStatus, orchTurn, readOrch } from '../orch.js';
 
@@ -105,6 +106,46 @@ describe('a merge that cannot land', () => {
     await orchTurn(dir, 'c-001');
     expect(readFileSync(join(dir, '.codeloop/state/briefs/c-001-code.md'), 'utf-8')).toContain('merge conflict in built.txt');
   }, 60_000);
+});
+
+describe('a stage that waits on answers', () => {
+  const INTERVIEW_LANE = `id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: interview\n    done: { cmd: "node ${CLI} check questions {id} --min 3" }\n  - id: build\n    done: { cmd: "true" }\n`;
+  // First run: asks three questions through the CLI and stops. Later runs: the questions exist, so it builds and hands back.
+  const ASKING_AGENT = `#!/bin/sh
+set -e
+if ! ls "$CODELOOP_PROJECT_DIR"/specs/*/interview.md >/dev/null 2>&1; then
+  for q in one two three; do node "${CLI}" ask "$CODELOOP_CARD" "Question $q?" --recommended yes; done
+  exit 0
+fi
+echo built > built.txt
+git add -A
+${GIT} commit -qm "feat: built
+
+Card: $CODELOOP_CARD"
+node "${CLI}" card handback "$CODELOOP_CARD" --branch "$(git rev-parse --abbrev-ref HEAD)" --head "$(git rev-parse HEAD)" --proof "node ${CLI} check questions $CODELOOP_CARD --min 3" --left "built.txt" --worktree "$PWD"
+`;
+
+  it('ends the turn as questions with no retry and no gate, stops the run, and proceeds once answers are in', async () => {
+    project(INTERVIEW_LANE, ASKING_AGENT);
+    const run = await orchRun(dir, 'c-001');
+    expect(run.turns).toHaveLength(1);
+    expect(run.turns[0].outcome).toBe('questions');
+    expect(run.stopped).toBe('waiting for answers');
+    const card = readCards(dir).cards[0];
+    expect(card.retries.interview ?? 0).toBe(0);
+    expect(card.stage).toBe('interview');
+
+    // Running again while the questions are open starts no builder.
+    const again = await orchRun(dir, 'c-001');
+    expect(again.turns).toHaveLength(0);
+    expect(again.stopped).toBe('waiting for answers');
+
+    acceptAllAnswers(dir, 'c-001', 'owner');
+    const next = await orchTurn(dir, 'c-001');
+    expect(next.findings).toEqual([]);
+    expect(next.outcome).toBe('merged');
+    expect(readCards(dir).cards[0].stage).toBe('build');
+  }, 90_000);
 });
 
 describe('orchRun and orchReport', () => {
