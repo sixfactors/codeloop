@@ -23,6 +23,7 @@ const OUTCOME: Record<OrchTurn['outcome'], string> = {
   stuck: 'border-transparent bg-destructive/15 text-destructive',
   briefed: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
   'merge-failed': 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  questions: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
 };
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
