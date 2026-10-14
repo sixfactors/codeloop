@@ -11,6 +11,7 @@ import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
 import { folderPages, inject, listPages, type Page } from './wiki.js';
 import { titleTokens } from './wiki-rules.js';
+import { rubricBrief } from './rubric.js';
 
 export const BRIEFS_DIR = '.codeloop/state/briefs';
 export const AGENT_RUNS_DIR = '.codeloop/state/agent-runs';
@@ -186,6 +187,9 @@ export function buildBrief(projectDir: string, card: Card): string {
     const body = skillBody(projectDir, stage.skill);
     lines.push(`## Skill: ${stage.skill}`, '', body ?? `The skill's text is not in ${SKILLS_INDEX}; use the /${stage.skill} skill if your tool has it.`, '');
   }
+
+  const laneStage = lane.stages.find(s => s.id === card.stage);
+  if (laneStage) lines.push(...rubricBrief(projectDir, card, laneStage));
 
   if (stage.skill) {
     for (const file of skillStateFiles(projectDir, stage.skill)) {

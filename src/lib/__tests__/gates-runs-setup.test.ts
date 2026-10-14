@@ -186,7 +186,7 @@ describe('init detection', () => {
     const config = parseYaml(readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8'));
     expect(config.quality_checks).toEqual({ all: [{ name: 'Lint', command: 'pnpm run lint' }, { name: 'Typecheck', command: 'npx tsc --noEmit' }, { name: 'Build', command: 'pnpm run build' }] });
     expect(config.scopes.all.paths).toEqual(['**/*']);
-    expect(readFileSync(join(dir, '.codeloop/lanes/build.yaml'), 'utf-8')).toContain('--all-done && pnpm test"');
+    expect(readFileSync(join(dir, '.codeloop/lanes/build.yaml'), 'utf-8')).toContain('--all-done && pnpm test && codeloop check rubric {id}"');
     expect(existsSync(join(dir, 'tasks/todo.md'))).toBe(false);
   });
 

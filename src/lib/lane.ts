@@ -24,6 +24,8 @@ export interface Stage {
   done?: { cmd?: string; event?: string };
   gate?: Gate;
   notes?: string[];
+  /** A second agent judges the stage's output against its rubric before the check; `codeloop check rubric` then needs `{spec}/review-<stage>.md` with `verdict: accept`. */
+  review?: { agent: string; skill?: string };
 }
 
 export interface Lane {
@@ -112,6 +114,7 @@ export function lintLane(lane: Lane, skills: SkillEntry[] | null = null): string
         errors.push(`${at}: gate has no approver (owner or reviewer)`);
       }
     }
+    if (stage.review && !stage.review.agent) errors.push(`${at}: review has no agent (a preset under agents: in .codeloop/config.yaml)`);
     if (known && stage.skill && !known.has(stage.skill)) {
       errors.push(`${at}: skill "${stage.skill}" is not in ${SKILLS_INDEX}`);
     }

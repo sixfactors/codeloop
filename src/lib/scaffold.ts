@@ -223,7 +223,7 @@ export function applyDetection(projectDir: string, detection: ProjectDetection, 
   const lane = join(projectDir, '.codeloop/lanes/build.yaml');
   if (created.includes('.codeloop/lanes/build.yaml') && detection.testCommand && detection.testCommand !== 'npm test' && existsSync(lane)) {
     const text = readFileSync(lane, 'utf-8');
-    const next = text.replace('--all-done && npm test"', `--all-done && ${detection.testCommand}"`);
+    const next = text.replace(/--all-done && npm test(?=[ "])/, `--all-done && ${detection.testCommand}`);
     if (next !== text) {
       writeFileSync(lane, next);
       changed.push('.codeloop/lanes/build.yaml');

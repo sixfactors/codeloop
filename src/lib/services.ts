@@ -19,6 +19,7 @@ import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
+import { evaluateRubric, type RubricReport, type RubricResult } from './rubric.js';
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
@@ -121,6 +122,8 @@ export interface CardFull {
   evidence: Evidence | null;
   mock: string | null;
   page: WikiPage | null;
+  /** The current stage's rubric rows with pass, fail or pending and the finding, for the gate panel; null when the stage has no rubric. */
+  rubric: { stage: string; rows: RubricResult[]; review: RubricReport['review'] } | null;
 }
 
 export interface PageWrite {
@@ -587,7 +590,18 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     mock: mock ? mockHref(mock) : null,
     page,
     journey: journeyOf(projectDir, card, { tasks, health: display?.health }),
+    rubric: rubricOf(projectDir, card.id),
   };
+}
+
+function rubricOf(projectDir: string, id: string): CardFull['rubric'] {
+  try {
+    const report = evaluateRubric(projectDir, id);
+    return report.rows.length ? { stage: report.stage, rows: report.rows, review: report.review } : null;
+  } catch {
+    // A card in a lane that no longer loads still opens; it has no rubric to show.
+    return null;
+  }
 }
 
 /** Text evidence comes with its contents; an image is a path the caller fetches itself. */

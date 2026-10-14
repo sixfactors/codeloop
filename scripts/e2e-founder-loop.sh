@@ -553,11 +553,19 @@ expect 2 "next refuses the research stage with two sources" codeloop next 1
 printf -- '- source: http://127.0.0.1:1/forum — users ask for a column picker\n| acme | Export button in the toolbar | https://acme.test/docs/export |\n' >> $R/research.md
 expect 0 "check research passes offline with a verdict and three sources" codeloop check research 1
 expect 1 "check research --online fails on a source that does not answer" codeloop check research 1 --online
+expect 2 "next refuses research while its rubric is unmet" codeloop next 1
+expect 0 "check rubric names the empty pain line and every unattested row" sh -c "codeloop check rubric 1 2>&1 | grep -q '^R3 ' && codeloop check rubric 1 2>&1 | grep -q '^R2 .*no \`- R2 pass'"
+perl -pi -e 's/^pain:.*/pain: founders retype invoices for their accountant, source https:\/\/acme.test\/support\/12/' $R/research.md
+printf '\n## Rubric\n\n- R2 pass: I checked and it is not there\n- R5 pass: options compared in %s/research.md\n- R7 pass: %s/research.md lists the open questions\n' $R $R >> $R/research.md
+expect 0 "check rubric refuses an attest line with prose and no path" sh -c "codeloop check rubric 1 2>&1 | grep -q '^R2 .*names no path, line, URL or command'"
+perl -pi -e 's/^- R2 pass: .*/- R2 pass: `grep -rni csv src\/` finds no exporter/' $R/research.md
+expect 0 "check rubric passes once every attest row names its evidence" codeloop check rubric 1
 expect 0 "next moves research to the interview stage" sh -c "codeloop next 1 | grep -q 'c-001 moved to interview'"
 expect 1 "check questions --min 3 fails with no questions asked" codeloop check questions 1 --min 3
 expect 0 "the agent asks three questions with a recommended answer each" sh -c "codeloop ask 1 'Which formats?' --recommended 'CSV only' --as agent && codeloop ask 1 'Which lists?' --recommended 'Invoices first' --as agent && codeloop ask 1 'Row limit?' --recommended 'None' --as agent"
 expect 2 "next refuses the interview stage while a question has no answer" codeloop next 1
 expect 0 "the owner accepts the three recommended answers" sh -c "codeloop answer 1 1 --accept && codeloop answer 1 2 --accept && codeloop answer 1 3 --accept"
+printf '\n## Rubric\n\n- I2 pass: Q1 scope, Q2 scope, Q3 boundary in %s/interview.md\n- I4 pass: %s/research.md lists no open question the three do not ask\n- I6 pass: answers go into %s/spec.md acceptance and not_building\n' $R $R $R >> $R/interview.md
 expect 0 "next moves interview to the mock stage" sh -c "codeloop next 1 | grep -q 'c-001 moved to mock'"
 expect 0 "the acme row was appended to the competitor page" grep -q '^- c-001 Add CSV export: Export button in the toolbar' .codeloop/wiki/competitors/acme.md
 json "the card records which competitor page gained findings" "d.events.some(e=>e.action==='findings' && e.note==='.codeloop/wiki/competitors/acme.md')" codeloop card show 1 --json
@@ -574,9 +582,12 @@ perl -pi -e 's/--accent: #c2512f/--accent: #ff00ff/' $M
 expect 0 "check mock fails when the tokens block was edited" sh -c "codeloop check mock 1 2>&1 | grep -q 'the tokens block differs'"
 cp "$WORK/mock.good" $M
 expect 0 "check mock passes once the screen is drawn from the tokens" codeloop check mock 1
+expect 0 "the mock stage's attest rows go in rubric-mock.md, since the mock is HTML" sh -c "codeloop check rubric 1 2>&1 | grep -q 'M4 .*$R/rubric-mock.md'"
+printf '## Rubric\n\n- M2 pass: %s has the export-dialog frame; one state, the dialog has no empty or error state\n- M4 pass: US1 is the export-dialog section of %s\n' $M $M > $R/rubric-mock.md
 expect 0 "next moves mock to spec" sh -c "codeloop next 1 | grep -q 'c-001 moved to spec'"
 printf -- '- [ ] T001 [US1] [ui] Export dialog in src/export.tsx\n' >> $R/tasks.md
 perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' $R/spec.md
+printf '\n## Rubric\n\n- S3 pass: the three answers are in %s/spec.md acceptance and screens\n- S6 pass: %s/spec.md not_building names XLSX\n' $R $R >> $R/tasks.md
 expect 0 "the card waits at the spec gate" sh -c "codeloop next 1 | grep -q 'waiting for you at spec'"
 expect 0 "inbox shows the mock path with the spec gate" sh -c "codeloop inbox | grep -q '        mock: $M'"
 expect 0 "mocks index writes the gallery" sh -c "codeloop mocks index | grep -q '.codeloop/mocks/index.html: 1 mock' && grep -q 'href=\"@/$M\"' .codeloop/mocks/index.html && ! grep -q my-project .codeloop/mocks/index.html"

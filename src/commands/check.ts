@@ -6,6 +6,7 @@ import { checkMock, findMock } from '../lib/mock.js';
 import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.js';
 import { checkStory } from '../lib/story.js';
 import { wikiLanded } from '../lib/wiki-rules.js';
+import { evaluateRubric } from '../lib/rubric.js';
 import { questionProblems, questionsNotDecided, readQuestions } from '../lib/interview.js';
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
@@ -77,6 +78,12 @@ checkCommand
     const { errors, urls } = checkResearch(process.cwd(), card, min);
     return opts.online ? [...errors, ...(await checkOnline(urls))] : errors;
   })());
+
+checkCommand
+  .command('rubric <card>')
+  .description("Exit 1 unless the card's stage meets its rubric: every check row passes, every attest row has a `- Rn pass: <evidence>` line under ## Rubric naming a path, line, URL or command, and a stage with `review:` has its review file with `verdict: accept`")
+  .option('--stage <id>', "The stage to judge; defaults to the card's stage")
+  .action((card: string, opts: { stage?: string }) => failing(() => evaluateRubric(process.cwd(), card, opts.stage).problems)());
 
 checkCommand
   .command('wiki-landed <card>')

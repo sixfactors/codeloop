@@ -123,21 +123,9 @@ screens:
 - [ ] T001 [P] [US1] [api] What to do, naming the file
 ```
 
-## Checklist
+## Rubric
 
-See `checklist.md`:
-
-- [ ] title ≤ 12 words, no `` ` `` `--` `:` `.yaml` `.md` `/` `()`, no camelCase token
-- [ ] story has all three parts: persona, "I can", "so that"
-- [ ] persona is in the known list (built-in six, plus `.codeloop/config.yaml` `personas:`)
-- [ ] `size:` is S, M, or L; an L is split before the spec gate
-- [ ] `metric:` is present and defined under the lane or in `wiki/numbers/`
-- [ ] `done_when:` is a command or a screen, never "all stories complete"
-- [ ] `acceptance:` is 1–5 lines, each starting `Given`, containing `when` and `then`
-- [ ] `screens:` names match the mock's `data-screen` sections, or says `screens: none`
-- [ ] every acceptance line has at least one task in `tasks.md`
-- [ ] every task has exactly one layer tag and no task is untraceable to an acceptance line
-- [ ] `codeloop spec check {id}` exits 0
+See `rubric.md` in this folder: the criteria `codeloop check rubric` judges this stage by. Each `attest` row needs a `- Rn pass: <evidence>` line under `## Rubric` at the end of the output, the evidence naming a path, a line, a URL or a command. The brief carries the same rows.
 
 ## Done
 
