@@ -25,7 +25,7 @@ import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnsw
 import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
-import { lastActivityAt, readActivity, type ActivityEntry } from './activity.js';
+import { formatMinutes, lastActivityAt, phaseTime, readActivity, readAllActivity, type ActivityEntry } from './activity.js';
 import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
 import { storyCommits, type StoryCommit } from './diff-budget.js';
 import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
@@ -107,6 +107,8 @@ export interface CardShow {
   evidenceFiles: EvidenceFile[];
   /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
   commits: StoryCommit[];
+  /** Time in the current phase: wall, working and idle minutes; absent when the card has no entry time. */
+  phaseTime?: { stage: string; wallMinutes: number; activeMinutes: number; idleMinutes: number; /** "in build 6h 04m, working 1h 12m". */ text: string };
 }
 
 export type CardListFilter = { lane?: string; stage?: string; initiative?: string; epic?: string; feature?: string; band?: string; persona?: string; size?: string; points?: string | number; all?: boolean };
@@ -395,7 +397,11 @@ export function setupStatus(projectDir: string): SetupStatus {
 export function showCard(projectDir: string, ref: string): CardShow {
   const card = findCard(readCards(projectDir).cards, ref);
   const display = liveState(projectDir, card, openQuestions(projectDir, card).length);
-  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
+  const lane = loadLane(projectDir, card.lane);
+  const entered = lane.stages.some(x => x.id === card.stage) ? enteredAt(card.events ?? [], card.stage, lane.stages[0].id) : undefined;
+  const spent = entered ? phaseTime(readAllActivity(projectDir, card.id), entered, Date.now()) : undefined;
+  const time = spent ? { stage: card.stage, ...spent, text: `in ${card.stage} ${formatMinutes(spent.wallMinutes)}, working ${formatMinutes(spent.activeMinutes)}` } : undefined;
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
 }
 
 /**
@@ -809,6 +815,9 @@ export interface BoardStory {
   lastActivity?: { text: string; at?: string };
   /** When it entered the phase it is in. */
   phaseSince?: string;
+  /** Minutes of work and of waiting since `phaseSince`. */
+  activeMinutes?: number;
+  idleMinutes?: number;
   updatedAt: string;
 }
 
@@ -820,10 +829,11 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; sessio
   const holder: BoardRow = health === 'needs-you' || health === 'stuck' || c.display?.state === 'needs-you' ? 'needs-you' : held ? 'agent' : 'queued';
   const line = ctx ? storyLiveLine(ctx.projectDir, ctx.card, health) : undefined;
   const since = ctx?.firstStage ? enteredAt(ctx.card.events ?? [], ctx.card.stage, ctx.firstStage) : undefined;
+  const time = since && ctx ? phaseTime(readAllActivity(ctx.projectDir, c.id), since, Date.now()) : undefined;
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
     epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
-    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), updatedAt: c.updatedAt,
+    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), ...(time ? { activeMinutes: time.activeMinutes, idleMinutes: time.idleMinutes } : {}), updatedAt: c.updatedAt,
   };
 };
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];

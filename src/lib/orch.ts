@@ -36,7 +36,7 @@ export interface OrchTurn {
   worktree: string;
   branch: string;
   /** What the builder reported, when it reported. */
-  handback?: { head: string; proofExit: number; left: string; blocked: string; at: string };
+  handback?: { head: string; proofExit: number; left: string; blocked: string; at: string; selfcheck?: { pass: boolean; failing: string[] } };
   gate?: { verdict: 'pass' | 'fail'; findings: string[]; proof?: { cmd: string; exit: number } };
   merge?: { sha: string; mode: 'ff' | 'merge' };
   /** What ran on the main tree after the merge: verify, then the project's build and restart. */
@@ -222,7 +222,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   if (!hb) {
     turn.findings.push(noHandback);
   } else {
-    turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at };
+    turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at, ...(hb.selfcheck ? { selfcheck: hb.selfcheck } : {}) };
     // 5. gate
     const gate = runGate(projectDir, card.id, { handbackId: hb.head });
     turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
