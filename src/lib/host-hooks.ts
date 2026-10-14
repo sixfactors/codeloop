@@ -82,7 +82,25 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push' | 'p
  * (written to `.cursor/hooks.json`), the pre-commit/pre-push git guards, and the post-commit hook
  * that records each commit in its card's activity.
  */
-export function installHostHooks(projectDir: string, opts: { hostsOf?: string } = {}): HookInstall[] {
+/**
+ * True when the project already runs codeloop's git guard: a hook equal to the shipped one, or one
+ * carrying its `# codeloop <name>` marker, at the path git reads hooks from.
+ */
+export function hasGitGuardHooks(projectDir: string): boolean {
+  const run = spawnSync('git', ['rev-parse', '--git-path', 'hooks'], { cwd: projectDir, encoding: 'utf-8' });
+  if (run.status !== 0) return false;
+  const hooksPath = spawnSync('git', ['config', '--get', 'core.hooksPath'], { cwd: projectDir, encoding: 'utf-8' }).stdout.trim();
+  const husky = hooksPath && /\.husky\/_\/?$/.test(hooksPath);
+  const dir = husky ? join(resolve(projectDir, hooksPath), '..') : resolve(projectDir, hooksPath || run.stdout.trim());
+  return (['pre-commit', 'pre-push', 'post-commit'] as const).some(name => {
+    const path = join(dir, name);
+    if (!existsSync(path)) return false;
+    const text = readFileSync(path, 'utf-8');
+    return text.includes(`# codeloop ${name}`) || text === readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
+  });
+}
+
+export function installHostHooks(projectDir: string, opts: { hostsOf?: string; gitHooks?: boolean } = {}): HookInstall[] {
   // Only the hosts init set up get hook files; a repo with neither folder gets Claude's, the default host.
   // `hostsOf` names the tree whose folders say which hosts are set up: a story worktree is a fresh
   // checkout, so the main tree decides.
@@ -98,6 +116,7 @@ export function installHostHooks(projectDir: string, opts: { hostsOf?: string } 
     const cursor = mergeHooksFile(projectDir, '.cursor/hooks.json', 'cursor-hooks.json');
     out.push({ name: '.cursor/hooks.json', installed: true, reason: cursor.changed ? undefined : 'unchanged' });
   }
+  if (opts.gitHooks === false) return out;
   return [
     ...out,
     installGitHook(projectDir, 'pre-commit'),

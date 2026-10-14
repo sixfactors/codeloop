@@ -75,7 +75,7 @@ laneCommand
     }
     // A card already in a stage when its rubric arrives fails `check rubric` until its output has a
     // `## Rubric` block; name each one so the refresh does not leave the board silently red.
-    const owing = cardsNeedingRubric(process.cwd(), r.id);
+    const owing = cardsNeedingRubric(projectRoot(), r.id);
     if (owing.length) {
       console.log(chalk.yellow(`  ${owing.length} card(s) in flight owe a ## Rubric block; run \`codeloop rubric scaffold <card>\` on each:`));
       for (const c of owing) console.log(`    ${c.id} (${c.stage}): ${c.rows.join(', ')}`);

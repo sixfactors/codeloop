@@ -12,7 +12,7 @@ import { findCard, readCards, RefusalError, writeCards, type Card } from './card
 import { loadConfig } from './config.js';
 import { recordEvent } from './engine.js';
 import { listGates } from './gate.js';
-import { installHostHooks, type HookInstall } from './host-hooks.js';
+import { hasGitGuardHooks, installHostHooks, type HookInstall } from './host-hooks.js';
 import { slugify } from './spec.js';
 
 export interface WorktreeOptions {
@@ -87,7 +87,9 @@ export function ensureStoryWorktree(projectDir: string, cardRef: string, opts: W
   // A worktree is a fresh checkout: the host hooks the project rendered into its main tree (which
   // are not always tracked) are missing there, and a builder inside it would run unguarded and
   // write no activity.
-  const hooks = installHostHooks(path, { hostsOf: projectDir });
+  // Git hooks live in the repository's shared hooks folder, so writing them from a worktree writes
+  // them for the main tree too; only a project that already runs the guard gets it here.
+  const hooks = installHostHooks(path, { hostsOf: projectDir, gitHooks: hasGitGuardHooks(projectDir) });
   appendActivity(projectDir, card.id, { session: currentSession(), kind: 'hooks', path, text: hooks.map(h => `${h.name}${h.reason ? ` (${h.reason})` : ''}`).join(', ') });
   return { card: card.id, path, branch, trunk, created: true, hooks };
 }
