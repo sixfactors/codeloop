@@ -158,6 +158,27 @@ describe('verify', () => {
   });
 });
 
+describe('verify checks the diff budget', () => {
+  it('fails a passing story whose diff is over budget, and writes the numbers to verify.md', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+    write('.codeloop/config.yaml', 'diff_budget:\n  M: { files: 1 }\n');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    write('a.txt', 'x');
+    write('b.txt', 'x');
+    git('add', 'a.txt', 'b.txt');
+    git('commit', '-q', '-m', 'feat: two files', '-m', 'Card: c-1');
+
+    const result = await verify(dir, 'c-1', { record: false });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.problem).toBe('diff 2 files / 2 lines exceeds the M budget (1 files / 1,200 lines); split the story');
+    expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toMatch(/budget: 2 files, 2 lines, limit 1 files \/ 1200 lines \(M\), fail/);
+  });
+});
+
 describe('verify cannot pass on nothing', () => {
   it('exits 2 when the spec has no acceptance lines, or there are no use cases at all', async () => {
     useCase('uc-1', 'US1', 'cli: { run: "true" }');
