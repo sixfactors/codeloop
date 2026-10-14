@@ -55,6 +55,7 @@ export function researchSummary(text: string): { verdict: string; exists?: strin
   if (!verdict) return null;
   const exists = /^exists:\s*(\S.*)$/m.exec(text)?.[1]?.trim();
   const pain = /^pain:\s*(\S.*)$/m.exec(text)?.[1]?.trim();
-  const options = (/^## Options\s*\n([\s\S]*?)(?=\n## |\s*$)/m.exec(text)?.[1] ?? '').trim();
+  // Up to the next heading or the end of the text; a multiline `$` here would stop at the first option's line end.
+  const options = (/^## Options[ \t]*\n([\s\S]*?)(?=\n## |(?![\s\S]))/m.exec(text)?.[1] ?? '').trim();
   return { verdict, ...(exists ? { exists } : {}), ...(pain ? { pain } : {}), options };
 }

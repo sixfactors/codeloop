@@ -31,7 +31,8 @@ import { computeStats, type Stats } from './stats.js';
 import { listFilter, migrateStories, storyFields, type StoryFlags } from './story.js';
 import { migrateFeatures } from './migrate-features.js';
 import { ConflictError, openStore, type CardRecord, type Epic, type Evidence, type Feature, type Rice, type Store, type WikiPage } from './store/index.js';
-import { inject, lintWiki, listPages, WIKI_DIR, type Page as WikiEntry } from './wiki.js';
+import { inject, lintWiki, listPages, mergePages, WIKI_DIR, type Page as WikiEntry } from './wiki.js';
+import { migrateResearchDecisions, type MigrationRow } from './wiki-rules.js';
 
 export type { Inbox } from './inbox.js';
 export type { Question } from './interview.js';
@@ -491,6 +492,10 @@ export function inboxPaged(projectDir: string, index: ProjectIndex, q: InboxQuer
 export const wikiEntries = (projectDir: string): WikiEntry[] => listPages(projectDir);
 export const wikiInject = (projectDir: string, files: string[]): WikiEntry[] => inject(projectDir, files);
 export const wikiLint = (projectDir: string): ReturnType<typeof lintWiki> => lintWiki(projectDir);
+/** Folds wiki page b into a: frequencies add, cards and scope join, b is removed. */
+export const wikiMerge = (projectDir: string, a: string, b: string): WikiEntry => mergePages(projectDir, a, b);
+/** Research mirror pages turned into decisions titled by the choice, or removed; the mapping says which. */
+export const migrateDecisions = (projectDir: string, opts: { dryRun?: boolean } = {}): MigrationRow[] => migrateResearchDecisions(projectDir, opts);
 
 // --- index-backed reads: what the board draws -----------------------------------------------
 

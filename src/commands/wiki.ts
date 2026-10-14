@@ -57,14 +57,33 @@ wikiCommand
   .command('lint')
   .description('Report broken links, stale pages, duplicate titles and scanner filler (exit 1 on a broken link or a page in an unknown folder)')
   .action(guard(async () => {
-    const { broken, stale, duplicates, unknownFolder, filler } = await client().wiki.lint();
+    const { broken, stale, duplicates, unknownFolder, filler, nearDuplicates } = await client().wiki.lint();
     broken.forEach(b => console.error(chalk.red(`  broken: ${b}`)));
     unknownFolder.forEach(u => console.error(chalk.red(`  unknown folder: ${u}`)));
     stale.forEach(s => console.log(chalk.yellow(`  stale: ${s}`)));
     duplicates.forEach(d => console.log(chalk.yellow(`  duplicate: ${d}`)));
     filler.forEach(f => console.log(chalk.yellow(`  filler: ${f}`)));
+    nearDuplicates.forEach(n => console.log(chalk.yellow(`  near-duplicate: ${n}`)));
     if (broken.length || unknownFolder.length) process.exit(1);
-    console.log(`  wiki ok${stale.length + duplicates.length + filler.length ? ` (${stale.length} stale, ${duplicates.length} duplicate, ${filler.length} filler)` : ''}`);
+    console.log(`  wiki ok${stale.length + duplicates.length + filler.length + nearDuplicates.length ? ` (${stale.length} stale, ${duplicates.length} duplicate, ${filler.length} filler, ${nearDuplicates.length} near-duplicate)` : ''}`);
+  }));
+
+wikiCommand
+  .command('merge <a> <b>')
+  .description('Fold page b into page a: frequencies add, cards and scope join, b is removed (paths or file names, as `wiki lint` prints them)')
+  .action(guard(async (a: string, b: string) => {
+    const page = await client().wiki.merge(a, b);
+    console.log(`  merged ${b} into ${page.path}, freq ${page.freq}, cards ${page.cards.join(', ') || 'none'}`);
+  }));
+
+wikiCommand
+  .command('migrate-decisions')
+  .description('Turn research mirror pages ("<card title>: build") into decisions titled by the choice when they compared options; remove the rest')
+  .option('--dry-run', 'Print the mapping without writing', false)
+  .action(guard(async (opts: { dryRun?: boolean }) => {
+    const rows = await client().wiki.migrateDecisions({ dryRun: opts.dryRun });
+    for (const r of rows) console.log(`  ${r.from} -> ${r.to ?? chalk.yellow('removed')}  (${r.why})`);
+    console.log(rows.length ? `  ${rows.length} mirror page(s)${opts.dryRun ? ', nothing written' : ''}` : '  no research mirror pages');
   }));
 
 wikiCommand

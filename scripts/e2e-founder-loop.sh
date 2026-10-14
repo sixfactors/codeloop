@@ -321,7 +321,7 @@ json "run --lane left the other lanes' slots: a full run still starts the releas
 json "stats --compare splits by lane version" "d.v1.cards>=1 && d.v2.cards===0" codeloop stats --lane market --compare v1 v2 --json
 
 # --- wiki: capture, inject, critical gotchas block until acknowledged ------------------------
-gotcha() { codeloop wiki capture --title "CSV export needs a BOM for Excel" --scope "src/export/**" --body "Write the BOM first."; }
+gotcha() { codeloop wiki capture --title "CSV export needs a BOM for Excel" --scope "src/export/**" --body $'Failure: Excel shows mojibake in the CSV.\nFix: write the BOM first.'; }
 expect 0 "wiki capture writes a page" gotcha
 expect 0 "inject returns the page for a matching file" sh -c "codeloop wiki inject --files src/export/csv.ts | grep -q 'needs a BOM'"
 expect 0 "inject returns nothing for an unrelated file" sh -c "codeloop wiki inject --files site/page.tsx | grep -q 'no wiki pages apply'"

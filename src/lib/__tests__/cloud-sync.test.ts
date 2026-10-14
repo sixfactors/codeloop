@@ -114,21 +114,21 @@ describe('cloud sync of config, lanes and wiki', () => {
 
   it('reports each document as in-sync, local-ahead, cloud-ahead or both-changed', () => {
     const dir = project();
-    capture(dir, { title: `Local page ${run}`, scope: [], body: 'one' });
-    capture(dir, { title: `Both page ${run}`, scope: [], body: 'one' });
+    capture(dir, { kind: 'concept', title: `Local page ${run}`, scope: [], body: 'one' });
+    capture(dir, { kind: 'concept', title: `Both page ${run}`, scope: [], body: 'one' });
     connect(dir, conn());
 
-    writeFileSync(file(dir, `wiki/gotchas/local-page-${run}.md`), read(dir, `wiki/gotchas/local-page-${run}.md`) + 'edited here\n');
+    writeFileSync(file(dir, `wiki/concepts/local-page-${run}.md`), read(dir, `wiki/concepts/local-page-${run}.md`) + 'edited here\n');
     editInCloud(dir, 'config.yaml', CONFIG.replace('8', '5'));
-    writeFileSync(file(dir, `wiki/gotchas/both-page-${run}.md`), read(dir, `wiki/gotchas/both-page-${run}.md`) + 'edited here\n');
-    editInCloud(dir, `wiki/gotchas/both-page-${run}.md`, 'edited there');
+    writeFileSync(file(dir, `wiki/concepts/both-page-${run}.md`), read(dir, `wiki/concepts/both-page-${run}.md`) + 'edited here\n');
+    editInCloud(dir, `wiki/concepts/both-page-${run}.md`, 'edited there');
 
     expect(states(dir)).toEqual({
       'cards.json': 'in-sync',
       'config.yaml': 'cloud-ahead',
       'lanes/market.yaml': 'in-sync',
-      [`wiki/gotchas/local-page-${run}.md`]: 'local-ahead',
-      [`wiki/gotchas/both-page-${run}.md`]: 'both-changed',
+      [`wiki/concepts/local-page-${run}.md`]: 'local-ahead',
+      [`wiki/concepts/both-page-${run}.md`]: 'both-changed',
     });
   });
 
@@ -169,9 +169,9 @@ describe('cloud sync of config, lanes and wiki', () => {
 
   it('writes a wiki page changed on both sides beside the local one, lists it in the inbox, and pushes the merge once the copy is removed', () => {
     const dir = project();
-    capture(dir, { title: `Both page ${run}`, scope: [], body: 'one' });
+    capture(dir, { kind: 'concept', title: `Both page ${run}`, scope: [], body: 'one' });
     connect(dir, conn());
-    const path = `wiki/gotchas/both-page-${run}.md`;
+    const path = `wiki/concepts/both-page-${run}.md`;
     const mine = read(dir, path) + 'edited here\n';
     writeFileSync(file(dir, path), mine);
     editInCloud(dir, path, 'edited there');
@@ -201,7 +201,7 @@ describe('cloud sync of config, lanes and wiki', () => {
     connect(b, conn());
     const other = project();
     connect(other, { ...conn(), boardTitle: `other board ${run}`, folder: `other-${run}` });
-    capture(a, { title: `Shared page ${run}`, scope: [], body: 'from a' });
+    capture(a, { kind: 'concept', title: `Shared page ${run}`, scope: [], body: 'from a' });
 
     syncBefore(b);
     syncBefore(other);
@@ -277,17 +277,17 @@ describe('offline', () => {
     connect(a, conn());
     const b = project();
     connect(b, conn());
-    offline(a, () => capture(a, { title: `Offline page ${run}`, scope: [], body: 'kept' }));
-    expect(loadSync(a).documents[`wiki/gotchas/offline-page-${run}.md`]).toMatchObject({ pending: true });
-    capture(b, { title: `Teammate page ${run}`, scope: [], body: 'theirs' });
+    offline(a, () => capture(a, { kind: 'concept', title: `Offline page ${run}`, scope: [], body: 'kept' }));
+    expect(loadSync(a).documents[`wiki/concepts/offline-page-${run}.md`]).toMatchObject({ pending: true });
+    capture(b, { kind: 'concept', title: `Teammate page ${run}`, scope: [], body: 'theirs' });
     editInCloud(b, 'config.yaml', CONFIG.replace('8', '3'));
 
     disconnect(a);
     expect(existsSync(file(a, 'cloud.json'))).toBe(false);
     expect(existsSync(file(a, 'state/sync.json'))).toBe(false);
     expect(loadEngineConfig(a).gatesPerDay).toBe(3);
-    expect(read(a, `wiki/gotchas/teammate-page-${run}.md`)).toContain('theirs');
+    expect(read(a, `wiki/concepts/teammate-page-${run}.md`)).toContain('theirs');
     syncBefore(b);
-    expect(read(b, `wiki/gotchas/offline-page-${run}.md`)).toContain('kept');
+    expect(read(b, `wiki/concepts/offline-page-${run}.md`)).toContain('kept');
   });
 });

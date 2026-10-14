@@ -61,6 +61,16 @@ when package.json names a version this file has no heading for.
 - A promoted proposal gets its spec folder.
 
 ### Wiki and hub
+- Each wiki folder has a write rule, refused with the rule named: a decision compares two or more
+  options with a `## Why` and `## Consequences`, is titled by the choice and carries scope files; a
+  gotcha carries scope files, the failure and the fix. The research stage writes a decision only when
+  it compared options, so the "<card title>: build" copies of research.md stop;
+  `codeloop wiki migrate-decisions` folds or removes the existing ones.
+- A capture close to an existing page in the same folder (titles overlapping by 0.6, or the same scope
+  and first heading) merges into it with a dated note. `wiki lint` names the near-duplicates it left,
+  and `codeloop wiki merge <a> <b>` folds two pages by hand.
+- Briefs add wiki pages whose titles match the story's title and tasks, up to ten, and ask the agent to
+  end with `read:` lines. `codeloop check wiki-landed <id>` gates the research and review stages.
 - One wiki shape codeloop owns, with agent-written architecture pages judged by a check.
 - One local hub serves every registered project under `/p/<id>`; stuck and finished stories stop
   holding slots; a person can sign in and approve from any terminal.

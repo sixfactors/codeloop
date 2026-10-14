@@ -225,6 +225,8 @@ export interface Transport {
   writeWikiOutline(opts?: { force?: boolean }): Promise<WikiOutlineWriteResult>;
   /** Moves scanner filler into `reference/legacy/`, never deleting it. Local only. */
   migrateWiki(opts?: { dryRun?: boolean }): Promise<WikiMigrateResult>;
+  wikiMerge(a: string, b: string): Promise<WikiEntry>;
+  migrateDecisions(opts?: { dryRun?: boolean }): Promise<{ from: string; to: string | null; why: string }[]>;
   /** The shape with page counts: every section in spec order, empty ones left out. Local only. */
   wikiShape(): Promise<WikiShapeCount[]>;
   /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
@@ -370,6 +372,10 @@ export class CodeloopClient {
     writeOutline: (opts?: { force?: boolean }) => this.transport.writeWikiOutline(opts),
     /** `wiki migrate`: moves scanner filler into `reference/legacy/`, never deleting it. */
     migrate: (opts?: { dryRun?: boolean }) => this.transport.migrateWiki(opts),
+    /** Fold page b into page a (paths or file names). */
+    merge: (a: string, b: string) => this.transport.wikiMerge(a, b),
+    /** Turn research mirror decision pages into decisions titled by the choice, or remove them. */
+    migrateDecisions: (opts?: { dryRun?: boolean }) => this.transport.migrateDecisions(opts),
     /** The shape with page counts, pre-joined for the home page and sidebar. */
     shape: () => this.transport.wikiShape(),
     /** `wiki build`: refreshes the facts, starts a card in the `wiki` lane, and runs it unless `run: false`. */

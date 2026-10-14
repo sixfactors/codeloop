@@ -98,7 +98,7 @@ describe('brief', () => {
     lane('market', GATED_THEN_PUBLIC);
     write('.claude/commands/design.md', '---\ndescription: drafts\n---\nLead with the claim, then the proof.\n');
     write('.codeloop/skills.index.yaml', '- { name: design, source: .claude/commands/design.md, kind: command, description: drafts }\n');
-    capture(dir, { title: 'Drafts need a source', scope: ['out/**'], body: 'Cite the page each number came from.' });
+    capture(dir, { title: 'Drafts need a source', scope: ['out/**'], body: 'Failure: a draft cited nothing.\nFix: cite the page each number came from.' });
     createCard(dir, { lane: 'market', title: 'Launch post', id: 'c-001' });
     write('out/c-001.md', 'draft');
     for (const note of ['too salesy', 'no proof for the claim']) {
@@ -113,7 +113,7 @@ describe('brief', () => {
     expect(brief).toContain('Lead with the claim, then the proof.');
     expect(brief).toContain('test -f out/c-001.md');
     expect(brief).toContain('Latest rejection: no proof for the claim');
-    expect(brief).toContain('Cite the page each number came from.');
+    expect(brief).toContain('cite the page each number came from.');
     expect(brief).toContain('Do not run `codeloop approve`');
   });
 });

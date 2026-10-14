@@ -90,7 +90,7 @@ describe('cloud store', () => {
   it('writes a captured wiki page to the cloud, where search finds it', () => {
     const dir = project();
     connect(dir, conn());
-    capture(dir, { title: `Rename is not atomic ${run}`, scope: ['src/**'], body: 'Write the temp file next to the target.' });
+    capture(dir, { title: `Rename is not atomic ${run}`, scope: ['src/**'], body: 'Failure: the rename throws EXDEV.\nFix: write the temp file next to the target.' });
 
     expect(search(dir, `Rename is not atomic ${run}`).map(r => r.title)).toEqual([`Rename is not atomic ${run} (gotchas/rename-is-not-atomic-${run}.md)`]);
     expect(Object.keys(loadSync(dir).documents)).toContain(`wiki/gotchas/rename-is-not-atomic-${run}.md`);

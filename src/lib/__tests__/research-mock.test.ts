@@ -98,18 +98,28 @@ describe('competitor pages', () => {
     expect(buildBrief(dir, card())).not.toContain('## Competitors');
   });
 
-  it('writes a decision page from the verdict, exists, pain and options when the research stage passes', () => {
-    write(`${SPEC}/research.md`, read(`${SPEC}/research.md`).replace('exists: build', 'exists: unlock src/export.ts').replace('## Options\n', '## Options\n- A: toolbar button\n- B: scheduled email\n').replace('pain:\n', 'pain: support inbox, four requests this month\n') + `${SOURCES.join('\n')}\nverdict: build\n`);
+  it('writes a decision titled by the choice when the research compared options, and no page when it did not', () => {
+    write('src/export.ts', 'export {};\n');
+    const base = read(`${SPEC}/research.md`).replace('exists: build', 'exists: unlock `src/export.ts`').replace('pain:\n', 'pain: support inbox, four requests this month\n') + `${SOURCES.join('\n')}\nverdict: build\n`;
+    write(`${SPEC}/research.md`, base.replace('## Options\n', '## Options\n- A: toolbar button\n- B: scheduled email. Chosen.\n'));
 
     const { card } = advanceCard(dir, 'c-001');
-    const page = read('.codeloop/wiki/decisions/add-csv-export-build.md');
-    expect(page).toContain('title: "Add CSV export: build"');
-    expect(page).toContain('Verdict: build');
-    expect(page).toContain('Exists: unlock src/export.ts');
-    expect(page).toContain('Pain: support inbox, four requests this month');
+    const page = read('.codeloop/wiki/decisions/scheduled-email.md');
+    expect(page).toContain('title: scheduled email');
+    expect(page).toContain('- src/export.ts');
     expect(page).toContain('- A: toolbar button');
-    expect(card.events.find(e => e.action === 'decision')?.note).toBe('.codeloop/wiki/decisions/add-csv-export-build.md');
+    expect(page).toContain('## Why\n\nsupport inbox, four requests this month');
+    expect(page).toContain('## Consequences');
+    expect(card.events.find(e => e.action === 'decision')?.note).toBe('.codeloop/wiki/decisions/scheduled-email.md');
     expect(read('.codeloop/wiki/INDEX.md')).toContain('| `decisions/` |');
+  });
+
+  it('writes no decision page when the research named one option', () => {
+    write('src/export.ts', 'export {};\n');
+    write(`${SPEC}/research.md`, read(`${SPEC}/research.md`).replace('exists: build', 'exists: unlock `src/export.ts`').replace('## Options\n', '## Options\n- A: toolbar button. Chosen.\n') + `${SOURCES.join('\n')}\nverdict: build\n`);
+    const { card } = advanceCard(dir, 'c-001');
+    expect(card.events.some(e => e.action === 'decision')).toBe(false);
+    expect(existsSync(join(dir, '.codeloop/wiki/decisions'))).toBe(false);
   });
 
   it('puts the wiki folders a skill names in its inputs into the brief', () => {
