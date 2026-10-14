@@ -922,3 +922,4 @@ export function monitorLines(report: MonitorReport): string[] {
 export { listHandbacks, recordHandback, type HandbackInput, type HandbackRecord } from './handback.js';
 export { stalledBuilders, stalledLines, type StalledBuilder } from './stall.js';
 export { listGates, runGate, type GateInput, type GateRecord } from './gate.js';
+export { ensureStoryWorktree, mergeStory, removeStoryWorktree, type MergeResult, type StoryWorktree, type WorktreeOptions } from './worktree.js';
