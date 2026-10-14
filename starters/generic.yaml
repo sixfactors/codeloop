@@ -104,3 +104,7 @@ codeloop:
 # verify:
 #   setup: "npm ci && npm run build"
 #   workspace: export              # or tree, to run in the working tree
+
+# Layer tag -> path globs, e.g. `api: ["src/**"]`. `codeloop spec check` fails a task tagged [api]
+# that names a file in another layer. A layer with no globs is not checked.
+layers: {}

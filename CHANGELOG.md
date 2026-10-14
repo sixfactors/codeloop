@@ -7,6 +7,8 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
+
 ### Watch an agent work a story
 - `codeloop card handback <card> --branch <b> --head <sha> --proof "<cmd>"` records a builder's hand-back: it runs the proof command itself and stores the exit code and output on the card, so a gate can check data instead of a claim. A failing proof is recorded, an empty one is refused.
 - Every card has an activity stream (`.codeloop/state/activity/<card>.jsonl`): the Claude Code and
