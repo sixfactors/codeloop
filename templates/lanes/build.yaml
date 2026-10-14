@@ -1,5 +1,5 @@
 id: build
-version: 1
+version: 2
 metric: { name: cycle_time_days, source: cards, target: "<5" }
 trigger: { manual: true }
 wip: 2
@@ -26,6 +26,14 @@ stages:
     output: "{spec}/tasks.md"
     done: { cmd: "codeloop spec check {id}" }
     gate: { name: spec, approver: owner }
+  # Passes with no work when no task is tagged `[data]` and spec.md names no `entities:`.
+  - id: data-model
+    skill: system-design
+    output: "{spec}/data-model.md"
+    done: { cmd: "codeloop check data-model {id}" }
+    notes:
+      - "skip_when: no data tasks. The check passes trivially when no task is tagged `[data]` and spec.md has no `entities:` list."
+      - "Otherwise read .codeloop/wiki/architecture/data-model.md first and write {spec}/data-model.md with ## Entities, ## Stores, ## Indexes and ## Migration. Every store must already be on the architecture page, or be added there in this story."
   - id: build
     skill: api
     done: { cmd: "codeloop task check {id} --all-done && npm test" }
