@@ -298,7 +298,7 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
     return { action: 'agent-start', agent: agent!.name, log };
   });
   turn.log = log;
-  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } });
+  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
   recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent!.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent!.timeoutMinutes} minutes` } : {}) }));
   return settle(projectDir, record, turn, ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`);
 }

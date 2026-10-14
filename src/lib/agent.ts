@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { spawn } from 'child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
 import { dirname, isAbsolute, join } from 'path';
@@ -117,7 +118,7 @@ const MAX_WIKI_PAGES = 10;
 // Pages by scope first, then pages whose titles share at least two words, and half their own words,
 // with the card's title and open task lines. Capped so the brief stays readable.
 function wikiPagesFor(projectDir: string, card: Card, byScope: Page[]): Page[] {
-  const tasks = card.spec && existsSync(join(projectDir, card.spec, 'tasks.md')) ? readTasks(projectDir, card.spec).tasks.filter(t => !t.done).map(t => t.text) : [];
+  const tasks = card.spec && existsSync(specPath(projectDir, card.spec, 'tasks.md')) ? readTasks(projectDir, card.spec).tasks.filter(t => !t.done).map(t => t.text) : [];
   const words = titleTokens([card.title, ...tasks].join(' '));
   const byTitle = listPages(projectDir).filter(p => {
     if (byScope.some(q => q.path === p.path)) return false;
@@ -130,9 +131,9 @@ function wikiPagesFor(projectDir: string, card: Card, byScope: Page[]): Page[] {
 
 function filesInScope(projectDir: string, card: Card, output?: string): string[] {
   const files = output ? [output] : [];
-  if (card.spec && existsSync(join(projectDir, card.spec))) {
-    files.push(...readdirSync(join(projectDir, card.spec)).map(f => `${card.spec}/${f}`));
-    if (existsSync(join(projectDir, card.spec, 'tasks.md'))) {
+  if (card.spec && existsSync(specPath(projectDir, card.spec))) {
+    files.push(...readdirSync(specPath(projectDir, card.spec)).map(f => `${card.spec}/${f}`));
+    if (existsSync(specPath(projectDir, card.spec, 'tasks.md'))) {
       for (const task of readTasks(projectDir, card.spec).tasks.filter(t => !t.done)) {
         files.push(...(task.text.match(/(?:[\w.-]+\/)+[\w.-]+/g) ?? []));
       }
@@ -193,7 +194,7 @@ export function buildBrief(projectDir: string, card: Card): string {
 
   if (stage.skill) {
     for (const file of skillStateFiles(projectDir, stage.skill)) {
-      const full = join(projectDir, file);
+      const full = specPath(projectDir, file);
       if (existsSync(full)) lines.push(`## ${file}`, '', '```json', readFileSync(full, 'utf-8').trim(), '```', '');
     }
   }

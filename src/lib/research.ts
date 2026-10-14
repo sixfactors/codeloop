@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { resolveSpecDir } from './spec.js';
@@ -14,7 +15,7 @@ export function sourceOf(projectDir: string, line: string): string | undefined {
   if (url) return url;
   const path = PATH_SOURCE.exec(line)?.[1];
   if (!path) return undefined;
-  return existsSync(join(projectDir, path.replace(/:\d+$/, ''))) ? path : undefined;
+  return existsSync(specPath(projectDir, path.replace(/:\d+$/, ''))) ? path : undefined;
 }
 const VERDICT = /^verdict:\s*\S/m;
 const ONLINE_TIMEOUT_MS = 10_000;
@@ -22,8 +23,8 @@ const ONLINE_TIMEOUT_MS = 10_000;
 /** `ref` is a card id or number. The research file is the one in the card's spec folder. */
 export function checkResearch(projectDir: string, ref: string, minSources: number): { file: string; errors: string[]; urls: string[] } {
   const file = `${resolveSpecDir(projectDir, ref)}/research.md`;
-  if (!existsSync(join(projectDir, file))) return { file, errors: [`missing file: ${file}`], urls: [] };
-  const text = readFileSync(join(projectDir, file), 'utf-8');
+  if (!existsSync(specPath(projectDir, file))) return { file, errors: [`missing file: ${file}`], urls: [] };
+  const text = readFileSync(specPath(projectDir, file), 'utf-8');
   const sources = text.split('\n').map(l => sourceOf(projectDir, l.trim())).filter((u): u is string => !!u);
   const urls = sources.filter(s => /^https?:\/\//.test(s));
   const errors: string[] = [];

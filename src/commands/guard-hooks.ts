@@ -16,7 +16,7 @@ import { openQuestions } from '../lib/interview.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
 import { cardCommand } from './card.js';
 import { guard } from './guard.js';
-import { projectRoot } from '../lib/project-root.js';
+import { projectRoot, workDir } from '../lib/project-root.js';
 
 const PRESENCE_DIR = '.codeloop/state/presence';
 const safeFile = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -50,7 +50,8 @@ async function readStdinJson(): Promise<Record<string, unknown>> {
  * a symlinked prefix (macOS /var is /private/var), so a path that seems to sit outside the project
  * is compared again on real paths, through its nearest existing folder since the file may be new.
  */
-function projectRelative(projectDir: string, path: string): string {
+function projectRelative(root: string, path: string): string {
+  const projectDir = workDir(root);
   const abs = isAbsolute(path) ? path : join(projectDir, path);
   const rel = relative(projectDir, abs);
   if (!rel.startsWith('..')) return rel || path;

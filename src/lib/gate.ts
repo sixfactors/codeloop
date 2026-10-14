@@ -64,12 +64,12 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   const findings: string[] = [];
   const workDir = hb.worktree || projectDir;
 
-  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env: hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const proof = { cmd: hb.proof.cmd, exit: ran.status ?? 1, output: `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL) };
   if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}`);
 
   const stage = currentStage(loadLane(projectDir, card.lane), card);
-  const checked = runCheck(projectDir, card, stage);
+  const checked = runCheck(projectDir, card, stage, hb.worktree || undefined);
   if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed`);
 
   let claim: GateRecord['claim'] = null;

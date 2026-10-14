@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 /**
  * `codeloop check data-model <card>`: a story that changes stored data must say where each entity
  * lives, and that place must already be named by the project's architecture data-model page.
@@ -76,8 +77,8 @@ function pathListed(page: string, path: string): boolean {
 
 export function checkDataModel(projectDir: string, card: string): { problems: string[]; message?: string } {
   const dir = resolveSpecDir(projectDir, card);
-  const specFile = join(projectDir, dir, 'spec.md');
-  const tasksFile = join(projectDir, dir, 'tasks.md');
+  const specFile = specPath(projectDir, dir, 'spec.md');
+  const tasksFile = specPath(projectDir, dir, 'tasks.md');
   const entities = existsSync(specFile) ? readEntities(readFileSync(specFile, 'utf-8')) : [];
   const dataTasks = existsSync(tasksFile) ? readDataTasks(readFileSync(tasksFile, 'utf-8')) : [];
   if (!entities.length && !dataTasks.length) return { problems: [], message: NO_DATA_CHANGE };
@@ -88,7 +89,7 @@ export function checkDataModel(projectDir: string, card: string): { problems: st
   if (page === null) problems.push(`${ARCHITECTURE_DATA_MODEL} is missing; run the architecture skill first`);
 
   const modelRel = `${dir}/data-model.md`;
-  const modelFile = join(projectDir, modelRel);
+  const modelFile = specPath(projectDir, modelRel);
   if (!existsSync(modelFile)) {
     problems.push(`${modelRel} is missing`);
   } else {

@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { cardKey, findCard, findCardOrNone, readCards } from './cards.js';
@@ -36,7 +37,7 @@ export function checkScope(projectDir: string, cardId: string): string[] {
   const creep = scopeCreep(projectDir, card.id);
   if (!creep.length) return [];
   const review = `evidence/${cardKey(card)}/review.md`;
-  const file = join(projectDir, review);
+  const file = specPath(projectDir, review);
   const rows = existsSync(file) ? scopeRows(readFileSync(file, 'utf-8')) : [];
   const problems: string[] = [];
   for (const { path, lines } of creep) {

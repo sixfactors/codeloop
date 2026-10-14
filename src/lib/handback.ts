@@ -48,7 +48,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
   if (!cmd) throw new RefusalError('a hand-back needs a proof command');
   const card = findCard(readCards(projectDir).cards, cardRef);
 
-  const ran = spawnSync(cmd, { shell: true, cwd: input.worktree || projectDir, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const ran = spawnSync(cmd, { shell: true, cwd: input.worktree || projectDir, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL);
   // A killed or unspawnable proof has no status; 1 keeps "not 0" meaning "did not pass".
   const exit = ran.status ?? 1;

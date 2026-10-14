@@ -1,3 +1,4 @@
+import { specPath } from './project-root.js';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { findCard, readCards, RefusalError, type Card } from './cards.js';
@@ -105,7 +106,7 @@ export function interviewPath(projectDir: string, card: Card): string | undefine
 
 export function readQuestions(projectDir: string, card: Card): Question[] {
   const path = interviewPath(projectDir, card);
-  const file = path && join(projectDir, path);
+  const file = path && specPath(projectDir, path);
   return file && existsSync(file) ? parseQuestions(readFileSync(file, 'utf-8')) : [];
 }
 
@@ -120,7 +121,7 @@ export function addQuestions(projectDir: string, ref: string, items: { question:
   if (items.length === 0) throw new RefusalError('no questions to add');
   if (items.some(i => !i.question.trim())) throw new RefusalError('a question cannot be empty');
   const path = interviewPath(projectDir, card) ?? `${newSpec(projectDir, card.id, role).dir}/${INTERVIEW}`;
-  const file = join(projectDir, path);
+  const file = specPath(projectDir, path);
   return withLock(file, () => {
     const existing = existsSync(file) ? parseQuestions(readFileSync(file, 'utf-8')) : [];
     if (existing.length + items.length > MAX_QUESTIONS) {
@@ -148,7 +149,7 @@ export function addQuestions(projectDir: string, ref: string, items: { question:
 export function writeAnswer(projectDir: string, ref: string, n: number, answer: { text?: string; accept?: boolean; option?: string }, role: Role = 'owner'): Question {
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
-  const file = path && join(projectDir, path);
+  const file = path && specPath(projectDir, path);
   if (!file || !existsSync(file)) throw new RefusalError(`${card.id} has no questions; \`codeloop ask ${card.id} "<question>"\` adds one`);
   const written = withLock(file, () => {
     const questions = parseQuestions(readFileSync(file, 'utf-8'));
@@ -178,7 +179,7 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
 export function acceptAllAnswers(projectDir: string, ref: string, role: Role = 'owner'): { answered: Question[]; skipped: Question[] } {
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
-  const file = path && join(projectDir, path);
+  const file = path && specPath(projectDir, path);
   if (!file || !existsSync(file)) throw new RefusalError(`${card.id} has no questions`);
   const result = withLock(file, () => {
     const questions = parseQuestions(readFileSync(file, 'utf-8'));
