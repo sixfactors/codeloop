@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { stringify } from 'yaml';
 import { CLOUD_COPY, writeCloudWikiPage } from './cloud.js';
@@ -9,6 +9,8 @@ import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { parseFrontmatter } from './skills.js';
 import { slugify } from './spec.js';
+import { NEAR_PAGE, enforceRule, samePage, titleSimilarity } from './wiki-rules.js';
+import { readCards } from './cards.js';
 
 export const WIKI_DIR = '.codeloop/wiki';
 const KINDS = { gotcha: 'gotchas', decision: 'decisions', concept: 'concepts' } as const;
@@ -332,7 +334,11 @@ export function thresholds(projectDir: string): { critical: number; promote: num
   return { critical: config.codeloop?.critical_frequency ?? 3, promote: config.codeloop?.promote_frequency ?? 10 };
 }
 
-/** A title that already exists is the same lesson met again: its frequency goes up instead of a second page. */
+/**
+ * A page must pass its folder's rule (wiki-rules.ts). A title that already exists, or a near-duplicate in
+ * the same folder (`samePage`), is the same lesson met again: its frequency goes up, the card is added
+ * and a dated note appended, instead of a second page.
+ */
 export function capture(
   projectDir: string,
   input: { title: string; scope: string[]; body: string; kind?: Kind; card?: string },
@@ -341,13 +347,15 @@ export function capture(
   const kind = input.kind ?? 'gotcha';
   if (!KINDS[kind]) throw new RefusalError(`unknown kind "${kind}" (gotcha, decision or concept)`);
   if (!slugify(input.title)) throw new RefusalError(`wiki title "${input.title}" has no letters or digits to name its file with`);
+  enforceRule(kind, input, input.card ? cardTitle(projectDir, input.card) : undefined);
   // A second capture of the same title reads the page, raises its frequency and writes it back.
   return withLock(join(projectDir, WIKI_DIR, 'INDEX.md'), () => captureLocked(projectDir, input, kind, now));
 }
 
 function captureLocked(projectDir: string, input: { title: string; scope: string[]; body: string; card?: string }, kind: Kind, now: Date): Page {
   const today = now.toISOString().slice(0, 10);
-  const existing = listPages(projectDir).find(p => p.title.toLowerCase() === input.title.toLowerCase());
+  const pages = listPages(projectDir);
+  const existing = pages.find(p => p.title.toLowerCase() === input.title.toLowerCase()) ?? pages.find(p => p.kind === kind && samePage(p, input));
   const page: Page = existing
     ? {
         ...existing,
@@ -355,6 +363,7 @@ function captureLocked(projectDir: string, input: { title: string; scope: string
         scope: [...new Set([...existing.scope, ...input.scope])],
         cards: [...new Set([...existing.cards, ...(input.card ? [input.card] : [])])],
         updated: today,
+        body: withNote(existing.body, today, input.card, input.body),
       }
     : {
         path: `${WIKI_DIR}/${KINDS[kind]}/${slugify(input.title)}.md`,
@@ -372,6 +381,46 @@ function captureLocked(projectDir: string, input: { title: string; scope: string
   writeIndex(projectDir);
   writeCloudWikiPage(projectDir, page.path);
   return page;
+}
+
+function cardTitle(projectDir: string, id: string): string | undefined {
+  try {
+    return readCards(projectDir).cards.find(c => c.id === id)?.title;
+  } catch {
+    return undefined;
+  }
+}
+
+// The new capture's first line, dated, under `## Notes`: the page records each time it was met.
+function withNote(body: string, today: string, card: string | undefined, text: string): string {
+  const line = text.split('\n').map(l => l.trim()).find(Boolean) ?? '';
+  const head = /^## Notes\s*$/m.test(body) ? body : `${body}\n\n## Notes\n`;
+  return `${head}\n- ${today}${card ? ` (${card})` : ''}: ${line}`;
+}
+
+/** Folds page `b` into page `a`: frequencies add, cards and scope join, b's body is kept under a heading, b is removed. */
+export function mergePages(projectDir: string, a: string, b: string, now: Date = clock()): Page {
+  return withLock(join(projectDir, WIKI_DIR, 'INDEX.md'), () => {
+    const pages = listPages(projectDir);
+    const find = (ref: string) => pages.find(p => p.path === ref || p.path.endsWith(`/${ref}`) || p.path.endsWith(`/${ref}.md`));
+    const into = find(a);
+    const from = find(b);
+    if (!into || !from) throw new RefusalError(`no wiki page ${!into ? a : b}`);
+    if (into.path === from.path) throw new RefusalError('a page cannot be merged into itself');
+    const page: Page = {
+      ...into,
+      freq: into.freq + from.freq,
+      cards: [...new Set([...into.cards, ...from.cards])],
+      scope: [...new Set([...into.scope, ...from.scope])],
+      updated: now.toISOString().slice(0, 10),
+      body: `${into.body}\n\n## Merged from ${from.title}\n\n${from.body}`,
+    };
+    if (page.freq >= thresholds(projectDir).critical) page.severity = 'critical';
+    writePage(projectDir, page);
+    rmSync(join(projectDir, from.path));
+    writeIndex(projectDir);
+    return page;
+  });
 }
 
 export function inject(projectDir: string, files: string[]): Page[] {
@@ -412,6 +461,8 @@ export interface LintResult {
   unknownFolder: string[];
   /** A page still carrying scanner filler (see `isFillerPage`), reported but not refused: `wiki migrate` is the fix, not a hand edit. */
   filler: string[];
+  /** Two pages in one folder whose titles are close but were not merged on capture; `wiki merge` folds them. */
+  nearDuplicates: string[];
 }
 
 export function lintWiki(projectDir: string, now: Date = clock()): LintResult {
@@ -443,7 +494,16 @@ export function lintWiki(projectDir: string, now: Date = clock()): LintResult {
     if (path.startsWith(`${WIKI_DIR}/reference/`)) continue; // already migrated; filler there is intentional, not a problem to report again
     if (isFillerPage(path, body)) filler.push(`${path}: still has scanner filler; run \`codeloop wiki migrate\``);
   }
-  return { broken, stale, duplicates, unknownFolder, filler };
+  const nearDuplicates: string[] = [];
+  const short = (p: Page) => p.path.split('/').pop()!.replace(/\.md$/, '');
+  pages.forEach((p, i) => {
+    for (const q of pages.slice(i + 1)) {
+      if (p.kind === q.kind && p.title.toLowerCase() !== q.title.toLowerCase() && titleSimilarity(p.title, q.title) >= NEAR_PAGE) {
+        nearDuplicates.push(`${p.path} and ${q.path} look like the same page; fold them with \`codeloop wiki merge ${short(p)} ${short(q)}\``);
+      }
+    }
+  });
+  return { broken, stale, duplicates, unknownFolder, filler, nearDuplicates };
 }
 
 /** Critical pages whose scope matches the files and that were not acknowledged by title. */

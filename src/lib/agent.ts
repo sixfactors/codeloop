@@ -9,7 +9,8 @@ import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX } from './lane.js';
 import { checkEnv } from './shell.js';
 import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
-import { folderPages, inject } from './wiki.js';
+import { folderPages, inject, listPages, type Page } from './wiki.js';
+import { titleTokens } from './wiki-rules.js';
 
 export const BRIEFS_DIR = '.codeloop/state/briefs';
 export const AGENT_RUNS_DIR = '.codeloop/state/agent-runs';
@@ -110,6 +111,22 @@ function skillStateFiles(projectDir: string, name: string): string[] {
 }
 
 // The stage output, what is already in the card's spec folder, and the paths its open tasks name.
+const MAX_WIKI_PAGES = 10;
+
+// Pages by scope first, then pages whose titles share at least two words, and half their own words,
+// with the card's title and open task lines. Capped so the brief stays readable.
+function wikiPagesFor(projectDir: string, card: Card, byScope: Page[]): Page[] {
+  const tasks = card.spec && existsSync(join(projectDir, card.spec, 'tasks.md')) ? readTasks(projectDir, card.spec).tasks.filter(t => !t.done).map(t => t.text) : [];
+  const words = titleTokens([card.title, ...tasks].join(' '));
+  const byTitle = listPages(projectDir).filter(p => {
+    if (byScope.some(q => q.path === p.path)) return false;
+    const own = [...titleTokens(p.title)];
+    const shared = own.filter(w => words.has(w)).length;
+    return shared >= 2 && shared / own.length >= 0.5;
+  });
+  return [...byScope, ...byTitle].slice(0, MAX_WIKI_PAGES);
+}
+
 function filesInScope(projectDir: string, card: Card, output?: string): string[] {
   const files = output ? [output] : [];
   if (card.spec && existsSync(join(projectDir, card.spec))) {
@@ -177,10 +194,10 @@ export function buildBrief(projectDir: string, card: Card): string {
     }
   }
 
-  const pages = inject(projectDir, filesInScope(projectDir, card, stage.output));
+  const pages = wikiPagesFor(projectDir, card, inject(projectDir, filesInScope(projectDir, card, stage.output)));
   if (pages.length) {
-    lines.push('## Wiki pages that apply', '');
-    for (const p of pages) lines.push(`### ${p.title} (${p.kind}, freq ${p.freq}, ${p.severity})`, '', p.body, '');
+    lines.push('## Wiki pages that apply', '', 'Matched by the files in scope and by the story\'s title and tasks. When you finish, end your output with one `read: <wiki page path>` line for each page you used.', '');
+    for (const p of pages) lines.push(`### ${p.title} (${p.kind}, freq ${p.freq}, ${p.severity}, ${p.path})`, '', p.body, '');
   }
 
   // Competitor pages have their own section below, with the instruction that goes with them.

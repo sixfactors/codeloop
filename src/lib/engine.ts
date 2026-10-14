@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
-import { researchSummary } from './research.js';
+import { decisionFromResearch } from './wiki-rules.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
@@ -175,21 +175,15 @@ function researchFindings(projectDir: string, card: Card, stage: Stage): string[
 
 // The verdict, the exists call, the pain and the options outlive the card as a decision page, so
 // the next card that touches the same ground starts from what was already decided.
+// The research stage writes a decision only when research.md compared options and makes a valid
+// one (wiki-rules.ts); `check wiki-landed` refuses the stage when options were compared and it cannot.
 function researchDecision(projectDir: string, card: Card, stage: Stage, now: Date): string | null {
   if (stage.id !== 'research' || !stage.output) return null;
   const file = join(projectDir, substitute(stage.output, card));
   if (!existsSync(file) || !statSync(file).isFile()) return null;
-  const summary = researchSummary(readFileSync(file, 'utf-8'));
-  if (!summary) return null;
-  const body = [
-    `Verdict: ${summary.verdict}`,
-    ...(summary.exists ? [`Exists: ${summary.exists}`] : []),
-    ...(summary.pain ? [`Pain: ${summary.pain}`] : []),
-    ...(summary.options ? ['', '## Options', '', summary.options] : []),
-    '',
-    `From ${substitute(stage.output, card)}.`,
-  ].join('\n');
-  return capture(projectDir, { title: `${card.title}: ${summary.verdict}`, scope: [], body, kind: 'decision', card: card.id }, now).path;
+  const made = decisionFromResearch(projectDir, card, readFileSync(file, 'utf-8'));
+  if (!made || made.problems.length) return null;
+  return capture(projectDir, made.input, now).path;
 }
 
 function park(card: Card, stage: Stage, now: Date, when: string): void {

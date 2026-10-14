@@ -66,9 +66,11 @@ Read these before writing anything:
    optionally `path:line`; a path counts only when the file exists) (the dash before "source" and the dash
    before the note both matter; `codeloop check research` parses the exact pattern).
 9. End the file with one line starting `verdict:`, `build`, `buy`, or `drop`. Nothing after this
-   line is read by the check, so don't bury it in a risks paragraph. When the stage passes, the
-   engine copies the verdict, the `exists:` line, the `pain:` line and `## Options` to
-   `.codeloop/wiki/decisions/<title>.md`, so write them to read standalone there.
+   line is read by the check, so don't bury it in a risks paragraph. When you compared two or more
+   options, mark the chosen one `Chosen.` and name the files it touches in backticks: as the stage
+   passes the engine writes a decision titled by that choice, with your options, the `pain:` line as
+   its why, and those files as its scope. `codeloop check wiki-landed {id}` refuses the stage when
+   options were compared and no valid decision can be made. With one option, no page is written.
 10. Run the done command and fix every line it reports before moving the card on.
 
 ## Questions to ask before working
