@@ -58,6 +58,19 @@ The designer working the `mock` stage. A card with nothing to draw writes `scree
    screens kept or listed under `screens_removed:`. Then open the file in a browser at desktop and
    phone width: nothing overflows, nothing is clipped, and it reads as the product.
 
+## In the app
+
+A project with a Next.js app (`mock.target: app`, the default when `next` is a dependency and an
+`app/` or `src/app/` directory exists) gets the mock as a real page instead of an HTML file:
+`codeloop mock new {id} --topic <topic>` writes `<app_dir>/mocks/<nnn>-<slug>/page.tsx` and
+`mock-data.ts`, with one `<section data-screen="<name>">` per screen. Before writing any JSX, search
+the component registry (shadcn: `search_items_in_registries`, then the closest examples) and read
+what `mock.components` (default `components/shared`) already holds; compose those, never hand-roll a
+row, chip or dialog. Inline style is layout only (display, gap, grid, padding, minWidth); when the
+registry and the drawing disagree, the registry wins, so change the drawing. The spec's
+`mock: keep | drop` decides the page's fate: `drop` (the default) deletes it at review with
+`codeloop mock cleanup {id}`, `keep` leaves it in the app.
+
 ## Questions to ask before working
 
 ## Q1 Does an existing mock in this topic already draw one of these screens?
