@@ -48,4 +48,4 @@ verdict: have
 
 - R2 pass: `grep -rniE "acceptAll|accept-all" src` lists ask.ts:44, interview.ts:179, services.ts:489, server.ts:251, client.ts:356; the same grep over ui/ is empty
 - R5 pass: three options under ## Options; the re-build lost on src/lib/interview.ts:179 already existing, the UI button deferred as its own card
-- R7 pass: three questions under ## Open questions for the interview, none answered here
+- R7 pass: three questions listed at specs/143-i-accept-every-recommended-answer-in-one/research.md:31, none answered here
