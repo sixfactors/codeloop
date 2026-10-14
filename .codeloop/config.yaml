@@ -19,3 +19,9 @@ agents:
 
 git:
   trunk: feat/cli-lanes-gates-agent-runs
+
+# In-app mocks: the workspace is a Next.js app whose pages live under workspace/app.
+mock:
+  target: app
+  app_dir: workspace/app
+  components: components/shared
