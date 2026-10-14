@@ -105,3 +105,12 @@ export function readActivity(projectDir: string, card: string, opts: { after?: s
   const items = all.slice(0, limit);
   return { items, ...(all.length > limit ? { next: items[items.length - 1].cursor } : {}) };
 }
+
+/** When the story's last activity line was written, as epoch ms; undefined when it has none. The file's mtime, not a read. */
+export function lastActivityAt(projectDir: string, card: string): number | undefined {
+  try {
+    return statSync(activityFile(projectDir, card)).mtimeMs;
+  } catch {
+    return undefined;
+  }
+}

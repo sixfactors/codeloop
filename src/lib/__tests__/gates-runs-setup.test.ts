@@ -445,7 +445,7 @@ describe('board and home through the SDK', () => {
     expect(count('needs-you')).toEqual(['c-001']);
     expect(count('in-progress')).toEqual(['c-002']);
     expect(board.backlog).toBe(1);
-    expect(board.columns.find(c => c.state === 'needs-you')!.stories[0].display).toEqual({ state: 'needs-you', stage: 'draft', waitingOn: 'copy', flags: [] });
+    expect(board.columns.find(c => c.state === 'needs-you')!.stories[0].display).toEqual({ state: 'needs-you', stage: 'draft', waitingOn: 'copy', health: 'needs-you', flags: [] });
     const home = await http.home.get();
     expect(home.summary).toMatchObject({ needsYou: 1, inProgress: 1 });
     expect(home.needsYou.map(s => s.id)).toEqual(['c-001']);

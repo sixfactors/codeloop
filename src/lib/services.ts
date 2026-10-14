@@ -19,11 +19,11 @@ import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
-import { addQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
+import { addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
-import { STATE_LABELS, type DisplayState, type StoryState } from './states.js';
+import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
 import { activeSessions } from './active-card.js';
-import { readActivity, type ActivityEntry } from './activity.js';
+import { lastActivityAt, readActivity, type ActivityEntry } from './activity.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
 import { newShape } from './shape.js';
@@ -91,7 +91,8 @@ export interface DecisionReport {
 }
 
 export interface CardShow {
-  card: Card & CardHolder;
+  /** `display`: the state and health a person sees, worked out now. */
+  card: Card & CardHolder & { display?: StoryState };
   brief: ReturnType<typeof stageBrief>;
   hint: string;
 }
@@ -108,7 +109,7 @@ export interface CardHolder {
 }
 
 export interface CardFull {
-  card: Card & CardHolder & { mock?: string; openQuestions: number };
+  card: Card & CardHolder & { mock?: string; openQuestions: number; display?: StoryState };
   spec: { dir: string; text: string | null } | null;
   tasks: Task[];
   questions: Question[];
@@ -369,7 +370,8 @@ export function setupStatus(projectDir: string): SetupStatus {
 /** The card by id or number, its current stage brief and the Next line. */
 export function showCard(projectDir: string, ref: string): CardShow {
   const card = findCard(readCards(projectDir).cards, ref);
-  return { card: { ...card, ...holderOf(projectDir, card.id) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
+  const display = liveState(projectDir, card, openQuestions(projectDir, card).length);
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, brief: stageBrief(projectDir, card), hint: nextHint(projectDir, card) };
 }
 
 /**
@@ -560,7 +562,7 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
   return {
-    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length },
+    card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display: liveState(projectDir, card, index.openQuestions(card.id).length) },
     spec,
     tasks,
     questions: readQuestions(projectDir, card),
@@ -763,10 +765,26 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; sessio
 });
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
 
+/**
+ * The story's state with its health, worked out now: health depends on the clock and on the last
+ * activity line, which no index version tracks, so it is computed per request, not cached.
+ */
+export function liveState(projectDir: string, card: Card, openQuestions: number, now = Date.now()): StoryState | undefined {
+  return storyState(card as Card & { release?: string }, openQuestions, { now, lastActivityAt: lastActivityAt(projectDir, card.id) });
+}
+
 async function storyRows(index: ProjectIndex, projectDir: string): Promise<BoardStory[]> {
   const agents = holders(projectDir);
   const { items } = await index.cards.list({}, undefined, 100_000);
-  return items.filter(c => c.display).map(c => storyRow(c, agents));
+  const raw = new Map(readCards(projectDir).cards.map(c => [c.id, c] as const));
+  const now = Date.now();
+  return items
+    .map(c => {
+      const card = raw.get(c.id);
+      const display = card ? liveState(projectDir, card, c.openQuestions, now) : c.display;
+      return display ? storyRow({ ...c, display }, agents) : undefined;
+    })
+    .filter((r): r is BoardStory => Boolean(r));
 }
 
 const byRank = (a: BoardStory, b: BoardStory) => (b.score ?? -1) - (a.score ?? -1) || a.updatedAt.localeCompare(b.updatedAt);
@@ -797,9 +815,11 @@ export async function boardView(index: ProjectIndex, projectDir: string): Promis
 }
 
 export interface HomeView {
-  summary: { needsYou: number; inProgress: number; failing: number; shippedThisWeek: number; agentsWorking: number };
+  summary: { needsYou: number; inProgress: number; failing: number; stale: number; shippedThisWeek: number; agentsWorking: number };
   needsYou: BoardStory[];
   failing: BoardStory[];
+  /** No event and no activity for two days: park or drop. */
+  stale: BoardStory[];
   inProgress: BoardStory[];
   agents: { session: string; label: string; card: string; title?: string; since: string }[];
   shipped: BoardStory[];
@@ -810,12 +830,13 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   const rows = await storyRows(index, projectDir);
   const week = Date.now() - 7 * 86_400_000;
   const needsYou = rows.filter(r => r.display.state === 'needs-you').sort(byRank);
-  const failing = rows.filter(r => r.display.flags.includes('failing')).sort(newestFirst);
+  const failing = rows.filter(r => r.display.health === 'failing').sort(newestFirst);
+  const stale = rows.filter(r => r.display.health === 'stale').sort(newestFirst);
   const inProgress = rows.filter(r => r.display.state === 'in-progress').sort(byRank);
   const shipped = rows.filter(r => (r.display.state === 'done' || r.display.state === 'shipped') && Date.parse(r.updatedAt) >= week).sort(newestFirst);
   const agents = activeSessions(projectDir).map(s => ({ session: s.session, label: s.label ?? s.session, card: s.card, title: rows.find(r => r.id === s.card)?.title, since: s.startedAt }));
   return {
-    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
-    needsYou, failing, inProgress, agents, shipped,
+    summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, stale: stale.length, shippedThisWeek: shipped.length, agentsWorking: agents.length },
+    needsYou, failing, stale, inProgress, agents, shipped,
   };
 }

@@ -8,7 +8,21 @@ import { DONE, DROPPED, PROPOSED, QUEUED, type Card } from './cards.js';
  */
 export const DISPLAY_STATES = ['backlog', 'up-next', 'in-progress', 'needs-you', 'done', 'shipped'] as const;
 export type DisplayState = (typeof DISPLAY_STATES)[number];
-export type StateFlag = 'failing' | 'blocked' | 'stuck';
+/** Flags that sit beside the state. Failing and stuck are no longer flags: `health` carries them. */
+export type StateFlag = 'blocked';
+
+/**
+ * How a story in a lane is doing, one value, never two (docs: story-journey devex, section 6):
+ * working (someone or something is on it, or a first failed check with recent activity), needs-you
+ * (a gate or questions; wins over failing), failing (two or more failed checks and no activity for
+ * an hour, or an agent run that ended on a failed check), stuck (three fails, parked by the engine),
+ * stale (no event and no activity for two days).
+ */
+export const HEALTH = ['working', 'needs-you', 'failing', 'stuck', 'stale'] as const;
+export type Health = (typeof HEALTH)[number];
+
+export const STALE_MS = 2 * 24 * 60 * 60 * 1000;
+export const QUIET_MS = 60 * 60 * 1000;
 
 export interface StoryState {
   state: DisplayState;
@@ -16,6 +30,8 @@ export interface StoryState {
   stage?: string;
   /** What waits on a person, when state is needs-you: a gate name, `stuck` or `questions`. */
   waitingOn?: string;
+  /** For a story in a lane: one of HEALTH. Absent for backlog, up next, done and shipped. */
+  health?: Health;
   flags: StateFlag[];
 }
 
@@ -28,18 +44,43 @@ export const STATE_LABELS: Record<DisplayState, string> = {
   shipped: 'Shipped',
 };
 
-type StateInput = Pick<Card, 'stage' | 'gate' | 'retries'> & { release?: string };
+type StateInput = Pick<Card, 'stage' | 'gate' | 'retries'> & { release?: string; updatedAt?: string; events?: { action: string; at?: string }[] };
 
-export function storyState(card: StateInput, openQuestions = 0): StoryState | undefined {
+/** `now` and the time of the story's last activity line; time-based health needs both. */
+export interface HealthContext {
+  now?: number;
+  lastActivityAt?: number;
+}
+
+/** True when the last agent run on the story was followed by a failed check, with no advance since. */
+function agentEndedOnFail(events: { action: string }[] = []): boolean {
+  const run = events.map(e => e.action).lastIndexOf('agent-run');
+  if (run < 0) return false;
+  const after = events.slice(run + 1).map(e => e.action);
+  return after.includes('fail') && !after.includes('advance');
+}
+
+export function storyState(card: StateInput, openQuestions = 0, ctx: HealthContext = {}): StoryState | undefined {
   if (card.stage === DROPPED) return undefined;
-  const failing = (card.retries?.[card.stage] ?? 0) > 0 && !card.gate;
   const flags: StateFlag[] = [];
-  if (failing) flags.push('failing');
-  if (card.gate === 'stuck') flags.push('stuck');
   if (card.stage === PROPOSED) return { state: 'backlog', flags };
   if (card.stage === QUEUED) return { state: 'up-next', flags };
   if (card.stage === DONE) return { state: card.release ? 'shipped' : 'done', flags };
-  if (card.gate) return { state: 'needs-you', stage: card.stage, waitingOn: card.gate, flags };
-  if (openQuestions > 0) return { state: 'needs-you', stage: card.stage, waitingOn: 'questions', flags };
-  return { state: 'in-progress', stage: card.stage, flags };
+  if (card.gate === 'stuck') return { state: 'needs-you', stage: card.stage, waitingOn: 'stuck', health: 'stuck', flags };
+  // Needs you wins over failing and stale: the next move is a person's.
+  if (card.gate) return { state: 'needs-you', stage: card.stage, waitingOn: card.gate, health: 'needs-you', flags };
+  if (openQuestions > 0) return { state: 'needs-you', stage: card.stage, waitingOn: 'questions', health: 'needs-you', flags };
+  return { state: 'in-progress', stage: card.stage, health: inProgressHealth(card, ctx), flags };
+}
+
+function inProgressHealth(card: StateInput, ctx: HealthContext): Health {
+  const now = ctx.now ?? Date.now();
+  const lastEvent = card.updatedAt ? Date.parse(card.updatedAt) : now;
+  const lastTouch = Math.max(lastEvent, ctx.lastActivityAt ?? 0);
+  if (now - lastTouch > STALE_MS) return 'stale';
+  if (agentEndedOnFail(card.events)) return 'failing';
+  const fails = card.retries?.[card.stage] ?? 0;
+  const quietSince = ctx.lastActivityAt ?? lastEvent;
+  if (fails >= 2 && now - quietSince > QUIET_MS) return 'failing';
+  return 'working';
 }

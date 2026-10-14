@@ -18,6 +18,11 @@ when package.json names a version this file has no heading for.
 - Sessions carry a host, a machine and a label ("claude on <machine>, since HH:MM"); the board and
   Home show the label instead of a UUID.
 
+### The monitor
+- A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed
+  check while someone works no longer shows red; failing means two or more fails and an hour with
+  no activity, or an agent run that ended on a failed check. Stale means two days untouched.
+
 ### Board and Home
 - Home shows what needs you, what is moving, which agents are working and what shipped this week;
   the board reads as six states, each screen loads with one call.
