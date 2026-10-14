@@ -19,6 +19,31 @@ export type StoreHome = 'repo' | 'user';
 /** The board and story paths that move with `store.home`, relative to the project root. */
 export const STORE_ITEMS = ['.codeloop/cards.json', '.codeloop/state', '.codeloop/mocks', 'specs', 'evidence', 'shape', 'docs/mocks'] as const;
 
+/** The names `store.move` takes, each one store path. */
+export const STORE_NAMES: Record<string, (typeof STORE_ITEMS)[number]> = {
+  cards: '.codeloop/cards.json',
+  state: '.codeloop/state',
+  mocks: '.codeloop/mocks',
+  specs: 'specs',
+  shape: 'shape',
+  evidence: 'evidence',
+  'docs-mocks': 'docs/mocks',
+};
+
+/**
+ * The store paths `user` home moves: `store.move` in config, default all of them. A project whose
+ * evidence or mocks are tracked on purpose (proof that ships with the code) names a subset, and the
+ * rest stay in the repo in both modes.
+ */
+export function movedItems(projectDir: string): string[] {
+  const store = (loadConfig(projectDir) as { store?: { move?: unknown } }).store;
+  const list = store && typeof store === 'object' ? store.move : undefined;
+  if (!Array.isArray(list)) return [...STORE_ITEMS];
+  const unknown = list.filter(n => typeof n !== 'string' || !STORE_NAMES[n]);
+  if (unknown.length) throw new RefusalError(`store.move names ${unknown.join(', ')}; use ${Object.keys(STORE_NAMES).join(', ')}`);
+  return STORE_ITEMS.filter(item => (list as string[]).some(n => STORE_NAMES[n] === item));
+}
+
 export function storeHome(projectDir: string): StoreHome {
   const store = (loadConfig(projectDir) as { store?: { home?: unknown } }).store;
   return store && typeof store === 'object' && store.home === 'user' ? 'user' : 'repo';
@@ -67,7 +92,7 @@ export function ensureStoreLinks(projectDir: string): StoreLink[] {
   if (storeHome(projectDir) !== 'user') return [];
   const home = userStoreDir(projectDir);
   const out: StoreLink[] = [];
-  for (const item of STORE_ITEMS) {
+  for (const item of movedItems(projectDir)) {
     const path = join(projectDir, item);
     const target = join(home, item);
     if (isLink(path)) {
@@ -101,7 +126,7 @@ export function assertStoreReady(projectDir: string): void {
 export interface StoreWhere {
   home: StoreHome;
   dir: string;
-  items: { item: string; path: string; resolved: string; link: boolean }[];
+  items: { item: string; path: string; resolved: string; link: boolean; home: StoreHome }[];
 }
 
 export function storeWhere(projectDir: string): StoreWhere {
@@ -111,7 +136,8 @@ export function storeWhere(projectDir: string): StoreWhere {
     dir: storeDir(projectDir),
     items: STORE_ITEMS.map(item => {
       const path = join(projectDir, item);
-      return { item, path, resolved: home === 'user' ? join(userStoreDir(projectDir), item) : path, link: isLink(path) };
+      const moved = home === 'user' && movedItems(projectDir).includes(item);
+      return { item, path, resolved: moved ? join(userStoreDir(projectDir), item) : path, link: isLink(path), home: moved ? 'user' : 'repo' };
     }),
   };
 }
@@ -145,7 +171,7 @@ export function moveStore(projectDir: string, to: StoreHome, config: { read: () 
   const home = userStoreDir(projectDir);
   const copied: string[] = [];
   const toDelete: string[] = [];
-  for (const item of STORE_ITEMS) {
+  for (const item of movedItems(projectDir)) {
     const repoPath = join(projectDir, item);
     const userPath = join(home, item);
     if (to === 'user') {
