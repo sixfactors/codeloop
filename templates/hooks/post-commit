@@ -1,0 +1,7 @@
+#!/bin/sh
+# Installed by `codeloop init --hooks` / `codeloop render --hooks`. Records the commit in the
+# activity of the card its `Card:` (or `Feature:`) trailer names. Never fails the commit, which has
+# already happened by the time this runs.
+[ -d .codeloop ] || exit 0
+command -v codeloop >/dev/null 2>&1 || exit 0
+codeloop guard commit >/dev/null 2>&1 || true

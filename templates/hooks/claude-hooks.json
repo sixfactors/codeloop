@@ -46,6 +46,10 @@
           {
             "type": "command",
             "command": "codeloop wiki capture --quiet"
+          },
+          {
+            "type": "command",
+            "command": "codeloop guard stop"
           }
         ]
       }

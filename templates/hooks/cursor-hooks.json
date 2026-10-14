@@ -27,6 +27,11 @@
       {
         "command": "codeloop guard bash --format cursor"
       }
+    ],
+    "stop": [
+      {
+        "command": "codeloop guard stop"
+      }
     ]
   }
 }

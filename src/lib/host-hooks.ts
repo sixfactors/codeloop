@@ -41,7 +41,7 @@ function mergeHooksFile(projectDir: string, destRel: string, templateFile: strin
 }
 
 /** Installs a git hook from `templates/hooks/<name>` next to `commit-msg`; refuses to overwrite a different existing one. */
-function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push'): HookInstall {
+function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push' | 'post-commit'): HookInstall {
   const run = spawnSync('git', ['rev-parse', '--git-path', 'hooks'], { cwd: projectDir, encoding: 'utf-8' });
   if (run.status !== 0) return { name, installed: false, reason: 'not a git repository' };
   const source = readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
@@ -79,7 +79,8 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push'): Ho
  * Everything `codeloop init --hooks` and `codeloop render --hooks` install on top of the
  * commit-msg hook: the Claude Code PreToolUse/UserPromptSubmit/Stop hooks (merged into
  * `.claude/settings.json`), the Cursor sessionStart/sessionEnd/subagentStart/subagentStop hooks
- * (written to `.cursor/hooks.json`), and the pre-commit/pre-push git guards.
+ * (written to `.cursor/hooks.json`), the pre-commit/pre-push git guards, and the post-commit hook
+ * that records each commit in its card's activity.
  */
 export function installHostHooks(projectDir: string): HookInstall[] {
   // Only the hosts init set up get hook files; a repo with neither folder gets Claude's, the default host.
@@ -98,5 +99,6 @@ export function installHostHooks(projectDir: string): HookInstall[] {
     ...out,
     installGitHook(projectDir, 'pre-commit'),
     installGitHook(projectDir, 'pre-push'),
+    installGitHook(projectDir, 'post-commit'),
   ];
 }

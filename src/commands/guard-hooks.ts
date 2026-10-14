@@ -1,10 +1,11 @@
 import { spawnSync } from 'child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeFileSync } from 'fs';
 import { hostname } from 'os';
-import { join } from 'path';
+import { basename, dirname, isAbsolute, join, relative } from 'path';
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { activeSessions, clearActiveCard, currentSession, getActiveCard, setActiveCard } from '../lib/active-card.js';
+import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveCard, setActiveCard } from '../lib/active-card.js';
+import { appendActivity } from '../lib/activity.js';
 import { findCard, inLane, readCards, type Card } from '../lib/cards.js';
 import { listCards } from '../lib/services.js';
 import { resolveRole } from '../lib/engine.js';
@@ -37,6 +38,29 @@ async function readStdinJson(): Promise<Record<string, unknown>> {
     return JSON.parse(text);
   } catch {
     return {};
+  }
+}
+
+/**
+ * The edited file as the activity line names it, from the project root. A host may name it through
+ * a symlinked prefix (macOS /var is /private/var), so a path that seems to sit outside the project
+ * is compared again on real paths, through its nearest existing folder since the file may be new.
+ */
+function projectRelative(projectDir: string, path: string): string {
+  const abs = isAbsolute(path) ? path : join(projectDir, path);
+  const rel = relative(projectDir, abs);
+  if (!rel.startsWith('..')) return rel || path;
+  try {
+    let probe = abs;
+    let rest = '';
+    while (!existsSync(probe) && dirname(probe) !== probe) {
+      rest = rest ? join(basename(probe), rest) : basename(probe);
+      probe = dirname(probe);
+    }
+    const real = relative(realpathSync(projectDir), join(realpathSync(probe), rest));
+    return real.startsWith('..') ? abs : real;
+  } catch {
+    return abs;
   }
 }
 
@@ -84,7 +108,12 @@ guardCommand
       process.exit(2);
     }
     if (!path) return;
-    if (outsidePlanScope(projectDir, card, path)) return;
+    const file = projectRelative(projectDir, path);
+    const edited = () => appendActivity(projectDir, card.id, { session, kind: 'edit', file });
+    if (outsidePlanScope(projectDir, card, path)) {
+      edited();
+      return;
+    }
     // Another live session's card claims the files its plan lists: refused here, naming that card,
     // so two sessions in one repo never edit the same file from different stories.
     for (const other of isSharedPath(projectDir, path) ? [] : activeSessions(projectDir)) {
@@ -100,12 +129,14 @@ guardCommand
     const files = planFiles(projectDir, card);
     if (!files) {
       console.error(chalk.yellow(`codeloop: ${card.id} has no \`## Files\` list in its plan.md yet; not enforced`));
+      edited();
       return;
     }
     if (!pathInPlan(projectDir, files, path)) {
       console.error(chalk.red(`codeloop: ${path} is outside ${card.id}'s plan (${files.join(', ')})`));
       process.exit(2);
     }
+    edited();
   });
 
 // Open stories by priority band, then score, then age: what a session with nothing active should pick from.
@@ -129,8 +160,10 @@ guardCommand
     const projectDir = process.cwd();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
-    const activeId = getActiveCard(projectDir, currentSession(typeof input.session_id === 'string' ? input.session_id : undefined));
+    const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    const activeId = getActiveCard(projectDir, session);
     if (activeId) {
+      appendActivity(projectDir, activeId, { session, kind: 'start', ...(detectHost(input) ? { host: detectHost(input) } : {}) });
       let card;
       try {
         card = findCard(readCards(projectDir).cards, activeId);
@@ -167,6 +200,10 @@ guardCommand
     const command = String(toolInput.command ?? input.command ?? '');
     const hit = OWNER_ACTION.exec(command);
     if (!hit) {
+      // An owner action is not logged here: it runs only if the person allows it, and the engine
+      // event it writes is mirrored into the stream then.
+      const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+      if (command && existsSync(join(process.cwd(), '.codeloop'))) appendActivity(process.cwd(), getActiveCard(process.cwd(), session), { session, kind: 'cmd', text: command });
       if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
       return;
     }
@@ -186,7 +223,37 @@ guardCommand
   .action(async () => {
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    if (session && existsSync(join(process.cwd(), '.codeloop'))) appendActivity(process.cwd(), getActiveCard(process.cwd(), session), { session, kind: 'end' });
     if (session) clearActiveCard(process.cwd(), session);
+  });
+
+guardCommand
+  .command('stop')
+  .description("Stop hook: records in the active story's activity that the session finished a turn")
+  .action(async () => {
+    const projectDir = process.cwd();
+    if (!existsSync(join(projectDir, '.codeloop'))) return;
+    const input = await readStdinJson();
+    const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    appendActivity(projectDir, getActiveCard(projectDir, session), { session, kind: 'stop' });
+  });
+
+guardCommand
+  .command('commit')
+  .description("post-commit hook: records the commit in the activity of each card its `Card:` (or `Feature:`) trailer names")
+  .action(() => {
+    const projectDir = process.cwd();
+    if (!existsSync(join(projectDir, '.codeloop'))) return;
+    const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
+    if (log.status !== 0) return;
+    const [sha, subject, cardTrailer, featureTrailer] = log.stdout.replace(/\n$/, '').split('\0');
+    const ids = (cardTrailer?.trim() ? cardTrailer : featureTrailer ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    let known: Set<string>;
+    try { known = new Set(readCards(projectDir).cards.map(c => c.id)); } catch { return; }
+    const session = currentSession();
+    for (const id of new Set(ids)) {
+      if (known.has(id)) appendActivity(projectDir, id, { session, kind: 'commit', sha: sha.slice(0, 12), subject });
+    }
   });
 
 guardCommand
@@ -195,7 +262,8 @@ guardCommand
   .action(async () => {
     const projectDir = process.cwd();
     const input = await readStdinJson();
-    const activeId = getActiveCard(projectDir, currentSession(typeof input.session_id === 'string' ? input.session_id : undefined));
+    const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    const activeId = getActiveCard(projectDir, session);
     if (!activeId) {
       // A repo with open stories and none active: the board's priority order decides what a session
       // works on, not the chat. Exit 2 blocks the prompt and shows the list. A repo with no stories
@@ -217,6 +285,7 @@ guardCommand
       console.log(`codeloop: active card ${activeId} not found`);
       return;
     }
+    appendActivity(projectDir, card.id, { session, kind: 'prompt', ...(typeof input.prompt === 'string' ? { text: input.prompt } : {}) });
     const open = openQuestions(projectDir, card).length;
     const prompt = typeof input.prompt === 'string' ? input.prompt.toLowerCase() : '';
     const keywords = card.title.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
