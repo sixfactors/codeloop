@@ -36,7 +36,8 @@
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build:all",
     "build:workspace": "node scripts/build-workspace.mjs",
-    "bench": "node scripts/bench.mjs"
+    "bench": "node scripts/bench.mjs",
+    "e2e:orch": "bash scripts/e2e-orch-full-lane.sh"
   },
   "keywords": [
     "claude-code",
