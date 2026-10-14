@@ -23,6 +23,8 @@ export interface HandbackInput {
   left?: string;
   blocked?: string;
   session?: string;
+  /** The git worktree the work is in; the proof is run there. Defaults to the project root. */
+  worktree?: string;
 }
 
 export interface HandbackRecord {
@@ -35,6 +37,7 @@ export interface HandbackRecord {
   blocked: string;
   at: string;
   session?: string;
+  worktree?: string;
 }
 
 const safe = (text: string) => text.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -45,7 +48,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
   if (!cmd) throw new RefusalError('a hand-back needs a proof command');
   const card = findCard(readCards(projectDir).cards, cardRef);
 
-  const ran = spawnSync(cmd, { shell: true, cwd: projectDir, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const ran = spawnSync(cmd, { shell: true, cwd: input.worktree || projectDir, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL);
   // A killed or unspawnable proof has no status; 1 keeps "not 0" meaning "did not pass".
   const exit = ran.status ?? 1;
@@ -62,6 +65,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
     left: input.left ?? '',
     blocked: input.blocked ?? '',
     at: new Date().toISOString(),
+    ...(input.worktree ? { worktree: input.worktree } : {}),
     ...((input.session ?? currentSession()) ? { session: input.session ?? currentSession() } : {}),
   };
   mkdirSync(dirOf(projectDir), { recursive: true });

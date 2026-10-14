@@ -126,3 +126,12 @@ layers:
   ui: ["workspace/**", "ui/**"]
   test: ["**/__tests__/**", "**/*.test.ts"]
   docs: ["docs/**", "*.md"]
+
+# Diff budget: `codeloop verify` fails a story whose commits (Card:/Feature: trailers; evidence/,
+# specs/, .codeloop/ and CHANGELOG.md excluded) change more than its size allows. Defaults shown;
+# set any size to override it, or `budget: off` to disable.
+# diff_budget:
+#   S: { files: 8, lines: 300 }
+#   M: { files: 20, lines: 1200 }
+#   L: { files: 40, lines: 3000 }
+# budget: off

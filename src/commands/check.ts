@@ -10,7 +10,9 @@ import { questionProblems, questionsNotDecided, readQuestions } from '../lib/int
 import { checkOnline, checkResearch } from '../lib/research.js';
 import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
+import { checkScope } from '../lib/scope-creep.js';
 import { checkArchitecture } from '../lib/architecture-check.js';
+import { checkDataModel } from '../lib/data-model.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
 export function fileProblem(path: string, has: string[]): string | null {
@@ -111,6 +113,11 @@ checkCommand
   .action((card: string) => failing(() => (liveWalkRequired(process.cwd()) ? checkLiveWalk(process.cwd(), card) : []))());
 
 checkCommand
+  .command('scope <card>')
+  .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in evidence/<nnn>/review.md")
+  .action((card: string) => failing(() => checkScope(process.cwd(), card))());
+
+checkCommand
   .command('story <card>')
   .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
   .action((card: string) => failing(() => checkStory(process.cwd(), findCard(readCards(process.cwd()).cards, card)))());
@@ -138,6 +145,15 @@ checkCommand
     }
     console.log('architecture check passed');
   });
+
+checkCommand
+  .command('data-model <card>')
+  .description("Exit 1 unless a story that changes data has a data-model.md whose stores the architecture data-model page names")
+  .action((card: string) => failing(() => {
+    const { problems, message } = checkDataModel(process.cwd(), card);
+    if (!problems.length && message) console.log(message);
+    return problems;
+  })());
 
 checkCommand
   .command('questions <card>')

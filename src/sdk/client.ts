@@ -9,6 +9,10 @@ import type {
   Card,
   CardCreated,
   CardActivity,
+  GateInput,
+  GateRecord,
+  MergeResult,
+  StoryWorktree,
   HandbackInput,
   HandbackRecord,
   CardEvent,
@@ -162,6 +166,13 @@ export interface Transport {
   /** Runs the proof command and records the hand-back; a failing proof is recorded with its exit code. */
   handback(ref: string, input: HandbackInput): Promise<HandbackRecord>;
   handbacks(ref: string): Promise<HandbackRecord[]>;
+  /** Reruns the latest hand-back's proof, the stage check and one claim; records a pass or fail verdict. Refused when there is no hand-back. */
+  gate(ref: string, input: GateInput): Promise<GateRecord>;
+  gates(ref: string): Promise<GateRecord[]>;
+  /** Creates (or reuses) the story's own git worktree and branch and records both on the card. */
+  worktree(ref: string): Promise<StoryWorktree>;
+  /** Merges the story's branch into the trunk; refused unless the latest gate passed and no overlapping file is dirty. */
+  merge(ref: string): Promise<MergeResult>;
   stageOutput(ref: string): Promise<StageOutput>;
   writeStageOutput(ref: string, text: string, opts?: RoleOption): Promise<StageOutput>;
   splitCard(ref: string, titles: string[], opts?: RoleOption): Promise<SplitResult>;
@@ -271,6 +282,14 @@ export class CodeloopClient {
     handback: (ref: string, input: HandbackInput) => this.transport.handback(ref, input),
     /** The card's hand-backs, newest first. */
     handbacks: (ref: string) => this.transport.handbacks(ref),
+    /** Gates the card's latest (or named) hand-back: the proof is rerun, not believed. */
+    gate: (ref: string, input: GateInput = {}) => this.transport.gate(ref, input),
+    /** The card's gate records, newest first. */
+    gates: (ref: string) => this.transport.gates(ref),
+    /** The story's own worktree and branch, created on first call and reused after. */
+    worktree: (ref: string) => this.transport.worktree(ref),
+    /** Merges the story's branch into the trunk once its gate passed; never rebases. */
+    merge: (ref: string) => this.transport.merge(ref),
     /** The current stage's output file: path and text, or null text when it is not written yet. */
     output: (ref: string) => this.transport.stageOutput(ref),
     /** Writes the current stage's output file, making its folders. The check does not run. */

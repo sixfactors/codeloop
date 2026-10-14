@@ -8,10 +8,15 @@ when package.json names a version this file has no heading for.
 ## 0.5.0 (unreleased)
 
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
+- `codeloop verify` fails a story whose diff exceeds the budget for its size (S 8 files / 300 lines, M 20 / 1,200, L 40 / 3,000; `diff_budget:` overrides, `budget: off` disables) and writes a `budget:` line to evidence; `codeloop card diff <id>` shows the numbers.
+- `codeloop card worktree <card>` gives a story its own git worktree (`../<repo>-wt-<card>`) and branch (`feat/<feature or lane>-<title>`) cut from `git.trunk`, recorded on the card; `codeloop card merge <card>` fast-forwards it into the trunk (merge commit when it cannot), refused unless the latest gate passed and no file the branch changed is dirty in the main tree (`POST /api/cards/:id/worktree`, `POST /api/cards/:id/merge`).
+- The build lane has a `data-model` stage between spec and build: `codeloop check data-model <card>` passes when no task is tagged `[data]` and spec.md names no `entities:`, and otherwise needs `specs/NNN/data-model.md` (Entities, Stores, Indexes, Migration) whose every store is named on `.codeloop/wiki/architecture/data-model.md`. Run `codeloop lane refresh build` to pick it up.
+- The review stage fails while a file the story changed outside its plan has no verdict: `codeloop check scope <card>` lists each one with its line count, and evidence/<nnn>/review.md needs a `## Scope` row per file saying `keep` (reason of 10+ words), `revert`, or `move to <card-id>`. Run `codeloop lane refresh build` to pick it up.
 
 ### Watch an agent work a story
 - A builder that holds a card and writes nothing to it for 30 minutes (`monitor.stall_minutes`) is flagged `stalled` on Home and `/api/hub/attention`, listed by `codeloop monitor stalled` and at session start, and the doctor writes one "asked for a hand-back" line per stall.
 - `codeloop card handback <card> --branch <b> --head <sha> --proof "<cmd>"` records a builder's hand-back: it runs the proof command itself and stores the exit code and output on the card, so a gate can check data instead of a claim. A failing proof is recorded, an empty one is refused.
+- `codeloop card gate <card> [--handback <sha>]` runs the proof before a story merges: it reruns the hand-back's proof (in `--worktree` when the hand-back named one), runs the stage check without advancing, and confirms the first file the hand-back names exists on its branch. The verdict and findings are stored per card (`POST /api/cards/:id/gate`, `GET /api/cards/:id/gates`); exit 1 on fail, refused when there is no hand-back.
 - Every card has an activity stream (`.codeloop/state/activity/<card>.jsonl`): the Claude Code and
   Cursor hooks record edits, commands, prompts and session start and stop on the session's active
   card; headless runs copy their log into it; checks, commits (via a `Card:` trailer and the new
@@ -21,6 +26,12 @@ when package.json names a version this file has no heading for.
   `codeloop card activity <id> --follow` in the terminal.
 - Sessions carry a host, a machine and a label ("claude on <machine>, since HH:MM"); the board and
   Home show the label instead of a UUID.
+- Open a story and see its journey: every phase done, current, waiting on you or skipped (and
+  why), with who holds it and what it did last.
+- A story page shows one panel for what to do next: watch the agent's live feed, approve the gate
+  or answer its questions, or start an agent or work on it yourself; the check is said in a sentence.
+- Home shows each working agent as a tile with its story, phase, last action and whether it is
+  working, stalled, failing a check or idle.
 
 ### The monitor
 - A story shows one health, never two: working, needs you, failing, stuck or stale. A first failed

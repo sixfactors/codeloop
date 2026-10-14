@@ -53,6 +53,9 @@ export interface CardExtras {
   after?: string;
   /** The stage a queued card enters when promoted; split children resume at their parent's stage. */
   start_stage?: string;
+  /** The git worktree this story builds in, and its branch (`ensureStoryWorktree`). */
+  worktree?: string;
+  branch?: string;
 }
 
 export interface Card extends StoryFields, CardExtras {

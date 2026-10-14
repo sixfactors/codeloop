@@ -78,6 +78,14 @@ A card ships in under a week. Bigger is a feature with several stories: split wi
 
 Check: `size:` is S, M or L; L cards cannot pass the spec gate unsplit.
 
+| Size | Diff budget `codeloop verify` enforces |
+|---|---|
+| S | 8 files, 300 lines |
+| M | 20 files, 1,200 lines (also used when a card has no size) |
+| L | 40 files, 3,000 lines |
+
+The diff is every commit with a `Card:` or `Feature:` trailer for the card, files counted once, lines added plus deleted, excluding `evidence/`, `specs/`, `.codeloop/` and `CHANGELOG.md`. Override per size under `diff_budget:` in config.yaml, or set `budget: off`. `codeloop card diff <id>` shows the numbers without running verify.
+
 ## One metric per card
 
 The card names the stage metric it moves, threaded up: story → feature → metric → initiative goal → north star. `no-data` means instrument first, not guess. Lanes already carry a `metric:`; a card may override it.
@@ -104,6 +112,8 @@ The spec's `done_when:` line names a command that exits 0 or a screen a person o
 ## Technical detail lives below the story
 
 `plan.md` carries files, commands, flags and schema. `tasks.md` carries up to eight layer-tagged tasks in dependency order, each naming the acceptance line it satisfies. The card and `spec.md` carry none of that.
+
+A story that changes stored data also carries `specs/NNN/data-model.md`: entities with fields, the store each lives in (it must be named on the architecture data-model page), indexes, and migration. `codeloop check data-model` enforces it; a story with no `[data]` task and no `entities:` in its spec skips it.
 
 Tasks must name files in their own layer when `layers:` is configured in `.codeloop/config.yaml`; `codeloop spec check` fails a task whose tag and file paths disagree.
 

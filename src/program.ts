@@ -31,7 +31,7 @@ import { checkCommand } from './commands/check.js';
 import { packCommand } from './commands/pack.js';
 import { specCommand, taskCommand } from './commands/spec.js';
 import { importCommand } from './commands/import.js';
-import { statsCommand, verifyCommand } from './commands/verify.js';
+import { cardDiffCommand, statsCommand, verifyCommand } from './commands/verify.js';
 import { learnCommand, wikiCommand } from './commands/wiki.js';
 import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
 import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
@@ -68,6 +68,7 @@ export function buildProgram(): Command {
 
   // Lane engine
   program.addCommand(laneCommand);
+  cardCommand.addCommand(cardDiffCommand);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
   program.addCommand(shapeCommand);

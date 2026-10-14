@@ -281,9 +281,16 @@ export function createApp(
   }));
   // A hand-back runs its proof command here and records the exit code; a failing proof is still a 201.
   app.post(api('/cards/:id/handback'), writing(async c => {
-    const body = await json(c, { branch: '', head: '', proof: '', left: undefined as string | undefined, blocked: undefined as string | undefined, session: undefined as string | undefined });
+    const body = await json(c, { branch: '', head: '', proof: '', left: undefined as string | undefined, blocked: undefined as string | undefined, session: undefined as string | undefined, worktree: undefined as string | undefined });
     return c.json(services.recordHandback(projectDir, c.req.param('id'), body), 201);
   }));
+  app.post(api('/cards/:id/gate'), writing(async c => {
+    const body = await json(c, { handbackId: undefined as string | undefined });
+    return c.json(services.runGate(projectDir, c.req.param('id'), body), 201);
+  }));
+  app.post(api('/cards/:id/worktree'), writing(async c => c.json(services.ensureStoryWorktree(projectDir, c.req.param('id')), 201)));
+  app.post(api('/cards/:id/merge'), writing(async c => c.json(services.mergeStory(projectDir, c.req.param('id')), 201)));
+  app.get(api('/cards/:id/gates'), handled(async c => c.json(services.listGates(projectDir, c.req.param('id')))));
   app.get(api('/cards/:id/handbacks'), handled(async c => c.json(services.listHandbacks(projectDir, c.req.param('id')))));
   app.get(api('/runs/:runId'), handled(async c => {
     const found = services.run(projectDir, c.req.param('runId'));

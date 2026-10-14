@@ -5,6 +5,7 @@
 - [ ] every finding has a verdict (fix now / defer / unnecessary) and evidence
 - [ ] every "fix now" finding is actually fixed, and `codeloop verify {id}` re-run and still green
 - [ ] every "defer" finding exists as a `codeloop card propose` line, not only in this file
+- [ ] every out-of-plan file is listed in `## Scope` with keep / revert / move to <card-id> and why (`codeloop check scope {id}` exits 0)
 - [ ] the file ends with a line starting `verdict:`
 - [ ] `codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'` exits 0
 - [ ] one step of the live walk repeated by the reviewer and recorded as `walk repeated:`
