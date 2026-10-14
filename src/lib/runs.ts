@@ -6,6 +6,7 @@
  */
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
+import { appendActivity } from './activity.js';
 import { AGENT_RUNS_DIR, loadAgents, resolveAgent, type AgentConfig } from './agent.js';
 import { findCard, readCards, RefusalError, safeName } from './cards.js';
 import { clock } from './clock.js';
@@ -45,6 +46,39 @@ function save(projectDir: string, record: RunRecord): RunRecord {
   mkdirSync(join(projectDir, AGENT_RUNS_DIR), { recursive: true });
   writeFileSync(recordPath(projectDir, record.runId), JSON.stringify(record, null, 2) + '\n');
   return record;
+}
+
+/**
+ * Copies each line the run's log gains into the card's activity, as `log` lines, until `done`
+ * settles. The log is tailed rather than hooked because the agent writes it directly through a
+ * file descriptor. A log cut down by keepTail is followed from its new end.
+ */
+async function mirrorLog(projectDir: string, record: RunRecord, done: Promise<unknown>): Promise<void> {
+  const file = join(projectDir, record.logPath);
+  let offset = 0;
+  let partial = '';
+  let finished = false;
+  void done.finally(() => (finished = true));
+  const drain = (flush: boolean) => {
+    const size = existsSync(file) ? statSync(file).size : 0;
+    if (size < offset) offset = size;
+    if (size > offset) {
+      const fd = openSync(file, 'r');
+      const buffer = Buffer.alloc(size - offset);
+      readSync(fd, buffer, 0, buffer.length, offset);
+      closeSync(fd);
+      offset = size;
+      const lines = (partial + buffer.toString('utf-8')).split('\n');
+      partial = lines.pop() ?? '';
+      for (const text of lines) if (text.trim()) appendActivity(projectDir, record.cardId, { kind: 'log', runId: record.runId, text });
+    }
+    if (flush && partial.trim()) appendActivity(projectDir, record.cardId, { kind: 'log', runId: record.runId, text: partial });
+  };
+  while (!finished) {
+    drain(false);
+    await new Promise(r => setTimeout(r, POLL_MS));
+  }
+  drain(true);
 }
 
 const append = (projectDir: string, record: RunRecord, text: string) => writeFileSync(join(projectDir, record.logPath), text.endsWith('\n') ? text : `${text}\n`, { flag: 'a' });
@@ -99,11 +133,13 @@ export function startCardRun(projectDir: string, ref: string, opts: { agent?: st
     }
     final.endedAt = clock().toISOString();
     save(projectDir, final);
-    pending.delete(pendingKey(projectDir, runId));
     return final;
   })();
-  pending.set(pendingKey(projectDir, runId), finished);
-  return { record, finished };
+  const mirrored = mirrorLog(projectDir, record, finished).catch(() => undefined);
+  // `finished` settles once the log is mirrored too, so a caller that waits on it reads every line.
+  const settled = finished.then(async final => (await mirrored, final)).finally(() => pending.delete(pendingKey(projectDir, runId)));
+  pending.set(pendingKey(projectDir, runId), settled);
+  return { record, finished: settled };
 }
 
 export function readRun(projectDir: string, runId: string): RunRecord | undefined {
