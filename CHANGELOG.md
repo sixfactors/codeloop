@@ -7,6 +7,7 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- In a project with Next.js (`mock.target: app`, the default when `next` is a dependency and `app/` or `src/app/` exists) `codeloop mock new <card> --topic <t>` writes the mock as a page in the app, `<app_dir>/mocks/<nnn>-<slug>/page.tsx` plus `mock-data.ts`, one `data-screen` section per screen in the spec; `codeloop check mock` accepts it when every screen is there, nothing imports from outside the project and inline style is layout only, and `codeloop mock cleanup <card>` deletes the page unless spec.md says `mock: keep`. `mock.app_dir` and `mock.components` (default `components/shared`) override the defaults.
 - `codeloop orch <card> --builder session:<id-or-label-prefix> | person | agent[:name]` hands the brief to a live session or a person instead of spawning an agent: it goes to `.codeloop/state/orch/outbox/<session>.md` (`codeloop orch inbox` prints what is waiting) with an `orch-brief` activity line, then orch waits for the hand-back (`orch.wait_minutes`, default 120, or `--wait <min>`) and gates and merges as for an agent; `--no-wait` returns `briefed` and `codeloop orch resume <card>` finishes the turn (`orch.run` takes `builder` and `wait`, `orch.resume(id)`, `POST /api/cards/:id/orch/resume`).
 - Signing in to the board survives a hub restart.
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.

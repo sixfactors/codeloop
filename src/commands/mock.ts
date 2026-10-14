@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { newMock, writeMocksIndex } from '../lib/mock.js';
+import { cleanupMock, newMock, writeMocksIndex } from '../lib/mock.js';
 import { guard } from './guard.js';
 
 export const mockCommand = new Command('mock').description("A card's mock, built from the shared template so every mock looks like the same product");
@@ -12,7 +12,15 @@ mockCommand
   .action(guard((card: string, opts: { topic: string; from: string }) => {
     const { path, created, from } = newMock(process.cwd(), card, opts.topic, opts.from);
     console.log(created ? `  created ${path}${from ? ` from ${from}` : ''}` : `  ${path} already exists; left as it is`);
-    console.log(`Next: draw one <section data-screen="..."> per screen named in the spec, then \`codeloop check mock ${card}\`.`);
+    console.log(path.endsWith('/page.tsx') ? `Next: compose one <section data-screen="..."> per screen from the app's shared components, then \`codeloop check mock ${card}\`.` : `Next: draw one <section data-screen="..."> per screen named in the spec, then \`codeloop check mock ${card}\`.`);
+  }));
+
+mockCommand
+  .command('cleanup <card>')
+  .description("Delete the card's app mock page unless its spec says `mock: keep` (default drop)")
+  .action(guard((card: string) => {
+    const { path, action } = cleanupMock(process.cwd(), card);
+    console.log(action === 'none' ? '  no app mock to clean up' : `  ${action === 'dropped' ? 'deleted' : 'kept'} ${path}`);
   }));
 
 export const mocksCommand = new Command('mocks').description('The mock gallery');

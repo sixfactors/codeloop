@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { basename, dirname, join } from 'path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
+import { basename, dirname, join, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { findCard, findCardOrNone, readCards, RefusalError, safeName } from './cards.js';
 import { loadConfig } from './config.js';
+import { detectProject } from './detect.js';
 import { resolveSpecDir, slugify } from './spec.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -71,6 +72,8 @@ function legacyMock(projectDir: string, cardId: string): string | undefined {
 
 /** The card's mock: beside its spec, then under .codeloop/mocks, then an older one under docs/mocks. */
 export function findMock(projectDir: string, cardId: string): string | undefined {
+  const app = appMockPath(projectDir, cardId);
+  if (app && existsSync(join(projectDir, app))) return app;
   const spec = resolveSpecDirOrNone(projectDir, cardId);
   if (spec && existsSync(join(projectDir, spec, MOCK_FILE))) return `${spec}/${MOCK_FILE}`;
   const own = `${CARD_MOCKS_DIR}/${cardId}.html`;
@@ -135,6 +138,7 @@ export function newMock(projectDir: string, ref: string, topic: string, from: st
   const folder = safeName(topic, 'topic');
   const existing = findMock(projectDir, card.id);
   if (existing) return { path: existing, created: false };
+  if (mockTarget(projectDir) === 'app') return newAppMock(projectDir, card, folder);
   const project = projectName(projectDir);
   const path = mockPathFor(projectDir, card.id);
 
@@ -214,7 +218,8 @@ export function checkMock(projectDir: string, ref: string): string[] {
 
   const id = card?.id ?? ref;
   const path = findMock(projectDir, id);
-  if (!path) return [`no mock for ${id} (expected ${mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
+  if (!path) return [`no mock for ${id} (expected ${appMockPath(projectDir, id) ?? mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
+  if (path.endsWith(APP_PAGE)) return checkAppMock(projectDir, path, screens);
   const html = readFileSync(join(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
   if (!html.includes(MARKER)) return [`${path} does not carry the template marker ${MARKER}`];
   const expected = template(projectDir);
@@ -291,4 +296,106 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
   mkdirSync(join(projectDir, CARD_MOCKS_DIR), { recursive: true });
   writeFileSync(join(projectDir, path), html);
   return { path, mocks: found.length };
+}
+
+// ---- App target: the mock is a page in the project's own Next.js app ----
+
+const APP_PAGE = 'page.tsx';
+const APP_DATA = 'mock-data.ts';
+const APP_DIRS = ['src/app', 'app'];
+/** Style properties a mock page may set inline: layout only, so colour, type and surfaces come from the components. */
+const LAYOUT_PROP = /^(display|gap|rowGap|columnGap|minWidth|padding\w*|grid\w*)$/;
+
+/** The Next.js app directory: `mock.app_dir`, else `src/app` or `app` when it exists. */
+export function mockAppDir(projectDir: string): string | undefined {
+  const configured = loadConfig(projectDir).mock?.app_dir;
+  if (typeof configured === 'string' && configured.trim()) return configured.trim().replace(/^\.\//, '').replace(/\/+$/, '');
+  return APP_DIRS.find(d => existsSync(join(projectDir, d)));
+}
+
+/** `app` for a project with next and an app directory, else `html`; `mock.target` overrides. */
+export function mockTarget(projectDir: string): 'html' | 'app' {
+  const configured = loadConfig(projectDir).mock?.target;
+  if (configured === 'html' || configured === 'app') return configured;
+  return detectProject(projectDir).frameworks.includes('next') && mockAppDir(projectDir) ? 'app' : 'html';
+}
+
+/** Where the shared components live, used for the import hint in the scaffold. */
+export const mockComponents = (projectDir: string): string => String(loadConfig(projectDir).mock?.components ?? 'components/shared').replace(/^\.?\//, '').replace(/\/+$/, '');
+
+/** `<app_dir>/mocks/<spec folder or card id>/page.tsx`, or undefined when the target is html. */
+function appMockPath(projectDir: string, cardId: string): string | undefined {
+  if (mockTarget(projectDir) !== 'app') return undefined;
+  const dir = mockAppDir(projectDir);
+  if (!dir) return undefined;
+  const spec = resolveSpecDirOrNone(projectDir, cardId);
+  return `${dir}/mocks/${spec ? basename(spec) : cardId}/${APP_PAGE}`;
+}
+
+const pascal = (text: string) => text.split(/[^a-zA-Z0-9]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join('');
+const jsx = (text: string) => text.replace(/[{}<>]/g, c => `{'${c}'}`);
+const attr = (text: string) => text.replace(/\\/g, '\\\\').replace(/"/g, '&quot;');
+const key = (text: string) => JSON.stringify(text);
+
+function newAppMock(projectDir: string, card: { id: string; title: string }, topic: string): { path: string; created: boolean } {
+  const path = appMockPath(projectDir, card.id);
+  if (!path) throw new RefusalError('mock.target is app but no app directory exists; set `mock.app_dir` in .codeloop/config.yaml');
+  const specDir = resolveSpecDirOrNone(projectDir, card.id);
+  const specFile = specDir ? join(projectDir, specDir, 'spec.md') : '';
+  const spec = specFile && existsSync(specFile) ? readFileSync(specFile, 'utf-8') : '';
+  const named = specScreens(spec);
+  const screens = named === 'none' ? [] : named;
+  const story = /^Story:\s*(.+)$/m.exec(spec)?.[1].trim() ?? card.title;
+  const read = (name: string) => readFileSync(join(PACKAGE_ROOT, 'templates/mock', name), 'utf-8');
+  const fill = (text: string, values: Record<string, string>) => text.replace(/\{\{(\w+)\}\}/g, (_, k: string) => values[k] ?? '');
+  const sections = screens.map(s => `      <section data-screen="${attr(s)}">\n        <h2>${jsx(s)}</h2>\n        {/* Compose this screen from the shared components, rendering screens[${key(s)}]. */}\n      </section>\n`).join('');
+  const entries = screens.map(s => `  ${key(s)}: { note: ${key(`Replace with the rows the ${s} screen renders.`)} },\n`).join('');
+  const values = { id: card.id, title: jsx(card.title), story: jsx(story), components: mockComponents(projectDir), pascal: pascal(card.id) + pascal(topic), sections, entries };
+  mkdirSync(dirname(join(projectDir, path)), { recursive: true });
+  writeFileSync(join(projectDir, path), fill(read('app-page.tsx.txt'), values));
+  writeFileSync(join(projectDir, dirname(path), APP_DATA), fill(read('app-data.ts.txt'), values));
+  return { path, created: true };
+}
+
+/** Why an app-target mock page does not pass. */
+function checkAppMock(projectDir: string, path: string, screens: string[]): string[] {
+  const src = readFileSync(join(projectDir, path), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const errors: string[] = [];
+  const components = mockComponents(projectDir);
+  for (const screen of screens) {
+    const quoted = screen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!new RegExp(`data-screen=(?:\\{\\s*)?["'\`]${quoted}["'\`]`).test(src)) errors.push(`${path} has no <section data-screen="${screen}"> for a screen named in the spec`);
+  }
+  const root = resolve(projectDir);
+  const from = resolve(projectDir, dirname(path));
+  const specifiers = [...src.matchAll(/(?:\bfrom\s+|\bimport\s*\(?\s*|\brequire\(\s*)["']([^"']+)["']/g)].map(m => m[1]);
+  for (const spec of new Set(specifiers)) {
+    const outside = /^https?:|^\/\//.test(spec) || spec.includes('node_modules') || (spec.startsWith('.') && !(resolve(from, spec) + sep).startsWith(root + sep));
+    if (outside) errors.push(`${path} imports ${spec}, a path outside the project; import from ${components} or the project's own modules`);
+  }
+  if (/<style\b/.test(src)) errors.push(`${path} has an inline <style> block; a mock sets no CSS, compose the components in ${components}`);
+  const bad = new Set<string>();
+  for (const m of src.matchAll(/\bstyle=\{\{([^}]*)\}\}/g)) {
+    for (const prop of m[1].matchAll(/(?:^|,)\s*["']?([A-Za-z-]+)["']?\s*:/g)) if (!LAYOUT_PROP.test(prop[1])) bad.add(prop[1]);
+  }
+  if (bad.size) errors.push(`${path} sets inline style beyond layout (${[...bad].join(', ')}); only display, gap, grid, padding and minWidth are allowed, the components do the rest`);
+  return errors;
+}
+
+/** The spec's `mock:` decision, `keep` or `drop`; drop when the spec says nothing. */
+export function specMockDecision(spec: string): 'keep' | 'drop' {
+  return /^mock:\s*keep\b/im.test(spec) ? 'keep' : 'drop';
+}
+
+/** Deletes the card's app mock page when the spec's `mock:` is `drop` (the default); a `keep` leaves it. */
+export function cleanupMock(projectDir: string, ref: string): { path?: string; action: 'dropped' | 'kept' | 'none' } {
+  const card = findCard(readCards(projectDir).cards, ref);
+  const path = findMock(projectDir, card.id);
+  if (!path || !path.endsWith(`/${APP_PAGE}`)) return { action: 'none' };
+  const specDir = resolveSpecDirOrNone(projectDir, card.id);
+  const specFile = specDir ? join(projectDir, specDir, 'spec.md') : '';
+  const decision = specFile && existsSync(specFile) ? specMockDecision(readFileSync(specFile, 'utf-8')) : 'drop';
+  if (decision === 'keep') return { path, action: 'kept' };
+  rmSync(join(projectDir, dirname(path)), { recursive: true, force: true });
+  return { path, action: 'dropped' };
 }

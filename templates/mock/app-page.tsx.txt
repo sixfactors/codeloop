@@ -1,0 +1,22 @@
+'use client';
+
+// codeloop-mock-app: {{id}}
+// Mock for {{id}} {{title}}. Delete or keep it as the spec's `mock:` line says (`codeloop mock cleanup {{id}}`).
+// Compose each screen from the project's components in {{components}}; search the registry first and
+// reuse what exists. Layout only here (display, gap, grid, padding, minWidth): `codeloop check mock` fails
+// an inline <style>, and any style={{ }} that sets more than layout.
+//
+// Complete the imports, for example:
+// import { <Component> } from '@/{{components}}/<file>';
+import { screens } from './mock-data';
+
+export default function Mock{{pascal}}Page() {
+  return (
+    <main style={{ display: 'grid', gap: 24, padding: 24 }}>
+      <header>
+        <h1>{{title}}</h1>
+        <p>{{story}}</p>
+      </header>
+{{sections}}    </main>
+  );
+}
