@@ -29,6 +29,10 @@ when package.json names a version this file has no heading for.
 ### Shared story store
 - `codeloop render` writes the same CLAUDE.md, AGENTS.md and host rule files in every worktree: the
   active card line is gone from them, and the session-start hook prints the active story instead.
+- A command in a linked worktree finds the main tree's board with no `CODELOOP_PROJECT_DIR`.
+  `store.home: user` keeps cards.json, specs, evidence, shape, mocks and `.codeloop/state` under
+  `~/.codeloop/projects/<id>/`, shared by every worktree; `codeloop store move --to user|repo` copies
+  them across and `codeloop store where` prints where each path resolves.
 
 ### Orchestrator after the merge
 - After merging a story the orchestrator runs `codeloop verify` (from the verify stage on) and the

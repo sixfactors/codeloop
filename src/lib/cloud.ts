@@ -1,3 +1,4 @@
+import { followLink } from './store-home.js';
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs';
@@ -352,7 +353,7 @@ function upload(s: Session, row: Row, content: string, expect?: SyncEntry): void
 function writeLocal(projectDir: string, path: string, content: string): string {
   const text = `${content.trimEnd()}\n`;
   if (kindOf(path) === 'board') JSON.parse(text); // a board page that is not JSON must not replace cards.json
-  const file = abs(projectDir, path);
+  const file = followLink(abs(projectDir, path));
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(`${file}.pull.tmp`, text);
   renameSync(`${file}.pull.tmp`, file);
