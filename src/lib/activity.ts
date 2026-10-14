@@ -114,3 +114,44 @@ export function lastActivityAt(projectDir: string, card: string): number | undef
     return undefined;
   }
 }
+
+/** Kinds that mean someone or something was working the story; prompts, checks and engine events are not. */
+const WORK_KINDS = new Set(['edit', 'cmd', 'commit', 'handback', 'log']);
+/** Two work lines further apart than this are two bursts; the gap between them is idle. */
+export const BURST_GAP_MS = 10 * 60 * 1000;
+
+/** Every line of the card's stream, oldest first. */
+export function readAllActivity(projectDir: string, card: string): ActivityEntry[] {
+  const out: ActivityEntry[] = [];
+  let after: string | undefined;
+  for (;;) {
+    const page = readActivity(projectDir, card, { after, limit: MAX_LIMIT });
+    out.push(...page.items);
+    if (!page.next) return out;
+    after = page.next;
+  }
+}
+
+/** Milliseconds of work between `from` and `to`: the gaps between consecutive work lines in the window that are within ten minutes, summed. */
+export function activeMs(lines: { at: string; kind: string }[], from: number, to: number): number {
+  const times = lines.filter(l => WORK_KINDS.has(l.kind)).map(l => Date.parse(l.at)).filter(t => t >= from && t <= to).sort((a, b) => a - b);
+  let total = 0;
+  for (let i = 1; i < times.length; i++) if (times[i] - times[i - 1] <= BURST_GAP_MS) total += times[i] - times[i - 1];
+  return total;
+}
+
+const toMinutes = (ms: number) => Math.round(ms / 60_000);
+
+/** Time in a phase from `since` to `until`: wall, working and idle minutes. */
+export function phaseTime(lines: { at: string; kind: string }[], since: string, until: number): { wallMinutes: number; activeMinutes: number; idleMinutes: number } {
+  const from = Date.parse(since);
+  const wall = Math.max(0, until - from);
+  const active = Math.min(wall, activeMs(lines, from, until));
+  return { wallMinutes: toMinutes(wall), activeMinutes: toMinutes(active), idleMinutes: toMinutes(wall - active) };
+}
+
+/** "6h 04m", "12m": minutes as a person reads a duration. */
+export function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  return h ? `${h}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`;
+}

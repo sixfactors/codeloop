@@ -37,7 +37,7 @@ import { rubricCommand } from './commands/rubric.js';
 import { packCommand } from './commands/pack.js';
 import { specCommand, taskCommand } from './commands/spec.js';
 import { importCommand } from './commands/import.js';
-import { cardDiffCommand, cardHealthCommand, healthCommand, statsCommand, verifyCommand } from './commands/verify.js';
+import { cardSelfcheckCommand, cardDiffCommand, cardHealthCommand, healthCommand, statsCommand, verifyCommand } from './commands/verify.js';
 import { learnCommand, wikiCommand } from './commands/wiki.js';
 import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
 import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
@@ -81,7 +81,7 @@ export function buildProgram(): Command {
   // Lane engine
   program.addCommand(laneCommand);
   // cardCommand is a module singleton and buildProgram runs more than once in tests, so add each once.
-  for (const sub of [cardDiffCommand, cardHealthCommand]) {
+  for (const sub of [cardDiffCommand, cardHealthCommand, cardSelfcheckCommand]) {
     if (!cardCommand.commands.some(c => c.name() === sub.name())) cardCommand.addCommand(sub);
   }
   program.addCommand(cardCommand);

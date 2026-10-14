@@ -35,6 +35,8 @@ comments, or a `verdict: approve` line written before every fix-now finding is a
 
 ## Procedure
 
+A story is reviewed once, at this stage, against the rubric and the Scope table. There is no review per commit, and a reviewer does not re-review each fix. A reviewer who wants changes writes every one as a finding with a fix-now verdict in a single review.md; the builder answers them all in one turn and runs `codeloop card selfcheck {id}` before handing back.
+
 1. Confirm `evidence/{nnn}/verify.md` says `result: pass`. If it doesn't, stop here, review
    cannot approve work that hasn't been shown to work.
 2. **Repeat one step of the live walk yourself.** Pick the step in `## Live walk` that matters most,

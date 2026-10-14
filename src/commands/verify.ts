@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { findCard, readCards } from '../lib/cards.js';
+import { runSelfcheck } from '../lib/selfcheck.js';
 import { checkBudget } from '../lib/diff-budget.js';
 import { checkHealth, formatHealth, projectHealth } from '../lib/health.js';
 import { RefusalError } from '../lib/engine.js';
@@ -87,6 +88,16 @@ export const cardDiffCommand = new Command('diff')
     console.log(`  files ${v.files}, lines ${v.lines}, commits ${v.commits}`);
     console.log(v.pass ? chalk.green(`  ${v.message}`) : chalk.red(`  ${v.message}`));
     if (!v.pass) process.exit(1);
+  }));
+
+/** Registered under `card` in program.ts: the builder's own run of what the gate would fail it on. */
+export const cardSelfcheckCommand = new Command('selfcheck')
+  .description("Run the stage check, check scope, check rubric and the diff budget in this work dir, one line each. Exit 1 if any fails; the result rides the hand-back and lets the gate skip the stage check")
+  .argument('<id>', 'Card number or id')
+  .action(guard((ref: string) => {
+    const r = runSelfcheck(projectRoot(), ref);
+    for (const s of r.steps) console.log(`  ${s.name}: ${s.pass ? chalk.green('pass') : chalk.red('fail')} - ${s.detail.replace(/\s+/g, ' ').slice(0, 200)}`);
+    if (!r.pass) process.exit(1);
   }));
 
 export const healthCommand = new Command('health')

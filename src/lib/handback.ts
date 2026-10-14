@@ -7,7 +7,8 @@
 import { spawnSync } from 'child_process';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { appendActivity } from './activity.js';
+import { appendActivity, readActivity } from './activity.js';
+import { selfcheckAt } from './selfcheck.js';
 import { currentSession } from './active-card.js';
 import { findCard, readCards, RefusalError } from './cards.js';
 import { recordEvent } from './engine.js';
@@ -38,6 +39,8 @@ export interface HandbackRecord {
   at: string;
   session?: string;
   worktree?: string;
+  /** The builder's own `card selfcheck` at this head, when it ran one. */
+  selfcheck?: { pass: boolean; failing: string[] };
 }
 
 const safe = (text: string) => text.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -68,6 +71,8 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
     ...(input.worktree ? { worktree: input.worktree } : {}),
     ...((input.session ?? currentSession()) ? { session: input.session ?? currentSession() } : {}),
   };
+  const self = selfcheckAt(readActivity(projectDir, card.id, { limit: 1000 }).items, input.head);
+  if (self) record.selfcheck = { pass: self.pass, failing: self.failing };
   mkdirSync(dirOf(projectDir), { recursive: true });
   writeFileSync(join(dirOf(projectDir), `${prefix}${n}.json`), `${JSON.stringify(record, null, 2)}\n`);
 

@@ -117,6 +117,10 @@ The spec's `done_when:` line names a command that exits 0 or a screen a person o
 
 A story that changes stored data also carries `specs/NNN/data-model.md`: entities with fields, the store each lives in (it must be named on the architecture data-model page), indexes, and migration. `codeloop check data-model` enforces it; a story with no `[data]` task and no `entities:` in its spec skips it.
 
+A story with more than eight tasks, or size L, is refused when it enters the build stage (`codeloop card split` first); `lanes: { max_tasks: <n> }` in config.yaml changes the limit.
+
+A commit ticks its task: add `Task: T017` (one or more lines) beside `Card: <id>` in the commit message and the post-commit hook turns `- [ ] T017` into `- [x] T017`, with a `task` activity line. An id not in tasks.md is ignored with a warning.
+
 Tasks must name files in their own layer when `layers:` is configured in `.codeloop/config.yaml`; `codeloop spec check` fails a task whose tag and file paths disagree.
 
 ## Keep plumbing off the board unless it moves a metric

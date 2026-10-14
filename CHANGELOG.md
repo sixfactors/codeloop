@@ -7,6 +7,10 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- Every story shows time in stage and time working: `activeMinutes` (the gaps between consecutive edit, command, commit, hand-back or log lines that are within ten minutes of each other, summed) and `idleMinutes` (wall time in the phase minus that) sit on the journey steps, on `boardView` stories beside `phaseSince`, and `codeloop card show` prints "in build 6h 04m, working 1h 12m" (`cards.show` returns `phaseTime`).
+- `codeloop card selfcheck <card>` runs the stage check, `check scope`, `check rubric` and the diff budget in the current work dir, one line each, exit 1 if any fails. The brief footer tells the builder to run it before handing back; the hand-back record carries the result (`selfcheck` on the record and the orch turn) and the gate skips the stage check when a selfcheck passed at the hand-back's head, still rerunning the proof. The review skill now says one review per story at the review stage, never per commit.
+- A story with more than eight task lines in tasks.md, or size L, is refused when it enters the build stage by advance or `card place` ("c-048 has 17 tasks; split it into stories of eight or fewer (`codeloop card split c-048 ...`)"); `lanes: { max_tasks: <n> }` in config.yaml changes the limit, and a card with `split_from` and no more tasks than the limit passes. A story already in build is not thrown out: `card show` prints the sentence and the doctor records it once as a `split-nudge` event.
+- A commit message trailer `Task: T017` (one or more, beside `Card: c-048`) ticks that line in the card's tasks.md from the post-commit hook, appends a `task` activity line and records a `task` card event; an id not in tasks.md is ignored with a one-line warning, and a task already ticked is left alone.
 - In a project with Next.js (`mock.target: app`, the default when `next` is a dependency and `app/` or `src/app/` exists) `codeloop mock new <card> --topic <t>` writes the mock as a page in the app, `<app_dir>/mocks/<nnn>-<slug>/page.tsx` plus `mock-data.ts`, one `data-screen` section per screen in the spec; `codeloop check mock` accepts it when every screen is there, nothing imports from outside the project and inline style is layout only, and `codeloop mock cleanup <card>` deletes the page unless spec.md says `mock: keep`. `mock.app_dir` and `mock.components` (default `components/shared`) override the defaults.
 - `codeloop orch <card> --builder session:<id-or-label-prefix> | person | agent[:name]` hands the brief to a live session or a person instead of spawning an agent: it goes to `.codeloop/state/orch/outbox/<session>.md` (`codeloop orch inbox` prints what is waiting) with an `orch-brief` activity line, then orch waits for the hand-back (`orch.wait_minutes`, default 120, or `--wait <min>`) and gates and merges as for an agent; `--no-wait` returns `briefed` and `codeloop orch resume <card>` finishes the turn (`orch.run` takes `builder` and `wait`, `orch.resume(id)`, `POST /api/cards/:id/orch/resume`).
 - Signing in to the board survives a hub restart.
@@ -36,6 +40,8 @@ when package.json names a version this file has no heading for.
   `store.home: user` keeps cards.json, specs, evidence, shape, mocks and `.codeloop/state` under
   `~/.codeloop/projects/<id>/`, shared by every worktree; `codeloop store move --to user|repo` copies
   them across and `codeloop store where` prints where each path resolves.
+- `store.move` names which of cards, state, mocks, specs, shape, evidence and docs-mocks `user` home
+  takes, default all; the rest stay in the repo, and `store where` prints each path's home.
 
 ### Orchestrator after the merge
 - After merging a story the orchestrator runs `codeloop verify` (from the verify stage on) and the

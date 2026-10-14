@@ -109,3 +109,35 @@ describe('one board for every worktree', () => {
     expect(files(dir)).toEqual(before);
   }, 60_000);
 });
+
+describe('store.move names what user home moves', () => {
+  it('with a subset, store move --to user leaves evidence in the repo and store where prints it as repo', () => {
+    cl(dir, 'start', 'Founders can export invoices');
+    execSync('mkdir -p evidence/001 && echo "result: pass" > evidence/001/verify.md', { cwd: dir });
+    config('store:\n  move: [cards, state, specs, shape]\n');
+    const evidenceBefore = readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8');
+
+    const out = cl(dir, 'store', 'move', '--to', 'user');
+    expect(out).toContain('copied .codeloop/cards.json, specs');
+    expect(out).not.toMatch(/copied .*evidence/);
+    expect(existsSync(join(userStoreDir(dir), 'evidence'))).toBe(false);
+    expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toBe(evidenceBefore);
+    expect(readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')).toMatch(/^store:\n {2}home: user\n {2}move: \[cards, state, specs, shape\]$/m);
+
+    // The refusal names only the moved paths still in the repo, never evidence.
+    let refused = '';
+    try {
+      cl(dir, 'card', 'list');
+    } catch (e) {
+      refused = String((e as { stderr?: string }).stderr ?? e);
+    }
+    expect(refused).toMatch(/repo copies are still at \.codeloop\/cards\.json, specs;/);
+
+    for (const p of ['.codeloop/cards.json', '.codeloop/state', 'specs']) rmSync(join(dir, p), { recursive: true, force: true });
+    cl(dir, 'card', 'list'); // the next ordinary command links the moved paths
+    const where = cl(dir, 'store', 'where');
+    expect(where).toMatch(/^ {2}evidence\s+repo\s+\S*\/demo\/evidence$/m);
+    expect(where).toMatch(/^ {2}specs\s+user\s+\S*\/home\/projects\/demo\/specs \(linked\)$/m);
+    expect(lstatSync(join(dir, 'evidence')).isSymbolicLink()).toBe(false);
+  }, 60_000);
+});

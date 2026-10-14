@@ -16,6 +16,7 @@ import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextC
 export { RefusalError };
 import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
 import { planFiles } from './plan-scope.js';
+import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
 // engine.ts drives a stage's domain-specific side effect without owning its parsing.
@@ -444,6 +445,10 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   const before = findCard(file.cards, id);
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
+  if (stage === SPLIT_BEFORE_STAGE) {
+    const problem = storySizeProblem(projectDir, before);
+    if (problem) throw new RefusalError(problem);
+  }
   const now = opts.now ?? clock();
   const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
@@ -660,6 +665,10 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     card.events.push(event(now, 'engine', 'unstick', stage.id, 'the check passes after work landed on the story'));
   }
   const next = lane.stages[lane.stages.indexOf(stage) + 1];
+  if (next?.id === SPLIT_BEFORE_STAGE) {
+    const problem = storySizeProblem(projectDir, card);
+    if (problem) throw new RefusalError(problem);
+  }
   card.stage = next ? next.id : DONE;
   if (stage.output) card.evidence.push(substitute(stage.output, card));
   card.events.push(event(now, 'engine', 'advance', stage.id, `to ${card.stage}`));

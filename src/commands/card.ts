@@ -190,9 +190,9 @@ cardCommand
   .description('Show a card, its current stage brief and its events')
   .option('--json', 'JSON output')
   .action(guard(async (id: string, opts: { json?: boolean }) => {
-    const { card, brief: stage, hint, tasks, evidenceFiles, commits } = await client().cards.show(id);
+    const { card, brief: stage, hint, tasks, evidenceFiles, commits, phaseTime } = await client().cards.show(id);
     if (opts.json) {
-      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits }, null, 2));
+      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits, phaseTime }, null, 2));
       return;
     }
     console.log(line(card));
@@ -211,6 +211,7 @@ cardCommand
       for (const note of stage.notes) console.log(`  note:   ${note}`);
       for (const f of stage.feedback) console.log(chalk.yellow(f.kind === 'rejected' ? `  rejected: ${f.note}` : `  returned from ${f.from}: ${f.note}`));
     }
+    if (phaseTime) console.log(chalk.dim(`  ${phaseTime.text}`));
     const moving = card.display?.moving;
     if (moving) console.log(chalk.yellow(`  ${card.display?.health} · moving: work landed since the check failed`));
     if (tasks?.length) {

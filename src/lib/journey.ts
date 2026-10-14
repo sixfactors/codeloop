@@ -6,7 +6,7 @@
  */
 import { closeSync, existsSync, openSync, readSync, statSync } from 'fs';
 import { join } from 'path';
-import { ACTIVITY_DIR, readActivity, type ActivityLine } from './activity.js';
+import { ACTIVITY_DIR, phaseTime, readActivity, readAllActivity, type ActivityLine } from './activity.js';
 import { activeSessions } from './active-card.js';
 import { DONE, DROPPED, PROPOSED, QUEUED, type Card, type CardEvent } from './cards.js';
 import { readQuestions } from './interview.js';
@@ -23,6 +23,9 @@ export interface JourneyStep {
   enteredAt?: string;
   leftAt?: string;
   durationMs?: number;
+  /** Minutes of work in the phase (edits, commands, commits, hand-backs within ten minutes of each other), and the rest of its wall time. */
+  activeMinutes?: number;
+  idleMinutes?: number;
   /** Who finished it (done) or who it waits on (gate). */
   who?: string;
   /** Why a skipped phase was skipped, in a sentence. */
@@ -165,7 +168,7 @@ function changedSince(projectDir: string, card: Card, lane: Lane, at: string): b
   return readActivity(projectDir, card.id, { limit: 1000 }).items.some(i => i.kind !== 'check' && Date.parse(i.at) > checked);
 }
 
-export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; tasks?: { done: boolean; id?: string; layer?: string; text?: string }[]; health?: string } = {}): Journey {
+export function journeyOf(projectDir: string, card: Card, opts: { now?: number; lane?: Lane; tasks?: { done: boolean; id?: string; layer?: string; text?: string }[]; health?: string } = {}): Journey {
   const lane = opts.lane ?? loadLane(projectDir, card.lane);
   const events = card.events ?? [];
   const stages = lane.stages;
@@ -175,6 +178,8 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
   const placed = [...events].reverse().find(e => e.action === 'place');
   const placedAt = placed ? stages.findIndex(s => s.id === placed.stage) : -1;
 
+  const now = opts.now ?? Date.now();
+  const stream = readAllActivity(projectDir, card.id);
   const steps: JourneyStep[] = stages.map((s, i) => {
     const step: JourneyStep = { id: s.id, ...(s.gate ? { gate: { name: s.gate.name, approver: s.gate.approver } } : {}), state: 'ahead' };
     if (outside || i > at) return step;
@@ -186,6 +191,11 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
         step.who = card.awaiting;
         const parkedAt = [...events].reverse().find(e => e.action === 'park')?.at;
         if (parkedAt) step.leftAt = parkedAt;
+      }
+      if (entered) {
+        const t = phaseTime(stream, entered, step.leftAt ? Date.parse(step.leftAt) : now);
+        step.activeMinutes = t.activeMinutes;
+        step.idleMinutes = t.idleMinutes;
       }
       return step;
     }
@@ -200,6 +210,9 @@ export function journeyOf(projectDir: string, card: Card, opts: { lane?: Lane; t
     if (entered) {
       step.enteredAt = entered;
       step.durationMs = Math.max(0, Date.parse(left.at) - Date.parse(entered));
+      const t = phaseTime(stream, entered, Date.parse(left.at));
+      step.activeMinutes = t.activeMinutes;
+      step.idleMinutes = t.idleMinutes;
     }
     const approval = [...events].reverse().find(e => e.action === 'approve' && e.stage === s.id);
     const worker = [...events].reverse().find(e => e.stage === s.id && e.actor !== 'engine');

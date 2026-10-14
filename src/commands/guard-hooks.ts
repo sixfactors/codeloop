@@ -12,6 +12,7 @@ import { ensureMonitorSchedule } from '../lib/schedule.js';
 import { monitorEnabled } from '../lib/run.js';
 import { loadAgents } from '../lib/agent.js';
 import { resolveRole } from '../lib/engine.js';
+import { tickTaskFromCommit } from '../lib/spec.js';
 import { openQuestions } from '../lib/interview.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
 import { cardCommand } from './card.js';
@@ -263,15 +264,21 @@ guardCommand
   .action(() => {
     const projectDir = projectRoot();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
-    const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
+    const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)%x00%(trailers:key=Task,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
     if (log.status !== 0) return;
-    const [sha, subject, cardTrailer, featureTrailer] = log.stdout.replace(/\n$/, '').split('\0');
+    const [sha, subject, cardTrailer, featureTrailer, taskTrailer] = log.stdout.replace(/\n$/, '').split('\0');
     const ids = (cardTrailer?.trim() ? cardTrailer : featureTrailer ?? '').split(',').map(s => s.trim()).filter(Boolean);
     let known: Set<string>;
     try { known = new Set(readCards(projectDir).cards.map(c => c.id)); } catch { return; }
     const session = currentSession();
     for (const id of new Set(ids)) {
-      if (known.has(id)) appendActivity(projectDir, id, { session, kind: 'commit', sha: sha.slice(0, 12), subject });
+      if (!known.has(id)) continue;
+      appendActivity(projectDir, id, { session, kind: 'commit', sha: sha.slice(0, 12), subject });
+      for (const task of new Set((taskTrailer ?? '').split(',').map(s => s.trim()).filter(Boolean))) {
+        const result = tickTaskFromCommit(projectDir, id, task);
+        if (result === 'ticked') appendActivity(projectDir, id, { session, kind: 'task', task, sha: sha.slice(0, 12) });
+        else if (result === 'unknown') console.error(`codeloop: ${id} has no task ${task} in tasks.md; trailer ignored`);
+      }
     }
   });
 

@@ -91,7 +91,10 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}${why(proof.output)}`);
 
   const stage = currentStage(loadLane(projectDir, card.lane), card);
-  const checked = runCheck(projectDir, card, stage, hb.worktree || undefined, hb.head);
+  // A selfcheck that passed at this exact head already ran the stage check, scope, rubric and budget
+  // there; only the proof is rerun. A failed or missing selfcheck changes nothing.
+  const skipCheck = hb.selfcheck?.pass === true;
+  const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined, hb.head);
   if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed${why(checked.output)}`);
 
   let claim: GateRecord['claim'] = null;
