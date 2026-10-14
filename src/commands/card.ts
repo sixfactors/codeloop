@@ -107,6 +107,21 @@ function activityText(l: ActivityEntry): string {
 }
 
 cardCommand
+  .command('handback <id>')
+  .description('Hand a card back: runs the proof command here and records its exit code and output on the card')
+  .requiredOption('--branch <branch>', 'The branch the work is on')
+  .requiredOption('--head <sha>', 'The commit the work ends at')
+  .requiredOption('--proof <cmd>', 'The command that proves the work; it is run from the project root')
+  .option('--left <text>', 'What is left to do')
+  .option('--blocked <text>', 'What blocked the work')
+  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string }) => {
+    const c = client();
+    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked });
+    console.log(`proof exit ${rec.proof.exit}; hand-back recorded for ${rec.card} at ${rec.stage} (${rec.branch}@${rec.head.slice(0, 8)})`);
+    await c.close();
+  }));
+
+cardCommand
   .command('activity <id>')
   .description("What happened on a card, oldest first: edits, commands, checks, commits and gates. --follow keeps printing as it happens")
   .option('--follow', 'Keep printing new lines until interrupted')

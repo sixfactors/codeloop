@@ -82,6 +82,21 @@ describe('local transport: the CLI path, no server', () => {
   });
 });
 
+describe('handback through both transports', () => {
+  it('records the proof exit on each, lists newest first, and refuses an empty proof', async () => {
+    await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });
+    const { client } = overHttp();
+    const input = { branch: 'feat/x', head: 'abc123' };
+    const viaLocal = await local().cards.handback('c-001', { ...input, proof: 'true' });
+    const viaHttp = await client.cards.handback('c-001', { ...input, proof: 'false' });
+    expect(viaLocal.proof.exit).toBe(0);
+    expect(viaHttp.proof.exit).toBe(1);
+    for (const c of [local(), client]) expect((await c.cards.handbacks('c-001')).map(h => h.proof.exit)).toEqual([1, 0]);
+    await expect(client.cards.handback('c-001', { ...input, proof: '' })).rejects.toMatchObject({ status: 400 });
+    await expect(local().cards.handback('c-001', { ...input, proof: '' })).rejects.toThrow('a hand-back needs a proof command');
+  });
+});
+
 describe('http transport: the UI path against the same services', () => {
   it('reads what the local transport wrote, with ETag revalidation on the second read', async () => {
     await local().cards.new({ lane: 'market', title: 'Founders can read the launch post' });

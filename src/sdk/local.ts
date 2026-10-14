@@ -87,6 +87,8 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     streamRun: (runId, signal) => services.runStream(projectDir, runId, signal),
     cardActivity: async (ref, query = {}) => services.cardActivity(projectDir, ref, query),
     activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, async (r, q) => services.cardActivity(projectDir, r, q)),
+    handback: async (ref, input) => services.recordHandback(projectDir, ref, input),
+    handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),
     splitCard: async (ref, titles, opts) => services.splitCard(projectDir, ref, titles, role(opts)),

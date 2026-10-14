@@ -279,6 +279,12 @@ export function createApp(
     const started = services.runCard(projectDir, c.req.param('id'), { agent: body.agent || undefined });
     return c.json({ runId: started.runId }, 202);
   }));
+  // A hand-back runs its proof command here and records the exit code; a failing proof is still a 201.
+  app.post(api('/cards/:id/handback'), writing(async c => {
+    const body = await json(c, { branch: '', head: '', proof: '', left: undefined as string | undefined, blocked: undefined as string | undefined, session: undefined as string | undefined });
+    return c.json(services.recordHandback(projectDir, c.req.param('id'), body), 201);
+  }));
+  app.get(api('/cards/:id/handbacks'), handled(async c => c.json(services.listHandbacks(projectDir, c.req.param('id')))));
   app.get(api('/runs/:runId'), handled(async c => {
     const found = services.run(projectDir, c.req.param('runId'));
     if (!found) return notFound(c, `run ${c.req.param('runId')}`);

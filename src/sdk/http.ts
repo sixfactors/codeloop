@@ -197,6 +197,8 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     // A page past the end today has lines tomorrow, so the ETag cache is bypassed like a run's.
     cardActivity: (ref, query: ActivityQuery = {}) => json<CardActivity>(`/api/cards/${encodeURIComponent(ref)}/activity${search({ after: query.after, limit: query.limit, t: Date.now() })}`),
     activityStream: (ref, opts = {}) => followCardActivity(ref, opts, events, (r, q) => json<CardActivity>(`/api/cards/${encodeURIComponent(r)}/activity${search({ after: q.after, limit: q.limit, t: Date.now() })}`)),
+    handback: (ref, input) => post(`/api/cards/${encodeURIComponent(ref)}/handback`, input),
+    handbacks: ref => json(`/api/cards/${encodeURIComponent(ref)}/handbacks?t=${Date.now()}`),
     stageOutput: ref => json(`/api/cards/${encodeURIComponent(ref)}/output?t=${Date.now()}`),
     writeStageOutput: (ref, text) => json(`/api/cards/${encodeURIComponent(ref)}/output`, { method: 'PUT', body: JSON.stringify({ text }) }),
     splitCard: (ref, titles) => post(`/api/cards/${encodeURIComponent(ref)}/split`, { titles }),
