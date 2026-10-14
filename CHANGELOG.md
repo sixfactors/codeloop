@@ -7,6 +7,7 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- `codeloop orch <card> --builder session:<id-or-label-prefix> | person | agent[:name]` hands the brief to a live session or a person instead of spawning an agent: it goes to `.codeloop/state/orch/outbox/<session>.md` (`codeloop orch inbox` prints what is waiting) with an `orch-brief` activity line, then orch waits for the hand-back (`orch.wait_minutes`, default 120, or `--wait <min>`) and gates and merges as for an agent; `--no-wait` returns `briefed` and `codeloop orch resume <card>` finishes the turn (`orch.run` takes `builder` and `wait`, `orch.resume(id)`, `POST /api/cards/:id/orch/resume`).
 - Signing in to the board survives a hub restart.
 - `layers:` in config.yaml maps a layer tag to path globs, and `codeloop spec check` fails a task tagged `[api]` that names a file in the `ui` layer (or the reverse); `codeloop init` writes the default block.
 - `codeloop verify` fails a story whose diff exceeds the budget for its size (S 8 files / 300 lines, M 20 / 1,200, L 40 / 3,000; `diff_budget:` overrides, `budget: off` disables) and writes a `budget:` line to evidence; `codeloop card diff <id>` shows the numbers.
