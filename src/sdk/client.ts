@@ -16,6 +16,7 @@ import type {
   HandbackInput,
   HandbackRecord,
   OrchOptions,
+  OrchTurn,
   OrchStarted,
   OrchStatusRow,
   OrchView,
@@ -179,6 +180,7 @@ export interface Transport {
   merge(ref: string): Promise<MergeResult>;
   /** Starts one orchestrated turn (a run to `opts.until` when given) in the background and returns at once; read the result with `orchView`. */
   orchRun(ref: string, opts?: OrchOptions): Promise<{ turn: OrchStarted }>;
+  orchResume(ref: string): Promise<{ turn: OrchTurn }>;
   orchStatus(): Promise<OrchStatusRow[]>;
   orchView(ref: string): Promise<OrchView>;
   stageOutput(ref: string): Promise<StageOutput>;
@@ -317,6 +319,8 @@ export class CodeloopClient {
   readonly orch = {
     /** Starts one turn (a run to `until` when given) and returns at once. */
     run: (ref: string, opts?: OrchOptions) => this.transport.orchRun(ref, opts),
+    /** Finishes a briefed turn (session or person builder) once its hand-back exists: gate, merge, advance. */
+    resume: (ref: string) => this.transport.orchResume(ref),
     /** Every story under orchestration: stage, turns, last outcome, builder, idle minutes. */
     status: () => this.transport.orchStatus(),
     /** The story's turn record and the owner's report: what works now, proof, what is left, the next gate. */

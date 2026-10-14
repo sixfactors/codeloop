@@ -202,6 +202,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     worktree: ref => post(`/api/cards/${encodeURIComponent(ref)}/worktree`, {}),
     merge: ref => post(`/api/cards/${encodeURIComponent(ref)}/merge`, {}),
     orchRun: (ref, opts = {}) => post(`/api/cards/${encodeURIComponent(ref)}/orch`, opts),
+    orchResume: ref => post(`/api/cards/${encodeURIComponent(ref)}/orch/resume`, {}),
     orchStatus: () => json(`/api/orch/status?t=${Date.now()}`),
     orchView: ref => json(`/api/cards/${encodeURIComponent(ref)}/orch?t=${Date.now()}`),
     gates: ref => json(`/api/cards/${encodeURIComponent(ref)}/gates?t=${Date.now()}`),

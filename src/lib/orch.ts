@@ -8,14 +8,16 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, loadAgents, resolveAgent, runAgent, type AgentConfig } from './agent.js';
+import { activeSessions, currentSession, type SessionCard } from './active-card.js';
 import { appendActivity } from './activity.js';
 import { DONE, findCard, readCards, RefusalError, safeName, writeCards, type Card } from './cards.js';
 import { clock } from './clock.js';
 import { currentStage, advanceCard, recordEvent, type Outcome } from './engine.js';
 import { listGates, runGate } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
+import { loadConfig } from './config.js';
 import { loadLane } from './lane.js';
-import { builderIdle } from './stall.js';
+import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
 
 export const ORCH_DIR = '.codeloop/state/orch';
@@ -36,7 +38,9 @@ export interface OrchTurn {
   merge?: { sha: string; mode: 'ff' | 'merge' };
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
-  outcome: 'merged' | 'failed' | 'stuck';
+  /** `briefed`: a session or person was handed the brief and has not handed back yet. */
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed';
+  builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   log?: string;
 }
@@ -50,6 +54,41 @@ export interface OrchOptions {
   agent?: string;
   /** A gate name or a stage id to stop at; any gate stops the loop anyway. */
   until?: string;
+  /** `agent[:name]` (default), `session:<id-or-label-prefix>` or `person`. */
+  builder?: string;
+  /** Minutes to wait for a session or person's hand-back; `false` returns at once with outcome `briefed`. Default `orch.wait_minutes` (120). */
+  wait?: number | false;
+}
+
+export const ORCH_OUTBOX_DIR = `${ORCH_DIR}/outbox`;
+export const DEFAULT_WAIT_MINUTES = 120;
+const POLL_MS = 15_000;
+const outboxMark = (card: string, n: number) => `<!-- orch-brief ${card} turn ${n} -->`;
+
+export type BuilderSpec = { kind: 'agent'; name?: string } | { kind: 'session'; ref: string } | { kind: 'person' };
+
+export function parseBuilder(text?: string, agent?: string): BuilderSpec {
+  const t = (text ?? '').trim();
+  if (!t || t === 'agent') return { kind: 'agent', name: agent };
+  if (t.startsWith('agent:')) return { kind: 'agent', name: t.slice(6) || agent };
+  if (t === 'person') return { kind: 'person' };
+  if (t.startsWith('session:') && t.length > 8) return { kind: 'session', ref: t.slice(8) };
+  throw new RefusalError(`unknown builder "${t}": use agent[:name], session:<id-or-label-prefix> or person`);
+}
+
+function findSession(projectDir: string, ref: string): SessionCard {
+  const all = activeSessions(projectDir);
+  const hit = all.find(s => s.session === ref) ?? all.find(s => s.session.startsWith(ref) || (s.label ?? '').startsWith(ref));
+  if (!hit) throw new RefusalError(`no live session matches "${ref}" under ${ACTIVE_SESSIONS_DIR_HINT}`);
+  return hit;
+}
+const ACTIVE_SESSIONS_DIR_HINT = '.codeloop/state/active';
+
+export function waitMinutes(projectDir: string, opt?: number): number {
+  if (typeof opt === 'number' && opt >= 0) return opt;
+  const orch = (loadConfig(projectDir) as { orch?: unknown }).orch;
+  const v = orch && typeof orch === 'object' ? (orch as { wait_minutes?: unknown }).wait_minutes : undefined;
+  return typeof v === 'number' && v >= 0 ? v : DEFAULT_WAIT_MINUTES;
 }
 
 export interface OrchRunResult {
@@ -134,47 +173,16 @@ function countFailure(projectDir: string, id: string, note: string): 'failed' | 
   return stuck ? 'stuck' : 'failed';
 }
 
-/** One turn: the story's current stage through the builder, the gate, and the merge. */
-export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
-  const first = findCard(readCards(projectDir).cards, cardRef);
-  if (first.stage === DONE) throw new RefusalError(`card ${first.id} is done`);
-  if (first.gate) throw new RefusalError(`card ${first.id} is waiting at gate "${first.gate}" (${first.awaiting} approves)`);
-  const lane = loadLane(projectDir, first.lane);
-  const agent = resolveAgent(projectDir, opts.agent, lane.agent);
-  const now = clock();
-  const limit = agentStartsToday(projectDir, agent, now);
-  if (limit >= agent.maxRunsPerDay) throw new RefusalError(`agent ${agent.name} has started ${limit} times in the last 24 hours (max_runs_per_day is ${agent.maxRunsPerDay})`);
+const outboxFile = (projectDir: string, to: string) => join(projectDir, ORCH_OUTBOX_DIR, `${safeName(to, 'session id')}.md`);
 
-  // 1. worktree
-  const wt = ensureStoryWorktree(projectDir, first.id);
-  const record = readOrch(projectDir, first.id);
-  const card = findCard(readCards(projectDir).cards, first.id);
-  const n = record.turns.length + 1;
-  const turn: OrchTurn = { n, stage: card.stage, startedAt: new Date().toISOString(), agent: agent.name, worktree: wt.path, branch: wt.branch, outcome: 'failed', findings: [] };
-  const lastFailed = record.turns.at(-1);
-  const carried = lastFailed && lastFailed.outcome !== 'merged' && lastFailed.stage === card.stage ? lastFailed.findings : [];
-
-  // 2. brief
-  const brief = join(projectDir, briefPath(card));
-  mkdirSync(dirname(brief), { recursive: true });
-  writeFileSync(brief, orchBrief(projectDir, card, wt.path, wt.branch, carried));
-
-  // 3. builder
-  let log = '';
-  recordEvent(projectDir, card.id, (_cards, current) => {
-    const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
-    log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
-    return { action: 'agent-start', agent: agent.name, log };
-  });
-  turn.log = log;
-  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } });
-  recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent.timeoutMinutes} minutes` } : {}) }));
-
-  // 4. hand-back: the newest one for this card recorded after the turn started
+/** Steps 4 to 7: take the hand-back recorded since the turn began, gate it, merge it, record the turn. */
+function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandback: string): OrchTurn {
+  const card = findCard(readCards(projectDir).cards, record.card);
   const started = Date.parse(turn.startedAt);
+  // 4. hand-back: the newest one for this card recorded after the turn started
   const hb: HandbackRecord | undefined = listHandbacks(projectDir, card.id).find(h => Date.parse(h.at) >= started && h.stage === card.stage);
   if (!hb) {
-    turn.findings.push(ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`);
+    turn.findings.push(noHandback);
   } else {
     turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at };
     // 5. gate
@@ -202,10 +210,125 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
   if (!turn.findings.length) turn.outcome = 'merged';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
   turn.endedAt = new Date().toISOString();
-  record.turns.push(turn);
+  upsertTurn(record, turn);
   saveOrch(projectDir, record);
-  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
+  // 7. report
+  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
   return turn;
+}
+
+function upsertTurn(record: OrchRecord, turn: OrchTurn): void {
+  const i = record.turns.findIndex(t => t.n === turn.n);
+  if (i >= 0) record.turns[i] = turn;
+  else record.turns.push(turn);
+}
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+/** Polls for a hand-back recorded after the turn began; one `doctor` nudge when the card's stream goes quiet for `monitor.stall_minutes`. */
+async function awaitHandback(projectDir: string, cardId: string, turn: OrchTurn, minutes: number): Promise<boolean> {
+  const started = Date.parse(turn.startedAt);
+  const deadline = Date.now() + minutes * 60_000;
+  for (;;) {
+    if (listHandbacks(projectDir, cardId).some(h => Date.parse(h.at) >= started && h.stage === turn.stage)) return true;
+    const idle = builderIdle(projectDir, cardId);
+    if (idle.stalled && !idle.nudged) appendActivity(projectDir, cardId, { kind: 'doctor', text: `${NUDGE_PREFIX} ${idle.idleMinutes} min on ${turn.stage}: hand back with the line in the brief` });
+    const left = deadline - Date.now();
+    if (left <= 0) return false;
+    await sleep(Math.min(POLL_MS, left));
+  }
+}
+
+/** One turn: the story's current stage through the builder, the gate, and the merge. */
+export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
+  const first = findCard(readCards(projectDir).cards, cardRef);
+  if (first.stage === DONE) throw new RefusalError(`card ${first.id} is done`);
+  if (first.gate) throw new RefusalError(`card ${first.id} is waiting at gate "${first.gate}" (${first.awaiting} approves)`);
+  const lane = loadLane(projectDir, first.lane);
+  const spec = parseBuilder(opts.builder, opts.agent);
+  const now = clock();
+  let agent: AgentConfig | undefined;
+  let session: SessionCard | undefined;
+  if (spec.kind === 'agent') {
+    agent = resolveAgent(projectDir, spec.name, lane.agent);
+    const limit = agentStartsToday(projectDir, agent, now);
+    if (limit >= agent.maxRunsPerDay) throw new RefusalError(`agent ${agent.name} has started ${limit} times in the last 24 hours (max_runs_per_day is ${agent.maxRunsPerDay})`);
+  } else if (spec.kind === 'session') session = findSession(projectDir, spec.ref);
+  const builderName = agent?.name ?? (session ? (session.label ?? session.session) : 'person');
+
+  // 1. worktree
+  const wt = ensureStoryWorktree(projectDir, first.id);
+  const record = readOrch(projectDir, first.id);
+  const card = findCard(readCards(projectDir).cards, first.id);
+  const n = record.turns.length + 1;
+  const turn: OrchTurn = { n, stage: card.stage, startedAt: new Date().toISOString(), agent: builderName, builderKind: spec.kind, worktree: wt.path, branch: wt.branch, outcome: 'failed', findings: [] };
+  const lastFailed = record.turns.at(-1);
+  const carried = lastFailed && lastFailed.outcome !== 'merged' && lastFailed.outcome !== 'briefed' && lastFailed.stage === card.stage ? lastFailed.findings : [];
+
+  // A briefed turn nobody answered is closed by the next one, without costing a retry.
+  for (const t of record.turns) if (t.outcome === 'briefed' && !t.endedAt) Object.assign(t, { outcome: 'failed', endedAt: turn.startedAt, findings: [`superseded by turn ${n}`] });
+  // 2. brief
+  const brief = join(projectDir, briefPath(card));
+  mkdirSync(dirname(brief), { recursive: true });
+  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried);
+  writeFileSync(brief, briefText);
+
+  // 3. builder
+  if (!agent) {
+    const to = session ? session.session : 'person';
+    const outbox = outboxFile(projectDir, to);
+    mkdirSync(dirname(outbox), { recursive: true });
+    writeFileSync(outbox, `${outboxMark(card.id, n)}\n${briefText.trimEnd()}\n\n`, { flag: 'a' });
+    turn.outcome = 'briefed';
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, card.id, { kind: 'orch-brief', to: session ? (session.label ?? session.session) : 'person', stage: card.stage, n, text: `brief at ${briefPath(card)}` });
+    console.log(`  brief for ${card.id} (${builderName}): ${brief}`);
+    console.log(`  outbox: ${outbox}`);
+    console.log(`  hand-back line: codeloop card handback ${card.id} --branch ${wt.branch} --head "$(git rev-parse HEAD)" --proof "<proof command>" --left "<what is left>" --blocked "<what blocked you, or empty>" --worktree "${wt.path}"`);
+    if (opts.wait === false) return turn;
+    const got = await awaitHandback(projectDir, card.id, turn, waitMinutes(projectDir, opts.wait));
+    return settle(projectDir, record, turn, got ? 'no hand-back' : 'no hand-back within the wait');
+  }
+
+  let log = '';
+  recordEvent(projectDir, card.id, (_cards, current) => {
+    const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
+    log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
+    return { action: 'agent-start', agent: agent!.name, log };
+  });
+  turn.log = log;
+  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } });
+  recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent!.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent!.timeoutMinutes} minutes` } : {}) }));
+  return settle(projectDir, record, turn, ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`);
+}
+
+/** Picks up a briefed turn once its hand-back exists: gate, merge, advance. */
+export function orchResume(projectDir: string, cardRef: string): OrchTurn {
+  const card = findCard(readCards(projectDir).cards, cardRef);
+  const record = readOrch(projectDir, card.id);
+  const turn = [...record.turns].reverse().find(t => t.outcome === 'briefed' && !t.endedAt);
+  if (!turn) throw new RefusalError(`card ${card.id} has no briefed turn to resume`);
+  if (card.gate) throw new RefusalError(`card ${card.id} is waiting at gate "${card.gate}" (${card.awaiting} approves)`);
+  const started = Date.parse(turn.startedAt);
+  if (!listHandbacks(projectDir, card.id).some(h => Date.parse(h.at) >= started && h.stage === turn.stage)) throw new RefusalError(`no hand-back for ${card.id} ${turn.stage} since the brief; the builder has not handed back yet`);
+  return settle(projectDir, record, turn, 'no hand-back');
+}
+
+/** Briefs waiting for this session, and for the person, that no hand-back has answered yet. */
+export function orchInbox(projectDir: string, session: string | undefined = currentSession()): { to: string; card: string; n: number; text: string }[] {
+  const out: { to: string; card: string; n: number; text: string }[] = [];
+  for (const to of [...(session ? [session] : []), 'person']) {
+    const path = outboxFile(projectDir, to);
+    if (!existsSync(path)) continue;
+    for (const part of readFileSync(path, 'utf-8').split(/^(?=<!-- orch-brief )/m)) {
+      const m = /^<!-- orch-brief (\S+) turn (\d+) -->\n/.exec(part);
+      if (!m) continue;
+      const open = readOrch(projectDir, m[1]).turns.some(t => t.n === Number(m[2]) && t.outcome === 'briefed' && !t.endedAt);
+      if (open) out.push({ to, card: m[1], n: Number(m[2]), text: part.slice(m[0].length).trim() });
+    }
+  }
+  return out;
 }
 
 /** Turns until the story parks at a gate, is stuck or done, reaches `until`, or the agent runs out of starts for the day. */
@@ -226,6 +349,7 @@ export async function orchRun(projectDir: string, cardRef: string, opts: OrchOpt
       throw e;
     }
     turns.push(turn);
+    if (turn.outcome === 'briefed') return { card: id, turns, stopped: 'briefed' };
   }
   return { card: id, turns, stopped: 'turn cap' };
 }
