@@ -12,7 +12,7 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const LAYERS = ['api', 'sdk', 'ui', 'test', 'docs'] as const;
 const MAX_ACCEPTANCE = 5;
 
-const TASK = /^- \[( |x)\] (T\d{3})( \[P\])?( \[(US\d+)\])? \[(api|sdk|ui|test|docs)\] (.+)$/;
+const TASK = /^- \[( |x)\] (T\d{3})( \[P\])?( \[(US\d+)\])? \[(api|sdk|ui|test|docs|data)\] (.+)$/;
 const ACCEPTANCE = /^- (US\d+)[ :.]/;
 
 export interface Task {

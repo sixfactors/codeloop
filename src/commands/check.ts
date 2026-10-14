@@ -11,6 +11,7 @@ import { checkBreakdown, checkBrief } from '../lib/shape.js';
 import { blockingGotchas } from '../lib/wiki.js';
 import { checkScope } from '../lib/scope-creep.js';
 import { checkArchitecture } from '../lib/architecture-check.js';
+import { checkDataModel } from '../lib/data-model.js';
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
 export function fileProblem(path: string, has: string[]): string | null {
@@ -137,6 +138,15 @@ checkCommand
     }
     console.log('architecture check passed');
   });
+
+checkCommand
+  .command('data-model <card>')
+  .description("Exit 1 unless a story that changes data has a data-model.md whose stores the architecture data-model page names")
+  .action((card: string) => failing(() => {
+    const { problems, message } = checkDataModel(process.cwd(), card);
+    if (!problems.length && message) console.log(message);
+    return problems;
+  })());
 
 checkCommand
   .command('questions <card>')
