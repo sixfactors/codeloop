@@ -17,6 +17,7 @@ import { currentStage, advanceCard, recordEvent, type Outcome } from './engine.j
 import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
+import { openQuestions } from './interview.js';
 import { loadLane } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
@@ -44,7 +45,7 @@ export interface OrchTurn {
   advance?: Outcome;
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
   /** `merge-failed`: the gate passed but the merge did not; the work was right, so it costs no retry. */
-  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed';
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -207,6 +208,17 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
   }
   let mergeFailed = false;
+  // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
+  const open = openQuestions(projectDir, card);
+  if (open.length) {
+    turn.note = `waiting for answers: ${open.map(q => `Q${q.n}`).join(', ')} on ${card.id}`;
+    turn.outcome = 'questions';
+    turn.endedAt = new Date().toISOString();
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: 'questions', text: turn.note });
+    return turn;
+  }
   if (!hb) {
     turn.findings.push(noHandback);
   } else {
@@ -329,6 +341,8 @@ async function awaitHandback(projectDir: string, cardId: string, turn: OrchTurn,
 export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
   const first = findCard(readCards(projectDir).cards, cardRef);
   if (first.stage === DONE) throw new RefusalError(`card ${first.id} is done`);
+  const asked = openQuestions(projectDir, first);
+  if (asked.length) throw new RefusalError(`${first.id} is waiting for answers: ${asked.map(q => `Q${q.n}`).join(', ')}; answer them and run again`);
   if (first.gate) throw new RefusalError(`card ${first.id} is waiting at gate "${first.gate}" (${first.awaiting} approves)`);
   const lane = loadLane(projectDir, first.lane);
   const spec = parseBuilder(opts.builder, opts.agent);
@@ -349,7 +363,7 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
   const n = record.turns.length + 1;
   const turn: OrchTurn = { n, stage: card.stage, startedAt: new Date().toISOString(), agent: builderName, builderKind: spec.kind, worktree: wt.path, branch: wt.branch, outcome: 'failed', findings: [] };
   const lastFailed = record.turns.at(-1);
-  const carried = lastFailed && lastFailed.outcome !== 'merged' && lastFailed.outcome !== 'briefed' && lastFailed.stage === card.stage ? lastFailed.findings : [];
+  const carried = lastFailed && lastFailed.outcome !== 'merged' && lastFailed.outcome !== 'briefed' && lastFailed.outcome !== 'questions' && lastFailed.stage === card.stage ? lastFailed.findings : [];
 
   // A briefed turn nobody answered is closed by the next one, without costing a retry.
   for (const t of record.turns) if (t.outcome === 'briefed' && !t.endedAt) Object.assign(t, { outcome: 'failed', endedAt: turn.startedAt, findings: [`superseded by turn ${n}`] });
@@ -431,11 +445,13 @@ export async function orchRun(projectDir: string, cardRef: string, opts: OrchOpt
     try {
       turn = await orchTurn(projectDir, id, opts);
     } catch (e) {
+      if (e instanceof RefusalError && /waiting for answers/.test(e.message)) return { card: id, turns, stopped: 'waiting for answers' };
       if (e instanceof RefusalError && /max_runs_per_day/.test(e.message)) return { card: id, turns, stopped: e.message };
       throw e;
     }
     turns.push(turn);
     if (turn.outcome === 'briefed') return { card: id, turns, stopped: 'briefed' };
+    if (turn.outcome === 'questions') return { card: id, turns, stopped: 'waiting for answers' };
     if (turn.outcome === 'merge-failed') return { card: id, turns, stopped: `merge failed: ${turn.findings.at(-1)}` };
   }
   return { card: id, turns, stopped: 'turn cap' };
