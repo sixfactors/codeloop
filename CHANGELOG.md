@@ -28,6 +28,9 @@ when package.json names a version this file has no heading for.
 - `codeloop run --due` runs a doctor tick: a failing story gets its agent started again (under
   three fails), and a story stuck or stale for a day gets one "Park it?" question in the inbox.
   Each action is a line on the story's activity. `monitor: off` in config.yaml turns it off.
+- The monitor keeps itself running: when a project has agents configured and nothing scheduled,
+  the first session installs an hourly `codeloop run --agent` in your crontab and says so.
+  `codeloop schedule remove` or `monitor: off` stops it.
 
 ### Board and Home
 - Home shows what needs you, what is moving, which agents are working and what shipped this week;

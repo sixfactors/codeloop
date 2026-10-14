@@ -8,6 +8,9 @@ import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveC
 import { appendActivity } from '../lib/activity.js';
 import { DONE, DROPPED, findCard, findCardOrNone, inLane, readCards, type Card } from '../lib/cards.js';
 import { listCards, monitorLines, monitorReport } from '../lib/services.js';
+import { ensureMonitorSchedule } from '../lib/schedule.js';
+import { monitorEnabled } from '../lib/run.js';
+import { loadAgents } from '../lib/agent.js';
 import { resolveRole } from '../lib/engine.js';
 import { openQuestions } from '../lib/interview.js';
 import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
@@ -163,6 +166,9 @@ guardCommand
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
     // The monitor first: what waits on a person, what is failing and its fix, what is stale.
     for (const line of monitorLines(monitorReport(projectDir))) console.log(line);
+    // And make sure something keeps acting on it between sessions.
+    const scheduled = ensureMonitorSchedule(projectDir, { hasAgents: Object.keys(loadAgents(projectDir).agents).length > 0, monitorOn: monitorEnabled(projectDir) });
+    if (scheduled) console.log(scheduled);
     let activeId = getActiveCard(projectDir, session);
     const pointed = activeId ? findCardOrNone(readCards(projectDir).cards, activeId) : undefined;
     // A finished story is never the one a session works: clear the pointer instead of naming it.
