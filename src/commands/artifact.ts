@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { ARTIFACT_KINDS, newArtifact, writeArtifactsIndex, type ArtifactKind } from '../lib/artifact.js';
 import { newMock } from '../lib/mock.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 const isKind = (k: string): k is ArtifactKind => (ARTIFACT_KINDS as readonly string[]).includes(k);
 
@@ -22,12 +23,12 @@ artifactCommand
     guard((card: string, opts: { kind: string; topic: string; from: string }) => {
       if (!isKind(opts.kind)) throw new Error(`--kind must be one of: ${ARTIFACT_KINDS.join(', ')}`);
       if (opts.kind === 'mock') {
-        const { path, created, from } = newMock(process.cwd(), card, opts.topic, opts.from);
+        const { path, created, from } = newMock(projectRoot(), card, opts.topic, opts.from);
         console.log(created ? `  created ${path}${from ? ` from ${from}` : ''}` : `  ${path} already exists; left as it is`);
         console.log(`Next: draw one <section data-screen="..."> per screen, then \`codeloop check artifact ${card} --kind mock\`.`);
         return;
       }
-      const { path, created, from } = newArtifact(process.cwd(), card, opts.topic, opts.kind, opts.from);
+      const { path, created, from } = newArtifact(projectRoot(), card, opts.topic, opts.kind, opts.from);
       console.log(created ? `  created ${path}${from ? ` from ${from}` : ''}` : `  ${path} already exists; left as it is`);
       console.log(`Next: fill in the frontmatter list and the sections it names, then \`codeloop check artifact ${card} --kind ${opts.kind}\`.`);
     }),
@@ -40,7 +41,7 @@ artifactsCommand
   .description('Write docs/artifacts/index.html: kind, then project, then topic, then cards, newest first')
   .action(
     guard(() => {
-      const { path, artifacts } = writeArtifactsIndex(process.cwd());
+      const { path, artifacts } = writeArtifactsIndex(projectRoot());
       console.log(`  ${path}: ${artifacts} ${artifacts === 1 ? 'artifact' : 'artifacts'}.`);
     }),
   );

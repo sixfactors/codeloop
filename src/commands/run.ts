@@ -4,6 +4,7 @@ import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
 import { doctorTick, planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 interface RunOptions {
   due?: boolean;
@@ -26,7 +27,7 @@ export const runCommand = new Command('run')
   .option('--now <iso>', 'Treat this as the current time')
   .option('--json', 'JSON output')
   .action(guard(async (opts: RunOptions) => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const now = opts.now ? new Date(opts.now) : clock();
     if (Number.isNaN(now.getTime())) throw new RefusalError(`--now "${opts.now}" is not a date`);
     const requested = opts.agent ?? loadAgents(projectDir).runByDefault;

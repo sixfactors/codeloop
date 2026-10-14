@@ -4,6 +4,7 @@ import { resolveRole } from '../lib/engine.js';
 import { lintLane, loadLane, loadLanes, loadSkillsIndex, refreshLane } from '../lib/lane.js';
 import { evalProposal, promote, propose, PROPOSALS_DIR, rollback } from '../lib/proposals.js';
 import { guard } from './guard.js';
+import { projectRoot } from '../sdk/local.js';
 
 export const laneCommand = new Command('lane').description('Inspect, check and change lanes');
 
@@ -11,7 +12,7 @@ laneCommand
   .command('list')
   .description('List lanes')
   .action(guard(() => {
-    const lanes = loadLanes(process.cwd());
+    const lanes = loadLanes(projectRoot());
     if (lanes.length === 0) console.log('  no lanes in .codeloop/lanes');
     for (const lane of lanes) {
       const trigger = lane.trigger?.cron ? `cron ${lane.trigger.cron}` : lane.trigger?.on ? `on ${lane.trigger.on}${lane.trigger.lane ? ` (${lane.trigger.lane})` : ''}` : 'manual';
@@ -24,7 +25,7 @@ laneCommand
   .description('Show one lane')
   .option('--json', 'JSON output')
   .action(guard((id: string, opts: { json?: boolean }) => {
-    const lane = loadLane(process.cwd(), id);
+    const lane = loadLane(projectRoot(), id);
     if (opts.json) {
       console.log(JSON.stringify(lane, null, 2));
       return;
@@ -46,7 +47,7 @@ laneCommand
   .command('lint')
   .description('Check every lane; exits 2 on any error')
   .action(guard(() => {
-    const projectDir = process.cwd();
+    const projectDir = projectRoot();
     const lanes = loadLanes(projectDir);
     const skills = loadSkillsIndex(projectDir);
     const errors = lanes.flatMap(lane => lintLane(lane, skills));
@@ -65,7 +66,7 @@ laneCommand
   .command('refresh <id>')
   .description('Replace an installed lane with the shipped template; refuses when a card would be stranded')
   .action(guard((id: string) => {
-    const r = refreshLane(process.cwd(), id);
+    const r = refreshLane(projectRoot(), id);
     console.log(`  lane ${r.id} refreshed from v${r.from} to v${r.to}`);
     if (r.addedStages.length) console.log(chalk.dim(`  added stages: ${r.addedStages.join(', ')}`));
     if (r.keptWip !== undefined) {
@@ -77,7 +78,7 @@ laneCommand
   .command('propose')
   .description('Write lane-change proposals from repeated rejections and stuck stages')
   .action(guard(() => {
-    const created = propose(process.cwd());
+    const created = propose(projectRoot());
     if (created.length === 0) console.log('  no proposals: no stage has 3 rejections or 2 stucks on the current lane version');
     created.forEach(id => console.log(`  proposed ${PROPOSALS_DIR}/${id}`));
   }));
@@ -86,7 +87,7 @@ laneCommand
   .command('eval <proposal>')
   .description('Lint, fixture-test and replay a proposal; writes eval-result.json')
   .action(guard((id: string) => {
-    const result = evalProposal(process.cwd(), id);
+    const result = evalProposal(projectRoot(), id);
     result.lint.forEach(e => console.error(chalk.red(`  lint: ${e}`)));
     result.fixtures.forEach(f => console.log(`  ${f.ok ? chalk.green('ok  ') : chalk.red('FAIL')} ${f.stage} / ${f.fixture}: expected ${f.expect}, got ${f.got}`));
     result.vacuous.forEach(e => console.error(chalk.red(`  check: ${e}`)));
@@ -101,7 +102,7 @@ laneCommand
   .description('Install an evaluated proposal as the live lane')
   .option('--as <role>', 'owner | reviewer | agent')
   .action(guard((id: string, opts: { as?: string }) => {
-    const r = promote(process.cwd(), id, resolveRole(opts.as));
+    const r = promote(projectRoot(), id, resolveRole(opts.as));
     console.log(`  lane ${r.lane} promoted${r.from === null ? '' : ` from v${r.from}`} to v${r.to}`);
     r.weakening.forEach(w => console.log(chalk.yellow(`  accepted weakening: ${w.detail}. Reason: ${w.reason}`)));
   }));
@@ -111,6 +112,6 @@ laneCommand
   .description('Restore the previous version of a lane')
   .option('--as <role>', 'owner | reviewer | agent')
   .action(guard((id: string, opts: { as?: string }) => {
-    const r = rollback(process.cwd(), id, resolveRole(opts.as));
+    const r = rollback(projectRoot(), id, resolveRole(opts.as));
     console.log(`  lane ${r.lane} rolled back from v${r.from} to v${r.to}`);
   }));
