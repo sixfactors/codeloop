@@ -9,7 +9,7 @@ inputs:
   - .codeloop/wiki/ (gotchas for changed files)
 outputs:
   - evidence/{nnn}/review.md
-check: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'"
+check: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id}"
 questions: 1
 ---
 
@@ -60,6 +60,16 @@ comments, or a `verdict: approve` line written before every fix-now finding is a
    changes-requested` instead, the done check only looks for the literal string `verdict: approve`.
 9. Run the done command.
 
+## Scope
+
+`codeloop check scope {id}` lists every file the story's commits changed that its `plan.md`
+`## Files` list does not allow, with line counts. Each one needs a row in review.md's `## Scope`
+table, and the review stage does not finish while one has no verdict:
+
+- `keep`, with a reason of at least ten words saying why the file belongs to this story
+- `revert`, with a reason; do the revert before approving
+- `move to <card-id>`, naming an existing card; the change leaves this story
+
 ## Questions to ask before working
 
 Review rarely needs the owner mid-stage; the one question worth asking is about severity on a
@@ -80,6 +90,11 @@ recommended: Block on WARNING only for billing, auth, and public-webhook paths; 
 | Finding | Verdict | Evidence |
 |---|---|---|
 
+## Scope
+
+| File | Verdict | Reason |
+|---|---|---|
+
 verdict: approve
 ```
 
@@ -95,13 +110,14 @@ See `checklist.md`:
 - [ ] every finding has a verdict (fix now / defer / unnecessary) and evidence
 - [ ] every "fix now" finding is actually fixed, and `codeloop verify {id}` re-run and still green
 - [ ] every "defer" finding exists as a `codeloop card propose` line, not only in this file
+- [ ] every out-of-plan file is listed in `## Scope` with keep / revert / move to <card-id> and why (`codeloop check scope {id}` exits 0)
 - [ ] the file ends with a line starting `verdict:`
 - [ ] `codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'` exits 0 only when every fix-now item is resolved
 
 ## Done
 
 ```
-codeloop check file evidence/{nnn}/review.md --has 'verdict: approve'
+codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id}
 ```
 
 Exit 1 when the file is missing, empty, or doesn't contain the exact string `verdict: approve` -
