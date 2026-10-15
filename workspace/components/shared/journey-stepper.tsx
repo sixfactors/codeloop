@@ -18,6 +18,18 @@ export const formatDuration = (ms?: number) => {
   return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
 };
 
+const hm = (minutes: number) => {
+  const h = Math.floor(minutes / 60);
+  return h ? `${h}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`;
+};
+
+/** "in build 6h 04m, working 1h 12m": the phase's wall time and the part of it someone was working.
+ * The API sends the working and idle minutes, which together are the wall time. */
+export function phaseTimeText(stage: string, active?: number, idle?: number): string | undefined {
+  if (active === undefined || idle === undefined) return undefined;
+  return `in ${stage} ${hm(active + idle)}, working ${hm(active)}`;
+}
+
 export const since = (iso?: string) => (iso ? new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : undefined);
 
 const ICON = { done: Check, current: CircleDot, gate: Lock, skipped: MinusCircle, ahead: Circle } as const;

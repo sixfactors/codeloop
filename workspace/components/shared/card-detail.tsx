@@ -24,6 +24,7 @@ import { Questions } from '@/components/shared/questions';
 import { Markdown } from '@/components/shared/markdown';
 import { JourneyStepper } from '@/components/shared/journey-stepper';
 import { CurrentStepPanel } from '@/components/shared/current-step-panel';
+import { TasksAndCommits } from '@/components/shared/tasks-commits';
 import { OrchestrationSection } from '@/components/shared/orchestration-section';
 import { ActivityFeed } from '@/components/shared/activity-feed';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -181,8 +182,9 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
       {journey ? <JourneyStepper journey={journey} /> : !full.data && !full.error ? <Skeleton className="h-12 w-full rounded-lg" /> : null}
       {/* Above the rail, so on a narrow screen what to do next comes before the story's details.
           Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
-      <CurrentStepPanel key={card.id} card={card} journey={journey} />
+      <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} />
       <OrchestrationSection cardId={card.id} />
+      {full.data ? <TasksAndCommits tasks={full.data.tasks ?? []} commits={full.data.commits ?? []} /> : null}
       <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
         <div className="flex min-w-0 flex-col gap-4">
           <Tabs defaultValue="output" key={`tabs-${card.id}`}>

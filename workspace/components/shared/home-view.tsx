@@ -45,6 +45,8 @@ const ORCH_OUTCOME: Record<string, string> = {
   failed: 'border-transparent bg-destructive/15 text-destructive',
   stuck: 'border-transparent bg-destructive/15 text-destructive',
   briefed: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  questions: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  'merge-failed': 'border-transparent bg-destructive/15 text-destructive',
 };
 
 /** Every story the orchestrator has taken: its stage, how many turns, the last outcome, who built it, how long it has been quiet. */
@@ -181,7 +183,7 @@ export function HomeView() {
             {data.agents.length ? (
               <ItemGroup className="gap-2">
                 {data.agents.map((a) => (
-                  <Item key={a.session} variant="outline" size="sm" className="flex-col items-stretch" render={<Link href={routes.card(a.card)} />} data-testid={`home-agent-tile-${a.card}`}>
+                  <Item key={a.session} variant="outline" size="sm" className="flex-col items-stretch" render={<Link href={routes.card(a.card)} />} data-testid={`home-agent-tile-${a.card}`} data-stalled={a.stalled || undefined}>
                     <ItemContent className="min-w-0">
                       <ItemTitle className="flex w-full min-w-0 items-center gap-2">
                         <Holder agent={a.label} />

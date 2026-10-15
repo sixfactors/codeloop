@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { BoardCard } from '@/components/shared/board-card';
 import { StoryBadge } from '@/components/shared/state-pill';
+import { phaseTimeText } from '@/components/shared/journey-stepper';
 import { Holder } from '@/components/shared/holder';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
@@ -44,6 +45,7 @@ const inPhase = (iso?: string) => {
 
 /** The card face: title, who holds it, its live line, how long it has been in this phase, one badge. */
 function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) => void }) {
+  const time = phaseTimeText(story.stage, story.activeMinutes, story.idleMinutes);
   const who = story.holder === 'agent' ? story.agent : story.holder === 'needs-you' ? 'You' : undefined;
   return (
     <div
@@ -70,7 +72,10 @@ function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) 
       ) : null}
       <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
         <span className="font-mono">{story.id}</span>
-        {story.phaseSince && story.display.state !== 'done' && story.display.state !== 'shipped' ? <span>{inPhase(story.phaseSince)}</span> : null}
+        {story.display.state !== 'done' && story.display.state !== 'shipped'
+          ? time ? <span data-testid="board-card-time">{time}</span>
+          : story.phaseSince ? <span>{inPhase(story.phaseSince)}</span> : null
+          : null}
         <span className="ml-auto"><StoryBadge display={story.display} /></span>
       </span>
     </div>
