@@ -16,8 +16,7 @@ acceptance:
 - US3 Given a PR opened by `card pr` whose body lists the card's acceptance lines as checkboxes, when it merges with every box ticked, then the merge counts as the pr-gate approval and the event records `mergedBy`. (interview Q4)
 
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
-screens:
-
+screens: none
 ## Not building
 
 <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
