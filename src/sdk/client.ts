@@ -1,3 +1,4 @@
+import type { CardEdit } from '../lib/story-control.js';
 import type {
   ActivityEntry,
   ActivityQuery,
@@ -160,6 +161,12 @@ export interface Transport {
   closeCard(ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   parkCard(ref: string, note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   placeCard(ref: string, stage: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
+  /** A done or dropped card back to its lane's first stage, or to `backlog`. */
+  reopenCard(ref: string, opts?: RoleOption & { to?: string; note?: string }): Promise<Card>;
+  /** An active card to any stage of its lane; a note is required when it goes back past a passed gate. */
+  moveCard(ref: string, stage: string, note?: string, opts?: RoleOption): Promise<Card>;
+  /** Title, story line, priority, feature or size; the story line in spec.md follows. */
+  editCard(ref: string, edit: CardEdit, opts?: RoleOption): Promise<Card>;
   brief(ref: string): Promise<string>;
   /** Starts the card's stage: the check, the agent when it fails, one advance. Returns before it ends. */
   runCard(ref: string, opts?: { agent?: string }): Promise<{ runId: string }>;
@@ -295,6 +302,9 @@ export class CodeloopClient {
     close: (ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption) => this.transport.closeCard(ref, outcome, note, opts),
     park: (ref: string, note?: string, opts?: RoleOption) => this.transport.parkCard(ref, note, opts),
     place: (ref: string, stage: string, opts?: RoleOption) => this.transport.placeCard(ref, stage, opts),
+    reopen: (ref: string, opts?: RoleOption & { to?: string; note?: string }) => this.transport.reopenCard(ref, opts),
+    move: (ref: string, stage: string, note?: string, opts?: RoleOption) => this.transport.moveCard(ref, stage, note, opts),
+    edit: (ref: string, fields: CardEdit, opts?: RoleOption) => this.transport.editCard(ref, fields, opts),
     /** What an agent is given to do the card's current stage. */
     brief: (ref: string) => this.transport.brief(ref),
     /** Runs the current stage: the check first, the agent (named or configured) when it fails, then one advance. */

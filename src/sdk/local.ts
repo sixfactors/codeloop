@@ -9,6 +9,7 @@ import { pruneWorktrees } from '../lib/worktree.js';
 import { killOrphans, listProcs } from '../lib/procs.js';
 import { closeIndex, getIndex, type ProjectIndex } from '../lib/index/index.js';
 import * as services from '../lib/services.js';
+import { editCard, moveCard, reopenCard } from '../lib/story-control.js';
 import { openStore, type Store } from '../lib/store/index.js';
 import { CodeloopClient, followCardActivity, type Transport } from './client.js';
 import type { LiveEvent, Role, RoleOption } from './types.js';
@@ -84,6 +85,9 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     closeCard: async (ref, outcome, note, opts) => services.closeCard(projectDir, ref, role(opts), outcome, note),
     parkCard: async (ref, note, opts) => services.parkCard(projectDir, ref, role(opts), note),
     placeCard: async (ref, stage, opts) => services.placeCard(projectDir, ref, stage, role(opts)),
+    reopenCard: async (ref, opts) => reopenCard(projectDir, ref, role(opts), { to: opts?.to, note: opts?.note }),
+    moveCard: async (ref, stage, note, opts) => moveCard(projectDir, ref, stage, role(opts), { note }),
+    editCard: async (ref, edit, opts) => editCard(projectDir, ref, role(opts), edit),
     brief: async ref => services.brief(projectDir, ref),
     runCard: async (ref, opts = {}) => ({ runId: services.runCard(projectDir, ref, opts).runId }),
     getRun: async runId => services.run(projectDir, runId),

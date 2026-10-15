@@ -11,6 +11,7 @@ import { readInboxSeen } from './inbox.js';
 import { CARD_MOCKS_DIR, isMockPath } from './mock.js';
 import { evidenceDir, evidenceOf, mocksArchiveDir } from './paths.js';
 import * as services from './services.js';
+import { editCard, moveCard, reopenCard, type CardEdit } from './story-control.js';
 import { openStore, type Store } from './store/index.js';
 import type { StoryFlags } from './story.js';
 
@@ -240,6 +241,30 @@ export function createApp(
     await refreshCards();
     return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), closed });
   }));
+
+  // Reopen, move and edit by hand, as the owner. A refusal here says the story's current state forbids
+  // the change (a builder holds it, it is not done, the move undoes a gate without a note), so it is a
+  // 409 against that state rather than the 400 other writes answer.
+  const controlling = (what: string, run: (c: Context, id: string) => Promise<ReturnType<typeof reopenCard>>) => writing(async c => {
+    if (!owner) return readOnly(c, what);
+    try {
+      const card = await run(c, c.req.param('id') ?? '');
+      await refreshCards();
+      return c.json({ card });
+    } catch (e) {
+      if (e instanceof RefusalError) return c.json({ error: e.message }, e.message.includes('not found') ? 404 : 409);
+      throw e;
+    }
+  });
+  app.post(api('/cards/:id/reopen'), controlling('reopen a card', async (c, id) => {
+    const body = await json(c, { to: undefined as string | undefined, note: undefined as string | undefined });
+    return reopenCard(projectDir, id, 'owner', { to: body.to, note: body.note });
+  }));
+  app.post(api('/cards/:id/move'), controlling('move a card', async (c, id) => {
+    const body = await json(c, { stage: '', note: undefined as string | undefined });
+    return moveCard(projectDir, id, body.stage, 'owner', { note: body.note });
+  }));
+  app.patch(api('/cards/:id'), controlling('edit a card', async (c, id) => editCard(projectDir, id, 'owner', await json(c, {} as CardEdit))));
 
   // Advancing runs the stage's check the way `codeloop next` does; it changes the board, so it is a token write.
   app.post(api('/cards/:id/advance'), writing(async c => {
