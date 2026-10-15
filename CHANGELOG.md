@@ -35,6 +35,21 @@ when package.json names a version this file has no heading for.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
+### Resilience
+- One budget per run: `orch run`, `run --due`, the doctor tick and a card run stop at 12 turns, 6
+  agent starts, 90 minutes or 3 failures on one stage (`orch.budget`), with the reason recorded.
+- Stops that spend no retry: a crashed check (`check-error`), an agent that cannot run
+  (`builder-unavailable`), questions, a failed merge, a refusal, the repo lock (`locked`) or the budget.
+- An agent that exits within 10 seconds with nothing handed back twice in a row is marked unavailable;
+  no loop starts it again until `codeloop agent clear <name>`.
+- `.codeloop/state/agent-ledger.json` counts each agent's starts per day; `max_runs_per_day` defaults
+  to 10 and `codeloop stats` shows today's starts.
+- One repo lock (`.codeloop/state/run.lock`) for orchestrated turns, `run --due`, post-merge builds and
+  restarts, and `store move`; a second caller waits `orch.lock_wait_minutes` (10) then stops naming
+  the holder, and a dead holder's lock is reclaimed.
+- Agent processes run in their own process group and die with the codeloop process that started them;
+  `codeloop ps` lists them and `codeloop ps --kill-orphans` kills only those whose parent is gone.
+
 ### Shared story store
 - `codeloop render` writes the same CLAUDE.md, AGENTS.md and host rule files in every worktree: the
   active card line is gone from them, and the session-start hook prints the active story instead.
