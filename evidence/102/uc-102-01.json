@@ -2,14 +2,15 @@
   "id": "uc-102-01",
   "accept": "US1",
   "failure_mode": "a split stops halfway and leaves duplicates",
-  "sha": "8a9316b022d4ba2b8d7d342f73b31e2c93321110",
+  "sha": "dfc9aad00b5847d4c45c8448c5bc25183a38abb9",
   "env": "local",
+  "workspace": "export of dfc9aad",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/deangrover/Projects/codeloop\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/flow.test.ts \u001b[2m(\u001b[22m\u001b[2m14 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m11 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 93\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m11 skipped\u001b[39m\u001b[90m (14)\u001b[39m\n\u001b[2m   Start at \u001b[22m 17:16:31\n\u001b[2m   Duration \u001b[22m 2.15s\u001b[2m (transform 179ms, setup 0ms, import 176ms, tests 93ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-YUR6Oz/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/flow.test.ts \u001b[2m(\u001b[22m\u001b[2m18 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m14 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 127\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m4 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m14 skipped\u001b[39m\u001b[90m (18)\u001b[39m\n\u001b[2m   Start at \u001b[22m 14:06:05\n\u001b[2m   Duration \u001b[22m 2.21s\u001b[2m (transform 216ms, setup 0ms, import 207ms, tests 127ms, environment 0ms)\u001b[22m\n\n\nexit 0"
     }
   ]
 }
