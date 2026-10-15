@@ -1,0 +1,15 @@
+## Q1 Scope: does this card skip blocked stories when refilling Up next, or defer that rule until link edit ships (c-128), as c-119 recommended?
+recommended: Skip blocked here. The card note and design both require it: a story with an active blocked_by (blocked flag from c-119, or the link itself if the flag is not live yet) never auto-moves into queued. Until c-128 can clear a link, document the escape as editing the card's links in cards.json or waiting for that CLI; do not invent a second unblock path in this card.
+answer: Skip blocked here. The card note and design both require it: a story with an active blocked_by (blocked flag from c-119, or the link itself if the flag is not live yet) never auto-moves into queued. Until c-128 can clear a link, document the escape as editing the card's links in cards.json or waiting for that CLI; do not invent a second unblock path in this card.
+
+## Q2 Acceptance: what proves limit, auto_refill and refill without a Settings screen or board HTML?
+recommended: Vitest on config and engine: defaults are limit 6 and auto_refill true; under the limit, the top ranked proposed stories move to queued on a board-changing write; blocked stories are left in proposed; with auto_refill false nothing auto-queues; lane wip and promoteQueued still only move queued into the first stage. screens: none. Settings UI stays c-139.
+answer: Vitest on config and engine: defaults are limit 6 and auto_refill true; under the limit, the top ranked proposed stories move to queued on a board-changing write; blocked stories are left in proposed; with auto_refill false nothing auto-queues; lane wip and promoteQueued still only move queued into the first stage. screens: none. Settings UI stays c-139.
+
+## Q3 Risk: when the owner lowers board.up_next.limit below the current Up next count, do we demote the surplus back to proposed, or only stop filling?
+recommended: Only stop filling. Never auto-demote queued stories when the limit shrinks; surplus stays in Up next until it starts or the owner moves it. Auto-demote would yank work agents already treat as ready and is harder to explain than a temporarily over-limit chip.
+answer: Only stop filling. Never auto-demote queued stories when the limit shrinks; surplus stays in Up next until it starts or the owner moves it. Auto-demote would yank work agents already treat as ready and is harder to explain than a temporarily over-limit chip.
+
+## Q4 Boundary: what stays out so this card is config plus refill only?
+recommended: Validated board.up_next.limit / auto_refill, refill proposed→queued by boardView rank (score then updatedAt), and skip blocked. Out of scope: Settings page (c-139), Plan drag ranking (c-137), board HTML (c-136), changing promoteQueued or lane wip, and any CLI to edit links (c-128).
+answer: Validated board.up_next.limit / auto_refill, refill proposed→queued by boardView rank (score then updatedAt), and skip blocked. Out of scope: Settings page (c-139), Plan drag ranking (c-137), board HTML (c-136), changing promoteQueued or lane wip, and any CLI to edit links (c-128).
