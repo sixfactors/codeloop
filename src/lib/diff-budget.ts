@@ -1,4 +1,5 @@
 import { spawnSync } from 'child_process';
+import { commitGraph, reachableFrom } from './commit-graph.js';
 import { loadConfig } from './config.js';
 import type { Size } from './cards.js';
 
@@ -43,10 +44,6 @@ const trailerOf = (cardId: string) => (l: string) => {
   return m?.[1] === cardId;
 };
 
-function trunkRef(projectDir: string): string {
-  const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
-  return git(projectDir, ['rev-parse', '--verify', '--quiet', `refs/heads/${configured}`]).trim() ? configured : 'HEAD';
-}
 
 /** Commits carrying a `Card:` or `Feature:` trailer for the card, newest first, from HEAD only or (`branches`) from every local branch and worktree branch. */
 /**
@@ -61,15 +58,6 @@ export const storyRef = (ref?: string): string | undefined => ref || process.env
 
 type Scanned = { sha: string; subject: string; at: number; decorations: string };
 
-// While a caller holds withCommitIndex, every card's commits come from one `git log --all`, read
-// once: the monitor asks about every card, and a log per card cost 2.7 s on a board of 171.
-let index: { dir: string; byCard: Map<string, Scanned[]> } | undefined;
-
-const cardsOf = (body: string): string[] => body.split('\n').flatMap(l => {
-  const m = /^(?:Card|Feature):\s*(\S+)\s*$/.exec(l);
-  return m ? [m[1]] : [];
-});
-
 function readLog(projectDir: string, ref: string | undefined, all: boolean): { rec: Scanned; body: string }[] {
   const log = git(projectDir, ['log', ...(ref ? [ref] : all ? ['--all'] : []), '--format=%H%x00%s%x00%b%x00%D%x00%ct%x01']);
   const out: { rec: Scanned; body: string }[] = [];
@@ -80,21 +68,17 @@ function readLog(projectDir: string, ref: string | undefined, all: boolean): { r
   return out;
 }
 
-/** Runs `fn` with all cards' story commits read from a single git log. Not reentrant across projects. */
+/** Kept for callers that bracket a batch of reads; the commit graph now caches across requests on its own. */
 export function withCommitIndex<T>(projectDir: string, fn: () => T): T {
-  const byCard = new Map<string, Scanned[]>();
-  for (const { rec, body } of readLog(projectDir, undefined, true)) for (const id of new Set(cardsOf(body))) (byCard.get(id) ?? byCard.set(id, []).get(id)!).push(rec);
-  const saved = index;
-  index = { dir: projectDir, byCard };
-  try {
-    return fn();
-  } finally {
-    index = saved;
-  }
+  commitGraph(projectDir);
+  return fn();
 }
 
 function scan(projectDir: string, cardId: string, all: boolean, ref?: string): Scanned[] {
-  if (index && index.dir === projectDir && all && !ref) return index.byCard.get(cardId) ?? [];
+  if (all && !ref) {
+    const graph = commitGraph(projectDir);
+    if (graph) return (graph.byCard.get(cardId) ?? []).map(c => ({ sha: c.sha, subject: c.subject, at: c.at, decorations: '' }));
+  }
   return readLog(projectDir, ref, all).filter(({ body }) => body.split('\n').some(trailerOf(cardId))).map(x => x.rec);
 }
 
@@ -102,11 +86,16 @@ function scan(projectDir: string, cardId: string, all: boolean, ref?: string): S
 export const storyCommitTimes = (projectDir: string, cardId: string): number[] => scan(projectDir, cardId, true).map(c => c.at);
 
 export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
-  const trunk = trunkRef(projectDir);
-  return scan(projectDir, cardId, true).map(c => {
-    const held = git(projectDir, ['branch', '--contains', c.sha, '--format=%(refname:short)']).split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('('));
-    const merged = spawnSync('git', ['merge-base', '--is-ancestor', c.sha, trunk], { cwd: projectDir }).status === 0;
-    return { sha: c.sha, subject: c.subject, at: c.at, merged, branches: held.filter(b => b !== trunk) };
+  const graph = commitGraph(projectDir);
+  if (!graph) return [];
+  const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
+  const trunk = graph.tips.has(configured) ? configured : 'HEAD';
+  const trunkTip = trunk === 'HEAD' ? graph.head : graph.tips.get(trunk);
+  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, trunkTip);
+  const branches = [...graph.tips].filter(([name]) => name !== trunk).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  return (graph.byCard.get(cardId) ?? []).map(c => {
+    const i = graph.index.get(c.sha)!;
+    return { sha: c.sha, subject: c.subject, at: c.at, merged: onTrunk[i] === 1, branches: branches.filter(([name, tip]) => reachableFrom(graph, `branch:${name}`, tip)[i] === 1).map(([name]) => name) };
   });
 }
 

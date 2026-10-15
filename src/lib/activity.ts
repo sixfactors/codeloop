@@ -120,16 +120,26 @@ const WORK_KINDS = new Set(['edit', 'cmd', 'commit', 'handback', 'log']);
 /** Two work lines further apart than this are two bursts; the gap between them is idle. */
 export const BURST_GAP_MS = 10 * 60 * 1000;
 
-/** Every line of the card's stream, oldest first. */
+const allCache = new Map<string, { stamp: string; lines: ActivityEntry[] }>();
+const ALL_CACHE_MAX = 600;
+
+/**
+ * Every line of the card's stream, oldest first, parsed in one pass and kept until the file's
+ * mtime or size changes. A board page asks for every card's stream (time in phase, progress), and
+ * paging through readActivity re-parsed the rest of the file for each page. The array is shared:
+ * callers read it and do not modify it.
+ */
 export function readAllActivity(projectDir: string, card: string): ActivityEntry[] {
-  const out: ActivityEntry[] = [];
-  let after: string | undefined;
-  for (;;) {
-    const page = readActivity(projectDir, card, { after, limit: MAX_LIMIT });
-    out.push(...page.items);
-    if (!page.next) return out;
-    after = page.next;
-  }
+  const file = activityFile(projectDir, card);
+  const st = statSync(file, { throwIfNoEntry: false });
+  if (!st) return [];
+  const stamp = `${st.mtimeMs}:${st.size}`;
+  const hit = allCache.get(file);
+  if (hit?.stamp === stamp) return hit.lines;
+  const lines = parseLines(readFrom(file, 0).text, 0).entries;
+  if (allCache.size >= ALL_CACHE_MAX) allCache.delete(allCache.keys().next().value!);
+  allCache.set(file, { stamp, lines });
+  return lines;
 }
 
 /** Milliseconds of work between `from` and `to`: the gaps between consecutive work lines in the window that are within ten minutes, summed. */
