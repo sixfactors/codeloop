@@ -67,15 +67,16 @@ Next: run the api skill, then `codeloop next c-002`.
 
 ## What is unreleased
 
-The npm package is 0.4.2. Everything below is on `main` as 0.4.3 and goes out with the next publish; until then it needs a clone or a tarball built from one:
+The npm package is 0.4.3. The trunk is 0.5.0 and goes out with the next publish; until then it needs a clone or a tarball built from one. See `CHANGELOG.md` for the full list.
 
-- the workspace board with New story, the Inbox page, Initiatives and the card drawer
-- story fields on a card (`--persona`, `--can`, `--so`, `--size`), the story check and a strict `spec check`
-- `ask` and `answer`, the questions band in the inbox, and the interview stage in the build lane
-- RICE on features, P1 to P4 bands, `feature`, `epic`, `initiative` and `card split` commands
-- the SDK (`@protoboxai/codeloop/sdk`) the CLI and the board both call
-- thirteen stage skills, `skill eval`, `wiki init --from-repo`, `artifact new` (mock, system design, workflow)
-- `render` writing the agent protocol for Claude Code, Cursor, Copilot and AGENTS.md, and `init --hooks` with edit, commit and push guards
+- one main tree by default: builders work in the checked-out tree under file leases, two at a time, and failed gates are fixed forward (`orch.isolation`, `orch.max_builders`)
+- everything codeloop writes lives under `.codeloop/` (`codeloop store move --layout dotfolder` moves an older project)
+- `codeloop off [--for 2h]` and `codeloop on` pause hooks and the orchestrator in a repo
+- `codeloop orch run <card> [--builder agent|session:<x>|person]` runs a story's stages with one budget per run, stop reasons, an agent ledger, a repo lock and a memory ceiling
+- the story page shows an activity stream, a journey stepper, one state per card and the rubric rows beside Approve; Home shows agent tiles and "stalled N min"
+- questions carry options and `codeloop answer --accept-all` takes every recommendation
+- session start prints your inbox, `codeloop doctor` runs the monitor tick, and `codeloop ps` lists what codeloop started
+- a resident hook process cuts `guard session` from about 3 s to 0.3 s
 
 ## Working on codeloop itself
 

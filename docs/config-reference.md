@@ -18,7 +18,7 @@ scopes:
     pattern_sections: ["Section"] # Pattern sections to load for this scope
 
 # Quality checks run during /commit Phase 1.
-# Organized by scope — only runs checks for active scopes.
+# Organized by scope - only runs checks for active scopes.
 quality_checks:
   <scope-name>:
     - name: "Check Name"         # Display name
@@ -33,13 +33,13 @@ diff_scan:
     severity: CRITICAL           # CRITICAL or WARNING
     message: "Human-readable"    # Message shown in review output
 
-# Testing — used by /test and /qa
+# Testing - used by /test and /qa
 test:
   command: "npm test"            # Test runner command (auto-detected if omitted)
   coverage_threshold: 80         # Min coverage % for /qa gate (optional)
   integrity_checks: true         # Scan for fake-pass patterns in /qa
 
-# Deployment — used by /deploy and /ship
+# Deployment - used by /deploy and /ship
 deploy:
   staging:
     command: "make deploy-stg"   # Command to deploy to staging
@@ -49,7 +49,7 @@ deploy:
     verify: "make smoke-prod"   # Post-deploy verification command
     requires: staging            # Must pass staging before prod
 
-# Debugging — used by /debug
+# Debugging - used by /debug
 debug:
   logs: "fly logs --app myapp"   # Command to tail production logs
   health: "curl -sf url/health" # Health check command
@@ -79,7 +79,7 @@ scopes:
     gotcha_sections: ["Frontend", "React"]
 ```
 
-Then `/commit` only loads gotchas from the "Frontend" and "React" sections — not backend gotchas.
+Then `/commit` only loads gotchas from the "Frontend" and "React" sections - not backend gotchas.
 
 ### Path Matching
 
@@ -170,7 +170,7 @@ All fields are optional. `/debug` reports which commands are missing and guides 
 
 ## Watch
 
-The `watch` section configures `codeloop watch` — a background daemon that monitors the project.
+The `watch` section configures `codeloop watch` - a background daemon that monitors the project.
 
 ```yaml
 watch:
@@ -212,7 +212,7 @@ agents:
   claude:
     cmd: "claude -p --permission-mode acceptEdits < {brief}"
     timeout_minutes: 20
-    max_runs_per_day: 20
+    max_runs_per_day: 10
   codex:
     cmd: "codex exec - < {brief}"
 run:
@@ -224,8 +224,53 @@ run:
 | `agents.default` | the only agent, when one is configured | Agent used by `run --agent` with no name. |
 | `agents.<name>.cmd` | required | Shell command run in the project directory. `{brief}` is replaced with the shell-quoted path of the stage brief. |
 | `agents.<name>.timeout_minutes` | 20 | The agent and its child processes are killed after this. |
-| `agents.<name>.max_runs_per_day` | 20 | Starts of this agent across the project in any 24 hours. |
+| `agents.<name>.max_runs_per_day` | 10 | Starts of this agent across the project in any 24 hours. |
 | `run.agent` | false | `true` makes plain `codeloop run` start agents; `--no-agent` turns it off for one run. |
+
+## Orchestrator
+
+Unreleased (0.5.0). Used by `codeloop orch`.
+
+```yaml
+orch:
+  isolation: tree        # tree | worktree | auto
+  max_builders: 2
+  on_conflict: wait      # wait | worktree
+  wait_minutes: 120
+  lock_wait_minutes: 10
+  budget: { turns: 12, agentStarts: 6, wallMinutes: 90, perStageFails: 3 }
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `orch.isolation` | `tree` | `tree` runs each builder in the checked-out tree under a lease on its plan's files; `worktree` gives each story its own worktree and merges it after the gate; `auto` uses a worktree for an L story only. |
+| `orch.max_builders` | 2 | Builders running at once; one over the cap is `queued` until a slot frees. |
+| `orch.on_conflict` | `wait` | A story whose plan overlaps a held lease waits (`waiting-lease`); `worktree` takes a worktree instead. |
+| `orch.wait_minutes` | 120 | How long `--builder session:<x>` or `person` waits for a hand-back. |
+| `orch.lock_wait_minutes` | 10 | How long a second caller waits for the repo lock before stopping with `locked`. |
+| `orch.budget` | 12 turns, 6 agent starts, 90 minutes, 3 fails on one stage | One budget per `orch run`, `run --due`, doctor tick and card run; the first limit reached stops it with the reason recorded. |
+
+## Store
+
+Unreleased (0.5.0).
+
+| Key | Default | Meaning |
+|---|---|---|
+| `store.layout` | `dotfolder` | `dotfolder` keeps specs, evidence, shape, use cases, mocks and artifacts under `.codeloop/`. `root` is the pre-0.5 layout; a project that still has root folders is read as `root` until `codeloop store move --layout dotfolder`. |
+| `store.home` | `repo` | `user` keeps the board and story files under `~/.codeloop/projects/<id>/`, shared by every worktree. |
+| `store.move` | all | With `store.home: user`, which of cards, state, mocks, specs, shape, evidence and docs-mocks move. |
+
+## Limits, activity and monitor
+
+Unreleased (0.5.0).
+
+| Key | Default | Meaning |
+|---|---|---|
+| `limits.max_memory_mb` | 2048 | New codeloop processes and agents wait while the codeloop processes already hold more than this; `codeloop ps --total` shows the sum. |
+| `activity` | on | `activity: off` stops recording the per-story activity stream. |
+| `monitor.stall_minutes` | 30 | A builder holding a card that writes nothing for this long is flagged stalled. `monitor: off` turns the monitor off. |
+
+There is no `doctor.every` key. The doctor tick runs from the hourly `codeloop run --agent` crontab entry that the monitor installs (`codeloop schedule remove` stops it), or on demand with `codeloop doctor`.
 
 ## Codeloop Settings
 

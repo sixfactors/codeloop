@@ -8,9 +8,9 @@ Every tool converges on four layers: a strategy container, a delivery container,
 
 | Level | codeloop | What it is | Lives in | Estimated | Jira | Linear | Azure DevOps | Aha! |
 |---|---|---|---|---|---|---|---|---|
-| Strategy | **initiative** | A goal plus a hypothesis and the metric that proves it. Open-ended. | `wiki/initiatives/<slug>.md` | no | initiative / theme | initiative | — | goal / initiative |
+| Strategy | **initiative** | A goal plus a hypothesis and the metric that proves it. Open-ended. | `wiki/initiatives/<slug>.md` | no | initiative / theme | initiative | - | goal / initiative |
 | Delivery | **epic** | An outcome that takes several features and usually more than one release. Has a target and an end. Optional: a feature may hang on an initiative directly. | `wiki/epics/<slug>.md` | no, rolls up | epic | project | epic | epic |
-| Value | **feature** | A capability the user gets, titled by what they can now do. Ships in one release. One to many stories. | `wiki/features/<slug>.md` | rolls up from stories | — (no level) | milestone | feature | feature |
+| Value | **feature** | A capability the user gets, titled by what they can now do. Ships in one release. One to many stories. | `wiki/features/<slug>.md` | rolls up from stories | - (no level) | milestone | feature | feature |
 | Unit of work | **story** (a card) | One slice a user could use, in under a week, through one lane run. | the board, `specs/NNN/` | yes: size S/M/L, points optional | story | issue | user story | requirement |
 | Step | **task** | One line in `tasks.md`, layer-tagged, traceable to an acceptance line. | `specs/NNN/tasks.md` | no | sub-task | sub-issue | task | to-do |
 
@@ -30,8 +30,8 @@ Every tool that ranks puts the score on the unit of value, not on the unit of wo
 |---|---|---|
 | feature | `rice: { reach, impact, confidence, effort }` in its frontmatter; reach, impact and confidence on 1–10, effort in weeks. `score = reach × impact × confidence ÷ effort`, one decimal. No rice, no score. | P1–P4 by quartile over the features that have a score: the top quarter is P1, the bottom P4, equal scores share a band. A feature without rice is P4. |
 | story (card) | Inherited from its feature. A card may carry `effort:` (weeks) to replace the feature's effort in its own score; the band stays the feature's. A card with no feature, or naming one with no page, has no score and is P4. | inherited |
-| epic | The sum of its features' scores, whichever initiative they serve. In an initiative's tree an epic shows only the features naming that initiative, and its score there is the sum of those. | — |
-| initiative | The sum of the scores of the features naming it. | — |
+| epic | The sum of its features' scores, whichever initiative they serve. In an initiative's tree an epic shows only the features naming that initiative, and its score there is the sum of those. | - |
+| initiative | The sum of the scores of the features naming it. | - |
 
 Rules that follow:
 
@@ -88,16 +88,29 @@ An entry gate on the first stage of a lane has nothing before it, so the card st
 | **run** | One card's stage run started from the board or the SDK (`cards.run`): the check, the configured agent when it fails, one advance. Its record and log are `.codeloop/state/agent-runs/<runId>.{json,log}`. |
 | **auto_start** | `lanes: { auto_start: true }` in config.yaml lets a lane's `on_done: { start }` make the follow-on card. Off, a finished card only announces what it would start; a lane's own `trigger: { on: lane.done }` is not affected. |
 
+## Orchestration words
+
+Unreleased (0.5.0).
+
+| Term | Means |
+|---|---|
+| **holder** | Who has a story now: an agent, a person (Needs you), or nobody (Queued). Each board row is one holder. |
+| **phase** | A stage of the lane as the board shows it: Up next, each stage, Live this week. |
+| **state** | The one health a story shows: Working, Needs you, Failing, Stuck, Stale or Moving. |
+| **lease** | A claim on the files in a plan's `## Files` list while a builder runs, so two builders never edit the same file. |
+| **turn** | One orchestrated run of a stage: brief, builder, hand-back, gate, record. |
+| **outcome** | How a turn ended: `merged`, `failed`, `stuck`, `questions`, `merge-failed`, `refused`, `check-error`, `builder-unavailable`, `locked`, `waiting-lease`, `queued` or `briefed`. |
+
 ## Status words
 
 Two orthogonal things, kept apart as every tool does:
 
 | Work status (the lane) | Deployment state (environments) |
 |---|---|
-| **backlog**: proposed, not promoted | — |
-| **active**: in a stage, an agent may be on it | — |
-| **waiting**: parked at a gate for a person | — |
-| **stuck**: three failed checks | — |
+| **backlog**: proposed, not promoted | - |
+| **active**: in a stage, an agent may be on it | - |
+| **waiting**: parked at a gate for a person | - |
+| **stuck**: three failed checks | - |
 | **done**: accepted at the last gate | **staged**: reachable from the staging ref |
 | **dropped** | **live**: reachable from the prod ref |
 

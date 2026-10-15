@@ -6,6 +6,7 @@ import { TypicalDay } from '@/components/sections/typical-day';
 import { CompareLine } from '@/components/sections/compare-line';
 import { SolutionOverview } from '@/components/sections/solution-overview';
 import { FeaturesGrid } from '@/components/sections/features-grid';
+import { WhatsNew } from '@/components/sections/whats-new';
 import { WhoFor } from '@/components/sections/who-for';
 import { ProofStrip } from '@/components/sections/proof-strip';
 import { FaqSection } from '@/components/sections/faq-section';
@@ -25,6 +26,7 @@ export default function Home() {
         <TypicalDay />
         <TerminalProof />
         <FeaturesGrid />
+        <WhatsNew />
         <CompareLine />
         <WhoFor />
         <ProofStrip />

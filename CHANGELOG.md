@@ -73,6 +73,12 @@ when package.json names a version this file has no heading for.
 - Agent processes run in their own process group and die with the codeloop process that started them;
   `codeloop ps` lists them and `codeloop ps --kill-orphans` kills only those whose parent is gone.
 
+### Speed and memory
+- A resident hook process (`codeloop hookd`, started by the hook script, gone after 10 idle minutes) answers `guard edit`, `bash`, `prompt` and `session` for every session, taking `guard session` from about 3 s to 0.3 s; the CLI loads a command's code only when it runs.
+- `limits.max_memory_mb` (default 2048) holds new codeloop processes and agent starts while codeloop already uses more, and `codeloop ps --total` shows the sum; tests run in a sandbox that cannot touch the real board.
+- `codeloop hub --restart` waits for the old listener to close before starting a new one, and the schedule restarts turns that were waiting.
+- The board and Home read git and activity once per request, and the commit graph is cached by HEAD.
+
 ### Shared story store
 - `codeloop render` writes the same CLAUDE.md, AGENTS.md and host rule files in every worktree: the
   active card line is gone from them, and the session-start hook prints the active story instead.
