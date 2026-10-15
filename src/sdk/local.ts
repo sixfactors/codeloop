@@ -10,6 +10,7 @@ import { killOrphans, listProcs } from '../lib/procs.js';
 import { closeIndex, getIndex, type ProjectIndex } from '../lib/index/index.js';
 import * as services from '../lib/services.js';
 import { editCard, moveCard, reopenCard } from '../lib/story-control.js';
+import { computeProgress } from '../lib/story-progress.js';
 import { openStore, type Store } from '../lib/store/index.js';
 import { CodeloopClient, followCardActivity, type Transport } from './client.js';
 import type { LiveEvent, Role, RoleOption } from './types.js';
@@ -179,6 +180,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     killOrphans: async () => killOrphans(projectDir),
     clearAgent: async name => clearAgent(projectDir, name),
     pruneWorktrees: async (opts = {}) => pruneWorktrees(projectDir, opts),
+    progress: async opts => computeProgress(projectDir, opts),
     wikiShape: async () => services.wikiShape(projectDir),
     buildWiki: async (opts = {}, roleOpts) => services.buildWiki(projectDir, opts, role(roleOpts)),
     close: async () => {
@@ -198,3 +200,4 @@ export { CodeloopClient };
 export { MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
 /** The directory holding the board: CODELOOP_PROJECT_DIR when a builder runs in a worktree, else the working directory. */
 export { projectRoot } from '../lib/project-root.js';
+export { parseWindow, renderProgress } from '../lib/story-progress.js';

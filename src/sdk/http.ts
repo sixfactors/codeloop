@@ -305,6 +305,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     pruneWorktrees: async () => {
       throw new ApiError(501, 'worktree prune changes this machine\'s checkouts; use the local transport');
     },
+    progress: async () => {
+      throw new ApiError(501, 'progress is measured from the local board; use the local transport');
+    },
     clearAgent: async () => {
       throw new ApiError(501, 'agent clear writes the project state; use the local transport');
     },

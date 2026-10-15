@@ -1,4 +1,5 @@
 import type { CardEdit } from '../lib/story-control.js';
+import type { ProgressReport } from '../lib/story-progress.js';
 import type {
   ActivityEntry,
   ActivityQuery,
@@ -266,6 +267,8 @@ export interface Transport {
   killOrphans(): Promise<number[]>;
   clearAgent(name: string): Promise<boolean>;
   pruneWorktrees(opts?: { dryRun?: boolean }): Promise<{ path: string; branch: string; removed: boolean; why: string }[]>;
+  /** How stories moved over the window: stage moves, time per stage, waits, stuck stories, gates. Local only. */
+  progress(opts: { windowMs: number }): Promise<ProgressReport>;
   /** The shape with page counts: every section in spec order, empty ones left out. Local only. */
   wikiShape(): Promise<WikiShapeCount[]>;
   /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
@@ -459,6 +462,8 @@ export class CodeloopClient {
   artifacts = () => this.transport.artifacts();
   evidence = (nnn: string) => this.transport.evidence(nnn);
   stats = () => this.transport.stats();
+  /** How stories moved over the window, measured from the board. */
+  progress = (opts: { windowMs: number }) => this.transport.progress(opts);
   config = () => this.transport.config();
   /** Owner mode, sign-in state and the project, for the app shell's read-only banner and header. */
   session = () => this.transport.sessionInfo();

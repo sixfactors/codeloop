@@ -4,8 +4,6 @@ import { readFileSync } from 'fs';
 import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
 import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
-import { resolveRole } from '../lib/engine.js';
-import { editCard, moveCard, reopenCard } from '../lib/story-control.js';
 
 const client = () => createLocalClient(projectRoot());
 
@@ -363,7 +361,7 @@ cardCommand
   .option('--to <stage>', 'A stage of its lane, or backlog (default: the first stage)')
   .option(...ROLE)
   .action(guard(async (id: string, note: string | undefined, opts: { as?: string; to?: string }) => {
-    const card = reopenCard(projectRoot(), id, resolveRole(opts.as), { to: opts.to, note });
+    const card = await client().cards.reopen(id, { as: opts.as, to: opts.to, note });
     console.log(`${card.id} is reopened at ${card.stage === 'proposed' ? 'backlog' : card.stage}`);
   }));
 
@@ -372,7 +370,7 @@ cardCommand
   .description('Move an active card to any earlier or later stage of its lane; the note is required when moving back past a gate that was passed')
   .option(...ROLE)
   .action(guard(async (id: string, stage: string, note: string | undefined, opts: { as?: string }) => {
-    const card = moveCard(projectRoot(), id, stage, resolveRole(opts.as), { note });
+    const card = await client().cards.move(id, stage, note, { as: opts.as });
     console.log(`${card.id} is at ${card.stage}`);
   }));
 
@@ -387,7 +385,7 @@ cardCommand
   .option(...ROLE)
   .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string }) => {
     const { as, ...edit } = opts;
-    const card = editCard(projectRoot(), id, resolveRole(as), edit);
+    const card = await client().cards.edit(id, edit, { as });
     console.log(`${card.id} is edited`);
   }));
 
