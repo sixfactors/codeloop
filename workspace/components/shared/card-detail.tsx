@@ -27,7 +27,6 @@ import { CurrentStepPanel } from '@/components/shared/current-step-panel';
 import { TasksAndCommits } from '@/components/shared/tasks-commits';
 import { OrchestrationSection } from '@/components/shared/orchestration-section';
 import { ActivityFeed } from '@/components/shared/activity-feed';
-import { Checkbox } from '@/components/ui/checkbox';
 import { CardOutputTab } from '@/components/shared/card-output-tab';
 import { CardActionMenu } from '@/components/shared/card-action-menu';
 import { useCard, useCardFull, useCardOutput, isMissing } from '@/hooks/use-api';
@@ -81,13 +80,11 @@ export function CardDetailSkeleton() {
   );
 }
 
-/** What the current phase has produced: its output file rendered, the task list, evidence and questions, each once. */
+/** What the current phase has produced: its output file rendered, evidence and questions, each once. The tasks are in the Tasks and commits panel. */
 function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof useCardFull> }) {
   const routes = useRoutes();
   const output = useCardOutput(card.id);
   const [editing, setEditing] = useState(false);
-  const tasks = full.data?.tasks ?? [];
-  const counts = full.data?.journey?.tasks;
   const evidence: (EvidenceFile | string)[] = full.data?.evidence ?? card.evidence ?? [];
   const answeredCount = (full.data?.questions ?? []).filter((q) => q.answer).length;
   // What earlier phases wrote (the card's own evidence list), shown when this phase has written nothing yet.
@@ -112,20 +109,6 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
           )
           : <EmptyState compact icon={FileText} title="Nothing written in this phase yet" description={output.data?.path ? `This phase writes ${output.data.path}.` : 'This phase has no output file.'} />}
       </section>
-      {tasks.length ? (
-        <section className="flex flex-col gap-2" data-testid="tasks">
-          <h3 className="text-sm font-medium">Tasks{counts ? <span className="ml-2 text-xs font-normal text-muted-foreground">{counts.done} of {counts.total}</span> : null}</h3>
-          <ul className="flex flex-col gap-1 rounded-xl border bg-card p-3">
-            {tasks.map((t) => (
-              <li key={t.id} className="flex items-start gap-2 text-sm">
-                <Checkbox checked={t.done} disabled aria-label={t.done ? 'done' : 'not done'} className="mt-0.5" />
-                <span className={t.done ? 'text-muted-foreground line-through' : undefined}>{t.text}</span>
-                {t.layer ? <Badge variant="outline" className="ml-auto rounded-full">{t.layer}</Badge> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
       {evidence.length ? (
         <section className="flex flex-col gap-2" data-testid="evidence">
           <div className="flex items-center gap-2"><h3 className="text-sm font-medium">Evidence</h3><Button size="xs" variant="ghost" className="ml-auto" nativeButton={false} render={<Link href={routes.evidence(evidenceId(card.id))} />}>Open folder</Button></div>
@@ -184,7 +167,7 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
           Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
       <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} />
       <OrchestrationSection cardId={card.id} />
-      {full.data ? <TasksAndCommits tasks={full.data.tasks ?? []} commits={full.data.commits ?? []} /> : null}
+      {full.data ? <TasksAndCommits tasks={full.data.tasks ?? []} counts={full.data.journey?.tasks} commits={full.data.commits ?? []} /> : null}
       <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
         <div className="flex min-w-0 flex-col gap-4">
           <Tabs defaultValue="output" key={`tabs-${card.id}`}>

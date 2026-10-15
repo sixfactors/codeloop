@@ -179,7 +179,13 @@ try {
 
   // Hub mode: pages under /p/<project>/, the API under /api/p/<project>/. Every value expected here
   // comes from the API, so a screen that drops or invents a row fails.
-  const hubFull = async (project, id) => { const r = await ctx.request.get(`${BASE}/api/p/${project}/cards/${id}/full`); const j = await r.json(); return j.data ?? j; };
+  // A busy hub can drop a slow read; three tries before the run gives up.
+  const hubGet = async (path) => {
+    for (let i = 0; ; i++) {
+      try { const r = await ctx.request.get(`${BASE}${path}`, { timeout: 120000 }); const j = await r.json(); return j.data ?? j; } catch (e) { if (i === 2) throw e; }
+    }
+  };
+  const hubFull = (project, id) => hubGet(`/api/p/${project}/cards/${id}/full`);
   const hm = (m) => { const h = Math.floor(m / 60); return h ? `${h}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`; };
   const shoot = async (name, widths = [1440, 900]) => {
     if (!args.shots) return;
@@ -203,6 +209,9 @@ try {
     const ticked = await page.locator('[data-testid="task-row"][data-done]').count();
     const apiDone = full.tasks.filter((t) => t.done).length;
     ok(`${id} lists every task with its tick`, tasks === full.tasks.length && ticked === apiDone && tasks > 0, `${ticked} of ${tasks} on screen, api ${apiDone} of ${full.tasks.length}`);
+    await page.locator('[data-testid="produced"]').waitFor({ timeout: 90000 });
+    const twice = await page.locator('[data-testid="produced"] [data-testid="tasks"]').count();
+    ok(`${id} tasks show once, in the Tasks and commits panel`, twice === 0, `${twice} list(s) in the Output tab`);
     const layers = await page.locator('[data-testid="task-layer"]').allInnerTexts();
     ok(`${id} tasks carry their layer chips`, layers.join() === full.tasks.filter((t) => t.layer).map((t) => t.layer).join(), layers.slice(0, 5).join(','));
     // A live project can land a commit while the page loads: compare against a read taken after it.
@@ -224,8 +233,8 @@ try {
     ok(`${id} current step shows time in phase and time working`, Boolean(g && w) && g[1] === w[1] && g[3] === w[3] && Math.abs(mins(g[2]) - mins(w[2])) <= 3, `${gotTime ?? 'none'}; api ${wantTime ?? 'none'}`);
     await shoot(`${id}-moving`);
     // The board face: the first story the board API sends with working minutes.
-    const board = await (await ctx.request.get(`${BASE}/api/p/${project}/board`)).json();
-    const story = (board.data ?? board).phases.flatMap((ph) => Object.values(ph.cells ?? {}).flat()).find((x) => x.activeMinutes !== undefined && x.display.state !== 'done' && x.display.state !== 'shipped');
+    const board = await hubGet(`/api/p/${project}/board`);
+    const story = board.phases.flatMap((ph) => Object.values(ph.cells ?? {}).flat()).find((x) => x.activeMinutes !== undefined && x.display.state !== 'done' && x.display.state !== 'shipped');
     await page.goto(withToken(`/p/${project}/`), { waitUntil: 'domcontentloaded' });
     if (story) {
       const face = page.locator(`[data-testid="board-card-${story.id}"] [data-testid="board-card-time"]`).first();
