@@ -5,6 +5,7 @@ import { join } from 'path';
 import { CONFIG_FILE } from '../lib/config.js';
 import { moveStore, storeWhere, userStoreDir } from '../lib/store-home.js';
 import { withRunLockSync } from '../lib/run-lock.js';
+import { moveLayout } from '../lib/layout-move.js';
 import { guard, refuse } from './guard.js';
 import { projectRoot } from '../sdk/local.js';
 
@@ -54,9 +55,22 @@ storeCommand
 storeCommand
   .command('move')
   .description('Copy the board and story files to the other home and set store.home; the old copy is left for you to delete')
-  .requiredOption('--to <home>', 'user (~/.codeloop/projects/<id>/) or repo')
-  .action(guard(async (opts: { to: string }) => {
-    if (opts.to !== 'user' && opts.to !== 'repo') throw refuse(`--to is user or repo, not "${opts.to}"`);
+  .option('--to <home>', 'user (~/.codeloop/projects/<id>/) or repo')
+  .option('--layout <layout>', 'dotfolder (everything under .codeloop/) or root (specs/, evidence/, shape/ at the repo root)')
+  .option('--dry-run', 'With --layout: print what would move, change nothing')
+  .action(guard(async (opts: { to?: string; layout?: string; dryRun?: boolean }) => {
+    if (opts.layout) {
+      if (opts.layout !== 'dotfolder' && opts.layout !== 'root') throw refuse(`--layout is dotfolder or root, not "${opts.layout}"`);
+      const projectDir = projectRoot();
+      const plan = opts.dryRun ? moveLayout(projectDir, opts.layout, { dryRun: true }) : withRunLockSync(projectDir, 'store move --layout', () => moveLayout(projectDir, opts.layout as 'dotfolder' | 'root'));
+      const verb = plan.dryRun ? 'would move' : 'moved';
+      for (const m of plan.moved) console.log(`  ${verb} ${m.from} -> ${m.to}${m.tracked ? ' (git mv)' : ''}`);
+      console.log(`  ${plan.dryRun ? 'would rewrite' : 'rewrote'} ${plan.cards} card(s) on the board${plan.lanes.length ? ` and ${plan.lanes.join(', ')}` : ''}; store.layout: ${plan.to}`);
+      if (plan.pointer) console.log(`  ${plan.dryRun ? 'would leave' : 'left'} ${plan.pointer} pointing to .codeloop/specs/`);
+      if (plan.dryRun) console.log('  nothing changed; run again without --dry-run');
+      return;
+    }
+    if (opts.to !== 'user' && opts.to !== 'repo') throw refuse(`--to is user or repo, or give --layout dotfolder|root`);
     const projectDir = projectRoot();
     const config = join(projectDir, CONFIG_FILE);
     // Moving the board while a run reads it would lose that run's writes: the repo lock first.
