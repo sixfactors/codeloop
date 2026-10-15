@@ -17,6 +17,8 @@ const EXEMPT_FILES: Record<string, string> = {
   'cloud.ts': 'cloud sync is a transport of its own',
   'guard.ts': 'the shell helper that maps engine errors to exit codes',
   'guard-hooks.ts': 'the host hooks (guard edit/prompt/diff, presence, whoami, card activate) read .codeloop/state directly; no SDK operation yet',
+  'hookd.ts': 'starts the hook daemon process; host-local, no project operation',
+  'ps.ts': 'reads the host process table and the memory ceiling in config; host-local, no project operation',
   'hub.ts': 'the hub process: builds the hub Hono app and the project registry is host-local state, not a project operation',
   'import.ts': 'bulk import of cards from files',
   'init.ts': 'project scaffolding before a store exists; also registers the project with the hub',

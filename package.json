@@ -12,7 +12,7 @@
   },
   "type": "module",
   "bin": {
-    "codeloop": "dist/index.js",
+    "codeloop": "bin/codeloop",
     "codeloop-hook": "bin/codeloop-hook"
   },
   "exports": {

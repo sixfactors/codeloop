@@ -16,6 +16,7 @@ import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
+import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
@@ -393,8 +394,10 @@ export function monitorEnabled(projectDir: string): boolean {
  * day gets one "park it" question in the inbox. Each action is a line on the story's activity
  * stream. Stories in `skip` were already worked by this run.
  */
-export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string } = {}): Promise<DoctorAction[]> {
+export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe } = {}): Promise<DoctorAction[]> {
   if (!monitorEnabled(projectDir)) return [];
+  // Reruns and nudges start processes; over the ceiling the tick waits for the next one.
+  if (overCeiling(projectDir, opts.memory).over) return [];
   const actions: DoctorAction[] = [];
   const hasAgents = Object.keys(loadAgents(projectDir).agents).length > 0;
   const log = (a: DoctorAction) => {
