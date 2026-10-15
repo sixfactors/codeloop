@@ -6,6 +6,9 @@
 import { ApiError, createHttpClient, type CodeloopClient } from '@protoboxai/codeloop/sdk';
 import type { ActivityLine, AdvanceReport, Artifact, OrchStatusRow, OrchView, Band, BoardView, Card, CardFull, CardOutput, CardShow, CardsPage, CardsQuery, Config, Evidence, FeatureRow, HomeView, InboxPayload, InboxQuery, Initiative, InitiativeRow, InitiativeTree, Lane, NextAction, Page, PageWrite, PagesPage, PagesQuery, Question, Rice, Run, Session, SetupAdopt, SetupDetect, SetupStatus, SplitResult, Stats, TreeEpic, TreeFeature, WikiShapeCount } from './types';
 import type { NewCardInput, ProposalInput } from '@protoboxai/codeloop/sdk';
+
+/** The fields Edit changes; each is sent only when it changed. */
+export type StoryEdit = { title?: string; story?: string; priority?: string; feature?: string; size?: string };
 import { currentProjectBrowser, currentProjectServer, hubModeBrowser, hubModeServer } from './project';
 
 export type { NewCardInput, ProposalInput };
@@ -187,6 +190,10 @@ export const api = {
   /** Starts one orchestrated turn; `builder` is agent, agent:<name>, session:<x> or person. Returns before it ends. */
   orchRun: async (id: string, opts: { builder: string; wait?: number | false }) => (await client()).orch.run(id, opts),
   park: async (id: string, note?: string) => (await client()).cards.park(id, note),
+  /** A done or dropped story back to its lane's first stage, or to the backlog with `to: 'backlog'`. */
+  reopen: async (id: string, opts: { to?: string; note?: string } = {}) => (await client()).cards.reopen(id, opts),
+  move: async (id: string, stage: string, note?: string) => (await client()).cards.move(id, stage, note),
+  editCard: async (id: string, fields: StoryEdit) => (await client()).cards.edit(id, fields),
   brief: async (id: string): Promise<string> => (await client()).cards.brief(id),
   /** Every line of a card's activity, oldest first, paged through the cursor; the newest 2000 are kept. */
   async cardActivity(id: string): Promise<ActivityLine[]> {

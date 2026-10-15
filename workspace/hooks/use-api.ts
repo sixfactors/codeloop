@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient, ty
 import { api } from '@/lib/api';
 import type { Card, CardsQuery, Facets, InboxPayload, InboxQuery, Lane, PageWrite, PagesQuery, Rice } from '@/lib/types';
 import { CARD_FACETS } from '@/lib/types';
-import type { NewCardInput, ProposalInput } from '@/lib/api';
+import type { NewCardInput, ProposalInput, StoryEdit } from '@/lib/api';
 import { deriveInbox, deriveLanes, uniq } from '@/lib/cards';
 import { findCard, invalidateCardLists, invalidatePageLists, patchCard, patchPage, removePage } from '@/lib/live-cache';
 import { boardQueryOptions, cardCountQueryOptions, cardQueryOptions, cardsQueryOptions, homeQueryOptions, inboxQueryOptions, isMissing, pageQueryOptions, pagesQueryOptions, QK, wikiShapeQueryOptions } from '@/lib/queries';
@@ -263,6 +263,18 @@ export async function refreshCard(qc: QueryClient, id: string) {
   void qc.invalidateQueries({ queryKey: ['cards'], predicate: (query) => query.queryKey.at(-1) === 'count' });
   // The write may have resolved what the "what next" panel was waiting on.
   void qc.invalidateQueries({ queryKey: QK.next });
+}
+
+/** Reopen, move and edit by hand. Each writes an event, so the story's activity is refetched with it. */
+export function useStoryControl() {
+  const qc = useQueryClient();
+  const after = (id: string) => { void qc.invalidateQueries({ queryKey: QK.activity(id) }); return refreshCard(qc, id); };
+  return {
+    reopen: useMutation({ mutationFn: ({ id, to, note }: { id: string; to?: string; note?: string }) => api.reopen(id, { to, note }), onSuccess: (_r, { id }) => after(id) }),
+    move: useMutation({ mutationFn: ({ id, stage, note }: { id: string; stage: string; note?: string }) => api.move(id, stage, note), onSuccess: (_r, { id }) => after(id) }),
+    edit: useMutation({ mutationFn: ({ id, fields }: { id: string; fields: StoryEdit }) => api.editCard(id, fields), onSuccess: (_r, { id }) => after(id) }),
+    park: useMutation({ mutationFn: ({ id, note }: { id: string; note?: string }) => api.park(id, note), onSuccess: (_r, { id }) => after(id) }),
+  };
 }
 
 /** Park a story back to the inbox: nobody works it until someone picks it up again. */
