@@ -21,10 +21,12 @@ import { CopyButton } from '@/components/shared/copy-button';
 import { Holder } from '@/components/shared/holder';
 import { Questions } from '@/components/shared/questions';
 import { RunLogPane } from '@/components/shared/run-log-pane';
-import { since } from '@/components/shared/journey-stepper';
+import { phaseTimeText, since } from '@/components/shared/journey-stepper';
+import { StatePill } from '@/components/shared/state-pill';
+import { RubricRows } from '@/components/shared/rubric-rows';
 import { useAdvance, useBrief, useCanWrite, useDecide, useOrch, useOrchRun, usePark, useSetupStatus } from '@/hooks/use-api';
 import { toast } from '@/lib/toast';
-import type { Card as CardT, Journey } from '@/lib/types';
+import type { Card as CardT, Journey, StageRubric, StoryState } from '@/lib/types';
 
 function Why({ reason, children }: { reason?: string; children: React.ReactNode }) {
   if (!reason) return <>{children}</>;
@@ -98,7 +100,7 @@ function AgentShape({ card, journey }: { card: CardT; journey: Journey }) {
   );
 }
 
-function YouShape({ card, journey }: { card: CardT; journey: Journey }) {
+function YouShape({ card, journey, rubric }: { card: CardT; journey: Journey; rubric?: StageRubric | null }) {
   const decide = useDecide();
   const { canWrite, reason } = useCanWrite();
   const [note, setNote] = useState('');
@@ -118,6 +120,7 @@ function YouShape({ card, journey }: { card: CardT; journey: Journey }) {
               ? 'The check failed three times. Approve unsticks it: it clears the three fails and keeps the stage, so the next run starts fresh. Reject parks it.'
               : `Gate ${holder.gate}, approved by the ${holder.awaiting ?? 'owner'}.`}
           </p>
+          {rubric?.rows.length ? <RubricRows rubric={rubric} /> : null}
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={!canWrite || decide.isPending} title={canWrite ? undefined : reason} onClick={() => act('approve')} data-testid="gate-approve"><Check />{holder.gate === 'stuck' ? 'Approve: unstick' : 'Approve'}</Button>
@@ -187,17 +190,20 @@ function NobodyShape({ card, journey }: { card: CardT; journey: Journey }) {
   );
 }
 
-export function CurrentStepPanel({ card, journey }: { card: CardT; journey?: Journey }) {
+export function CurrentStepPanel({ card, journey, display, rubric }: { card: CardT; journey?: Journey; display?: StoryState; rubric?: StageRubric | null }) {
   if (!journey) return null;
   const current = journey.steps.find((s) => s.state === 'current' || s.state === 'gate');
   if (!current) return null;
   const shape = journey.holder.kind;
+  const time = phaseTimeText(current.id, current.activeMinutes, current.idleMinutes);
   return (
     <div data-testid="current-step-panel" data-card={card.id} data-shape={shape} className="flex flex-col gap-1">
-      <p className="text-xs text-muted-foreground">
-        {current.id}{current.enteredAt ? ` since ${since(current.enteredAt)}` : ''}
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {display ? <StatePill display={display} agent={journey.holder.agent} /> : null}
+        <span>{current.id}{current.enteredAt ? ` since ${since(current.enteredAt)}` : ''}</span>
+        {time ? <span className="tabular-nums" data-testid="step-time">{time}</span> : null}
       </p>
-      {shape === 'agent' ? <AgentShape card={card} journey={journey} /> : shape === 'you' ? <YouShape card={card} journey={journey} /> : <NobodyShape card={card} journey={journey} />}
+      {shape === 'agent' ? <AgentShape card={card} journey={journey} /> : shape === 'you' ? <YouShape card={card} journey={journey} rubric={rubric} /> : <NobodyShape card={card} journey={journey} />}
     </div>
   );
 }
