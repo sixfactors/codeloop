@@ -170,7 +170,9 @@ export interface CardFull {
   commits?: StoryCommit[];
 }
 
-export type Artifact = SdkArtifact & { href?: string; url?: string };
+/** A row of GET /api/artifacts. A mock also carries its `data-screen` frames, its in-app folder and the
+ * cards whose `screens:` take a screen from it (`board (mocks/118)`), for the Mocks page. */
+export type Artifact = SdkArtifact & { href?: string; url?: string; frames?: string[]; folder?: string; referencedBy?: { cardId: string; screen: string }[] };
 
 /** `GET /api/cards/:id/show`: the card and its stage brief with the paths and the check command substituted. */
 export type CardShow = SdkCardShow;

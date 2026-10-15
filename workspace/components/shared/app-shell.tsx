@@ -10,7 +10,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, BookOpen, Boxes, Home, Images, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
+import { BarChart3, BookOpen, Boxes, Frame, Home, Images, Kanban, Layers, Map, Moon, Settings, SquareTerminal, Sun, type LucideIcon } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
@@ -80,6 +80,7 @@ function navGroups(routes: Routes): NavGroup[] {
       label: 'Knowledge',
       items: [
         { id: 'wiki', title: 'Wiki', url: routes.wiki(), matchUrl: MATCH.wiki(), icon: BookOpen },
+        { id: 'mocks', title: 'Mocks', url: routes.mocks, matchUrl: MATCH.mocks, icon: Frame },
         { id: 'artifacts', title: 'Artifacts', url: routes.artifacts, matchUrl: MATCH.artifacts, icon: Images },
         { id: 'stats', title: 'Stats', url: routes.stats, matchUrl: MATCH.stats, icon: BarChart3 },
       ],

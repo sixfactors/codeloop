@@ -12,6 +12,7 @@ import { CARD_MOCKS_DIR, isMockPath } from './mock.js';
 import { evidenceDir, evidenceOf, mocksArchiveDir } from './paths.js';
 import * as services from './services.js';
 import { editCard, moveCard, reopenCard, type CardEdit } from './story-control.js';
+import { withGalleryFields } from './mock-gallery.js';
 import { openStore, type Store } from './store/index.js';
 import type { StoryFlags } from './story.js';
 
@@ -470,7 +471,9 @@ export function createApp(
     return new Response(readFileSync(realFile), { headers: { 'Content-Type': MIME_TYPES[extname(realFile).toLowerCase()] || 'application/octet-stream' } });
   });
 
-  app.get(api('/artifacts'), handled(async c => cached(c, etag('artifacts', v.artifacts), async () => ({ artifacts: await services.artifacts(index) }))));
+  // Each mock with its frames, its in-app folder and the cards that take a screen from it, for the Mocks page.
+  // The etag adds the cards version: a spec's `screens:` reference changes the rows without touching a mock.
+  app.get(api('/artifacts'), handled(async c => cached(c, etag('artifacts', v.artifacts, v.cards), async () => ({ artifacts: withGalleryFields(projectDir, await services.artifacts(index)) }))));
   // Not cached: the agent working each story comes from live sessions, which no index version tracks.
   app.get(api('/board'), handled(async c => c.json(await services.boardView(index, projectDir, { lane: query(c).get('lane') ?? undefined }))));
   app.get(api('/home'), handled(async c => c.json(await services.homeView(index, projectDir))));

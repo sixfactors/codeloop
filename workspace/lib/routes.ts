@@ -20,6 +20,9 @@ export function routesFor(project?: string) {
     get inbox() { return `${prefix}/inbox/`; },
     wiki: (path?: string) => (path ? wikiPath(path) : `${prefix}/wiki/`),
     get artifacts() { return `${prefix}/artifacts/`; },
+    get mocks() { return `${prefix}/mocks/`; },
+    /** An in-app mock's own page, by its folder under app/mocks/. */
+    mockPage: (folder: string) => `${prefix}/mocks/${encodeURIComponent(folder)}/`,
     get roadmap() { return `${prefix}/roadmap/`; },
     get initiatives() { return `${prefix}/initiatives/`; },
     initiative: (id: string) => `${prefix}/initiatives/${encodeURIComponent(id)}/`,
@@ -47,6 +50,8 @@ export const routes: Routes = {
   get inbox() { return routesFor(currentProjectBrowser()).inbox; },
   wiki: (path?: string) => routesFor(currentProjectBrowser()).wiki(path),
   get artifacts() { return routesFor(currentProjectBrowser()).artifacts; },
+  get mocks() { return routesFor(currentProjectBrowser()).mocks; },
+  mockPage: (folder: string) => routesFor(currentProjectBrowser()).mockPage(folder),
   get roadmap() { return routesFor(currentProjectBrowser()).roadmap; },
   get initiatives() { return routesFor(currentProjectBrowser()).initiatives; },
   initiative: (id: string) => routesFor(currentProjectBrowser()).initiative(id),
