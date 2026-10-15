@@ -137,7 +137,9 @@ export function lastActivity(projectDir: string, card: string): ActivityLine | u
 /** One activity line as a short sentence: "edited src/settings.py", "ran pnpm test". */
 export function activityText(l: ActivityLine): string {
   switch (l.kind) {
-    case 'edit': return `edited ${l.file}`;
+    // An `edit` with no file is an owner's story edit written before it had its own kind.
+    case 'edit': return l.file ? `edited ${l.file}` : `edited ${l.text ?? 'the story'}`;
+    case 'story-edit': return `edited ${l.text ?? 'the story'}`;
     case 'cmd': return `ran ${l.text}`;
     case 'prompt': return l.text ? `was asked: ${l.text}` : 'was asked something';
     case 'check': return l.pass ? `check passed (${l.stage})` : `check failing: ${checkSentence(String(l.output ?? ''))}`;

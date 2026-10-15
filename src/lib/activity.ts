@@ -14,7 +14,7 @@ export const ACTIVITY_DIR = '.codeloop/state/activity';
 /** Engine events copied into the stream; `fail` is left out because the check line already says it. */
 export const MIRRORED_EVENTS = new Set(['park', 'approve', 'auto-approve', 'reject', 'answer', 'stuck', 'unstick', 'advance', 'promote', 'unpark', 'place', 'returned', 'rollback', 'agent-start', 'agent-run', 'close', 'drop', 'reopen', 'move', 'edit']);
 
-export type ActivityKind = 'start' | 'prompt' | 'stop' | 'end' | 'edit' | 'cmd' | 'log' | 'check' | 'commit' | string;
+export type ActivityKind = 'start' | 'prompt' | 'stop' | 'end' | 'edit' | 'story-edit' | 'cmd' | 'log' | 'check' | 'commit' | string;
 
 export interface ActivityLine {
   at: string;
@@ -115,7 +115,8 @@ export function lastActivityAt(projectDir: string, card: string): number | undef
   }
 }
 
-/** Kinds that mean someone or something was working the story; prompts, checks and engine events are not. */
+/** Kinds that mean someone or something was working the story; prompts, checks, engine events and an
+ * owner's `story-edit` are not. */
 const WORK_KINDS = new Set(['edit', 'cmd', 'commit', 'handback', 'log']);
 /** Two work lines further apart than this are two bursts; the gap between them is idle. */
 export const BURST_GAP_MS = 10 * 60 * 1000;
