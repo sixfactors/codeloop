@@ -44,6 +44,7 @@ import { artifactCommand, artifactsCommand } from './commands/artifact.js';
 import { attachCardActivate, guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
 import { hookdCommand } from './commands/hookd.js';
 import { scanCommand } from './commands/scan.js';
+import { progressCommand } from './commands/progress.js';
 // After the command modules: program-base reaches the card store first otherwise, and the wiki and
 // features modules then meet in the opposite order (WIKI_DIR read before it is defined).
 import { baseProgram } from './program-base.js';
@@ -107,6 +108,7 @@ export function buildProgram(): Command {
   program.addCommand(verifyCommand);
   program.addCommand(healthCommand);
   program.addCommand(statsCommand);
+  program.addCommand(progressCommand);
   program.addCommand(wikiCommand);
   program.addCommand(learnCommand);
   program.addCommand(renderCommand);

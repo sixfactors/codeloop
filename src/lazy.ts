@@ -56,6 +56,7 @@ export const COMMANDS: Record<string, [load: () => Promise<Record<string, unknow
   verify: [() => import('./commands/verify.js'), 'verifyCommand'],
   health: [() => import('./commands/verify.js'), 'healthCommand'],
   stats: [() => import('./commands/verify.js'), 'statsCommand'],
+  progress: [() => import('./commands/progress.js'), 'progressCommand'],
   wiki: [() => import('./commands/wiki.js'), 'wikiCommand'],
   learn: [() => import('./commands/wiki.js'), 'learnCommand'],
   render: [() => import('./commands/render.js'), 'renderCommand'],

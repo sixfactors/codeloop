@@ -73,6 +73,8 @@ The builder is an agent by default. `--builder session:<id-or-label-prefix>` or 
 
 Also unreleased: stage rubrics (`codeloop check rubric`), `codeloop answer --accept-all`, wiki write rules with near-duplicate merging, and the story journey on the board (activity stream, stepper, phase board with holder rows, one state per card: Working, Needs you, Failing, Stuck, Stale, Moving). Board and Home read git and activity once per request.
 
+`codeloop progress [--since 7d] [--json]` reports how stories moved in a window (stage moves, median hours per stage, waits, stuck stories, gates, repeated failing checks) from the board, events and activity streams, with no model call.
+
 ## Everything under .codeloop
 
 codeloop never writes into a project's source tree. What it owns is under `.codeloop/`: the board, config, lanes and wiki, and with `store.layout: dotfolder` (the default) the story folders too.
