@@ -105,6 +105,8 @@ Before a card enters build, research states what already exists for it:
 
 Check: `research.md` has `exists: have|unlock|port|build` with a path or URL when it is not `build`.
 
+Screens already drawn: an entry under `screens:` may point at an existing mock instead of drawing it again, as `name (mocks/118)` or `name from mocks/118`, inline (`screens: board (mocks/118), story page (mocks/132)`) or one per list line. `codeloop check mock` passes a referenced screen when that mock folder exists and has at least one frame, and fails naming the missing path otherwise. A card with only references needs no mock of its own; one with a mix draws just the entries that carry no reference. `mocks/132` is the building-blocks page, which shows every state of the shared components. A card with nothing to draw writes `screens: none`.
+
 Screens: in a project with a Next.js app, each name under `screens:` becomes a `data-screen` section on a page in that app, composed from its shared components, and `mock: keep | drop` in the spec says whether the page stays.
 
 ## Done when is a command or a screen

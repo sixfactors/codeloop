@@ -188,7 +188,39 @@ function resolveSpecDirOrNone(projectDir: string, ref: string): string | undefin
 }
 
 /** The names under `screens:` in a spec, or 'none' when the spec says the card has nothing to draw. */
-export const specScreens = (spec: string) => specList(spec, 'screens');
+export const specScreens = (spec: string): string[] | 'none' => {
+  const list = specList(spec, 'screens');
+  return list === 'none' ? list : list.filter(s => !SCREEN_REF.test(s));
+};
+
+/** `name (mocks/118)` or `name from mocks/118`: a screen another card's mock already draws. */
+const SCREEN_REF = /^(.*?)\s*(?:\(\s*(?:from\s+)?mocks\/([\w-]+)\s*\)|\bfrom\s+mocks\/([\w-]+))\s*$/;
+
+/** The screens a spec takes from existing mocks instead of drawing: name and the `mocks/<nnn>` it points at. */
+export function specScreenRefs(spec: string): { name: string; from: string }[] {
+  const list = specList(spec, 'screens');
+  if (list === 'none') return [];
+  return list.flatMap(entry => {
+    const m = SCREEN_REF.exec(entry);
+    return m ? [{ name: m[1] || m[2] || m[3], from: m[2] ?? m[3] }] : [];
+  });
+}
+
+/** Why a referenced mock cannot stand in for a screen: it must exist and draw at least one frame. */
+function checkMockRef(projectDir: string, ref: { name: string; from: string }): string | undefined {
+  const dir = mockAppDir(projectDir);
+  if (mockTarget(projectDir) === 'app' && dir) {
+    const root = specPath(projectDir, `${dir}/mocks`);
+    const folder = existsSync(root) ? readdirSync(root).find(f => f === ref.from || f.startsWith(`${ref.from}-`)) : undefined;
+    if (!folder) return `screen "${ref.name}" points at mocks/${ref.from}, but ${dir}/mocks/${ref.from} does not exist`;
+    const page = specPath(projectDir, `${dir}/mocks/${folder}/${APP_PAGE}`);
+    const frames = existsSync(page) ? (readFileSync(page, 'utf-8').match(/data-screen=/g) ?? []).length : 0;
+    return frames > 0 ? undefined : `screen "${ref.name}" points at ${dir}/mocks/${folder}, which has no frame (no data-screen in ${APP_PAGE})`;
+  }
+  const found = findMock(projectDir, /^\d+$/.test(ref.from) ? `c-${ref.from}` : ref.from);
+  if (!found) return `screen "${ref.name}" points at mocks/${ref.from}, but no mock for it exists`;
+  return mockScreens(readFileSync(specPath(projectDir, found), 'utf-8')).length > 0 ? undefined : `screen "${ref.name}" points at ${found}, which has no frame`;
+}
 
 /** The names under `screens_removed:`: inherited screens this card drops on purpose. */
 export const specScreensRemoved = (spec: string) => {
@@ -220,15 +252,19 @@ export function checkMock(projectDir: string, ref: string): string[] {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   const specDir = resolveSpecDir(projectDir, ref);
   const specFile = specPath(projectDir, specDir, 'spec.md');
-  const screens = existsSync(specFile) ? specScreens(readFileSync(specFile, 'utf-8')) : [];
+  const specText = existsSync(specFile) ? readFileSync(specFile, 'utf-8') : '';
+  const screens = specScreens(specText);
   if (screens === 'none') return [];
+  const refErrors = specScreenRefs(specText).map(r => checkMockRef(projectDir, r)).filter((e): e is string => !!e);
+  // A card that only reuses other mocks draws nothing of its own.
+  if (screens.length === 0 && specScreenRefs(specText).length > 0) return refErrors;
   // An untouched spec template names nothing, so it cannot pass.
   if (screens.length === 0) return [`${specDir}/spec.md names no screens under \`screens:\` (write \`screens: none\` for a card with nothing to draw)`];
 
   const id = card?.id ?? ref;
   const path = findMock(projectDir, id);
-  if (!path) return [`no mock for ${id} (expected ${appMockPath(projectDir, id) ?? mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
-  if (path.endsWith(APP_PAGE)) return checkAppMock(projectDir, path, screens);
+  if (!path) return [...refErrors, `no mock for ${id} (expected ${appMockPath(projectDir, id) ?? mockPathFor(projectDir, id)}); run \`codeloop mock new ${id} --topic <topic>\``];
+  if (path.endsWith(APP_PAGE)) return [...refErrors, ...checkAppMock(projectDir, path, screens)];
   const html = readFileSync(specPath(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
   if (!html.includes(MARKER)) return [`${path} does not carry the template marker ${MARKER}`];
   const expected = template(projectDir);
@@ -236,7 +272,7 @@ export function checkMock(projectDir: string, ref: string): string[] {
   if (TOKENS.exec(html)?.[0] !== TOKENS.exec(expected)![0]) return [`${path}: the tokens block differs from ${source}/tokens.css; change the design system, not the mock`];
   if (BLOCKS.exec(html)?.[0] !== BLOCKS.exec(expected)![0]) return [`${path}: the blocks block differs from ${source}/blocks.css; add blocks to the design system, not the mock`];
 
-  const errors: string[] = [];
+  const errors: string[] = [...refErrors];
   const literals = [...new Set(html.replace(TOKENS, '').replace(BLOCKS, '').match(COLOUR) ?? [])];
   if (literals.length) errors.push(`${path} uses colours outside the tokens block: ${literals.join(', ')}`);
   for (const screen of screens) {

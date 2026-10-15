@@ -203,6 +203,18 @@ describe('mocks', () => {
     expect(checkMock(dir, 'c-001')).toEqual([`no mock for c-001 (expected ${MOCK}); run \`codeloop mock new c-001 --topic <topic>\``]);
   });
 
+  it('check mock passes a screen taken from an existing mock and names the path when that mock is missing', () => {
+    write('.codeloop/config.yaml', 'project:\n  name: "Acme App"\nmock:\n  target: app\n  app_dir: workspace/app\n');
+    write('workspace/app/mocks/132-building-blocks/page.tsx', '<section data-screen="all-states" />');
+    write('workspace/app/mocks/140-empty/page.tsx', 'export default () => null;');
+    screens('- story page (mocks/132)\n');
+    expect(checkMock(dir, 'c-001')).toEqual([]);
+    write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^- story page.*\n/m, '- story page from mocks/999\n'));
+    expect(checkMock(dir, 'c-001')).toEqual(['screen "story page" points at mocks/999, but workspace/app/mocks/999 does not exist']);
+    write(`${SPEC}/spec.md`, read(`${SPEC}/spec.md`).replace(/^- story page.*\n/m, '- empty (mocks/140)\n'));
+    expect(checkMock(dir, 'c-001')).toEqual(['screen "empty" points at workspace/app/mocks/140-empty, which has no frame (no data-screen in page.tsx)']);
+  });
+
   it('check mock fails on a missing screen, a changed tokens block, a missing marker and a colour outside the tokens', () => {
     screens('- export-dialog\n- export-done\n');
     newMock(dir, 'c-001', 'exports');

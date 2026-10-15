@@ -28,6 +28,7 @@ stages:
     done: { cmd: "codeloop check mock {id} && codeloop check rubric {id}" }
     notes:
       - "Name each screen under `screens:` in the card's spec.md, run `codeloop mock new <card> --topic <topic>`, and draw one frame per screen state in the file it creates."
+      - "Draw only what is new. A screen that already exists in another card's mock is referenced with `from: mocks/<nnn>`; the building-blocks page (c-132) holds every shared state. A card with nothing to draw writes `screens: none`."
   - id: spec
     skill: spec
     output: "{spec}/tasks.md"
