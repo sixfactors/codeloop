@@ -5,6 +5,7 @@ import { join } from 'path';
 import { createCard } from '../../engine.js';
 import { addQuestions } from '../../interview.js';
 import { ConflictError, FileDriver, MemoryDriver, openStore, registerDriver, runMigrations, type Epic, type Feature, type Initiative, type CardRecord, type Entity, type Lane, type Repo, type Store, type WikiPage } from '../index.js';
+import { specsDir } from '../../paths.js';
 
 const LANE = `id: build
 version: 1
@@ -173,7 +174,7 @@ describe('FileDriver over the files the CLI writes', () => {
     expect(q).toMatchObject({ cardId: 'c-1', n: 1, question: 'Which?', recommended: 'A', answer: '' });
 
     await store.questions.put({ ...q!, answer: 'A' }, q!.version);
-    expect(readFileSync(join(dir, 'specs/001-from-the-engine/interview.md'), 'utf-8')).toBe('## Q1 Which?\nrecommended: A\nanswer: A\n');
+    expect(readFileSync(join(dir, specsDir(dir), '001-from-the-engine/interview.md'), 'utf-8')).toBe('## Q1 Which?\nrecommended: A\nanswer: A\n');
     const before = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'));
     await store.cards.put({ ...cards[0], title: 'Renamed' }, cards[0].version);
     const after = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'));
