@@ -8,7 +8,7 @@
 import { evidenceOf } from './paths.js';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
-import { readActivity } from './activity.js';
+import { readAllActivity } from './activity.js';
 import { cardKey, type Card } from './cards.js';
 import { storyCommitTimes } from './diff-budget.js';
 import { readTasks, type Task } from './spec.js';
@@ -79,10 +79,7 @@ export function progressSince(projectDir: string, card: Card): number | undefine
     }
   }
   for (const f of evidenceFiles(projectDir, card)) bump(Date.parse(f.mtime));
-  for (let page = readActivity(projectDir, card.id, { limit: 1000 }); ; page = readActivity(projectDir, card.id, { after: page.next, limit: 1000 })) {
-    for (const l of page.items) if (PROGRESS_KINDS.has(String(l.kind))) bump(Date.parse(l.at));
-    if (!page.next) break;
-  }
+  for (const l of readAllActivity(projectDir, card.id)) if (PROGRESS_KINDS.has(String(l.kind))) bump(Date.parse(l.at));
   for (const at of storyCommitTimes(projectDir, card.id)) bump(at);
   return newest || undefined;
 }
