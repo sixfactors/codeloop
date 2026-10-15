@@ -143,8 +143,10 @@ export type PageSummary = Pick<IndexedPage, 'id' | 'title'> & Partial<Omit<Index
 export type Page = PageSummary & { body: string };
 
 /** A file as the card screen lists it; a card's own `evidence` names files by path alone, so the rest is optional. */
-export type EvidenceFile = Pick<EvidenceDetail['files'][number], 'name'> & Partial<EvidenceDetail['files'][number]>;
-export type Evidence = EvidenceDetail;
+/** An evidence file as the server lists it: `url` is where the server serves it, so pages link to that, never to `path`. */
+type ServedEvidenceFile = EvidenceDetail['files'][number] & { url?: string };
+export type EvidenceFile = Pick<ServedEvidenceFile, 'name'> & Partial<ServedEvidenceFile>;
+export type Evidence = Omit<EvidenceDetail, 'files'> & { files: ServedEvidenceFile[] };
 
 /** `/api/cards/:id/full` with the spec text and the evidence files lifted out, the way the card screen reads them. */
 /** A commit carrying the story's trailer: merged into the trunk, or held on the branches named. */

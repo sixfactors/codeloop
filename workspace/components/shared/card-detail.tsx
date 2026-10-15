@@ -115,13 +115,13 @@ function ProducedByStep({ card, full }: { card: CardT; full: ReturnType<typeof u
           <div className="grid gap-3 sm:grid-cols-2">
             {evidence.map((e, i) => {
               const f = typeof e === 'string' ? { name: e } : e;
-              const image = f.path && /\.(png|jpe?g)$/i.test(f.name);
+              const image = f.url && /\.(png|jpe?g)$/i.test(f.name);
               return (
                 <figure key={`${f.name}-${i}`} className="flex min-w-0 flex-col gap-1 rounded-xl border bg-card p-2">
                   {/* Evidence is served as files by the API; next/image would need it configured as a remote. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {image ? <a href={f.path} target="_blank" rel="noreferrer"><img src={f.path} alt={f.name} className="max-h-48 w-full rounded object-contain" /></a> : null}
-                  <figcaption className="truncate font-mono text-xs text-muted-foreground" title={f.name}>{f.name}</figcaption>
+                  {image ? <a href={f.url} target="_blank" rel="noreferrer"><img src={f.url} alt={f.name} className="max-h-48 w-full rounded object-contain" /></a> : null}
+                  <figcaption className="font-mono text-xs break-all text-muted-foreground">{f.name}</figcaption>
                 </figure>
               );
             })}

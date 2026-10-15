@@ -225,7 +225,8 @@ export interface Transport {
   putPage(id: string, write: PageWrite): Promise<{ page: WikiPage; created: boolean }>;
   deletePage(id: string): Promise<boolean>;
   artifacts(): Promise<(Artifact & { href?: string })[]>;
-  evidence(nnn: string): Promise<EvidenceDetail | undefined>;
+  /** Over HTTP each file also carries `url`, where the server serves it; in-process there is no server, so no `url`. */
+  evidence(nnn: string): Promise<(Omit<EvidenceDetail, 'files'> & { files: (EvidenceDetail['files'][number] & { url?: string })[] }) | undefined>;
   stats(): Promise<Stats>;
   config(): Promise<Config>;
   /** Owner mode, sign-in state, token validity, default-password notice, and the project. */

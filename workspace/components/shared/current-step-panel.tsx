@@ -57,9 +57,9 @@ function CheckLine({ journey }: { journey: Journey }) {
   return (
     <Alert variant={check.pass ? 'default' : 'destructive'} data-testid="check-sentence" data-pass={check.pass}>
       {check.pass ? <CheckCircle2 /> : <XCircle />}
-      <AlertTitle className="flex flex-wrap items-start gap-2">{check.stale ? <Badge variant="outline" className="rounded-full" data-testid="check-stale">stale</Badge> : null}<span>{check.sentence}</span></AlertTitle>
+      <AlertTitle className="flex flex-wrap items-start gap-2">{check.stale ? <Badge variant="outline" className="rounded-full" data-testid="check-stale">stale</Badge> : null}<span className="min-w-0 wrap-anywhere">{check.sentence}</span></AlertTitle>
       {!check.pass && check.output && check.output.trim() !== check.sentence ? (
-        <AlertDescription><pre className="max-h-32 w-full overflow-auto font-mono text-[11px] whitespace-pre-wrap">{check.output.trim()}</pre></AlertDescription>
+        <AlertDescription><pre className="max-h-32 w-full overflow-auto font-mono text-[11px] whitespace-pre-wrap wrap-anywhere">{check.output.trim()}</pre></AlertDescription>
       ) : null}
     </Alert>
   );

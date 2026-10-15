@@ -2,14 +2,14 @@ import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { streamSSE } from 'hono/streaming';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'fs';
 import { join, extname, resolve, sep } from 'path';
 import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
 import { getIndex, type ActivityFrame, type Diff, type ProjectIndex } from './index/index.js';
 import { readInboxSeen } from './inbox.js';
 import { CARD_MOCKS_DIR, isMockPath } from './mock.js';
-import { mocksArchiveDir } from './paths.js';
+import { evidenceDir, evidenceOf, mocksArchiveDir } from './paths.js';
 import * as services from './services.js';
 import { openStore, type Store } from './store/index.js';
 import type { StoryFlags } from './story.js';
@@ -22,6 +22,10 @@ const MIME_TYPES: Record<string, string> = {
   '.css': 'text/css',
   '.json': 'application/json',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.md': 'text/markdown',
+  '.log': 'text/plain',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain',
@@ -53,6 +57,15 @@ export function createApp(
   const mocksBase = opts.mocksBase ?? '/mocks';
   const api = (path: string) => `${apiBase}${path}`;
   const mocksRoute = (path: string) => `${mocksBase}${path}`;
+  // Each evidence file's served URL, under this app's own API base so the hub's per-project prefix
+  // comes along. Paths are project-relative (`.codeloop/evidence/048/x.png`); the URL takes the part
+  // after the story folder.
+  const withEvidenceUrls = <F extends { path: string }>(nnn: string, files: F[]) => {
+    const folder = `${evidenceOf(projectDir, nnn)}/`;
+    return files.map(f => (f.path.startsWith(folder)
+      ? { ...f, url: api(`/evidence/${nnn}/file/${f.path.slice(folder.length).split('/').map(encodeURIComponent).join('/')}`) }
+      : f));
+  };
   const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pagesPrefix = new RegExp(`^${escapeRegExp(api('/pages/'))}`);
   const mocksPrefix = new RegExp(`^${escapeRegExp(mocksRoute(''))}/?`);
@@ -351,7 +364,10 @@ export function createApp(
   }));
   app.get(api('/setup/status'), handled(async c => c.json(services.setupStatus(projectDir))));
   app.get(api('/cards/:id/show'), handled(async c => c.json(services.showCard(projectDir, c.req.param('id')))));
-  app.get(api('/cards/:id/full'), handled(async c => c.json(await services.cardFull(index, store, c.req.param('id')))));
+  app.get(api('/cards/:id/full'), handled(async c => {
+    const full = await services.cardFull(index, store, c.req.param('id'));
+    return c.json(full.evidence ? { ...full, evidence: { ...full.evidence, files: withEvidenceUrls(full.evidence.id, full.evidence.files) } } : full);
+  }));
 
   // One card with its event log, by id or number.
   app.get(api('/cards/:id'), handled(async c => {
@@ -401,8 +417,28 @@ export function createApp(
 
   app.get(api('/evidence/:nnn'), handled(async c => {
     const found = await services.evidenceDetail(projectDir, store, c.req.param('nnn'));
-    return found ? c.json(found) : notFound(c, `evidence ${c.req.param('nnn')}`);
+    return found ? c.json({ ...found, files: withEvidenceUrls(found.id, found.files) }) : notFound(c, `evidence ${c.req.param('nnn')}`);
   }));
+  // One file from a story's evidence folder. Confined to that folder after symlinks resolve, so
+  // `..` or a link pointing outside answers 404 rather than reading the rest of the project.
+  app.get(api('/evidence/:nnn/file/*'), c => {
+    const nnn = c.req.param('nnn') ?? '';
+    if (!/^\d{3}$/.test(nnn)) return c.text('Not found', 404);
+    let wanted: string;
+    try {
+      wanted = decodeURIComponent(c.req.path.slice(api(`/evidence/${nnn}/file/`).length));
+    } catch {
+      return c.text('Not found', 404);
+    }
+    const folder = resolve(projectDir, evidenceOf(projectDir, nnn));
+    const file = resolve(folder, wanted);
+    if (!existsSync(folder) || !existsSync(file)) return c.text('Not found', 404);
+    const realRoot = realpathSync(resolve(projectDir, evidenceDir(projectDir)));
+    const realFolder = realpathSync(folder);
+    const realFile = realpathSync(file);
+    if (!realFolder.startsWith(realRoot + sep) || !realFile.startsWith(realFolder + sep) || !statSync(realFile).isFile()) return c.text('Not found', 404);
+    return new Response(readFileSync(realFile), { headers: { 'Content-Type': MIME_TYPES[extname(realFile).toLowerCase()] || 'application/octet-stream' } });
+  });
 
   app.get(api('/artifacts'), handled(async c => cached(c, etag('artifacts', v.artifacts), async () => ({ artifacts: await services.artifacts(index) }))));
   // Not cached: the agent working each story comes from live sessions, which no index version tracks.

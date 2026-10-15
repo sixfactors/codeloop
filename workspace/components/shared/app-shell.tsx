@@ -140,7 +140,8 @@ function HubNavGroups({ pathname, projects }: { pathname: string; projects?: Lis
 }
 
 function isActive(item: NavItem, pathname: string): boolean {
-  if (item.exact) return pathname === item.matchUrl || pathname.startsWith('/cards/');
+  // A story's evidence folder is part of the story, so it sits under Board like the story page.
+  if (item.exact) return pathname === item.matchUrl || pathname.startsWith('/cards/') || pathname.startsWith('/evidence/');
   const base = item.matchUrl.replace(/\/$/, '');
   return pathname === base || pathname.startsWith(`${base}/`) || (item.also ?? []).some((p) => pathname.startsWith(p));
 }
