@@ -12,7 +12,7 @@ const LANE = 'id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: card
 
 let root: string;
 let dir: string;
-const sh = (cmd: string, cwd = dir, env: Record<string, string> = {}) => execSync(cmd, { cwd, encoding: 'utf8', env: { ...process.env, ...env } }).trim();
+const sh = (cmd: string, cwd = dir, env: Record<string, string> = {}) => execSync(cmd, { cwd, encoding: 'utf8', timeout: 60_000, killSignal: 'SIGKILL', env: { ...process.env, ...env } }).trim();
 const cli = (args: string, cwd = dir, env: Record<string, string> = {}) => sh(`node ${CLI} ${args} 2>&1`, cwd, env);
 
 beforeEach(() => {
