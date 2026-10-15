@@ -12,7 +12,7 @@ import { loadConfig } from './config.js';
 export const ACTIVITY_DIR = '.codeloop/state/activity';
 
 /** Engine events copied into the stream; `fail` is left out because the check line already says it. */
-export const MIRRORED_EVENTS = new Set(['park', 'approve', 'auto-approve', 'reject', 'answer', 'stuck', 'unstick', 'advance', 'promote', 'unpark', 'place', 'returned', 'rollback', 'agent-start', 'agent-run', 'close', 'drop']);
+export const MIRRORED_EVENTS = new Set(['park', 'approve', 'auto-approve', 'reject', 'answer', 'stuck', 'unstick', 'advance', 'promote', 'unpark', 'place', 'returned', 'rollback', 'agent-start', 'agent-run', 'close', 'drop', 'reopen', 'move', 'edit']);
 
 export type ActivityKind = 'start' | 'prompt' | 'stop' | 'end' | 'edit' | 'cmd' | 'log' | 'check' | 'commit' | string;
 

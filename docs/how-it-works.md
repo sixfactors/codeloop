@@ -77,6 +77,10 @@ Also unreleased: stage rubrics (`codeloop check rubric`), `codeloop answer --acc
 
 `codeloop progress [--since 7d] [--json]` reports how stories moved in a window (stage moves, median hours per stage, waits, stuck stories, gates, repeated failing checks) from the board, events and activity streams, with no model call.
 
+### Moving a story by hand
+
+`codeloop card reopen` brings a done or dropped card back to its lane's first stage (or to the backlog as a proposal), `card move` puts an active card at any other stage of its lane, and `card edit` changes its title, story, priority, feature or size. Moving back past a gate that was passed needs a note saying why, a reopen or move resets the target stage's retries and clears the gate, and all three are refused while a builder or a run holds the card. Each writes one event (`reopen`, `move`, `edit`) that the board, the activity stream and the story page show (`src/lib/story-control.ts`).
+
 ## Everything under .codeloop
 
 codeloop never writes into a project's source tree. What it owns is under `.codeloop/`: the board, config, lanes and wiki, and with `store.layout: dotfolder` (the default) the story folders too.

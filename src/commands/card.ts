@@ -4,6 +4,8 @@ import { readFileSync } from 'fs';
 import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
 import { createLocalClient, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
+import { resolveRole } from '../lib/engine.js';
+import { editCard, moveCard, reopenCard } from '../lib/story-control.js';
 
 const client = () => createLocalClient(projectRoot());
 
@@ -353,6 +355,40 @@ cardCommand
     const { card, hint } = await client().cards.place(id, stage, { as: opts.as });
     console.log(`${card.id} is at ${card.stage}`);
     console.log(chalk.cyan(hint));
+  }));
+
+cardCommand
+  .command('reopen <id> [note]')
+  .description('Bring a done or dropped card back to the first stage of its lane, or with --to backlog to the inbox as a proposal (the owner decides)')
+  .option('--to <stage>', 'A stage of its lane, or backlog (default: the first stage)')
+  .option(...ROLE)
+  .action(guard(async (id: string, note: string | undefined, opts: { as?: string; to?: string }) => {
+    const card = reopenCard(projectRoot(), id, resolveRole(opts.as), { to: opts.to, note });
+    console.log(`${card.id} is reopened at ${card.stage === 'proposed' ? 'backlog' : card.stage}`);
+  }));
+
+cardCommand
+  .command('move <id> <stage> [note]')
+  .description('Move an active card to any earlier or later stage of its lane; the note is required when moving back past a gate that was passed')
+  .option(...ROLE)
+  .action(guard(async (id: string, stage: string, note: string | undefined, opts: { as?: string }) => {
+    const card = moveCard(projectRoot(), id, stage, resolveRole(opts.as), { note });
+    console.log(`${card.id} is at ${card.stage}`);
+  }));
+
+cardCommand
+  .command('edit <id>')
+  .description('Edit a card: its title, story, priority, feature or size; the story line in its spec.md follows')
+  .option('--title <title>', 'What the user can now do')
+  .option('--story <story>', '"As a <persona>, I can <what>, so that <outcome>"')
+  .option('--priority <p>', 'P1, P2, P3 or P4')
+  .option('--feature <feature>', 'The capability this card is a slice of')
+  .option('--size <size>', 'S, M or L')
+  .option(...ROLE)
+  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string }) => {
+    const { as, ...edit } = opts;
+    const card = editCard(projectRoot(), id, resolveRole(as), edit);
+    console.log(`${card.id} is edited`);
   }));
 
 cardCommand

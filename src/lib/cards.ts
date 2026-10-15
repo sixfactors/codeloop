@@ -31,6 +31,8 @@ export interface StoryFields {
   /** Same as story.as; kept flat so the board can filter on it. */
   persona?: string;
   size?: Size;
+  /** P1 (brings money) to P4 (nice to have); set from the story page. */
+  priority?: string;
   points?: number;
   initiative?: string;
   epic?: string;
