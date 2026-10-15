@@ -112,8 +112,8 @@ describe('start', () => {
     lane('build', '  - id: research\n    output: "{spec}/research.md"\n    done: { cmd: "true" }\n');
     lane('market', GATED_THEN_PUBLIC);
 
-    expect(startCard(dir, { lane: 'build', title: 'Add export' }).spec).toBe('specs/001-add-export');
-    expect(existsSync(join(dir, 'specs/001-add-export/tasks.md'))).toBe(true);
+    expect(startCard(dir, { lane: 'build', title: 'Add export' }).spec).toBe('.codeloop/specs/001-add-export');
+    expect(existsSync(join(dir, '.codeloop/specs/001-add-export/tasks.md'))).toBe(true);
     expect(startCard(dir, { lane: 'market', title: 'Launch' }).spec).toBeUndefined();
   });
 });
@@ -280,7 +280,7 @@ describe('a promoted proposal', () => {
     approveFlow(dir, card.id, 'owner');
     const promoted = readCards(dir).cards.find(c => c.id === card.id)!;
     expect(promoted.stage).toBe('research');
-    expect(promoted.spec).toMatch(/^specs\//);
+    expect(promoted.spec).toMatch(/^\.codeloop\/specs\//);
     expect(existsSync(join(dir, promoted.spec!, 'research.md'))).toBe(true);
   });
 });

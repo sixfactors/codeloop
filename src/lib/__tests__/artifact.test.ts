@@ -40,7 +40,7 @@ afterEach(() => {
 describe('newArtifact', () => {
   it('writes docs/artifacts/<project>/<topic>/<card-id>-<kind>.html and never overwrites it', () => {
     const result = newArtifact(dir, 'c-001', 'board', 'mock', 'none');
-    expect(result).toEqual({ path: 'docs/artifacts/acme-app/board/c-001-mock.html', created: true });
+    expect(result).toEqual({ path: '.codeloop/artifacts/acme-app/board/c-001-mock.html', created: true });
     expect(read(result.path)).toContain('<title>c-001 Checkout flow</title>');
     write(result.path, read(result.path) + '<!-- my work -->');
     expect(newArtifact(dir, 'c-001', 'board', 'mock', 'none')).toEqual({ path: result.path, created: false });
@@ -59,10 +59,10 @@ describe('newArtifact', () => {
   it('a bare system-design template fails on its own placeholder tech names, by design', () => {
     newArtifact(dir, 'c-001', 'board', 'system-design', 'none');
     expect(checkArtifact(dir, 'c-001', 'system-design')).toEqual([
-      'docs/artifacts/acme-app/board/c-001-system-design.html software-layer box "UI, name the framework" names no technology',
-      'docs/artifacts/acme-app/board/c-001-system-design.html software-layer box "API, name the framework" names no technology',
-      'docs/artifacts/acme-app/board/c-001-system-design.html software-layer box "Services, name the language/runtime" names no technology',
-      'docs/artifacts/acme-app/board/c-001-system-design.html software-layer box "Data, name the datastore" names no technology',
+      '.codeloop/artifacts/acme-app/board/c-001-system-design.html software-layer box "UI, name the framework" names no technology',
+      '.codeloop/artifacts/acme-app/board/c-001-system-design.html software-layer box "API, name the framework" names no technology',
+      '.codeloop/artifacts/acme-app/board/c-001-system-design.html software-layer box "Services, name the language/runtime" names no technology',
+      '.codeloop/artifacts/acme-app/board/c-001-system-design.html software-layer box "Data, name the datastore" names no technology',
     ]);
   });
 

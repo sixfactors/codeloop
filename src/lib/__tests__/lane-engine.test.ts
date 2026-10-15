@@ -102,13 +102,16 @@ describe('engine', () => {
     expect(card.events.some(e => e.action === 'fail')).toBe(false);
   });
 
-  it('treats an exit code other than 0 or 1 as a crash, and a plain exit 1 with a message as a failure', () => {
+  it('treats command-not-found as a crash, and exit 1 or a grep on a missing file (exit 2) as a failure', () => {
     writeLane('market', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo tool missing >&2; exit 127" }\n`);
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
     expect(advanceCard(dir, 'c-1').outcome).toBe('check-error');
     writeLane('plain', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo no brief >&2; exit 1" }\n`);
     createCard(dir, { lane: 'plain', title: 't', id: 'c-2' });
     expect(advanceCard(dir, 'c-2').outcome).toBe('failed');
+    writeLane('grep', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "grep -q claim out/missing.md" }\n`);
+    createCard(dir, { lane: 'grep', title: 't', id: 'c-3' });
+    expect(advanceCard(dir, 'c-3').outcome).toBe('failed');
   });
 
   it('refuses to advance a parked card', () => {

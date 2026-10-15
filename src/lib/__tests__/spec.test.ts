@@ -56,7 +56,7 @@ describe('spec check', () => {
     createCard(dir, { lane: 'build', title: 'Add CSV export', id: 'c-7' });
 
     const { dir: specDir } = newSpec(dir, 'c-7');
-    expect(specDir).toBe('specs/007-add-csv-export');
+    expect(specDir).toBe('.codeloop/specs/007-add-csv-export');
     expect(readCards(dir).cards[0].spec).toBe(specDir);
     // The fresh template fails on every standard field it has not filled in, and on the missing task.
     const errors = checkSpec(dir, specDir);
@@ -94,14 +94,14 @@ describe('import', () => {
     const result = importSpecKit(dir, 'kit');
 
     expect(result.cards.map(c => [c.title, c.lane, c.spec])).toEqual([
-      ['Login', 'build', 'specs/c-001-login'],
-      ['export', 'build', 'specs/c-002-export'],
+      ['Login', 'build', '.codeloop/specs/c-001-login'],
+      ['export', 'build', '.codeloop/specs/c-002-export'],
     ]);
-    expect(readFileSync(join(dir, 'specs/c-001-login/tasks.md'), 'utf-8')).toBe(
+    expect(readFileSync(join(dir, '.codeloop/specs/c-001-login/tasks.md'), 'utf-8')).toBe(
       '- [ ] T001 [P] [US1] [api] Create model in src/api/models/user.py\n- [x] T002 [US1] [ui] Build form in src/components/Login.tsx\n- [ ] T003 [US2] [?] Decide the retention policy\n',
     );
     expect(result.flagged.map(f => f.task)).toEqual(['- [ ] T003 [US2] [?] Decide the retention policy']);
-    expect(checkSpec(dir, 'specs/c-001-login')[0]).toMatch(/untagged task.*T003/);
+    expect(checkSpec(dir, '.codeloop/specs/c-001-login')[0]).toMatch(/untagged task.*T003/);
     expect(readFileSync(join(dir, 'kit/specs/001-login/tasks.md'), 'utf-8')).toBe(tasks);
   });
 

@@ -132,13 +132,16 @@ export const awaitsApproval = (card: Card, stage: Stage) => !!stage.gate?.outwar
 const STACK_FRAME = /^\s+at\s.+(?:\(.*\)|:\d+(?::\d+)?)\s*$/;
 
 /**
- * A check passes with 0 and fails with 1. Any other exit code, or an output that is a stack trace
- * (two or more `at ...` frames led by an Error or a bare trace and no message of the check's own),
- * means the command crashed, for example a CLI rebuilt while the run was using it.
+ * A check passes with 0 and fails with any other exit up to 125. A killed command, an exit of 126 or
+ * more, or a failing output that is a stack trace (two or more `at ...` frames led by an Error or a
+ * bare trace and no message of the check's own) means the command crashed, for example a CLI rebuilt
+ * while the run was using it.
  */
 export function checkCrashed(status: number | null, output: string): boolean {
-  if (status !== 0 && status !== 1) return true;
   if (status === 0) return false;
+  // Killed, not found (127), not executable (126) or ended by a signal (128+): the command never
+  // judged the work. Exits 2 to 125 are a check's own failures: grep and test exit 2 on a missing file.
+  if (status === null || status >= 126) return true;
   const lines = output.split('\n').map(l => l.trimEnd()).filter(Boolean);
   if (lines.filter(l => STACK_FRAME.test(l)).length < 2) return false;
   // Node ends an uncaught exception with its version line; a check failing on purpose never prints

@@ -154,7 +154,7 @@ describe('a check that writes the board', () => {
     createCard(dir, { lane: 'notes', title: 'Release notes', id: 'c-070' });
     const { card, outcome } = advanceCard(dir, 'c-070');
     expect(outcome).toBe('moved');
-    expect(card).toMatchObject({ stage: 'ship', spec: 'specs/070-release-notes' });
+    expect(card).toMatchObject({ stage: 'ship', spec: '.codeloop/specs/070-release-notes' });
     expect(findCard(cards(), 'c-070').events.map(e => e.action)).toEqual(['create', 'spec', 'advance']);
   });
 });
