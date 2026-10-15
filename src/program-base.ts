@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { RefusalError } from './lib/cards.js';
 import { assertStoreReady } from './lib/store-home.js';
 import { legacyNotice } from './lib/paths.js';
 import { projectRoot } from './lib/project-root.js';
@@ -33,7 +34,17 @@ export function baseProgram(): Command {
     }
     // store.home: user keeps the board outside the repo, reached through links in the main tree;
     // every command but `store` itself needs them in place first.
-    if (top.name() !== 'store' && existsSync(join(root, '.codeloop'))) assertStoreReady(root);
+    // A hook runs outside each command's guard(), so its refusal is printed and exited here: one
+    // line and exit 2, never an uncaught stack trace.
+    if (top.name() !== 'store' && existsSync(join(root, '.codeloop'))) {
+      try {
+        assertStoreReady(root);
+      } catch (e) {
+        if (!(e instanceof RefusalError)) throw e;
+        console.error(`codeloop: ${e.message}`);
+        process.exit(2);
+      }
+    }
     // The legacy layout is announced on every command a person runs (on stderr, so JSON stays clean);
     // the hooks a host runs on every tool call stay quiet.
     if (!['store', 'guard', 'hookd'].includes(top.name()) && existsSync(join(root, '.codeloop'))) {

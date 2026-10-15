@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync, execSync, spawnSync } from 'child_process';
 import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
@@ -87,6 +87,15 @@ describe('one board for every worktree', () => {
     cl(dir, 'start', 'Founders can export invoices');
     config('store:\n  home: user\n');
     expect(() => cl(dir, 'card', 'list')).toThrow(/repo copies are still at .*specs/);
+  }, 60_000);
+
+  it('the refusal from the step every command runs first is one line and exit 2, never a stack trace', () => {
+    cl(dir, 'start', 'Founders can export invoices');
+    config('store:\n  home: user\n');
+    const run = spawnSync(process.execPath, [CLI, 'card', 'list'], { cwd: dir, env: env(), encoding: 'utf-8', timeout: 60_000 });
+    expect(run.status).toBe(2);
+    expect(run.stderr).toMatch(/^codeloop: store\.home is user, but repo copies are still at /m);
+    expect(run.stderr).not.toMatch(/^\s+at /m);
   }, 60_000);
 
   it('store move --to user then --to repo round-trips the files byte for byte', () => {
