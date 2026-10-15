@@ -269,7 +269,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []), ...(turn.mode === 'tree' ? ['fix forward with a new commit on the branch; nothing was reset or reverted'] : []));
     else if (turn.mode === 'tree') {
       // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
-      const adv = advanceCard(projectDir, card.id, { unattended: true });
+      const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
       turn.advance = adv.outcome;
       if (adv.outcome === 'check-error') {
         crashed = true;
@@ -291,7 +291,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
       try {
         const merged = mergeStory(projectDir, card.id);
         turn.merge = { sha: merged.sha, mode: merged.mode };
-        const adv = advanceCard(projectDir, card.id, { unattended: true });
+        const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
         turn.advance = adv.outcome;
         if (adv.outcome === 'check-error') {
           crashed = true;

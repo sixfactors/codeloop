@@ -17,6 +17,7 @@ import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextC
 export { RefusalError };
 import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
 import { planFiles } from './plan-scope.js';
+import { skipUnchangedRerun } from './rerun-skip.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
@@ -585,7 +586,7 @@ function quietSinceLastCheck(projectDir: string, id: string): boolean {
     if (!page.next) break;
   }
   const lastCheck = items.map(i => i.kind).lastIndexOf('check');
-  return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check');
+  return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check' || i.kind === 'check-skipped');
 }
 
 /**
@@ -594,7 +595,7 @@ function quietSinceLastCheck(projectDir: string, id: string): boolean {
  * leaves it stuck. The gate is cleared only on the working copy, so a failure with the same
  * fingerprint returns without writing anything.
  */
-export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean; checkTimeoutMs?: number } & Clock = {}): AdvanceResult {
+export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean; checkTimeoutMs?: number; force?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
   let before = findCard(file.cards, ref);
   const id = before.id;
@@ -618,6 +619,12 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     park(card, stage, now, 'before the stage runs');
     writeCards(projectDir, file, replace(file.cards, card));
     return { card, outcome: 'parked', started: [], because: {} };
+  }
+
+  // A scheduled run or the doctor does not rerun a failed check nothing has changed under. A person's
+  // `card check` and the app's Check now are neither, so they always run; `force` says so explicitly.
+  if (!opts.force && (opts.unattended || rerun) && skipUnchangedRerun(projectDir, before, stage.id, now)) {
+    return { card: before, outcome: 'unchanged', started: [], because: {} };
   }
 
   // Read before this run's own check line is appended: only work by someone since the last check
