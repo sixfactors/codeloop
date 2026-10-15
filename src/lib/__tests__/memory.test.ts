@@ -94,3 +94,23 @@ describe('codeloop ps and the bin shim', () => {
     expect(flag('serve')).toBe('--max-old-space-size=1024');
   });
 });
+
+describe('process detection', () => {
+  it('sees a process started the way the bin shim starts one: node with V8 flags before the entry', async () => {
+    const { spawn } = await import('child_process');
+    const { codeloopProcesses, isCodeloopCommand } = await import('../memory.js');
+    const sock = join(root, 'ps.sock');
+    const child = spawn(process.execPath, ['--max-old-space-size=64', resolve('dist/hookd-main.js'), '1'], { cwd: root, env: { ...process.env, CODELOOP_HOOKD_SOCK: sock }, stdio: 'ignore' });
+    try {
+      for (let i = 0; i < 100 && !existsSync(sock); i++) await new Promise(r => setTimeout(r, 50));
+      expect(codeloopProcesses().map(p => p.pid)).toContain(child.pid);
+      expect(codeloopProcesses().find(p => p.pid === child.pid)?.kind).toBe('hookd');
+    } finally {
+      child.kill('SIGKILL');
+    }
+    expect(isCodeloopCommand('node --max-old-space-size=1024 /opt/x/codeloop/dist/index.js hub --port 4050')).toBe(true);
+    expect(isCodeloopCommand('node /Users/d/.npm-global/bin/codeloop hub')).toBe(true);
+    expect(isCodeloopCommand('vim /opt/x/codeloop/dist/index.js')).toBe(false);
+    expect(isCodeloopCommand('node /srv/app/dist/index.js')).toBe(false);
+  });
+});
