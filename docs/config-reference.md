@@ -269,6 +269,7 @@ Unreleased (0.5.0).
 | `limits.max_memory_mb` | 2048 | New codeloop processes and agents wait while the codeloop processes already hold more than this; `codeloop ps --total` shows the sum. |
 | `activity` | on | `activity: off` stops recording the per-story activity stream. |
 | `monitor.stall_minutes` | 30 | A builder holding a card that writes nothing for this long is flagged stalled. `monitor: off` turns the monitor off. |
+| `doctor.scaffold_starts` | 0 | Stuck stories whose stage output was never written that one doctor tick may start the stage agent on, once each (event `doctor-start`). 0 starts none; `codeloop doctor --dry-run` lists them. |
 
 There is no `doctor.every` key. The doctor tick runs from the hourly `codeloop run --agent` crontab entry that the monitor installs (`codeloop schedule remove` stops it), or on demand with `codeloop doctor`.
 

@@ -23,6 +23,7 @@ import { startOrch, waitingOrchCards } from './orch.js';
 import { placeTurn } from './orch-isolation.js';
 import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
 import { Budget } from './budget.js';
+import { stageScaffold } from './stage-scaffold.js';
 import { LockedError, withRunLock } from './run-lock.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
@@ -422,6 +423,13 @@ export interface DoctorAction {
 const DAY_MS_DOCTOR = 24 * 60 * 60 * 1000;
 const PARK_QUESTION = 'Park it?';
 
+/** `doctor.scaffold_starts` in config.yaml: how many stuck-on-scaffold stories one tick may start an agent on. Default 0. */
+export function scaffoldStartCap(projectDir: string): number {
+  const doctor = (loadConfig(projectDir) as { doctor?: { scaffold_starts?: unknown } }).doctor;
+  const cap = doctor && typeof doctor === 'object' ? doctor.scaffold_starts : undefined;
+  return typeof cap === 'number' && cap >= 0 ? Math.floor(cap) : 0;
+}
+
 /** On unless `.codeloop/config.yaml` sets `monitor: off`. */
 export function monitorEnabled(projectDir: string): boolean {
   const value = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
@@ -471,6 +479,18 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       if (!(e instanceof RefusalError)) throw e;
     }
   }
+  // A stuck story whose stage output no agent ever wrote failed three checks on a scaffold. It gets
+  // one start of its stage skill (event `doctor-start`), never a second, up to doctor.scaffold_starts a tick.
+  const scaffoldCap = scaffoldStartCap(projectDir);
+  const onScaffold = new Map<string, string>();
+  for (const card of readCards(projectDir).cards) {
+    if (opts.skip?.has(card.id) || card.gate !== 'stuck' || card.events.some(e => e.action === 'doctor-start')) continue;
+    const stage = loadLane(projectDir, card.lane).stages.find(s => s.id === card.stage);
+    const why = stage && stageScaffold(projectDir, card, stage);
+    if (why) onScaffold.set(card.id, why);
+  }
+  let scaffoldSeen = 0;
+  let scaffoldStarted = 0;
   for (const card of readCards(projectDir).cards) {
     if (opts.skip?.has(card.id)) continue;
     // A story that entered build before the size rule existed is not thrown out; it is told once.
@@ -530,6 +550,35 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       const started = Boolean(turn.agent?.started);
       log({ id: card.id, action: started ? 'agent-started' : 'agent-not-started', note: started ? `doctor started agent ${agent.name} on ${card.stage} (failing, ${fails} fails); outcome ${turn.advanced.outcome}` : `doctor did not start an agent on ${card.stage}: ${turn.agent?.reason ?? turn.advanced.note ?? turn.advanced.outcome}` });
       continue;
+    }
+    const scaffold = state.health === 'stuck' && hasAgents ? onScaffold.get(card.id) : undefined;
+    if (scaffold) {
+      scaffoldSeen++;
+      const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
+      const which = `(scaffold, ${scaffoldSeen} of ${onScaffold.size})`;
+      if (dry) {
+        log({ id: card.id, action: 'agent-started', note: `would start ${agent.name} on ${card.id} ${card.stage} ${which}${scaffoldSeen > scaffoldCap ? `; doctor.scaffold_starts is ${scaffoldCap}` : ''}: ${scaffold}` });
+        continue;
+      }
+      if (scaffoldStarted < scaffoldCap && !isUnavailable(projectDir, agent.name)) {
+        const spent = budget.stop(`${card.id}:${card.stage}`);
+        if (spent) {
+          log({ id: card.id, action: 'agent-not-started', note: `doctor stopped: ${spent}` });
+          break;
+        }
+        const mem = overCeiling(projectDir, opts.memory);
+        if (mem.over) {
+          log({ id: card.id, action: 'agent-not-started', note: `doctor waited: codeloop processes hold ${mem.total} MB, over limits.max_memory_mb ${mem.ceiling}` });
+          break;
+        }
+        scaffoldStarted++;
+        // Recorded before the start, so a run that dies midway still counts as the one start.
+        recordEvent(projectDir, card.id, () => ({ action: 'doctor-start', note: `${agent.name} on ${card.stage} ${which}: ${scaffold}` }), now);
+        opts.onStep?.(`starting agent ${agent.name} on ${card.id} ${card.stage} ${which}`);
+        const step = await agentStep(projectDir, card.id, agent, now, undefined, budget);
+        log({ id: card.id, action: step?.started ? 'agent-started' : 'agent-not-started', note: step?.started ? `doctor started ${agent.name} on ${card.id} ${card.stage} ${which}: ${scaffold}` : `doctor did not start an agent on ${card.stage}: ${step?.reason ?? 'the check passes'}` });
+        continue;
+      }
     }
     const untouched = now.getTime() - Date.parse(card.updatedAt) > DAY_MS_DOCTOR;
     if ((state.health === 'stale' || state.health === 'stuck') && untouched) {
