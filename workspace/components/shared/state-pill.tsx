@@ -56,9 +56,17 @@ function Pill({ tone, agentDot, children, className }: { tone: Tone; agentDot?: 
  */
 export function StoryBadge({ display }: { display: StoryState }) {
   const health = display.health && display.health !== 'working' && display.health !== 'needs-you' ? HEALTH_PILL[display.health] : undefined;
-  if (health) return <Pill tone={health.tone}>{health.label}</Pill>;
-  if (display.state === 'needs-you') return <Pill tone="you">{waitingLabel(display.waitingOn)}</Pill>;
+  if (health) return <Pill tone={health.tone}>{moving(display, health.label)}</Pill>;
+  if (display.state === 'needs-you') return <Pill tone="you">{moving(display, waitingLabel(display.waitingOn))}</Pill>;
   return null;
+}
+
+/** A stuck or failing story that work has landed on since its check failed reads "Stuck · moving":
+ * the health stays bad, but somebody is on it. The API sets `moving` only on those two healths. */
+function moving(display: StoryState, label: string): React.ReactNode {
+  if (!display.moving) return label;
+  const at = display.movingAt ? new Date(display.movingAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : undefined;
+  return <span data-testid="pill-moving" title={at ? `Work landed ${at}` : undefined}>{label} · moving</span>;
 }
 
 /**
@@ -86,8 +94,8 @@ export function StatePill({ display, agent, className }: { display: StoryState; 
   }
   return (
     <span className={cn('inline-flex flex-wrap items-center gap-1', className)}>
-      <Pill tone={tone} agentDot={dot}>{label}</Pill>
-      {health ? <Pill tone={health.tone}>{health.label}</Pill> : null}
+      <Pill tone={tone} agentDot={dot}>{display.health === 'stuck' ? moving(display, label) : label}</Pill>
+      {health ? <Pill tone={health.tone}>{moving(display, health.label)}</Pill> : null}
       {flags.map((f) => <Pill key={f} tone={FLAG_TONE[f]}>{FLAG_LABEL[f]}</Pill>)}
     </span>
   );

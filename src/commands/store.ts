@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { CONFIG_FILE } from '../lib/config.js';
 import { moveStore, storeWhere, userStoreDir } from '../lib/store-home.js';
+import { withRunLockSync } from '../lib/run-lock.js';
 import { guard, refuse } from './guard.js';
 import { projectRoot } from '../sdk/local.js';
 
@@ -58,7 +59,8 @@ storeCommand
     if (opts.to !== 'user' && opts.to !== 'repo') throw refuse(`--to is user or repo, not "${opts.to}"`);
     const projectDir = projectRoot();
     const config = join(projectDir, CONFIG_FILE);
-    const moved = moveStore(projectDir, opts.to, { read: () => (existsSync(config) ? readFileSync(config, 'utf-8') : ''), write: text => writeFileSync(config, text) });
+    // Moving the board while a run reads it would lose that run's writes: the repo lock first.
+    const moved = withRunLockSync(projectDir, 'store move', () => moveStore(projectDir, opts.to as 'user' | 'repo', { read: () => (existsSync(config) ? readFileSync(config, 'utf-8') : ''), write: text => writeFileSync(config, text) }));
     console.log(`  store.home: ${moved.to}; copied ${moved.copied.join(', ') || 'nothing'}`);
     if (moved.to === 'user') {
       console.log(`  The repo copies are untouched. Once you have checked ${userStoreDir(projectDir)}, delete them; codeloop links each path into the store on its next run:`);

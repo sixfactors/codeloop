@@ -199,7 +199,7 @@ describe('init detection', () => {
     expect(config.agents.default).toBe('claude');
     expect(config.agents.claude.cmd).toContain('{brief}');
     expect(config.agents.claude.timeout_minutes).toBe(15);
-    expect(config.agents.claude.max_runs_per_day).toBe(50);
+    expect(config.agents.claude.max_runs_per_day).toBe(10);
   });
 
   it('never overwrites an agents: block that is already there', () => {

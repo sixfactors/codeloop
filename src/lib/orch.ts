@@ -23,6 +23,9 @@ import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
 import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
+import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
+import { LockedError, withRunLock, withRunLockSync } from './run-lock.js';
+import { Budget } from './budget.js';
 
 export const ORCH_DIR = '.codeloop/state/orch';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,8 +48,10 @@ export interface OrchTurn {
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
+  /** `check-error`: the stage check itself crashed; no retry is spent. `builder-unavailable`: the agent cannot run (not logged in); no retry is spent. */
   /** `merge-failed`: the gate passed but the merge did not; the work was right, so it costs no retry. */
-  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions';
+  /** `locked`: another run held the repo lock past orch.lock_wait_minutes; nothing ran and no retry is spent. */
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions' | 'check-error' | 'builder-unavailable' | 'locked';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -63,6 +68,8 @@ export interface PostMergeStep {
 export interface OrchRecord {
   card: string;
   turns: OrchTurn[];
+  /** Why the last `orchRun` stopped, kept so `orch status` can say it after the process is gone. */
+  stopped?: { reason: string; at: string };
 }
 
 export interface OrchOptions {
@@ -71,6 +78,10 @@ export interface OrchOptions {
   until?: string;
   /** `agent[:name]` (default), `session:<id-or-label-prefix>` or `person`. */
   builder?: string;
+  /** The run's budget; default one from orch.budget. A caller running several stories shares one. */
+  budget?: Budget;
+  /** How long to wait for the repo lock; default orch.lock_wait_minutes (10). */
+  lockWaitMs?: number;
   /** Minutes to wait for a session or person's hand-back; `false` returns at once with outcome `briefed`. Default `orch.wait_minutes` (120). */
   wait?: number | false;
   /** Replaces the process-table reading and the sleep when waiting under `limits.max_memory_mb`; tests only. */
@@ -169,18 +180,24 @@ export function orchBrief(projectDir: string, card: Card, worktree: string, bran
   return `${buildBrief(projectDir, card).trimEnd()}\n\n${feedback}${feedback ? '\n' : ''}${footer}`;
 }
 
-function agentStartsToday(projectDir: string, agent: AgentConfig, now: Date): number {
-  return readCards(projectDir).cards.flatMap(c => c.events).filter(e => e.action === 'agent-start' && e.agent === agent.name && now.getTime() - new Date(e.at).getTime() < DAY_MS).length;
+
+/** The engine's `check-error` event, written once per distinct tail: a crashed check spends no retry. */
+function checkError(projectDir: string, id: string, stage: string, tail: string): void {
+  const last = findCard(readCards(projectDir).cards, id).events.filter(e => e.stage === stage).at(-1);
+  if (last?.action === 'check-error' && last.note === tail) return;
+  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note: tail }));
 }
 
 /** A failed turn costs a retry, the same way a failed check does; the lane's last retry parks the story stuck. */
 function countFailure(projectDir: string, id: string, note: string): 'failed' | 'stuck' {
   const file = readCards(projectDir);
   const card = findCard(file.cards, id);
+  // Parked stories take no more failures: `retries` never passes `lane.retries`.
+  if (card.gate === 'stuck') return 'stuck';
   const lane = loadLane(projectDir, card.lane);
   const stage = currentStage(lane, card);
   const now = clock().toISOString();
-  const failures = (card.retries[stage.id] ?? 0) + 1;
+  const failures = Math.min((card.retries[stage.id] ?? 0) + 1, lane.retries);
   const stuck = failures >= lane.retries;
   const ev = (action: string) => ({ at: now, actor: 'engine', human: false, action, stage: stage.id, note });
   const next: Card = {
@@ -211,6 +228,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
   }
   let mergeFailed = false;
+  let crashed = false;
   // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
   const open = openQuestions(projectDir, card);
   if (open.length) {
@@ -229,7 +247,11 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     // 5. gate
     const gate = runGate(projectDir, card.id, { handbackId: hb.head });
     turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
-    if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
+    if (gate.checkCrashed !== undefined) {
+      checkError(projectDir, card.id, turn.stage, gate.checkCrashed);
+      turn.findings.push(...gate.findings);
+      crashed = true;
+    } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
     else {
       // 6. merge, then the engine's own advance
       try {
@@ -237,7 +259,10 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
         turn.merge = { sha: merged.sha, mode: merged.mode };
         const adv = advanceCard(projectDir, card.id, { unattended: true });
         turn.advance = adv.outcome;
-        if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
+        if (adv.outcome === 'check-error') {
+          crashed = true;
+          turn.findings.push(`stage check crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+        } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
           turn.findings.push(`stage check failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
         } else {
@@ -259,6 +284,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   }
 
   if (!turn.findings.length) turn.outcome = 'merged';
+  else if (crashed) turn.outcome = 'check-error';
   else if (mergeFailed) turn.outcome = 'merge-failed';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
   turn.endedAt = new Date().toISOString();
@@ -297,6 +323,9 @@ function postMerge(projectDir: string, cardId: string, mergedStage: string, sha:
   if (named.build) plan.push({ name: 'build', cmd: named.build });
   if (named.restart) plan.push({ name: 'restart', cmd: named.restart });
   const steps: PostMergeStep[] = [];
+  if (!plan.length) return { steps };
+  // A build or restart never overlaps another run's: the repo lock (re-entrant for this turn's own holder).
+  return withRunLockSync(projectDir, `post-merge ${cardId}`, () => {
   for (const step of plan) {
     const run = spawnSync(step.cmd, { cwd: projectDir, shell: true, encoding: 'utf-8', timeout: POST_MERGE_TIMEOUT_MS, env: checkEnv() });
     const exit = run.error && !run.status ? null : run.status;
@@ -306,6 +335,7 @@ function postMerge(projectDir: string, cardId: string, mergedStage: string, sha:
     if (exit !== 0) return { steps, failed: `after the merge, ${step.name} (\`${step.cmd}\`) exited ${exit ?? 'without finishing'}: ${tail.trim().split('\n').slice(-5).join(' | ').slice(-600)}` };
   }
   return { steps };
+  });
 }
 
 /** A post-merge failure parks the story for its owner: the merge stands, but nobody is told it works. */
@@ -340,8 +370,29 @@ async function awaitHandback(projectDir: string, cardId: string, turn: OrchTurn,
   }
 }
 
-/** One turn: the story's current stage through the builder, the gate, and the merge. */
+/**
+ * One turn: the story's current stage through the builder, the gate, and the merge, holding the
+ * repo lock. A turn that cannot take the lock within orch.lock_wait_minutes is recorded as `locked`,
+ * names the holder and spends no retry.
+ */
 export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
+  const id = findCard(readCards(projectDir).cards, cardRef).id;
+  try {
+    return await withRunLock(projectDir, `orch ${id} turn`, () => orchTurnLocked(projectDir, id, opts), opts.lockWaitMs);
+  } catch (e) {
+    if (!(e instanceof LockedError)) throw e;
+    const record = readOrch(projectDir, id);
+    const card = findCard(readCards(projectDir).cards, id);
+    const at = new Date().toISOString();
+    const turn: OrchTurn = { n: record.turns.length + 1, stage: card.stage, startedAt: at, endedAt: at, agent: opts.agent ?? '', worktree: '', branch: '', outcome: 'locked', findings: [e.message] };
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, id, { kind: 'orch', stage: card.stage, n: turn.n, outcome: 'locked', text: e.message });
+    return turn;
+  }
+}
+
+async function orchTurnLocked(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
   const first = findCard(readCards(projectDir).cards, cardRef);
   if (first.stage === DONE) throw new RefusalError(`card ${first.id} is done`);
   const asked = openQuestions(projectDir, first);
@@ -354,8 +405,9 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
   let session: SessionCard | undefined;
   if (spec.kind === 'agent') {
     agent = resolveAgent(projectDir, spec.name, lane.agent);
-    const limit = agentStartsToday(projectDir, agent, now);
-    if (limit >= agent.maxRunsPerDay) throw new RefusalError(`agent ${agent.name} has started ${limit} times in the last 24 hours (max_runs_per_day is ${agent.maxRunsPerDay})`);
+    if (isUnavailable(projectDir, agent.name)) throw new AgentRefusal(`agent ${agent.name} is marked unavailable (${agentStatus(projectDir, agent.name).unavailable!.reason}); fix it, then run \`codeloop agent clear ${agent.name}\``, 'unavailable');
+    const used = startsToday(projectDir, agent.name, now);
+    if (used >= agent.maxRunsPerDay) throw new AgentRefusal(`agent ${agent.name} has started ${used} times today (max_runs_per_day is ${agent.maxRunsPerDay})`, 'ledger');
   } else if (spec.kind === 'session') session = findSession(projectDir, spec.ref);
   const builderName = agent?.name ?? (session ? (session.label ?? session.session) : 'person');
 
@@ -405,6 +457,19 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
   turn.log = log;
   const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
   recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent!.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent!.timeoutMinutes} minutes` } : {}) }));
+  // An agent that exits within seconds with nothing handed back could not run (not logged in, not
+  // installed): that is a stop, not a failed attempt, and the second in a row marks it unavailable.
+  const handedBack = listHandbacks(projectDir, card.id).some(h => Date.parse(h.at) >= Date.parse(turn.startedAt) && h.stage === card.stage);
+  const marked = noteAgentRun(projectDir, agent.name, { durationMs: ran.durationMs, handedBack, exit: ran.exit });
+  if (!handedBack && ran.durationMs < quickExitMs(projectDir)) {
+    turn.outcome = 'builder-unavailable';
+    turn.findings.push(`agent ${agent.name} exited ${ran.exit ?? 'without a code'} after ${Math.round(ran.durationMs / 100) / 10} s with nothing handed back${marked ? `; it is now marked unavailable until \`codeloop agent clear ${agent.name}\`` : ''} (see ${log})`);
+    turn.endedAt = new Date().toISOString();
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.join('; ') });
+    return turn;
+  }
   return settle(projectDir, record, turn, ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`);
 }
 
@@ -436,30 +501,62 @@ export function orchInbox(projectDir: string, session: string | undefined = curr
   return out;
 }
 
-/** Turns until the story parks at a gate, is stuck or done, reaches `until`, or the agent runs out of starts for the day. */
+/** What made a turn fail, as a stable string: two turns with the same one learned nothing new. */
+const fingerprint = (t: OrchTurn) => `${t.outcome}|${t.stage}|${t.findings.join(';')}`;
+
+/** The reason a run should stop after `turns` (this invocation's turns, newest last), if it should. */
+function breaker(turns: OrchTurn[]): string | undefined {
+  const last = turns.at(-1);
+  if (!last || last.outcome === 'merged') return undefined;
+  const lastThree = turns.slice(-3);
+  if (lastThree.length === 3 && lastThree.every(t => t.outcome === 'failed' && t.stage === last.stage)) return `failed 3 times in a row on ${last.stage}; fix the cause before running again`;
+  const prev = turns.at(-2);
+  if (prev && fingerprint(prev) === fingerprint(last)) return `the same failure twice on ${last.stage} (${last.outcome}): ${last.findings.join('; ').slice(0, 300)}; not retrying`;
+  return undefined;
+}
+
+/** Turns until the story parks at a gate, is stuck or done, reaches `until`, a breaker trips, or the agent runs out of starts for the day. */
 export async function orchRun(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchRunResult> {
   const id = findCard(readCards(projectDir).cards, cardRef).id;
   const turns: OrchTurn[] = [];
-  for (let i = 0; i < 50; i++) {
+  const stop = (stopped: string): OrchRunResult => {
+    const record = readOrch(projectDir, id);
+    record.stopped = { reason: stopped, at: new Date().toISOString() };
+    saveOrch(projectDir, record);
+    return { card: id, turns, stopped };
+  };
+  const budget = opts.budget ?? Budget.for(projectDir);
+  for (;;) {
     const card = findCard(readCards(projectDir).cards, id);
-    if (card.stage === DONE) return { card: id, turns, stopped: 'done' };
-    if (card.gate === 'stuck') return { card: id, turns, stopped: 'stuck' };
-    if (card.gate) return { card: id, turns, stopped: `gate ${card.gate}` };
-    if (opts.until && card.stage === opts.until) return { card: id, turns, stopped: `reached ${opts.until}` };
+    if (card.stage === DONE) return stop('done');
+    if (card.gate === 'stuck') return stop('stuck');
+    if (card.gate) return stop(`gate ${card.gate}`);
+    if (opts.until && card.stage === opts.until) return stop(`reached ${opts.until}`);
+    const spent = budget.stop(`${id}:${card.stage}`);
+    if (spent) return stop(spent);
     let turn: OrchTurn;
     try {
       turn = await orchTurn(projectDir, id, opts);
     } catch (e) {
-      if (e instanceof RefusalError && /waiting for answers/.test(e.message)) return { card: id, turns, stopped: 'waiting for answers' };
-      if (e instanceof RefusalError && /max_runs_per_day/.test(e.message)) return { card: id, turns, stopped: e.message };
+      if (e instanceof AgentRefusal) return stop(`${e.kind === 'unavailable' ? 'builder-unavailable' : 'refused'}: ${e.message}`);
+      if (e instanceof RefusalError && /waiting for answers/.test(e.message)) return stop('waiting for answers');
+      if (e instanceof RefusalError) return stop(`refused: ${e.message}`);
       throw e;
     }
     turns.push(turn);
-    if (turn.outcome === 'briefed') return { card: id, turns, stopped: 'briefed' };
-    if (turn.outcome === 'questions') return { card: id, turns, stopped: 'waiting for answers' };
-    if (turn.outcome === 'merge-failed') return { card: id, turns, stopped: `merge failed: ${turn.findings.at(-1)}` };
+    budget.turn();
+    if (turn.log) budget.agentStart();
+    if (turn.outcome === 'failed') budget.fail(`${id}:${turn.stage}`);
+    if (turn.outcome === 'builder-unavailable') return stop(`builder-unavailable: ${turn.findings.at(-1) ?? ''}`);
+    if (turn.outcome === 'locked') return stop(turn.findings.at(-1) ?? 'locked');
+    if (turn.outcome === 'briefed') return stop('briefed');
+    if (turn.outcome === 'questions') return stop('waiting for answers');
+    if (turn.outcome === 'merge-failed') return stop(`merge failed: ${turn.findings.at(-1)}`);
+    if (turn.outcome === 'stuck') return stop('stuck');
+    if (turn.outcome === 'check-error') return stop(`the stage check itself crashed; fix the tool before retrying: ${turn.findings.at(-1)?.slice(0, 300) ?? ''}`);
+    const tripped = breaker(turns);
+    if (tripped) return stop(tripped);
   }
-  return { card: id, turns, stopped: 'turn cap' };
 }
 
 export function orchStatus(projectDir: string): OrchStatusRow[] {

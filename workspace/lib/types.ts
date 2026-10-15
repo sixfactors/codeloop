@@ -19,6 +19,7 @@ import type {
   Artifact as SdkArtifact,
   Card as SdkCard,
   CardShow as SdkCardShow,
+  CardFull as SdkCardFull,
   IndexedFeature,
   CardEvent,
   CardFilterKey,
@@ -146,8 +147,14 @@ export type EvidenceFile = Pick<EvidenceDetail['files'][number], 'name'> & Parti
 export type Evidence = EvidenceDetail;
 
 /** `/api/cards/:id/full` with the spec text and the evidence files lifted out, the way the card screen reads them. */
+/** A commit carrying the story's trailer: merged into the trunk, or held on the branches named. */
+export type StoryCommit = SdkCardFull['commits'][number];
+/** The current stage's rubric: each row with pass, fail or pending and the finding. */
+export type StageRubric = NonNullable<SdkCardFull['rubric']>;
+export type RubricRow = StageRubric['rows'][number];
+
 export interface CardFull {
-  card: Card & CardHolder;
+  card: Card & CardHolder & { display?: StoryState };
   /** The lane's phases with this story's place in them, its holder and its last check, from the API. */
   journey?: Journey;
   spec?: string;
@@ -156,6 +163,9 @@ export interface CardFull {
   evidence?: EvidenceFile[];
   mock?: string | null;
   page?: Page | null;
+  rubric?: StageRubric | null;
+  /** Newest first, at most 20. */
+  commits?: StoryCommit[];
 }
 
 export type Artifact = SdkArtifact & { href?: string; url?: string };

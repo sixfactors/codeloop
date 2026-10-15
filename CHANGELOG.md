@@ -8,6 +8,7 @@ when package.json names a version this file has no heading for.
 ## 0.5.0 (unreleased)
 
 - codeloop starts in a third of the memory; the test suite runs serially.
+- The workspace story page shows a stuck or failing story that work has landed on as "Stuck · moving" or "Failing · moving", lists its tasks with ticks and layer next to its commits (merged, or the branch holding them), puts the stage's rubric rows (pass, fail, pending, with the finding) beside Approve, and shows "in build 6h 04m, working 1h 12m" on the current step and on each board card. The Orchestration section explains a turn that ended in questions or a failed merge, and Home shows how long a stalled agent has been quiet.
 - Every story shows time in stage and time working: `activeMinutes` (the gaps between consecutive edit, command, commit, hand-back or log lines that are within ten minutes of each other, summed) and `idleMinutes` (wall time in the phase minus that) sit on the journey steps, on `boardView` stories beside `phaseSince`, and `codeloop card show` prints "in build 6h 04m, working 1h 12m" (`cards.show` returns `phaseTime`).
 - `codeloop card selfcheck <card>` runs the stage check, `check scope`, `check rubric` and the diff budget in the current work dir, one line each, exit 1 if any fails. The brief footer tells the builder to run it before handing back; the hand-back record carries the result (`selfcheck` on the record and the orch turn) and the gate skips the stage check when a selfcheck passed at the hand-back's head, still rerunning the proof. The review skill now says one review per story at the review stage, never per commit.
 - A story with more than eight task lines in tasks.md, or size L, is refused when it enters the build stage by advance or `card place` ("c-048 has 17 tasks; split it into stories of eight or fewer (`codeloop card split c-048 ...`)"); `lanes: { max_tasks: <n> }` in config.yaml changes the limit, and a card with `split_from` and no more tasks than the limit passes. A story already in build is not thrown out: `card show` prints the sentence and the doctor records it once as a `split-nudge` event.
@@ -33,6 +34,21 @@ when package.json names a version this file has no heading for.
 - `CODELOOP_PROJECT_DIR` points card, hook, verify, check, inbox, ask and brief commands at the main tree's board when a builder runs inside a story worktree.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
+
+### Resilience
+- One budget per run: `orch run`, `run --due`, the doctor tick and a card run stop at 12 turns, 6
+  agent starts, 90 minutes or 3 failures on one stage (`orch.budget`), with the reason recorded.
+- Stops that spend no retry: a crashed check (`check-error`), an agent that cannot run
+  (`builder-unavailable`), questions, a failed merge, a refusal, the repo lock (`locked`) or the budget.
+- An agent that exits within 10 seconds with nothing handed back twice in a row is marked unavailable;
+  no loop starts it again until `codeloop agent clear <name>`.
+- `.codeloop/state/agent-ledger.json` counts each agent's starts per day; `max_runs_per_day` defaults
+  to 10 and `codeloop stats` shows today's starts.
+- One repo lock (`.codeloop/state/run.lock`) for orchestrated turns, `run --due`, post-merge builds and
+  restarts, and `store move`; a second caller waits `orch.lock_wait_minutes` (10) then stops naming
+  the holder, and a dead holder's lock is reclaimed.
+- Agent processes run in their own process group and die with the codeloop process that started them;
+  `codeloop ps` lists them and `codeloop ps --kill-orphans` kills only those whose parent is gone.
 
 ### Shared story store
 - `codeloop render` writes the same CLAUDE.md, AGENTS.md and host rule files in every worktree: the

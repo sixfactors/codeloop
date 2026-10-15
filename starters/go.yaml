@@ -87,7 +87,7 @@ watch:
 #   claude:
 #     cmd: "claude -p --permission-mode acceptEdits < {brief}"
 #     timeout_minutes: 20        # the agent is killed after this
-#     max_runs_per_day: 20       # agent starts across the project in any 24 hours
+#     max_runs_per_day: 10       # starts of this agent per day; the 11th is refused
 #   codex:
 #     cmd: "codex exec - < {brief}"
 # run:

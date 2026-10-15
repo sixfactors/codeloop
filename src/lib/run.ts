@@ -18,6 +18,9 @@ import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
+import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
+import { Budget } from './budget.js';
+import { LockedError, withRunLock } from './run-lock.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
@@ -53,6 +56,8 @@ export interface RunResult {
   agents?: AgentStep[];
   /** Every lane with a trigger, and what this run did about it. */
   lanes: LaneDue[];
+  /** Why the run stopped early: its budget, or the repo lock another run held. */
+  stopped?: string;
 }
 
 export interface LaneDue {
@@ -133,13 +138,14 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
   const { gatesPerDay } = loadEngineConfig(projectDir);
   const parked = waitingOnOwner(cards);
   if (gatesPerDay !== undefined && parked >= gatesPerDay) return `${plural(parked, 'card is', 'cards are')} waiting on you (capacity.gates_per_day is ${gatesPerDay}); clear the inbox first`;
-  const starts = planned + cards.flatMap(c => c.events).filter(e => e.action === 'agent-start' && e.agent === agent.name && now.getTime() - new Date(e.at).getTime() < DAY_MS).length;
-  if (starts >= agent.maxRunsPerDay) return `agent ${agent.name} has started ${plural(starts, 'time', 'times')} in the last 24 hours (max_runs_per_day is ${agent.maxRunsPerDay})`;
+  if (isUnavailable(projectDir, agent.name)) return `agent ${agent.name} is marked unavailable; \`codeloop agent clear ${agent.name}\` once it can run`;
+  const starts = planned + startsToday(projectDir, agent.name, now);
+  if (starts >= agent.maxRunsPerDay) return `agent ${agent.name} has started ${plural(starts, 'time', 'times')} today (max_runs_per_day is ${agent.maxRunsPerDay})`;
   return undefined;
 }
 
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
-async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string): Promise<(AgentStep & { busy?: boolean }) | null> {
+async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean }) | null> {
   const card = findCard(readCards(projectDir).cards, id);
   const lane = loadLane(projectDir, card.lane);
   const stage: Stage | undefined = lane.stages.find(s => s.id === card.stage);
@@ -152,6 +158,8 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'returned' || e.action === 'agent-start')).at(-1);
   if (asked?.action !== 'reject' && asked?.action !== 'returned' && runCheck(projectDir, card, stage)?.passed) return null;
 
+  const spent = budget?.stop(`${id}:${stage.id}`);
+  if (spent) return { ...step, started: false, reason: spent };
   let log = '';
   try {
     // The limits are judged on the same read of the board the start is written against.
@@ -170,8 +178,17 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   const brief = join(projectDir, briefPath(card));
   mkdirSync(dirname(brief), { recursive: true });
   writeFileSync(brief, buildBrief(projectDir, card));
-  const run = await runAgent(projectDir, agent, brief, join(projectDir, log));
-  const note = run.timedOut ? `timed out after ${agent.timeoutMinutes} minutes` : run.exit === null ? 'was killed' : undefined;
+  let run;
+  try {
+    run = await runAgent(projectDir, agent, brief, join(projectDir, log), { now });
+  } catch (e) {
+    if (!(e instanceof RefusalError)) throw e;
+    recordEvent(projectDir, id, () => ({ action: 'agent-run', agent: agent.name, exit: null, durationMs: 0, log, note: `not started: ${e.message}` }), now);
+    return { ...step, started: false, reason: e.message };
+  }
+  budget?.agentStart();
+  const marked = noteAgentRun(projectDir, agent.name, { durationMs: run.durationMs, handedBack: run.exit === 0, exit: run.exit });
+  const note = run.timedOut ? `timed out after ${agent.timeoutMinutes} minutes` : run.exit === null ? 'was killed' : marked ? `marked unavailable: exited quickly twice; \`codeloop agent clear ${agent.name}\`` : undefined;
   recordEvent(projectDir, id, () => ({ action: 'agent-run', agent: agent.name, exit: run.exit, durationMs: run.durationMs, log, ...(note ? { note } : {}) }), new Date(now.getTime() + run.durationMs));
   const reviewed = run.exit === 0 && stage.review ? await reviewStep(projectDir, id, stage, log, new Date(now.getTime() + run.durationMs)) : 0;
   return { ...step, started: true, exit: run.exit, durationMs: run.durationMs + reviewed, log };
@@ -216,10 +233,10 @@ export interface CardTurn {
 export type AgentWanted = { name?: string };
 
 /** `agent` is already resolved: `evalFixture` and `startCardRun` build their own, outside any lane. */
-export async function workCard(projectDir: string, id: string, stage: string, agent: AgentConfig | null, now: Date, logFile?: string): Promise<CardTurn> {
+export async function workCard(projectDir: string, id: string, stage: string, agent: AgentConfig | null, now: Date, logFile?: string, budget?: Budget): Promise<CardTurn> {
   const turn: CardTurn = { advanced: { id, outcome: 'refused' } };
   try {
-    const step = agent ? await agentStep(projectDir, id, agent, now, logFile) : null;
+    const step = agent ? await agentStep(projectDir, id, agent, now, logFile, budget) : null;
     if (step) {
       const { busy, ...entry } = step;
       turn.agent = entry;
@@ -238,6 +255,7 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
     // judged and counted. Without that a failing agent would be started again on every run.
     const advance = advanceCard(projectDir, id, { now: new Date(now.getTime() + (step?.durationMs ?? 0)), unattended: !!agent && !step?.started });
     const failed = step?.started && (advance.outcome === 'failed' || advance.outcome === 'stuck');
+    if (advance.outcome === 'failed') budget?.fail(`${id}:${stage}`);
     turn.output = advance.output;
     turn.outcome = advance.outcome;
     turn.advanced = { id, outcome: advance.outcome, ...(failed ? { next: nextHint(projectDir, advance.card, advance.outcome === 'failed' ? advance.output ?? '' : undefined) } : {}) };
@@ -252,12 +270,27 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
  *  card's stage keeps advancing until its own check stops it: a failed check, a gate, stuck, done,
  *  the agent's max_runs_per_day, or the safety cap. */
 export async function runDueWithAgent(projectDir: string, wanted: AgentWanted, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
+  try {
+    return await withRunLock(projectDir, 'run --due', () => runDueLocked(projectDir, wanted, now, filter));
+  } catch (e) {
+    if (!(e instanceof LockedError)) throw e;
+    return { created: [], skipped: [], advanced: [], agents: [], lanes: [], stopped: e.message };
+  }
+}
+
+async function runDueLocked(projectDir: string, wanted: AgentWanted, now: Date, filter: RunFilter): Promise<RunResult> {
+  const budget = Budget.for(projectDir, now.getTime());
   const file = join(projectDir, LAST_RUN);
   const result: RunResult = { ...withLock(file, () => startDue(projectDir, file, now, filter)), agents: [] };
   promoteQueued(projectDir, { now, lane: filter.lane });
   parkStuck(projectDir, { now });
 
   for (const { id, stage, lane: laneId } of active(projectDir, filter)) {
+    const spent = budget.stop();
+    if (spent) {
+      result.stopped = spent;
+      break;
+    }
     // Resolved once per card, from that card's own lane: a lane naming its own `agent:` preset
     // (src/commands/wiki.ts's `wiki` lane, for instance) is not forced onto every other lane's
     // cards in the same run.
@@ -265,7 +298,7 @@ export async function runDueWithAgent(projectDir: string, wanted: AgentWanted, n
     let current = stage;
     let turn: CardTurn = { advanced: { id, outcome: 'refused' } };
     for (let i = 0; i < MAX_ADVANCES_PER_CARD; i++) {
-      turn = await workCard(projectDir, id, current, agent, now);
+      turn = await workCard(projectDir, id, current, agent, now, undefined, budget);
       if (turn.agent) result.agents!.push(turn.agent);
       if (turn.busy || turn.advanced.outcome !== 'moved') break;
       current = findCard(readCards(projectDir).cards, id).stage;
@@ -396,8 +429,7 @@ export function monitorEnabled(projectDir: string): boolean {
  */
 export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe } = {}): Promise<DoctorAction[]> {
   if (!monitorEnabled(projectDir)) return [];
-  // Reruns and nudges start processes; over the ceiling the tick waits for the next one.
-  if (overCeiling(projectDir, opts.memory).over) return [];
+  const budget = Budget.for(projectDir, now.getTime());
   const actions: DoctorAction[] = [];
   const hasAgents = Object.keys(loadAgents(projectDir).agents).length > 0;
   const log = (a: DoctorAction) => {
@@ -436,7 +468,20 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     if (state.health === 'failing' && fails < 3) {
       if (!hasAgents) continue;
       const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
-      const turn = await workCard(projectDir, card.id, card.stage, agent, now);
+      // An agent a person has to fix first is never restarted by the doctor.
+      if (isUnavailable(projectDir, agent.name)) continue;
+      const spent = budget.stop(`${card.id}:${card.stage}`);
+      if (spent) {
+        log({ id: card.id, action: 'agent-not-started', note: `doctor stopped: ${spent}` });
+        break;
+      }
+      // Last of the three gates (unavailable agent, run budget, memory): a new agent is a new process tree.
+      const mem = overCeiling(projectDir, opts.memory);
+      if (mem.over) {
+        log({ id: card.id, action: 'agent-not-started', note: `doctor waited: codeloop processes hold ${mem.total} MB, over limits.max_memory_mb ${mem.ceiling}` });
+        break;
+      }
+      const turn = await workCard(projectDir, card.id, card.stage, agent, now, undefined, budget);
       const started = Boolean(turn.agent?.started);
       log({ id: card.id, action: started ? 'agent-started' : 'agent-not-started', note: started ? `doctor started agent ${agent.name} on ${card.stage} (failing, ${fails} fails); outcome ${turn.advanced.outcome}` : `doctor did not start an agent on ${card.stage}: ${turn.agent?.reason ?? turn.advanced.note ?? turn.advanced.outcome}` });
       continue;
