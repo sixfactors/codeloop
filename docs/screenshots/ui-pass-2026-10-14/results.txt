@@ -1,0 +1,143 @@
+spec 1  PASS  codeloop: columns are the lane's phases in order  (up-next,research,interview,mock,spec,data-model,build,verify,review,staging,live)
+spec 1  PASS  codeloop: empty phases collapsed, others open  (up-next,verify,staging,live)
+spec 1  PASS  codeloop: rows are Needs you / Agent / Queued with empty rows hidden  (needs-you:20 queued:34)
+spec 1  PASS  codeloop: header count equals the sidebar Board badge and the API total  (header 107, badge "99+", api 107)
+spec 1  PASS  codeloop: drawer pager total equals the header count  (1 of 107)
+spec 1  PASS  codeloop: cards show a live line and time in phase  (54 live lines, 54 times, 54 cards)
+spec 1  PASS  codeloop: no card shows a UUID as its holder
+spec 1  PASS  codeloop: no horizontal page scroll at 1440 and 900  ({"900":true,"1440":true})
+spec 1  PASS  codeloop: lane picker switches to wiki  (up-next,architecture)
+spec 1  PASS  ops-ai: columns are the lane's phases in order  (up-next,research,interview,mock,spec,build,verify,review,staging,live)
+spec 1  PASS  ops-ai: empty phases collapsed, others open  (up-next,interview,mock,spec,review,staging,live)
+spec 1  PASS  ops-ai: rows are Needs you / Agent / Queued with empty rows hidden  (needs-you:2 queued:3)
+spec 1  PASS  ops-ai: header count equals the sidebar Board badge and the API total  (header 48, badge "48", api 48)
+spec 1  PASS  ops-ai: drawer pager total equals the header count  (1 of 48)
+spec 1  PASS  ops-ai: cards show a live line and time in phase  (5 live lines, 5 times, 5 cards)
+spec 1  PASS  ops-ai: no card shows a UUID as its holder
+spec 1  PASS  ops-ai: no horizontal page scroll at 1440 and 900  ({"900":true,"1440":true})
+spec 1  PASS  ops-ai: lane picker switches to shape  (up-next,brief,interview,breakdown,rank)
+spec 8  PASS  sign in once as owner
+spec 2  PASS  pill reads "Stuck · moving"  (Stuck · moving)
+spec 2  PASS  holder is a label, never a UUID  (Stuck · moving | build since Wed 11:50 AM | in build 11h 58m, working 39m)
+spec 2  PASS  journey shows four skipped phases with "placed at build by owner"  (4 skipped, tooltip "placed at build by owner: work already under way")
+spec 2  FAIL  check sentence names 13:50 and "Changed since: N of 17 tasks done; run Check now"  (stale)
+spec 2  PASS  check sentence carries a stale badge
+spec 2  PASS  "in build Xh, working Ym" on the current step  (in build 11h 58m, working 39m)
+spec 2  PASS  Tasks and commits panel once, not under Output
+spec 2  PASS  ticked tasks with layer chips  (10 of 16 ticked, 16 chips)
+spec 2  PASS  commits newest first, each merged or on <branch>  (20 commits, first "merged")
+spec 2  PASS  no raw HTML comments in rendered output
+spec 2  PASS  evidence images open on click  (http://localhost:4050/p/ops-ai/cards/c-048/)
+spec 3  FAIL  "Waiting for you at spec" with the check sentence
+spec 3  FAIL  rubric rows with pass, fail or pending match the API
+spec 3  FAIL  rubric sits above Approve
+spec 3  FAIL  each row with a finding shows it  (3 findings)
+spec 3  FAIL  only Approve and Reject as run controls  (2 other run controls)
+spec 3  FAIL  run aborted  (locator.fill: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 2  PASS  pill reads "Stuck · moving"  (Stuck · moving)
+spec 2  PASS  holder is a label, never a UUID  (Stuck · moving | build since Wed 11:50 AM | in build 12h 02m, working 39m)
+spec 2  PASS  journey shows four skipped phases with "placed at build by owner"  (4 skipped, tooltip "placed at build by owner: work already under way")
+spec 2  PASS  check sentence names 13:50 and "Changed since: N of 16 tasks done; run Check now" (the spec said 17; tasks.md now has 16)  (stale The check failed at 13:50: 20 of 20 tasks open. Changed since: 12 of 16 tasks done; run Check now. open: T002 [api] G2 OpenAPI import maps GET/HEAD to Rea)
+spec 2  PASS  check sentence carries a stale badge
+spec 2  PASS  "in build Xh, working Ym" on the current step  (in build 12h 02m, working 39m)
+spec 2  PASS  Tasks and commits panel once, not under Output
+spec 2  FAIL  ticked tasks with layer chips  (12 of 16 ticked, 16 chips)
+spec 2  PASS  commits newest first, each merged or on <branch>  (20 commits, first "merged")
+spec 2  PASS  no raw HTML comments in rendered output
+spec 2  PASS  evidence images open on click  (http://localhost:4050/p/ops-ai/cards/c-048/)
+spec 3  PASS  "Waiting for you at spec" with the check sentence  (Waiting for you at spec)
+spec 3  PASS  rubric rows with pass, fail or pending match the API  (I1:pass I2:fail I3:pending I4:fail I5:pending I6:fail)
+spec 3  PASS  rubric sits above Approve
+spec 3  PASS  each row with a finding shows it  (5 findings)
+spec 3  PASS  only Approve and Reject as run controls  (0 other run controls)
+spec 3  PASS  note field takes text
+spec 2  PASS  pill reads "Stuck · moving"  (Stuck · moving)
+spec 2  PASS  holder is a label, never a UUID  (Stuck · moving | build since Wed 11:50 AM | in build 12h 04m, working 39m)
+spec 2  PASS  journey shows four skipped phases with "placed at build by owner"  (4 skipped, tooltip "placed at build by owner: work already under way")
+spec 2  PASS  check sentence names 13:50 and "Changed since: N of 16 tasks done; run Check now" (the spec said 17; tasks.md now has 16)  (stale The check failed at 13:50: 20 of 20 tasks open. Changed since: 12 of 16 tasks done; run Check now. open: T002 [api] G2 OpenAPI import maps GET/HEAD to Rea)
+spec 2  PASS  check sentence carries a stale badge
+spec 2  PASS  "in build Xh, working Ym" on the current step  (in build 12h 04m, working 39m)
+spec 2  PASS  Tasks and commits panel once, not under Output
+spec 2  PASS  ticked tasks with layer chips  (12 of 16 ticked, 16 chips)
+spec 2  PASS  commits newest first, each merged or on <branch>  (20 commits, first "merged")
+spec 2  PASS  no raw HTML comments in rendered output
+spec 2  FAIL  evidence images open on click  (4 images listed; opened text/html)
+spec 8  PASS  sign in once as owner
+spec 4  FAIL  c-133: options are buttons  (0 options, 4 open questions)
+spec 4  PASS  c-133: recommended option is marked
+spec 4  PASS  c-133: free-text Answer present
+spec 4  FAIL  run aborted  (locator.boundingBox: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 4  FAIL  c-133: options are buttons  (none of the 4 open questions has options in the data; each shows its recommended answer with Accept)
+spec 4  PASS  c-133: recommended option is marked
+spec 4  PASS  c-133: free-text Answer present
+spec 4  PASS  c-133: "Accept all suggested (n)" on top  (Accept all suggested (4))
+spec 4  FAIL  c-134: options are buttons  (none of the 0 open questions has options in the data; each shows its recommended answer with Accept)
+spec 4  FAIL  c-134: recommended option is marked
+spec 4  FAIL  c-134: free-text Answer present
+spec 4  FAIL  run aborted  (locator.boundingBox: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 4  FAIL  c-133: options are buttons  (none of the 4 open questions has options in the data; each shows its recommended answer with Accept)
+spec 4  PASS  c-133: recommended option is marked
+spec 4  PASS  c-133: free-text Answer present
+spec 4  PASS  c-133: "Accept all suggested (n)" on top  (Accept all suggested (4))
+spec 4  SKIP  c-134: question controls  (0 open questions (4 answered))
+spec 4  FAIL  c-133 Accept all clicked  (held: waiting for Dean to confirm the write)
+spec 5  PASS  report paragraph  (c-118 is at data-model. Works now: spec is on the trunk at ef8e4702 (turn 2, feat/ui-data-api-storie)
+spec 5  PASS  turns newest first  (3,2,1)
+spec 5  PASS  a turn row shows stage, builder label, started, merge sha, outcome  (#3 | data-model | agent claude-sonnet | Wed 06:47 PM | 5dde0d3 | merge-failed)
+spec 5  PASS  builder label is not a UUID
+spec 5  FAIL  a turn expands to the hand-back: branch, head, proof and exit, left, blocked  (HAND-BACK | BRANCH | feat/ui-data-api-stories-carry-a-holder-an-ow | HEAD | 5dde0d39602c | PROOF | codeloop check data-model c-118 && codeloop check rubric c-118 | exit 0 | no data change in this stor)
+spec 5  FAIL  and the gate: verdict, claim, findings  (GATE | VERDICT | pass | pass | | No findings.)
+spec 5  PASS  nobody shape shows Run with orchestrator, Brief a person, Park, Check now  (shape nobody, run-orchestrator,brief-person,park,check-now)
+spec 6  PASS  codeloop: Needs you count matches the board rows across lanes  (home 20, board rows 20)
+spec 6  FAIL  codeloop: summary counts on screen
+spec 6  PASS  codeloop: Needs you lists gates and questions with the action named  (Needs you | C-134 | The story page shows the proof beside the decision | Spec)
+spec 6  PASS  codeloop: agent tiles show labels, never UUIDs  (0 tiles)
+spec 6  PASS  codeloop: "stalled N min" on quiet agents  (0 stalled)
+spec 6  PASS  Orchestrating tiles list c-118
+spec 6  PASS  codeloop: shipped links in the normal colour  (oklch(0.1908 0.002 106.586) vs body oklch(0.3438 0.0269 95.7226))
+spec 6  FAIL  codeloop: sidebar badge shows needs-you plus failing  (badge 20, needs-you 20 + failing 34)
+spec 6  PASS  ops-ai: Needs you count matches the board rows across lanes  (home 2, board rows 2)
+spec 6  PASS  ops-ai: summary counts on screen
+spec 6  PASS  ops-ai: Needs you lists gates and questions with the action named  (Needs you | C-045 | The unused shared service token setting is gone | Local)
+spec 6  PASS  ops-ai: agent tiles show labels, never UUIDs  (1 tiles)
+spec 6  PASS  ops-ai: "stalled N min" on quiet agents  (0 stalled)
+spec 6  PASS  ops-ai: shipped links in the normal colour  (oklch(0.1908 0.002 106.586) vs body oklch(0.3438 0.0269 95.7226))
+spec 6  FAIL  ops-ai: sidebar badge shows needs-you plus failing  (badge 2, needs-you 2 + failing 6)
+spec 8  PASS  sign in once as owner
+spec 5  PASS  report paragraph  (c-118 is at data-model. Works now: spec is on the trunk at ef8e4702 (turn 2, feat/ui-data-api-storie)
+spec 5  PASS  turns newest first  (3,2,1)
+spec 5  PASS  a turn row shows stage, builder label, started, merge sha, outcome  (#3 | data-model | agent claude-sonnet | Wed 06:47 PM | 5dde0d3 | merge-failed)
+spec 5  PASS  builder label is not a UUID
+spec 5  PASS  a turn expands to the hand-back: branch, head, proof and exit, left, blocked  (HAND-BACK | BRANCH | feat/ui-data-api-stories-carry-a-holder-an-ow | HEAD | 5dde0d39602c | PROOF | codeloop check data-model c-118 && codeloop check rubric c-118 | exit 0 | no data change in this stor)
+spec 5  PASS  and the gate: verdict, claim, findings  (GATE | VERDICT | pass | pass | | No findings.)
+spec 5  PASS  nobody shape shows Run with orchestrator, Brief a person, Park, Check now  (shape nobody, run-orchestrator,brief-person,park,check-now)
+spec 6  PASS  codeloop: Needs you count matches the board rows across lanes  (home 20, board rows 20)
+spec 6  FAIL  codeloop: summary counts on screen  (needs-you 20; first lines: codeloop | Work | Home | Board | Initiatives | Roadmap | Knowledge | Wiki)
+spec 6  PASS  codeloop: Needs you lists gates and questions with the action named  (Needs you | C-134 | The story page shows the proof beside the decision | Spec)
+spec 6  PASS  codeloop: agent tiles show labels, never UUIDs  (0 tiles)
+spec 6  PASS  codeloop: "stalled N min" on quiet agents  (0 stalled)
+spec 6  PASS  Orchestrating tiles list c-118
+spec 6  PASS  codeloop: shipped links in the normal colour  (oklch(0.1908 0.002 106.586) vs body oklch(0.3438 0.0269 95.7226))
+spec 6  FAIL  codeloop: sidebar badge shows needs-you plus failing  (badge 20, needs-you 20 + failing 34)
+spec 6  PASS  ops-ai: Needs you count matches the board rows across lanes  (home 2, board rows 2)
+spec 6  FAIL  ops-ai: summary counts on screen  (needs-you 2; first lines: codeloop | Work | Home | Board | Initiatives | Roadmap | Knowledge | Wiki)
+spec 6  PASS  ops-ai: Needs you lists gates and questions with the action named  (Needs you | C-045 | The unused shared service token setting is gone | Local)
+spec 6  PASS  ops-ai: agent tiles show labels, never UUIDs  (1 tiles)
+spec 6  PASS  ops-ai: "stalled N min" on quiet agents  (0 stalled)
+spec 6  PASS  ops-ai: shipped links in the normal colour  (oklch(0.1908 0.002 106.586) vs body oklch(0.3438 0.0269 95.7226))
+spec 6  FAIL  ops-ai: sidebar badge shows needs-you plus failing  (badge 2, needs-you 2 + failing 6)
+spec 8  PASS  sign in once as owner
+spec 7  FAIL  run aborted  (page.goto: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 7  PASS  no doubled stage tag ("build build")  (Toggle Sidebar ops-ai Board Search ⌘K)
+spec 7  FAIL  narrow page: check and output paths not clipped  (3 clipped)
+spec 7  PASS  board columns grow, no inner scroll  (0 inner scrollers)
+spec 7  PASS  backlog chips do not truncate  (0 truncated)
+spec 7  FAIL  run aborted  (locator.waitFor: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 7  FAIL  run aborted  (locator.waitFor: Timeout 90000ms exceeded.)
+spec 8  PASS  sign in once as owner
+spec 8  FAIL  run aborted  (page.goto: Timeout 150000ms exceeded.)
