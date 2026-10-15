@@ -107,7 +107,7 @@ describe('workspace API reads', () => {
     const { app } = createApp(dir);
     const evidence = await (await app.request('/api/evidence/001')).json();
     expect(evidence.files.find((f: { name: string }) => f.name === 'verify.md').content).toBe('# verify\npass\n');
-    expect(evidence.files.find((f: { name: string }) => f.name === 'shot.png')).toEqual({ name: 'shot.png', kind: 'image', path: '.codeloop/evidence/001/shot.png' });
+    expect(evidence.files.find((f: { name: string }) => f.name === 'shot.png')).toEqual({ name: 'shot.png', kind: 'image', path: '.codeloop/evidence/001/shot.png', url: '/api/evidence/001/file/shot.png' });
     expect((await app.request('/api/evidence/999')).status).toBe(404);
 
     const artifacts = await (await app.request('/api/artifacts')).json();
