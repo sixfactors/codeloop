@@ -297,7 +297,7 @@ describe('two cards with the same number', () => {
 });
 
 describe('unattended retries on a stage with no output file', () => {
-  it('does not count a failure again while the working tree is unchanged, even though the check output differs each time', () => {
+  it('reports unchanged and counts nothing while nothing under the story moved, even though the check output differs each time', () => {
     const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe' });
     lane('build', 'stages:\n  - { id: build, done: { cmd: "echo took $RANDOM$RANDOM ms; exit 1" } }\n');
     write('src/a.ts', 'one');
@@ -312,11 +312,12 @@ describe('unattended retries on a stage with no output file', () => {
     runDue(dir);
     expect(retries()).toBe(1);
 
+    // An uncommitted edit outside the story's folders is not work on the story, so the check is not rerun.
     write('src/a.ts', 'two');
-    expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'failed' }]);
+    expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'unchanged' }]);
     write('src/a.ts', 'three');
     runDue(dir);
-    expect(retries()).toBe(3);
+    expect(retries()).toBe(1);
   });
 });
 
