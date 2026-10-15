@@ -94,6 +94,25 @@ try {
 
   // --board: the phase board shows its holder rows and a collapsed empty phase, and the header,
   // the sidebar (footer and Board badge) and the drawer pager all show the board's one count.
+  // --titles <project> --story <id> [--evidence <nnn>] (hub mode): every page's tab reads "<page or story title> · <project>".
+  if (args.titles) {
+    const project = String(args.titles);
+    const id = String(args.story ?? 'c-118');
+    const nnn = String(args.evidence ?? id.replace(/^c-/, ''));
+    // The hub can drop a request while it is busy; three tries before giving up.
+    let story;
+    for (let i = 0; i < 3 && !story; i++) story = await fetch(`${BASE}/api/p/${project}/cards/${id}`).then((r) => r.json()).then((j) => j.card?.title, () => undefined);
+    if (!story) throw new Error(`no card ${id} in ${project}`);
+    const want = { board: `Board · ${project}`, story: `${story} · ${project}`, evidence: `${story} · ${project}`, stats: `Stats · ${project}`, settings: `Settings · ${project}` };
+    const paths = { board: '/', story: `/cards/${id}/`, evidence: `/evidence/${nnn}/`, stats: '/stats/', settings: '/settings/' };
+    for (const [name, path] of Object.entries(paths)) {
+      await page.goto(withToken(`/p/${project}${path}`), { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction((t) => document.title === t, want[name], { timeout: 90000 }).catch(() => undefined);
+      await page.waitForTimeout(1500);
+      const got = await page.title();
+      ok(`${name} tab title reads "${want[name]}"`, got === want[name], got);
+    }
+  }
   if (args.board) {
     if (args.shots) mkdirSync(resolve(String(args.shots)), { recursive: true });
     for (const width of [1440, 900]) {

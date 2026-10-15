@@ -25,6 +25,7 @@ import { routesFor, type Routes } from '@/lib/routes';
 import { api, type ListedProject } from '@/lib/api';
 import { CommandPalette } from '@/components/shared/command-palette';
 import { ProjectSwitcher } from '@/components/shared/project-switcher';
+import { documentTitle, PageTitleContext } from '@/components/shared/page-title';
 import { ReadOnlyBanner } from '@/components/shared/read-only-banner';
 import { cn } from '@/lib/utils';
 
@@ -257,8 +258,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const project = session.data?.project;
   const product = atHubHome ? 'Codeloop' : project?.name ?? String(cfg?.product ?? cfg?.name ?? 'codeloop');
 
-  // The tab title names the project, not just "codeloop", so two boards in two tabs are told apart.
-  React.useEffect(() => { document.title = !atHubHome && project?.name ? `${project.name} · codeloop` : 'Codeloop'; }, [project?.name, atHubHome]);
+  // The tab title is "<page or story title> · <project>" on every page (see page-title.tsx), so two
+  // boards in two tabs are told apart and a story's tab names the story.
+  // Rendered as a <title> element, which React hoists into <head> on the server pass too. Writing
+  // document.title from an effect loses to Next's streamed metadata title, which lands after hydration.
+  const [pageTitle, setPageTitle] = React.useState<string>();
+  const projectLabel = atHubHome ? undefined : project?.name ?? projectId ?? product;
+  const tabTitle = atHubHome ? 'Codeloop' : documentTitle(pageTitle ?? sectionFor(pathname, groups, secondary), projectLabel);
 
   const indicators: Record<string, React.ReactNode> = {
     // The same number Home leads with, so the badge and the page never disagree.
@@ -268,6 +274,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+      <title>{tabTitle}</title>
       {!atHubHome && <SetupGate pathname={rawPathname} />}
       <Sidebar collapsible="icon">
         {/* A masthead, then destinations. The brand is not a menu row: it does not hover like one. */}
@@ -353,7 +360,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <ReadOnlyBanner />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col"><PageTitleContext.Provider value={setPageTitle}>{children}</PageTitleContext.Provider></div>
       </SidebarInset>
       <Toaster position="bottom-right" />
     </SidebarProvider>

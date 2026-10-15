@@ -10,7 +10,8 @@ import { dehydrated, getQueryClient } from '@/lib/query-server';
 import { currentProjectServer, hubModeServer } from '@/lib/project';
 
 export const metadata: Metadata = {
-  title: 'Codeloop workspace',
+  // No title here: the app shell renders the tab title ("<page> · <project>"); a metadata title is
+  // streamed in after hydration and would replace it.
   description: 'Board, inbox, wiki, artifacts and evidence for one codeloop project.',
 };
 

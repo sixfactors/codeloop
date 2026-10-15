@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageTitle } from '@/components/shared/page-title';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 export interface PageBreadcrumb {
@@ -65,6 +66,7 @@ export function PageLayout({
 
   return (
     <div className={cn('flex h-full flex-col space-y-4 px-5 py-5', className)}>
+      <PageTitle title={typeof title === 'string' ? title : undefined} />
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumb>
           <BreadcrumbList>
