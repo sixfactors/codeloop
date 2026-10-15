@@ -339,7 +339,7 @@ describe('guard session (SessionStart hook)', () => {
 
   it('is installed as a SessionStart hook by the Claude hooks template', () => {
     const template = JSON.parse(readFileSync(join(ROOT, 'templates/hooks/claude-hooks.json'), 'utf-8'));
-    expect(JSON.stringify(template.hooks.SessionStart)).toContain('codeloop guard session');
+    expect(JSON.stringify(template.hooks.SessionStart)).toContain('codeloop-hook session');
   });
 });
 

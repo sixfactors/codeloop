@@ -58,6 +58,7 @@ export const COMMANDS: Record<string, [load: () => Promise<Record<string, unknow
   gate: [() => import('./commands/render.js'), 'gateCommand'],
   config: [() => import('./commands/render.js'), 'configCommand'],
   cloud: [() => import('./commands/cloud.js'), 'cloudCommand'],
+  hookd: [() => import('./commands/hookd.js'), 'hookdCommand'],
   guard: [() => import('./commands/guard-hooks.js'), 'guardCommand'],
   monitor: [() => import('./commands/guard-hooks.js'), 'monitorCommand'],
   presence: [() => import('./commands/guard-hooks.js'), 'presenceCommand'],
