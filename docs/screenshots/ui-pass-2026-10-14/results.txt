@@ -141,3 +141,34 @@ spec 8  PASS  sign in once as owner
 spec 7  FAIL  run aborted  (locator.waitFor: Timeout 90000ms exceeded.)
 spec 8  PASS  sign in once as owner
 spec 8  FAIL  run aborted  (page.goto: Timeout 150000ms exceeded.)
+
+--- 2026-10-15 re-run on the hub built from 0253a37: specs 7 and 8, read-only ---
+spec 8  PASS  sign in once as owner
+spec 7  PASS  no doubled stage tag ("build build")  (Toggle Sidebar ops-ai Board Search ⌘K)
+spec 7  PASS  narrow page: check and output paths not clipped  (0 clipped)
+spec 7  PASS  board columns grow, no inner scroll  (0 inner scrollers)
+spec 7  PASS  backlog chips do not truncate  (0 truncated)
+spec 7  PASS  failing story c-018 says why without a click  (The check failed: no spec folder for c-018; run `codeloop spec new <card-id>`)
+spec 7  PASS  c-018 Output tab loads
+spec 7  SKIP  a question prints its recommended answer once  (no story is waiting on questions in codeloop or ops-ai)
+spec 7  FAIL  drawer pager c-048 to c-047 shows c-047 and nothing of c-048  (/p/ops-ai/cards/c-054/; c-048 title present: false)
+spec 7  PASS  re-look: evidence images open on click  (/api/p/ops-ai/evidence/048/file/g1-1-grant-dialog-lists-the-published-operations.png -> image/png)
+spec 7  PASS  re-look: evidence header reads the story title, top bar not "Workspace"  (title "A builder takes a bank API from import to a governed call an agent makes", top bar "Board")
+spec 7  PASS  re-look: rail at 900, paths wrap instead of clipping  (0 clipped)
+spec 7  PASS  look: cards/full evidenceFiles each carry a url  (18 of 18 with url)
+spec 7  PASS  look: c-083 (proposed) menu offers Edit  (Ask a question, Split, New mock, Edit)
+spec 7  PASS  look: Mocks page shows c-118 and c-132 with every frame drawn  (c-058:2/2 c-059:3/3 c-118:2/2 c-132:1/1 c-134:1/1)
+spec 8  PASS  stays signed in after reload of /p/codeloop/  (signedIn true, banner 0)
+spec 8  PASS  stays signed in after reload of /p/ops-ai/cards/c-048/  (signedIn true, banner 0)
+spec 8  PASS  stays signed in after reload of /p/codeloop/home/  (signedIn true, banner 0)
+spec 8  PASS  cmd-K finds a story by "journey"  (c-140 I can watch an agent work a story from its activity research | Start here …d [flows](architecture/flows.md): the layers and three real journeys - [Invariants](architecture/invariants.md): the rules and the tests th)
+spec 8  PASS  cmd-K finds a wiki page by "architecture"  (c-158 Data changes start from the architecture page research | c-095 Explain the architecture dropped | c-096 Explain the architecture done | c-049 C4 backend-nestjs plugin: DTO, envelope, swagger, scoping checks; spines)
+spec 8  PASS  New story validates a title with a slash before submit  (create disabled true; New story | | A story: who, what they can now do, and why. It lands in the backlog as a proposal, or starts in its lane now. | | Title | | Name what the user)
+spec 8  PASS  New story cancelled
+spec 8  FAIL  project switcher lists codeloop, ops-ai, acme
+spec 8  FAIL  switcher switches to ops-ai  (http://localhost:4050/p/codeloop/)
+spec 8  FAIL  browser title pattern is the same on board, story, evidence, stats, settings  ({"board":"codeloop · codeloop","story":"Codeloop workspace","evidence":"ops-ai · codeloop","stats":"codeloop · codeloop","settings":"codeloop · codeloop"})
+--- corrected checks for the pager (walked to c-047) and the switcher (top bar trigger) ---
+spec 7  PASS  drawer pager c-048 to c-047 shows c-047 and nothing of c-048  (reached c-047 after 23 steps (c-054,c-053,c-051,c-050,c-045,c-005...); c-047 title shown true; c-048 carried over on 0 steps)
+spec 8  PASS  project switcher lists codeloop, ops-ai, acme  (codeloop, ops-ai, acme, All projects)
+spec 8  PASS  switcher switches to ops-ai  (http://localhost:4050/p/ops-ai/)
