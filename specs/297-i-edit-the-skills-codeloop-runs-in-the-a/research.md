@@ -2,7 +2,7 @@
 
 ## What exists
 
-exists: unlock — the shipped skills, the index, the per-stage binding, the host render and `skill eval` all exist (`templates/skills/`, `src/lib/render.ts`, `src/lib/skill-eval.ts`); what is absent is an override path, a diff, a reset and any screen or SDK operation for skills. Skills are not on the SDK's public surface (`docs/architecture.md`).
+exists: unlock - the shipped skills, the index, the per-stage binding, the host render and `skill eval` all exist (`templates/skills/`, `src/lib/render.ts`, `src/lib/skill-eval.ts`); what is absent is an override path, a diff, a reset and any screen or SDK operation for skills. Skills are not on the SDK's public surface (`docs/architecture.md`).
 
 ## How others show it
 
@@ -21,9 +21,9 @@ exists: unlock — the shipped skills, the index, the per-stage binding, the hos
 
 ## Sources
 
-- source: src/lib/render.ts:19 — step text names the skill and its source path
-- source: src/lib/lane.ts:119 — lint requires the skill in the index
-- source: src/lib/skill-eval.ts — fixtures replay a skill through a one-stage lane
-- source: docs/architecture.md — adding a capability: service, API, SDK, CLI and UI in order
+- source: src/lib/render.ts:19 - step text names the skill and its source path
+- source: src/lib/lane.ts:119 - lint requires the skill in the index
+- source: src/lib/skill-eval.ts - fixtures replay a skill through a one-stage lane
+- source: docs/architecture.md - adding a capability: service, API, SDK, CLI and UI in order
 
 verdict: unlock
