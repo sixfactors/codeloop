@@ -253,6 +253,7 @@ export interface Transport {
   procs(): Promise<{ pid: number; parent: number; purpose: string; cmd: string; at: string; alive: boolean; orphan: boolean }[]>;
   killOrphans(): Promise<number[]>;
   clearAgent(name: string): Promise<boolean>;
+  pruneWorktrees(opts?: { dryRun?: boolean }): Promise<{ path: string; branch: string; removed: boolean; why: string }[]>;
   /** The shape with page counts: every section in spec order, empty ones left out. Local only. */
   wikiShape(): Promise<WikiShapeCount[]>;
   /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
@@ -368,6 +369,9 @@ export class CodeloopClient {
 
   /** Agent availability: `clear` says an agent marked unavailable can run again. */
   readonly agents = { clear: (name: string) => this.transport.clearAgent(name) };
+
+  /** Story worktrees: `prune` removes those whose branch is merged and whose tree is clean. */
+  readonly worktrees = { prune: (opts?: { dryRun?: boolean }) => this.transport.pruneWorktrees(opts) };
 
   /** The board: every story in one row of the six states, already grouped by the server. */
   readonly board = { get: (opts?: { lane?: string }) => this.transport.board(opts) };

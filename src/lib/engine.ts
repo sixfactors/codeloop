@@ -152,7 +152,8 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
-  const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : checkEnv();
+  // `ref` without `work`: a tree-mode story's commit range on the main tree's branch.
+  const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : ref ? { ...checkEnv(), CODELOOP_STORY_REF: ref } : checkEnv();
   const run = spawnSync(substitute(stage.done.cmd, card, { shell: true }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
   const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
   const passed = run.status === 0;

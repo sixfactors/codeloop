@@ -35,6 +35,7 @@ export const COMMANDS: Record<string, [load: () => Promise<Record<string, unknow
   doctor: [() => import('./commands/run.js'), 'doctorCommand'],
   orch: [() => import('./commands/orch.js'), 'orchCommand'],
   ps: [() => import('./commands/ps.js'), 'psCommand'],
+  worktree: [() => import('./commands/worktree.js'), 'worktreeCommand'],
   agent: [() => import('./commands/ps.js'), 'agentCommand'],
   brief: [() => import('./commands/brief.js'), 'briefCommand'],
   schedule: [() => import('./commands/schedule.js'), 'scheduleCommand'],

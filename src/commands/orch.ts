@@ -55,7 +55,7 @@ orchCommand
   .action(guard(async () => {
     const rows = orchStatus(projectRoot());
     if (!rows.length) return void console.log('  no story has been orchestrated');
-    for (const r of rows) console.log(`  ${r.card}  ${r.gate ? chalk.yellow(`waiting: ${r.gate}`) : r.stage}  ${r.turns} turn${r.turns === 1 ? '' : 's'}, last ${r.lastOutcome ?? 'none'}, builder ${r.builder ?? 'none'}, idle ${r.idleMinutes} min  ${r.title}`);
+    for (const r of rows) console.log(`  ${r.card}  ${r.gate ? chalk.yellow(`waiting: ${r.gate}`) : r.stage}  ${r.turns} turn${r.turns === 1 ? '' : 's'}, last ${r.lastOutcome ?? 'none'}, builder ${r.builder ?? 'none'}, ${r.mode}${r.lease ? ', lease held' : ''}, idle ${r.idleMinutes} min  ${r.title}`);
   }));
 
 orchCommand

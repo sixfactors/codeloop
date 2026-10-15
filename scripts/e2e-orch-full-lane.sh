@@ -495,6 +495,7 @@ git:
 verify:
   setup: ""
 orch:
+  isolation: worktree
   after_merge:
     build: "echo built > .after-merge"
 EOF

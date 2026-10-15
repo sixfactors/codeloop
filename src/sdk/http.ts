@@ -299,6 +299,9 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     killOrphans: async () => {
       throw new ApiError(501, 'ps --kill-orphans signals this machine\'s processes; use the local transport');
     },
+    pruneWorktrees: async () => {
+      throw new ApiError(501, 'worktree prune changes this machine\'s checkouts; use the local transport');
+    },
     clearAgent: async () => {
       throw new ApiError(501, 'agent clear writes the project state; use the local transport');
     },

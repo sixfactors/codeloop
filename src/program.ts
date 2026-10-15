@@ -8,6 +8,7 @@ import { hubCommand } from './commands/hub.js';
 import { projectsCommand } from './commands/projects.js';
 import { storeCommand } from './commands/store.js';
 import { agentCommand, psCommand } from './commands/ps.js';
+import { worktreeCommand } from './commands/worktree.js';
 import { watchCommand } from './commands/watch.js';
 import { installCommand } from './commands/install.js';
 import { searchCommand } from './commands/search.js';
@@ -84,6 +85,7 @@ export function buildProgram(): Command {
   program.addCommand(doctorCommand);
   program.addCommand(orchCommand);
   program.addCommand(psCommand);
+  program.addCommand(worktreeCommand);
   program.addCommand(agentCommand);
   program.addCommand(briefCommand);
   program.addCommand(scheduleCommand);
