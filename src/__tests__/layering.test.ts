@@ -53,6 +53,7 @@ const ALLOWED_IMPORTS: Record<string, Record<string, string>> = {
   'wiki.ts': {
     '../lib/wiki.js': 'capture and learn write wiki pages; no SDK operation yet',
     '../lib/competitors.js': 'competitor pages; no SDK operation yet',
+    '../lib/off.js': 'the Stop hook (`wiki capture --quiet`) must answer at once while codeloop is off, before any SDK client loads',
   },
 };
 
