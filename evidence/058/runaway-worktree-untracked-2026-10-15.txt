@@ -1,0 +1,14 @@
+.claude/settings.json
+.codeloop/mocks/
+shape/
+specs/001-add-csv-export/
+specs/001-add-export/
+specs/001-checkout-flow/
+specs/001-export-my-todos-as-a-file/
+specs/001-first/
+specs/001-ship-the-thing/
+specs/002-billing-sync/
+specs/002-import-wizard/
+specs/007-add-csv-export/
+specs/066-the-agent-thinks-before-it-builds/rubric-mock.md
+specs/c-001-second/

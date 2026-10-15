@@ -1,0 +1,623 @@
+diff --git a/evidence/001/uc-001-01.json b/evidence/001/uc-001-01.json
+index 895efb2..9db2f7b 100644
+--- a/evidence/001/uc-001-01.json
++++ b/evidence/001/uc-001-01.json
+@@ -2,14 +2,15 @@
+   "id": "uc-001-01",
+   "accept": "US1",
+   "failure_mode": "a failing check moves the card anyway, or never parks it",
+-  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
++  "sha": "",
+   "env": "local",
+-  "pass": true,
++  "workspace": "working tree",
++  "pass": false,
+   "layers": [
+     {
+       "layer": "cli",
+-      "pass": true,
+-      "output": "stays-then-stuck\n\nexit 0"
++      "pass": false,
++      "output": "bash: usecases/001/uc.sh: No such file or directory\n\nexit 127"
+     }
+   ]
+ }
+diff --git a/evidence/001/uc-001-02.json b/evidence/001/uc-001-02.json
+index 0b6b3c3..307b0d9 100644
+--- a/evidence/001/uc-001-02.json
++++ b/evidence/001/uc-001-02.json
+@@ -2,14 +2,15 @@
+   "id": "uc-001-02",
+   "accept": "US2",
+   "failure_mode": "two writers who read the same version both land, losing a write",
+-  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
++  "sha": "",
+   "env": "local",
+-  "pass": true,
++  "workspace": "working tree",
++  "pass": false,
+   "layers": [
+     {
+       "layer": "cli",
+-      "pass": true,
+-      "output": "conflict-no-lost-write\n\nexit 0"
++      "pass": false,
++      "output": "bash: usecases/001/uc.sh: No such file or directory\n\nexit 127"
+     }
+   ]
+ }
+diff --git a/evidence/001/uc-001-03.json b/evidence/001/uc-001-03.json
+index 573bfba..6c654c6 100644
+--- a/evidence/001/uc-001-03.json
++++ b/evidence/001/uc-001-03.json
+@@ -2,14 +2,15 @@
+   "id": "uc-001-03",
+   "accept": "US3",
+   "failure_mode": "an agent approves its own gate",
+-  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
++  "sha": "",
+   "env": "local",
+-  "pass": true,
++  "workspace": "working tree",
++  "pass": false,
+   "layers": [
+     {
+       "layer": "cli",
+-      "pass": true,
+-      "output": "agent-refused-owner-releases\n\nexit 0"
++      "pass": false,
++      "output": "bash: usecases/001/uc.sh: No such file or directory\n\nexit 127"
+     }
+   ]
+ }
+diff --git a/evidence/001/uc-001-04.json b/evidence/001/uc-001-04.json
+index ef73566..3422e9a 100644
+--- a/evidence/001/uc-001-04.json
++++ b/evidence/001/uc-001-04.json
+@@ -2,14 +2,15 @@
+   "id": "uc-001-04",
+   "accept": "US4",
+   "failure_mode": "trusted mode auto-approves a gate that guards something public",
+-  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
++  "sha": "",
+   "env": "local",
+-  "pass": true,
++  "workspace": "working tree",
++  "pass": false,
+   "layers": [
+     {
+       "layer": "cli",
+-      "pass": true,
+-      "output": "outward-gate-stops\n\nexit 0"
++      "pass": false,
++      "output": "bash: usecases/001/uc.sh: No such file or directory\n\nexit 127"
+     }
+   ]
+ }
+diff --git a/evidence/001/uc-001-05.json b/evidence/001/uc-001-05.json
+index 1279a50..1c8638b 100644
+--- a/evidence/001/uc-001-05.json
++++ b/evidence/001/uc-001-05.json
+@@ -2,14 +2,15 @@
+   "id": "uc-001-05",
+   "accept": "US5",
+   "failure_mode": "a lane changes without evidence, or with a red eval",
+-  "sha": "af1496dade7cf42f8c966e507e92211c5aa2cf48",
++  "sha": "",
+   "env": "local",
+-  "pass": true,
++  "workspace": "working tree",
++  "pass": false,
+   "layers": [
+     {
+       "layer": "cli",
+-      "pass": true,
+-      "output": "proposal-cites-cards-promote-refused\n\nexit 0"
++      "pass": false,
++      "output": "bash: usecases/001/uc.sh: No such file or directory\n\nexit 127"
+     }
+   ]
+ }
+diff --git a/evidence/001/verify.md b/evidence/001/verify.md
+index 25b54c7..b346fb8 100644
+--- a/evidence/001/verify.md
++++ b/evidence/001/verify.md
+@@ -1,3 +1,20 @@
++<!-- codeloop verify: start -->
++# Verify 001
++
++result: fail
++sha: none
++env: local
++workspace: working tree
++
++| Use case | Accepts | Layers |
++|---|---|---|
++| uc-001-01 | US1 | cli FAIL |
++| uc-001-02 | US2 | cli FAIL |
++| uc-001-03 | US3 | cli FAIL |
++| uc-001-04 | US4 | cli FAIL |
++| uc-001-05 | US5 | cli FAIL |
++<!-- codeloop verify: end -->
++
+ # Verify 001
+ 
+ result: pass
+diff --git a/specs/062-the-board-follows-git/interview.md b/specs/062-the-board-follows-git/interview.md
+index 62c0bd2..8ef0f66 100644
+--- a/specs/062-the-board-follows-git/interview.md
++++ b/specs/062-the-board-follows-git/interview.md
+@@ -1,19 +1,59 @@
++# c-062 interview: The board follows git
++
++Q1, Q3 and Q5 were answered by the owner in the first round and are kept as written. Q2 and Q4 were
++answered with a question back ("script/hook, or ask the user?") and a direction ("acceptance
++criteria matching") that research.md:35-36 could not build from, so they are re-asked here with
++options and a recommendation. Each question names the research line it builds on.
++
+ ## Q1 Scope: PR merged ends review, and merge reachable from `prodRef` means live. Is real deploy detection (Fly, Vercel) in, or only git reachability?
++builds on: research.md:16 (chosen option: git and GitHub only)
+ recommended: Git and GitHub PR only. Live = merge commit reachable from `prodRef` (a tag or branch in config). Fly/Vercel detection belongs to c-073.
+ answer: Git and GitHub PR only. Live = merge commit reachable from `prodRef` (a tag or branch in config). Fly/Vercel detection belongs to c-073.
+ 
+-## Q2 What fills `branch` and `pr` on the card: the agent at build start, a git hook, or reconcile matching `Feature: <id>` trailers?
+-recommended: Reconcile reads `Feature: <id>` commit trailers and the PR body; no hand-set field. `card start` names the branch `<type>/<id>-<slug>` so the match is there by construction.
+-answer: we need some local git branch script/hook for this? or should ask user if cant be found?
++## Q2 Risk: when neither `card.branch` nor a `Feature: c-062` trailer finds the PR, what does `run` do? (Owner, round one: a local branch script or hook, or ask the user when it cannot be found.)
++builds on: research.md:28 and research.md:35; the hook in templates/hooks/commit-msg:5 adds the trailer only when the branch name carries a card id, and src/lib/worktree.ts:88 names worktree branches `feat/<scope>-<slug>` with no id, so a hand-named branch with no id is found by nothing today
++options:
++- A: Leave the card at the pr gate, as today, and have the inbox line for it say "no PR found; approve by hand or name the branch with `codeloop card set c-062 branch <name>`". Also put the card id in the branch name `card worktree` makes, so the existing hook adds the trailer on every story branch. No new GitHub search.
++- B: As A, plus `run` searches GitHub once with `gh pr list --search c-062` over open PR titles, bodies and branch names before giving up, the way Linear matches an issue id.
++- C: Add a required `pr:` field the agent must write at build start; `run` never guesses.
++recommended: A
++answer: 
+ 
+ ## Q3 Acceptance: what proves it?
++builds on: research.md:16 (poll in `run` and `watch`, merge becomes the pr-gate approval with `actor: github`)
+ recommended: Given a card at review with an open PR, when the PR merges and `codeloop run` or `watch` runs, then the card is at staging with an event `actor: github`; when the `prodRef` tag moves past that commit, the card is live with no human event in between.
+ answer: Given a card at review with an open PR, when the PR merges and `codeloop run` or `watch` runs, then the card is at staging with an event `actor: github`; when the `prodRef` tag moves past that commit, the card is live with no human event in between.
+ 
+-## Q4 Riskiest assumption: a GitHub merge counts as the reviewer's pr-gate approval. Accept that, or still require `codeloop approve`?
+-recommended: Merge is the approval; the merger's GitHub login is written as the gate actor. The prod gate stays human (`outward: true`).
+-answer: interesting question - we should have the acceptance criteria matching (criteria is created at the start of the card)
++## Q4 Risk: a GitHub merge becomes the reviewer's pr-gate approval. What must the merged PR carry before the board counts it? (Owner, round one: acceptance criteria matching, since the criteria exist from the start of the card.)
++builds on: research.md:26 (a self-merge passes the gate with no second person) and research.md:36 (what "acceptance criteria matching" requires is undecided)
++options:
++- A: Only that a merged PR exists for the card. The acceptance lines are proven by `codeloop verify` at the next stage, not at the gate.
++- B: The PR body carries the card's acceptance lines from spec.md as checkboxes (`- [x] US1 ...`), written in by `card pr` when the PR opens. Merge counts as approval only when every line is ticked; otherwise the card stays at the gate and the inbox names the unticked lines. The event records `mergedBy`.
++- C: As B, and the PR must also have a green `codeloop verify c-062` status check from CI before merge counts.
++recommended: B
++answer: 
+ 
+-## Q5 Where does it run: `run`/`watch` polling via `gh`, a GitHub webhook into the hosted board, or both?
++## Q5 Boundary: where does it run: `run`/`watch` polling via `gh`, a GitHub webhook into the hosted board, or both?
++builds on: research.md:16-17 (polling chosen; webhook rejected as hosted-board work)
+ recommended: Polling via `gh pr view` in `run` and `watch`; a webhook is c-087/c-088 territory.
+ answer: Polling via `gh pr view` in `run` and `watch`; a webhook is c-087/c-088 territory.
++
++## Settled from research
++
++- research.md:37, the default for `git.prod_ref` when config has none: settled, not asked. Q1's accepted answer says `prodRef` is "a tag or branch in config", so there is no default. Absent, the live step does nothing and `run` prints one note naming the key (research.md:29). Lands in spec.md `## Not building`.
++
++## Folded into spec.md
++
++| Question | spec.md field | State |
++|---|---|---|
++| Q1 | `## Not building` (Fly/Vercel detection, c-073) and `done_when` | folded |
++| Q3 | `acceptance:` US1 and US2 | folded |
++| Q5 | `## Not building` (webhook, c-087/c-088) | folded |
++| Q2 | `## Failure modes` first item, and `## Not building` if A or C | on answer |
++| Q4 | `acceptance:` US3 | on answer |
++
++## Rubric
++
++- I2 pass: `grep -c '^## Q[0-9] \(Scope\|Acceptance\|Risk\|Boundary\):' specs/062-the-board-follows-git/interview.md` prints 5; one tag per question, none from outside the four
++- I4 pass: research.md:35 is Q2, research.md:36 is Q4, research.md:37 is settled under `## Settled from research` with the reason taken from Q1's accepted answer
++- I6 pass: specs/062-the-board-follows-git/spec.md `acceptance:` carries Q3 as US1 and US2, `## Not building` carries Q1 and Q5, and the table under `## Folded into spec.md` names the field Q2 and Q4 land in once answered
+diff --git a/specs/062-the-board-follows-git/research.md b/specs/062-the-board-follows-git/research.md
+index 55c2f36..9196724 100644
+--- a/specs/062-the-board-follows-git/research.md
++++ b/specs/062-the-board-follows-git/research.md
+@@ -2,32 +2,57 @@
+ 
+ ## What exists
+ 
+-<!-- Unlock before build. One line: exists: have | unlock | port | build, with a path or URL when it is not build. have = shipped and exposed, close the card. unlock = built but not exposed, expose it. port = in a sibling repo. -->
+-exists: build
++exists: build — no code reads a pull request or compares a card's commits against a prod ref to move the card. `grep -rn "gh pr\|gh api\|prodRef\|prod_ref\|mergedAt" src/` returns nothing; the only `github` hits are `src/commands/install.ts` (raw.githubusercontent download) and `src/lib/scaffold.ts` (writing `.github/workflows`). The engine moves a card only through `advanceCard` / `approveCard` in `src/lib/engine.ts`, where the pr gate (`build.yaml` review stage, `approver: reviewer`) and the prod gate (`approver: owner, outward: true`) wait for a person. Three pieces are already built and reusable: `storyCommits` in `src/lib/diff-budget.ts` finds a card's commits by `Feature:`/`Card:` trailer and marks each `merged` with `git merge-base --is-ancestor <sha> <trunk>`; `card.branch` and `mergeStory` in `src/lib/worktree.ts` know the story branch and fast-forward it into `git.trunk`; `src/lib/run.ts` already shells to git for `git.commit` / `git.tag` lane triggers. None of them changes a card's stage.
+ 
+ ## How others show it
+ 
+-<!-- One row per competitor that has a page in .codeloop/wiki/competitors/, its name in the first cell. The row is copied to that page when this stage passes. -->
+ | Competitor | How they show it | Source |
+ |---|---|---|
+ 
++No competitor pages in `.codeloop/wiki/competitors/`. Outside the wiki: Linear links an issue to a branch by the issue id in the branch name or a magic word ("Fixes ENG-123") in the PR, then moves it to In Progress on push and to Done (or a configured status) on merge, per team workflow settings. GitHub Projects has two built-in automations, "Merged pull requests" and "Closed pull requests", both of which set the item's status to Done. Neither tool knows "deployed"; both stop at merge.
++
+ ## Options
+ 
++- Poll in `codeloop run` and `watch`: for every card at the pr gate with a branch, call `gh pr view <branch> --json state,mergedAt,mergeCommit,mergedBy` and, on `MERGED`, write an approve event with `actor: github` naming the merger's login and advance to staging; for every card at staging or live-pending, run `git merge-base --is-ancestor <mergeCommit> <git.prod_ref>` and advance to live when it holds. Branch and PR are found by `card.branch` first, then by `Feature: <id>` trailers via `storyCommits`; no hand-set field. Chosen — matches interview Q1, Q3 and Q5 (polling, git and GitHub only, webhook is c-087/c-088), reuses `storyCommits` and the existing `gh` login on the founder's machine, and needs no server or secret.
++- GitHub webhook into `codeloop serve` or the hosted board. Rejected — the board binds 127.0.0.1 with no login (`src/lib/server.ts`); a public endpoint and signature check are hosted-board work the interview assigned to c-087/c-088.
++- Git-only, no `gh`: treat "branch merged into trunk" (`merge-base --is-ancestor`) as the pr-gate approval and skip the PR entirely. Rejected — it loses who merged (`mergedBy`) so the gate event would have no person behind it, and a local fast-forward by `card merge` would count as a reviewer approval. Kept as the fallback for the live step, where the prod ref is a git ref and `gh` is not needed.
++
+ ## The pain, grounded
+ 
+-<!-- The user pain this card answers, with a source. No source: write assumption: instead and say what would confirm it. -->
+-pain:
++pain: after a PR merges and a tag ships, the founder still runs `codeloop approve` twice to tell the board what git already knows, so the board lags or gets skipped. Source: the card story on c-062 ("see the card move on its own, so that I never update status by hand"), `.codeloop/wiki/initiatives/founder-ships-without-ceremony.md` (metric: human turns per shipped card, goal median under 4), and `build.yaml` lines 59-72 where both the pr and prod gates are person-approved with no git input.
+ 
+ ## Risks
+ 
++- A merge becomes a reviewer approval (interview Q4 accepted this). A self-merged PR by the author then passes the pr gate with no second person; the event must record `mergedBy` so the inbox can show it.
++- `gh` may be missing or logged out on the machine running `run`; the stage must report "cannot ask GitHub" as skipped, not as a failed check, or the card gets a spurious fail event.
++- The interview's Q2 answer is open: how a card learns its branch when it was not started with `card worktree`. Trailer matching via `storyCommits` covers commits; a PR with no `Feature:` trailer and a hand-named branch is found by nothing.
++- `git.prod_ref` does not exist in `src/lib/config.ts` yet; only `git.trunk` does. A missing value must make the live step a no-op with a note, not an error on every run.
++- The prod gate is `outward: true`. Interview Q4 keeps it human; the live step may only move a card whose prod gate was already approved, else it ships status for an unapproved outward step.
++- Polling `gh pr view` per card per run costs an API call each; `run` on a busy board with many cards at review should batch with one `gh pr list --state merged --json headRefName,...` per run.
++
++## Open questions for the interview
++
++- Q2 remains unanswered as a decision: when neither `card.branch` nor a `Feature:` trailer finds the PR, should `run` ask the owner through the inbox or leave the card for `codeloop approve`?
++- Q4's "acceptance criteria matching" is unclear: should merge-as-approval require the PR body to list the card's acceptance lines, or only that a PR exists for the card?
++- What is the default `git.prod_ref` when config has none: the latest tag, a `prod` branch, or off?
++
+ ## Sources
+ 
+-<!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
++- source: src/lib/diff-budget.ts:77 — `storyCommits` already marks a card's commits merged via `merge-base --is-ancestor`; the live step reuses it
++- source: src/lib/worktree.ts:112 — `mergeStory` knows `card.branch` and the trunk but is a local fast-forward, not a PR
++- source: src/lib/engine.ts:725 — `approveCard` is the only path through a gate and refuses any role but the gate's approver; a `github` actor needs an engine entry point
++- source: src/lib/health.ts:178 — `git.trunk` is the only git config key today; no prod ref
++- source: .codeloop/lanes/build.yaml — pr gate (reviewer) at review and prod gate (owner, outward) at live, both person-approved
++- source: specs/062-the-board-follows-git/interview.md — locked answers: git and GitHub only, poll via `gh pr view`, merge reachable from `prodRef` means live, webhook belongs to c-087/c-088
++- source: .codeloop/wiki/initiatives/founder-ships-without-ceremony.md — metric: human turns per shipped card, goal median under 4
++- source: https://cli.github.com/manual/gh_pr_view — `--json` exposes `state`, `mergedAt`, `mergeCommit`, `mergedBy`, `headRefName`: everything the poll needs
++- source: https://linear.app/docs/github — Linear links by issue id in the branch name or a magic word in the PR, moves to Done on merge; no deploy state
++- source: https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-built-in-automations — GitHub Projects' "Merged pull requests" automation sets status to Done; the bar is merge, not live
+ 
+-<!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
++verdict: build
+ 
+ ## Rubric
+ 
+-- R2 pending: The `exists:` verdict is proven: a grep or route list, named, that would have found the thing if it existed
+-- R5 pending: At least two options compared, with the one taken and why the other lost
+-- R7 pending: Open questions are listed for the interview, not guessed
++- R2 pass: `grep -rn "gh pr\|gh api\|prodRef\|prod_ref\|mergedAt" src/` returns no lines; `grep -rn "github" src/` hits only src/commands/install.ts and src/lib/scaffold.ts; the gate path is src/lib/engine.ts:725 `approveCard` with no git or GitHub input
++- R5 pass: three options under `## Options`; polling in `run`/`watch` chosen per specs/062-the-board-follows-git/interview.md Q5, webhook rejected as c-087/c-088 work, git-only rejected for losing `mergedBy`
++- R7 pass: `## Open questions for the interview` lists Q2's branch discovery, Q4's acceptance matching, and the `git.prod_ref` default, none answered here
+diff --git a/specs/062-the-board-follows-git/spec.md b/specs/062-the-board-follows-git/spec.md
+index 864659c..0926c2e 100644
+--- a/specs/062-the-board-follows-git/spec.md
++++ b/specs/062-the-board-follows-git/spec.md
+@@ -7,11 +7,14 @@ feature: <capability this card is a slice of>
+ initiative: <wiki/initiatives/<slug>.md>
+ size: S | M | L          <!-- L cannot pass the spec gate unsplit; split with `codeloop card split` -->
+ metric: <the one stage metric this card moves; no-data means instrument first>
+-done_when: <a command that exits 0, or a screen a person opens. Never "all stories complete">
++done_when: codeloop verify c-062   <!-- interview Q1: git and GitHub only; nothing here needs Fly or Vercel -->
+ 
+ <!-- One to five lines, outcome checks a user would notice, numbered US1..US5. Six means split. -->
+ acceptance:
+-- US1 Given <state>, when <action>, then <result>.
++- US1 Given a card at review with an open PR, when the PR merges and `codeloop run` or `watch` runs, then the card is at staging with an approve event `actor: github` naming the merger. (interview Q3)
++- US2 Given a card at staging whose prod gate is approved, when the `prodRef` tag or branch moves past the merge commit and `run` runs, then the card is live with no human event in between. (interview Q3)
++<!-- US3 lands here from interview Q4 once answered: what the merged PR must carry. -->
++<!-- Q2's answer lands under ## Failure modes: what run does when no PR is found for the card. -->
+ 
+ <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
+ screens:
+@@ -19,7 +22,9 @@ screens:
+ ## Not building
+ 
+ <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
+--
++- Real deploy detection on Fly or Vercel. Live means the merge commit is reachable from `git.prod_ref`; deploy checks are c-073. (interview Q1)
++- A GitHub webhook. The board polls `gh pr view` from `run` and `watch`; a webhook into the hosted board is c-087/c-088. (interview Q5)
++- A default for `git.prod_ref`. It is set in config or the live step does nothing and `run` prints one note naming the key. (interview, settled from research.md:37)
+ 
+ ## Failure modes
+ 
+diff --git a/specs/066-the-agent-thinks-before-it-builds/interview.md b/specs/066-the-agent-thinks-before-it-builds/interview.md
+index 9845429..b8f7f94 100644
+--- a/specs/066-the-agent-thinks-before-it-builds/interview.md
++++ b/specs/066-the-agent-thinks-before-it-builds/interview.md
+@@ -1,19 +1,60 @@
++# c-066 interview: The agent thinks before it builds
++
++Q1 to Q5 were answered by the owner in the first round and are kept as written. Research came
++after the answers and built on them (research.md:49), so none of its five open questions is a
++fork the owner has not already decided; each is settled under `## Settled from research` with the
++answer it follows from. Each question names the research line it builds on.
++
+ ## Q1 Scope: whys, options, premortem and scope-cut as one card reads as L. Which ship first?
++builds on: research.md:27 (this card writes `## Options` and `## Not building` only; whys and premortem are the child card) and research.md:17 (separate stages rejected)
+ recommended: Split: this card = options plus `## Not building` (scope-cut) written into spec.md; whys and premortem are a child card. Both reuse c-063's inbox mechanism.
+ answer: Split: this card = options plus `## Not building` (scope-cut) written into spec.md; whys and premortem are a child card. Both reuse c-063's inbox mechanism.
+ 
+-## Q2 Which sizes run which stages?
++## Q2 Boundary: which sizes run which stages?
++builds on: research.md:18 (research runs on S cards too, so the per-size table cannot live there) and research.md:28 (`when: size >= M` is c-058's unbuilt T002)
+ recommended: trivial none; S scope-cut; M options and scope-cut; L/epic all four. Set with `when: size >= M` on the stage.
+ answer: trivial none; S scope-cut; M options and scope-cut; L/epic all four. Set with `when: size >= M` on the stage.
+ 
+ ## Q3 Acceptance: what proves it?
++builds on: research.md:15 (chosen option: a spec-stage check over `## Options` and `## Not building`) and research.md:45 (`checkSpec` reads neither section today)
+ recommended: Given an M card, when `run` reaches spec, then spec.md has `## Options` with three approaches and one explicitly rejected with a reason, and `## Not building` with at least two lines; `spec check` fails if either is missing.
+ answer: Given an M card, when `run` reaches spec, then spec.md has `## Options` with three approaches and one explicitly rejected with a reason, and `## Not building` with at least two lines; `spec check` fails if either is missing.
+ 
+-## Q4 Riskiest assumption: the agent writes plausible but hollow options. What makes the check non-vacuous?
++## Q4 Risk: the agent writes plausible but hollow options. What makes the check non-vacuous?
++builds on: research.md:26 (the check counts shape, not sense; the options half stays a reading task at the gate) and research.md:30 (a rejected option's failure mode must not be captured as a gotcha)
+ recommended: Each option must name a file or wiki page it would touch; the rejected one must name its failure mode; premortem failure modes must become use case stubs under `usecases/` and that is what the check counts.
+ answer: Each option must name a file or wiki page it would touch; the rejected one must name its failure mode; premortem failure modes must become use case stubs under `usecases/` and that is what the check counts.
+ 
+-## Q5 Does Dean read these at the spec gate, or answer them as inbox questions?
++## Q5 Boundary: does Dean read these at the spec gate, or answer them as inbox questions?
++builds on: research.md:47 (`addQuestions` already posts a lettered question with a recommended letter) and research.md:31 (one question per M card counts against `MAX_QUESTIONS`)
+ recommended: Read at the gate; only the options stage posts one inbox question ("A, B or C? recommended B").
+ answer: Read at the gate; only the options stage posts one inbox question ("A, B or C? recommended B").
++
++## Settled from research
++
++Each item is a research.md:33 open question. None is re-asked: the owner's round-one answer
++fixes it, and the five-question cap in src/lib/interview.ts:11 is full. Each lands in spec.md as
++an `assumption:` the owner can strike at the spec gate.
++
++- research.md:35, an option that names a file not yet created: settled by Q4. "A file it would touch" is checked by existence, so every option names at least one path that exists today under `src/`, `templates/` or `.codeloop/wiki/`; a path to be created may be named beside it. Nothing under `src/` is created without registering it in an existing file (`src/index.ts`, a lane, a template), so the rule costs a real option nothing, and an option naming only new files is the hollow option Q4 guards against. Lands in spec.md US2 and `## Not building`.
++- research.md:36, `spec check` or a new `check thinking`: settled by Q3, which says `spec check`. The research reason for a separate command (every M card past spec fails on the next run) does not hold: `codeloop spec check` runs only as the spec stage's done cmd (.codeloop/lanes/build.yaml:34) and from rubric row S4, which is judged at the spec stage only. The rules go into `checkSpec` in src/lib/spec.ts:114 as named errors; no new command, no change to build.yaml. The decision page's `codeloop check thinking` wording is superseded by this line. Lands in spec.md US1 and `## Not building`.
++- research.md:37, which card carries whys and premortem: settled by Q1 (a child card). c-067 is "Research writes the first draft" and no other card fits, so the spec stage creates it with `codeloop card new build "The agent names the root cause and how it fails" --feature agent-thinks-first --size M` as its first task and records the id in `## Not building`. Lands in spec.md `## Not building`.
++- research.md:38, two option lists on an M card: settled by Q5 and the epic page (.codeloop/wiki/epics/thinking-stages.md: the answer is written back into the spec section it affects). The founder reads and picks from spec.md, so spec.md's `## Options` is the list the decision page is written from: the spec stage rewrites the card's decision page from spec.md when the card leaves spec, replacing the one the research advance wrote. Research.md keeps its options as the pre-interview draft the spec stage starts from. Lands in spec.md US4 and `## Failure modes`.
++- research.md:39, what gates size before c-058 ships `when:`: settled by Q1 and Q2 together. The check lives inside the spec stage, which runs on S and M alike, and Q2 wants S to carry scope-cut only. A stage `when:` cannot say that, so the per-size table is the check's own rule: it reads `card.size` and requires `## Not building` from S up and `## Options` from M up. This card has no dependency on c-058 T002, and `when:` is not a thing it waits for. Lands in spec.md US3.
++
++## Folded into spec.md
++
++| Question | spec.md field | State |
++|---|---|---|
++| Q1 | `## Not building` (whys and premortem, child card) | folded |
++| Q2 | `acceptance:` US3 (S cards need `## Not building` only) | folded |
++| Q3 | `acceptance:` US1 and `done_when` | folded |
++| Q4 | `acceptance:` US2 and `## Failure modes` first item; the use-case stubs line goes to `## Not building` with the child card | folded |
++| Q5 | `acceptance:` US4 and `screens: none` | folded |
++| research.md:35 to 39 | `## Not building` and `## Failure modes`, each marked `assumption:` | folded |
++
++## Rubric
++
++- I2 pass: `grep -c '^## Q[0-9] \(Scope\|Acceptance\|Risk\|Boundary\):' specs/066-the-agent-thinks-before-it-builds/interview.md` prints 5; one tag per question, none from outside the four
++- I4 pass: research.md:35 to 39 are the five items under `## Settled from research`, each naming the round-one answer that settles it; none is re-asked because `grep -c '^## Q' specs/066-the-agent-thinks-before-it-builds/interview.md` prints 5, the cap in src/lib/interview.ts:11
++- I6 pass: specs/066-the-agent-thinks-before-it-builds/spec.md carries Q3 as US1, Q4 as US2, Q2 as US3, Q5 as US4 and `screens: none`, Q1 and the five settled items under `## Not building` and `## Failure modes`, each line ending in the question or research line it came from
+diff --git a/specs/066-the-agent-thinks-before-it-builds/research.md b/specs/066-the-agent-thinks-before-it-builds/research.md
+index 77f5b96..6d9bd86 100644
+--- a/specs/066-the-agent-thinks-before-it-builds/research.md
++++ b/specs/066-the-agent-thinks-before-it-builds/research.md
+@@ -2,32 +2,61 @@
+ 
+ ## What exists
+ 
+-<!-- Unlock before build. One line: exists: have | unlock | port | build, with a path or URL when it is not build. have = shipped and exposed, close the card. unlock = built but not exposed, expose it. port = in a sibling repo. -->
+-exists: build
++exists: build — nothing reads `## Options` or `## Not building` out of a card's spec.md, and no stage asks the founder to pick between approaches. `grep -rn "Not building\|Failure modes\|## Options" src/ --include='*.ts'` hits only `src/lib/research.ts:60` and `src/lib/wiki-rules.ts` (lines 13, 58, 82, 122), all of which read research.md, never spec.md. `checkSpec` in `src/lib/spec.ts:114` checks the story line, size, metric, done_when, acceptance lines and task layers and nothing else; `codeloop spec check --help` lists one flag, `--verbose`, so the `--strict` that the template comment in `templates/spec/spec.md` promises does not exist. Stage `when:` is not a field yet: `grep -n "when" src/lib/lane.ts` returns no code lines, and c-058's T002 ("Add Stage `when` in src/lib/lane.ts") is unticked in `specs/058-small-fixes-skip-the-ceremony/tasks.md`. Three pieces are built and reusable: the `## Not building` and `## Failure modes` headings are already in `templates/spec/spec.md` (empty, unchecked); `optionLines` and `decisionFromResearch` in `src/lib/wiki-rules.ts:59` and `:111` already parse a list of options, pick the one marked Chosen and write a decision page; `addQuestions` in `src/lib/interview.ts:119` already posts an inbox question with two to four lettered options and a recommended letter (c-063, done).
+ 
+ ## How others show it
+ 
+-<!-- One row per competitor that has a page in .codeloop/wiki/competitors/, its name in the first cell. The row is copied to that page when this stage passes. -->
+ | Competitor | How they show it | Source |
+ |---|---|---|
+ 
++No competitor pages in `.codeloop/wiki/competitors/`. Outside the wiki: Spec Kit's plan step writes a research.md per unknown as Decision, Rationale and Alternatives considered, read by a person before tasks are generated; nothing fails if alternatives are missing. Architecture decision records (Nygard's format) carry Context, Decision, Consequences, and the common extension adds "Options considered"; again a convention, not a check. Shape Up's pitch has "Rabbit holes" and "No-gos" sections, which is the scope-cut written before the bet is made. None of the three gates the work on the sections being filled; the founder reads and trusts.
++
+ ## Options
+ 
++- Check spec.md's options and scope-cut at the spec stage. `codeloop check thinking <card>` reads spec.md and fails unless `## Options` has three list items, each naming in backticks a file under `src/`, `templates/` or a wiki page that exists, exactly one marked Rejected with a failure mode after it, and `## Not building` has at least two non-empty lines; the spec stage's done cmd in `templates/lanes/build.yaml` gains `&& codeloop check thinking {id}`; the spec skill posts one inbox question through `addQuestions` in `src/lib/interview.ts` ("A, B or C? recommended B") whose accepted answer marks the chosen option. Size gating uses `when: size >= M` on the stage once c-058 T002 lands; until then the check passes with a note for S and trivial cards by reading `card.size`. Chosen. It puts the four things the founder reads in the one file already open at the spec gate, reuses the inbox question mechanism and the option parser instead of adding a second one, and the check can fail: an option with no file path, a rejected option with no failure mode, or a one-line `## Not building` each produce a named error.
++- Separate lane stages `options` and `scope-cut` between interview and spec, each with its own output file `{spec}/options.md` and `{spec}/scope-cut.md` and its own done check. Rejected — it doubles the agent runs on every M card (`src/lib/run.ts` starts one agent per stage), and the founder would open three files at the spec gate instead of one; the epic page says the answer is written "back into the spec section it affects". Failure mode: a stage passes with its file written while spec.md still says nothing, so the gate approves a spec that never mentions the rejected option.
++- Extend the research stage instead: `checkResearch` in `src/lib/research.ts` already finds `## Options`, so raise it to three options and add `## Not building` to research.md. Rejected — research runs before the interview, so the options would predate the founder's answers and the scope-cut would be written by an agent that has not yet heard what is out of scope; and research runs on S cards too, so Q2's size table (S gets scope-cut only) cannot be met there. Failure mode: the founder answers Q3 "none of these" at the interview and the three options stay on the page, so the decision page carries a choice nobody made.
++
+ ## The pain, grounded
+ 
+-<!-- The user pain this card answers, with a source. No source: write assumption: instead and say what would confirm it. -->
+-pain:
++pain: the founder approves a spec that shows one approach and no reasoning, so the approval is a guess and the mistake surfaces at verify. Source: the c-066 story ("so that I approve a decision and not a guess"), `.codeloop/wiki/initiatives/founder-ships-without-ceremony.md` (metric: human turns per shipped card, goal median under 4; a spec reopened after build costs two more turns), and the interview's Q4 on this card, which names the riskiest assumption as "the agent writes plausible but hollow options". The card's own metric is first-pass verify, and today's spec gate gives the founder nothing to catch a wrong approach before build.
+ 
+ ## Risks
+ 
+-## Sources
++- Hollow options. An agent can write three options that each name a real file and still say nothing. The check counts shape, not sense; Q4's answer makes the premortem's failure modes into use case stubs under `usecases/` so at least that half is executable. The options half stays a reading task for the founder at the gate.
++- Scope creep into whys and premortem. Q1 split them into a child card; this card writes `## Options` and `## Not building` only, and the check must not require `## Failure modes` or the child card has nothing to add.
++- The `when:` dependency. `when: size >= M` is c-058's T002 and is not built. If c-058 slips, the size gate lives inside the check (read `card.size`, pass with a note below M), which is the second place size logic lives.
++- The decision page. `decisionFromResearch` writes a decision from research.md's options. If spec.md gains its own `## Options`, a card can end with two option lists that disagree; the spec-stage options should replace the research ones on the decision page, or the research page should stop carrying options on M cards. Which one is for the interview.
++- A rejected option named by its failure mode reads as a gotcha page. `wiki-landed` at review looks for repeat mistakes; a rejected option is not a mistake made, so it must not be captured as one.
++- The inbox question costs a wait. Q5 says one question per card at the options stage; on a board with ten M cards that is ten questions. `MAX_QUESTIONS` in `src/lib/interview.ts` caps a card at five and the options question counts against it.
+ 
+-<!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
++## Open questions for the interview
++
++- When an option names a file that does not exist yet (the option is to create it), does the check accept the path, or must every option name at least one existing file it would change?
++- Does the check go into `codeloop spec check` (then every M card already past spec fails it on the next run) or into a new `codeloop check thinking` added to the spec stage's done cmd only?
++- Which card carries whys and premortem? c-067 is "Research writes the first draft", so the child card from Q1 does not exist yet.
++- Research.md already lands an `## Options` decision page. On an M card, does the spec-stage options list replace it, merge into it, or does research keep its own?
++- Until c-058 ships stage `when:`, does the check read `card.size` itself and pass below M, or does the stage wait for c-058?
++
++## Sources
+ 
+-<!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
++- source: src/lib/research.ts:60 — `researchSummary` already parses `## Options` out of research.md; settled that an options parser exists and reads one file only
++- source: src/lib/wiki-rules.ts:111 — `decisionFromResearch` picks the option marked Chosen and writes a decision page; settled that spec-stage options would make a second list that the decision page must reconcile
++- source: src/lib/spec.ts:114 — `checkSpec` reads story, size, metric, done_when, acceptance and tasks; settled that `## Not building` and `## Options` in spec.md are read by nothing
++- source: templates/spec/spec.md — the `## Not building` and `## Failure modes` headings ship in every spec and the comment promises `spec check --strict`, which `codeloop spec check --help` does not list; settled that the headings exist and the check does not
++- source: src/lib/interview.ts:119 — `addQuestions` takes two to four lettered options and a recommended letter; settled that the "A, B or C? recommended B" inbox question needs no new mechanism
++- source: specs/058-small-fixes-skip-the-ceremony/tasks.md — T002 adds Stage `when` with size comparisons and is unticked; settled that `when: size >= M` is a dependency, not a thing to build here
++- source: specs/066-the-agent-thinks-before-it-builds/interview.md — Q1 splits whys and premortem to a child card, Q3 sets three options with one rejected and two scope-cut lines, Q4 says each option names a file or wiki page, Q5 says one inbox question
++- source: .codeloop/wiki/epics/thinking-stages.md — "writes the answer back into the spec section it affects"; settled that the output is spec.md, not a new file
++- source: https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions — Nygard's ADR: Context, Decision, Consequences; settled the shape a decision page already follows and that ADRs are a convention with no check
++- source: https://hbr.org/2007/09/performing-a-project-premortem — Klein's premortem: assume the project failed, write the reasons; settled that the premortem output is a list of failure causes, which Q4 turns into use case stubs
++- source: https://basecamp.com/shapeup/1.3-chapter-04 — Shape Up's pitch carries "Rabbit holes" and "No-gos"; settled that scope-cut is a named section written before the bet, which is the `## Not building` list
++- source: https://github.com/github/spec-kit — Spec Kit's plan step writes research.md entries as Decision, Rationale, Alternatives considered; settled that the nearest competitor shows options as prose a person reads, with nothing that fails when they are missing
++
++verdict: build
+ 
+ ## Rubric
+ 
+-- R2 pending: The `exists:` verdict is proven: a grep or route list, named, that would have found the thing if it existed
+-- R5 pending: At least two options compared, with the one taken and why the other lost
+-- R7 pending: Open questions are listed for the interview, not guessed
++- R2 pass: `grep -rn "Not building\|Failure modes\|## Options" src/ --include='*.ts'` hits only src/lib/research.ts:60 and src/lib/wiki-rules.ts (13, 58, 82, 122), all reading research.md; `codeloop spec check --help` lists only `--verbose`; `grep -n "when" src/lib/lane.ts` returns no code line
++- R5 pass: three options under `## Options`; a spec-stage check plus one inbox question chosen per specs/066-the-agent-thinks-before-it-builds/interview.md Q1, Q3 and Q5; separate stages rejected for doubling agent runs per src/lib/run.ts and splitting the gate reading across files; extending research rejected because research runs before the interview and on S cards
++- R7 pass: `## Open questions for the interview` lists five, none answered here: new-file paths in options, `spec check` versus `check thinking`, which card carries whys and premortem, how spec options reconcile with the research decision page, and what gates size before c-058 ships `when:`
+diff --git a/specs/066-the-agent-thinks-before-it-builds/spec.md b/specs/066-the-agent-thinks-before-it-builds/spec.md
+index 5f5bea9..33421c5 100644
+--- a/specs/066-the-agent-thinks-before-it-builds/spec.md
++++ b/specs/066-the-agent-thinks-before-it-builds/spec.md
+@@ -1,27 +1,39 @@
+ # c-066 spec: The agent thinks before it builds
+ 
+ <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
+-Story: As a <persona>, I can <what>, so that <pain relieved>.
++Story: As a founder, I can read three approaches with one rejected and a list of what is not being built before I approve a spec, so that I approve a decision and not a guess.
+ 
+-feature: <capability this card is a slice of>
+-initiative: <wiki/initiatives/<slug>.md>
+-size: S | M | L          <!-- L cannot pass the spec gate unsplit; split with `codeloop card split` -->
+-metric: <the one stage metric this card moves; no-data means instrument first>
+-done_when: <a command that exits 0, or a screen a person opens. Never "all stories complete">
++feature: the agent asks and thinks before it builds
++initiative: wiki/initiatives/founder-ships-without-ceremony.md
++size: M
++metric: first-pass verify
++<!-- the card's own metric (research.md "The pain, grounded"): a spec approved with a wrong approach fails at verify, not at the gate. The lane's cycle_time_days is what that moves. -->
++done_when: codeloop verify c-066
++<!-- interview Q3: the proof is `spec check` failing on a spec with no options or scope-cut, and passing with them -->
+ 
+ <!-- One to five lines, outcome checks a user would notice, numbered US1..US5. Six means split. -->
+ acceptance:
+-- US1 Given <state>, when <action>, then <result>.
++- US1 Given an M card at the spec stage, when `codeloop spec check` runs, then it exits 0 only if spec.md has `## Options` with three approaches, one marked Rejected with a reason, and `## Not building` with at least two lines, and otherwise exits 1 naming the missing part. (interview Q3; research.md:36 settled: the rules live in `checkSpec`, no new command)
++- US2 Given an option that names no existing file or wiki page in backticks, or a rejected option with no failure mode after it, when `codeloop spec check` runs, then it exits 1 naming that option. (interview Q4; research.md:35 settled: at least one named path exists today, a path to be created may stand beside it)
++- US3 Given an S card at the spec stage, when `codeloop spec check` runs, then `## Not building` with two lines is required and `## Options` is not, read from `card.size`. (interview Q2; research.md:39 settled: the per-size rule is the check's own, not a stage `when:`)
++- US4 Given an M card whose spec skill has written three options, when the stage ends, then one inbox question "A, B or C?" with a recommended letter is on the card, its accepted answer marks that option Chosen in spec.md, and the card's decision page is rewritten from spec.md when it leaves spec. (interview Q5; research.md:38 settled)
+ 
+ <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
+-screens:
++screens: none
++<!-- interview Q5: the founder reads spec.md at the gate the board already shows; nothing new is drawn. The one inbox question (US4) renders through c-063's existing inbox, so there is no new screen either. -->
+ 
+ ## Not building
+ 
+ <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
+--
++- Whys and premortem. A child card, created at this card's spec stage with `codeloop card new build "The agent names the root cause and how it fails" --feature agent-thinks-first --size M`; its id is recorded here once made. The premortem's use-case stubs under `usecases/` go with it. (interview Q1 and Q4; research.md:37 settled, assumption: no existing card fits, c-067 is research's first draft)
++- A new `codeloop check thinking` command or a change to the spec stage's done cmd. `spec check` already runs there and nowhere else, so the rules go into it. (interview Q3; research.md:36 settled, assumption: supersedes the decision page's command name)
++- Stage `when:` from c-058 T002. This card adds no stage, so it has nothing to gate; size is read inside the check. (interview Q2; research.md:39 settled, assumption)
++- A second options list on the decision page. Research.md keeps its options as the draft the spec stage starts from; the decision page is written from spec.md alone once the card leaves spec. (interview Q5; research.md:38 settled, assumption)
++- An option whose only named paths do not exist yet. Every option names at least one path that exists today, so the check has something to look up. (interview Q4; research.md:35 settled, assumption)
+ 
+ ## Failure modes
+ 
+ <!-- The ways this can break in production. One use case per item. -->
+--
++- Three options each name a real file and still say nothing: the check counts shape, so the founder reads the options at the gate and the inbox question's recommended letter is the one thing that must carry a reason. (interview Q4; research.md:26)
++- The research decision page and spec.md disagree after the founder picks a different letter: the decision page must be rewritten from spec.md at the spec advance, or the wiki records a choice nobody made. (research.md:29 and research.md:38 settled)
++- A rejected option's failure mode is captured as a gotcha at review: it is an option not taken, not a mistake made, so `wiki-landed` must not count it. (research.md:30)
+diff --git a/specs/066-the-agent-thinks-before-it-builds/tasks.md b/specs/066-the-agent-thinks-before-it-builds/tasks.md
+index 84c5545..c5fdf70 100644
+--- a/specs/066-the-agent-thinks-before-it-builds/tasks.md
++++ b/specs/066-the-agent-thinks-before-it-builds/tasks.md
+@@ -1,10 +1,15 @@
+ # c-066 tasks: The agent thinks before it builds
+ 
+-<!--
+-One line per task, each owned by one layer and tied to an acceptance line:
++- [ ] T001 [US1] [api] Parse `## Options` and `## Not building` out of spec.md in `checkSpec`, src/lib/spec.ts: fail with a named error unless Options has three list items with exactly one marked Rejected and a reason after it, and Not building has at least two non-empty lines
++- [ ] T002 [US2] [api] In the same parser, fail naming the option when it names no backticked path that exists under src/, templates/ or .codeloop/wiki/, or when the Rejected option carries no failure mode after the word Rejected, in src/lib/spec.ts
++- [ ] T003 [US3] [api] Read the card's size from the card store inside `checkSpec` (src/lib/spec.ts, lookup in src/lib/cards.ts): require Not building from S up and Options from M up; a trivial card passes with a note
++- [ ] T004 [US4] [api] When the spec stage advances on an M card, post one inbox question "A, B or C?" with the recommended letter through `addQuestions` in src/lib/interview.ts, its options read from spec.md `## Options`, skipped if the card already carries it; wired from the advance path in src/lib/flow.ts
++- [ ] T005 [US4] [api] On the accepted answer, mark that option Chosen in spec.md and clear any other Chosen in src/lib/interview.ts; when the card leaves spec, rewrite its decision page from spec.md `## Options` in src/lib/wiki-rules.ts so `decisionFromResearch` no longer wins
++- [ ] T006 [US1] [test] Tests in src/lib/__tests__/spec.test.ts and use cases usecases/066/uc-066-01 to 04: no Options fails naming the section, an option with no existing path fails naming the option, an S card passes without Options, an M card fails without them, the inbox question carries a recommended letter; each use case proved with `codeloop verify c-066 --mutate`
++- [ ] T007 [US1] [docs] Give templates/spec/spec.md an `## Options` block showing three approaches, one Rejected with its failure mode and one Chosen, and drop its `spec check --strict` promise; note the per-size rule in docs/story-standard.md under "Technical detail lives below the story"
++- [ ] T008 [US1] [docs] Create the child card with `codeloop card new build "The agent names the root cause and how it fails" --feature agent-thinks-first --size M` and record its id in the first line of spec.md `## Not building`, so the whys and premortem have a home before this card enters build
+ 
+-    - [ ] T001 [P] [US1] [api] What to do, naming the file
++## Rubric
+ 
+-Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in parallel.
+-`codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
+--->
++- S3 pass: the `## Folded into spec.md` table in specs/066-the-agent-thinks-before-it-builds/interview.md names the spec.md field each of Q1 to Q5 landed in; `grep -c 'interview Q' specs/066-the-agent-thinks-before-it-builds/spec.md` prints 10, every acceptance line, the `screens: none` note and every Not building line citing its question
++- S6 pass: `grep -n -A6 '^## Not building' specs/066-the-agent-thinks-before-it-builds/spec.md` lists five lines, whys and premortem (Q1), a new check command (Q3), stage `when:` (Q2), a second options list on the decision page (Q5), and options naming only new paths (Q4), each ending in the interview question that put it out
+diff --git a/specs/067-research-writes-the-first-draft/research.md b/specs/067-research-writes-the-first-draft/research.md
+index bfb2915..5ab260f 100644
+--- a/specs/067-research-writes-the-first-draft/research.md
++++ b/specs/067-research-writes-the-first-draft/research.md
+@@ -2,32 +2,62 @@
+ 
+ ## What exists
+ 
+-<!-- Unlock before build. One line: exists: have | unlock | port | build, with a path or URL when it is not build. have = shipped and exposed, close the card. unlock = built but not exposed, expose it. port = in a sibling repo. -->
+-exists: build
++exists: unlock — the research half is built and runs today; the draft-spec half is not. The build lane's first stage in `.codeloop/lanes/build.yaml` (stage `research`, done cmd `codeloop check research {id} --min-sources 3 && codeloop check wiki-landed {id} --stage research && codeloop check rubric {id}`) starts a headless agent with a brief from `buildBrief` in `src/lib/agent.ts:146`; that brief inlines the research skill, the wiki folders it reads and, for the research stage only, every page under `.codeloop/wiki/competitors/` (`src/lib/agent.ts:219`). `checkResearch` in `src/lib/research.ts:24` already requires a `verdict:` line and three `- source:` lines, `--online` makes each URL answer, and `decisionFromResearch` in `src/lib/wiki-rules.ts:111` lands the compared options as a decision page. `codeloop card run <id>` (`src/commands/card.ts:275`) runs the current stage on demand, which is this card's "on demand" path for a card already in research. What the grep did not find: nothing writes spec.md before the spec stage (`newSpec` in `src/lib/spec.ts:44` copies the template and `templates/skills/spec/SKILL.md` is the first skill that fills it), `grep -rn -i "screenshot" src templates/skills` hits only `src/lib/artifact.ts` (mock artifacts, not research), nothing posts a "close?" question when `exists:` is `have` or `unlock` (`grep -rn "close?" src` is empty), and a proposed card cannot be researched: `inLane` in `src/lib/cards.ts:103` excludes `proposed`, so `active()` in `src/lib/run.ts` never starts an agent on a backlog card. The plan lane in `.codeloop/lanes/plan.yaml` has its own `research` stage (skill `design`, checked only by `--has 'verdict:'`) and nothing ties it to the top five backlog cards.
+ 
+ ## How others show it
+ 
+-<!-- One row per competitor that has a page in .codeloop/wiki/competitors/, its name in the first cell. The row is copied to that page when this stage passes. -->
+ | Competitor | How they show it | Source |
+ |---|---|---|
++| Spec Kit | `/speckit.plan` writes a research.md per unknown as Decision, Rationale and Alternatives considered, then `/speckit.tasks` drafts tasks from it; the draft is read by a person before anything runs, and nothing fails when alternatives are missing | https://github.com/github/spec-kit/blob/main/spec-driven.md |
++| BMAD | An analyst agent runs brainstorming, market research and a project brief before the PM agent drafts the PRD; each is a separate chat turn the user starts, with no check on sources | https://github.com/bmad-code-org/BMAD-METHOD |
++| Kiro | From one prompt it drafts requirements.md (EARS acceptance), design.md and tasks.md in order, each a draft the user edits before the next is generated; the closest shape to "research writes the first draft", but it searches the codebase only, never the web, and cites nothing | https://kiro.dev/docs/specs/ |
+ 
+ ## Options
+ 
++- Extend the research stage that already runs, and expose it for backlog cards. The research skill in `templates/skills/research/SKILL.md` gains a second output, a draft `specs/{id}/spec.md` with the Story line, US1 to US3 and `## Not building` written from the `exists:`, `pain:` and `## Options` it just settled; `checkResearch` in `src/lib/research.ts` gains `--draft-spec`, which fails unless spec.md has a filled `Story:` line, one acceptance line and a non-empty `## Not building`, and it reads a `screenshots:` line that is either paths under the spec folder or `none`; `codeloop research <card>` in `src/commands/card.ts` is `card run` that first places a proposed card in the research stage through `placeCard` in `src/lib/engine.ts` so `inLane` in `src/lib/cards.ts` lets `src/lib/run.ts` start the agent; when the verdict is `have` or `unlock` the run posts one question through `addQuestions` in `src/lib/interview.ts` ("close? recommended yes") and parks the card the way `card park` does. Chosen. Every piece it needs is already there and tested: the brief, the competitor inlining, the source counter, the decision landing, `card run`, `park` and `addQuestions`; the check can fail on a named line (no Story, no US line, empty `## Not building`, a screenshot path that does not exist); and the founder opens the same two files at the spec gate that exist today, now already filled.
++- A standalone `codeloop research <card>` written in TypeScript that fetches the competitor pages with `pageText` from `src/lib/scan.ts`, searches the web and writes research.md deterministically with no agent. Rejected: the `exists:` verdict is a judgement over this codebase and its siblings, which a fetcher cannot make, and there is no web search without an API key in `.codeloop/config.yaml`. Failure mode: three URLs that answer `--online` and settle nothing, which is the filler Q4 names as the riskiest assumption.
++- A separate `draft` stage between research and interview with its own output `{spec}/draft.md` and check. Rejected: one more agent run on every card (`src/lib/run.ts` starts one agent per stage), and the interview then reads a third file; c-116 is already trying to cut stages for shaped stories. Failure mode: the draft passes while spec.md is still the template, so the spec stage rewrites from scratch and the draft was waste.
++
+ ## The pain, grounded
+ 
+-<!-- The user pain this card answers, with a source. No source: write assumption: instead and say what would confirm it. -->
+-pain:
++pain: the founder spends the first hour of every card gathering, not deciding: search the repo for what exists, find the competitor's docs, copy the story into a spec. Source: the card's own story ("so that my time goes to deciding, not gathering"), `.codeloop/wiki/initiatives/founder-ships-without-ceremony.md` (metric human turns per shipped card, median under 4 by 2026-12-01; a card that arrives at the spec gate with an empty spec costs a turn to send it back), and `.codeloop/wiki/features/agent-thinks-first.md`, which names "research reads the competitor pages and the web and writes the first draft of the spec" as the third story of the feature. The dogfood number: this card's first research run (`.codeloop/state/agent-runs/c-067-research-1.log`, 2026-10-13) exited 1 in 693 ms with the template untouched, so the founder got nothing to decide on.
+ 
+ ## Risks
+ 
+-## Sources
++- Filler. Q4's bar says one source must be a competitor page already in the wiki. `.codeloop/wiki/competitors/` was empty until this stage added Spec Kit, BMAD and Kiro, so the check "one source is a competitor page" would have failed every card on this repo; the bar needs `codeloop wiki competitor add` to be part of `init` or the check to accept a `wiki/competitors/` path once one exists.
++- Screenshots. No code path takes a screenshot (`grep -rn -i "screenshot" src templates/skills` hits only `src/lib/artifact.ts`). Q1 makes them best-effort through Chrome MCP when the agent has it; a `screenshots: none` line must satisfy the check or every headless run fails.
++- The draft spec contradicts the interview. Research runs before the interview (`.codeloop/lanes/build.yaml` stage order), so a draft `## Not building` written here predates the founder's answers. The interview skill must treat the draft as proposals it can strike, and the spec stage must rewrite, not append.
++- Two research stages. `.codeloop/lanes/plan.yaml` already has a `research` stage with the `design` skill and a weaker check. Q2's Monday top-five run either reuses the build stage's skill and check or the two drift.
++- Promoting a backlog card to run research on it changes its lane position. `inLane` in `src/lib/cards.ts:103` means a researched card is no longer proposed; if the verdict is `build`, it sits in research waiting for the interview, which the board shows as in flight before the founder chose it.
++- The `exists:` call here is `unlock`, so by the story standard the default move is expose, not rebuild. The draft-spec half and the backlog path are new code, so the card does not close on this verdict.
++
++## Open questions for the interview
+ 
+-<!-- At least three, one per line: a dash, the word source and a colon, the URL, a dash, a note. `codeloop check research` counts them. -->
++- When `codeloop research <card>` runs on a proposed card and the verdict is `build`, does the card stay in research (now in flight, counted against `wip: 10`) or return to proposed with the files written?
++- Does `--draft-spec` live in `check research` (then every build-lane card must pass it) or in a flag only `codeloop research` sets?
++- Which skill drafts spec.md: the research skill writing a second file, or the spec skill invoked once with `specs/{id}/interview.md` absent?
++- Does the Monday run reuse the build lane's research stage on the top five backlog cards, or does the plan lane's own `research` stage in `.codeloop/lanes/plan.yaml` change to call it?
++- Does the "close? recommended yes" question block the card at research (parked, lane slot freed) or at the spec gate the card was heading to anyway?
++
++## Sources
+ 
+-<!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
++- source: src/lib/agent.ts:219 — `buildBrief` inlines every competitor page for the research stage only; settled that competitor reading is built and needs no new mechanism
++- source: src/lib/research.ts:24 — `checkResearch` counts `- source:` lines and the `verdict:` line, and `checkOnline` makes each URL answer; settled that the source bar exists and the draft-spec bar does not
++- source: src/lib/cards.ts:103 — `inLane` excludes `proposed`, so no agent starts on a backlog card; settled that "before I spend a minute" needs a way into the research stage from the backlog
++- source: src/lib/spec.ts:44 — `newSpec` writes spec.md from the template and nothing fills it before the spec stage; settled that the draft spec is the missing half
++- source: src/commands/card.ts:275 — `card run <id>` runs the current stage on demand and streams the log; settled that the on-demand command exists for a card already in research
++- source: src/lib/interview.ts:119 — `addQuestions` posts an inbox question with a recommended answer; settled that Q5's "close? recommended yes" is one call
++- source: .codeloop/lanes/plan.yaml — the plan lane has its own `research` stage with the `design` skill and a `--has 'verdict:'` check; settled that Q2's Monday run has a stage to attach to and a weaker check to reconcile
++- source: .codeloop/wiki/initiatives/founder-ships-without-ceremony.md — metric human turns per shipped card, median under 4; settled the pain's number
++- source: .codeloop/wiki/competitors/kiro.md — the competitor page this stage added; the row above is copied here when the stage passes
++- source: https://github.com/github/spec-kit/blob/main/spec-driven.md — Spec Kit's plan step writes research.md as Decision, Rationale, Alternatives; settled that the nearest competitor drafts research as prose a person reads, with nothing that fails when sources are missing
++- source: https://github.com/bmad-code-org/BMAD-METHOD — BMAD's analyst agent does brainstorming, market research and a brief before the PRD, each a turn the user starts; settled that no competitor runs research unattended on a backlog item
++- source: https://kiro.dev/docs/specs/ — Kiro drafts requirements, design and tasks from one prompt with codebase context only; settled that "writes the first draft" is the market's shape and the web sources are the difference
++
++verdict: build
+ 
+ ## Rubric
+ 
+-- R2 pending: The `exists:` verdict is proven: a grep or route list, named, that would have found the thing if it existed
+-- R5 pending: At least two options compared, with the one taken and why the other lost
+-- R7 pending: Open questions are listed for the interview, not guessed
++- R2 pass: `grep -rn -i "screenshot" src templates/skills` hits only src/lib/artifact.ts; `grep -rn "close?" src` returns nothing; `newSpec` at src/lib/spec.ts:44 copies the template and `grep -rln "spec.md" src/lib` names no writer before the spec stage; `inLane` at src/lib/cards.ts:103 excludes proposed
++- R5 pass: three options under `## Options`; extending the research stage chosen because the brief (src/lib/agent.ts:219), the check (src/lib/research.ts:24), `card run` (src/commands/card.ts:275) and `addQuestions` (src/lib/interview.ts:119) already exist; a TypeScript fetcher rejected because `exists:` is a judgement and there is no web search key; a separate draft stage rejected for one more agent run per card in src/lib/run.ts
++- R7 pass: `## Open questions for the interview` lists five, none answered here: where a researched backlog card sits, where `--draft-spec` lives, which skill drafts spec.md, which lane's research stage the Monday run uses, and where the close question parks the card
