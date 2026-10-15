@@ -4,6 +4,7 @@ import { loadAgents, resolveAgent } from '../lib/agent.js';
 import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
 import { doctorTick, planRun, runDue, runDueWithAgent, type AgentWanted } from '../lib/run.js';
+import { offLine, readOff } from '../lib/off.js';
 import { guard } from './guard.js';
 import { projectRoot } from '../sdk/local.js';
 
@@ -65,6 +66,7 @@ export const runCommand = new Command('run')
       if (a.next) console.log(`    ${a.next}`);
     });
     doctor.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
+    if (result.stopped) console.log(`  stopped: ${result.stopped}`);
     console.log(`  ${result.created.length} created, ${result.advanced.length} advanced${result.agents ? `, ${result.agents.filter(a => a.started).length} agent runs` : ''}${doctor.length ? `, ${doctor.length} doctor actions` : ''}`);
   }));
 
@@ -72,6 +74,8 @@ export const doctorCommand = new Command('doctor')
   .description('Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories')
   .option('--json', 'JSON output')
   .action(guard(async (opts: { json?: boolean }) => {
+    const off = readOff(projectRoot());
+    if (off && !opts.json) console.log(`  ${offLine(off)}`);
     const actions = await doctorTick(projectRoot(), clock());
     if (opts.json) {
       console.log(JSON.stringify(actions, null, 2));

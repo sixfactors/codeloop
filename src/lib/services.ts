@@ -4,6 +4,7 @@
  * engine's files directly (what the CLI needs, no index, so a one-shot process exits), and
  * index-backed reads that take the server's ProjectIndex (what the board draws).
  */
+import { readOff } from './off.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { basename, dirname, join, resolve, sep } from 'path';
@@ -991,10 +992,13 @@ export interface HomeView {
   inProgress: BoardStory[];
   agents: AgentTile[];
   shipped: BoardStory[];
+  /** Present while `codeloop off` is in force for this project. */
+  off?: { until: string | null; why: string };
 }
 
 /** Home: what needs you, what is failing, what is moving, which agents are working, what shipped. */
 export async function homeView(index: ProjectIndex, projectDir: string): Promise<HomeView> {
+  const off = readOff(projectDir);
   const rows = await storyRows(index, projectDir);
   const week = Date.now() - 7 * 86_400_000;
   const needsYou = rows.filter(r => r.display.state === 'needs-you').sort(byRank);
@@ -1018,6 +1022,7 @@ export async function homeView(index: ProjectIndex, projectDir: string): Promise
   return {
     summary: { needsYou: needsYou.length, inProgress: inProgress.length, failing: failing.length, stale: stale.length, stalled: stalledNow.size, shippedThisWeek: shipped.length, agentsWorking: agents.length },
     needsYou, failing, stale, inProgress, agents, shipped,
+    ...(off ? { off: { until: off.until, why: off.why } } : {}),
   };
 }
 

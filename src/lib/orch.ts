@@ -4,6 +4,13 @@
  * merge, report); every one is an existing operation, so this file only sequences them and keeps
  * the record `.codeloop/state/orch/<card>.json`. The orchestrator itself never edits the worktree.
  */
+import { offLine, readOff } from './off.js';
+
+/** A paused repo starts no turn: the refusal carries the reason and the time it ends. */
+function refuseWhileOff(projectDir: string): void {
+  const off = readOff(projectDir);
+  if (off) throw new RefusalError(offLine(off));
+}
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -414,6 +421,7 @@ const currentBranch = (projectDir: string): string => {
  * `codeloop orch resume`.
  */
 export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
+  refuseWhileOff(projectDir);
   const id = findCard(readCards(projectDir).cards, cardRef).id;
   try {
     return await orchTurnSteps(projectDir, id, opts);
@@ -602,6 +610,7 @@ function breaker(turns: OrchTurn[]): string | undefined {
 
 /** Turns until the story parks at a gate, is stuck or done, reaches `until`, a breaker trips, or the agent runs out of starts for the day. */
 export async function orchRun(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchRunResult> {
+  refuseWhileOff(projectDir);
   const id = findCard(readCards(projectDir).cards, cardRef).id;
   const turns: OrchTurn[] = [];
   const stop = (stopped: string): OrchRunResult => {

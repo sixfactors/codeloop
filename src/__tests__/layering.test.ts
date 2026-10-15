@@ -27,6 +27,7 @@ const EXEMPT_FILES: Record<string, string> = {
   'list.ts': 'skill registry',
   'login.ts': 'skill registry',
   'mock.ts': 'mock scaffolding writes the mock beside the spec',
+  'off.ts': 'the pause switch is host-local state read by every hook before any project code loads; no SDK operation',
   'open.ts': 'reads serve.json and opens a browser; host-local like serve.ts, no SDK operation',
   'orch.ts': 'the orchestrator runs a builder agent to completion in this process; the API starts it in the background instead',
   'pack.ts': 'skill packaging',
@@ -105,6 +106,7 @@ describe('layering: CLI commands reach the engine only through the SDK', () => {
 const CWD_ALLOWED: Record<string, string> = {
   'init.ts': 'scaffolds a new project into the directory the user is in, before any board exists',
   'serve.ts': 'finds the project to host by walking up from the directory the user is in',
+  'off.ts': 'the pause switch is host-local state read by every hook before any project code loads; no SDK operation',
   'open.ts': 'finds the running server by walking up from the directory the user is in',
   'watch.ts': 'hosts the file watcher for the directory the user started it in',
   'publish.ts': 'publishes the skill package in the current directory',

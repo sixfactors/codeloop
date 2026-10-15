@@ -10,6 +10,21 @@ sock=${CODELOOP_HOOKD_SOCK:-${CODELOOP_HOME:-$HOME/.codeloop}/state/hookd.sock}
 body=
 [ -t 0 ] || body=$(cat)
 
+# Paused with `codeloop off`: answer nothing, start nothing. CODELOOP_OFF=1, or an off.json whose
+# until is null or still in the future (UTC ISO strings sort as text). An expired file falls
+# through, and the CLI removes it. `session` goes on to print the "off" line, and `bash` goes on because an owner action
+# (`codeloop approve`) still has to ask the person while codeloop is off.
+if [ "$verb" != session ] && [ "$verb" != bash ]; then
+  [ "${CODELOOP_OFF:-}" = 1 ] && exit 0
+  off=${CODELOOP_PROJECT_DIR:-$PWD}/.codeloop/state/off.json
+  if [ -f "$off" ]; then
+    until=$(sed -n 's/.*"until": *"\([^"]*\)".*/\1/p' "$off" | head -n 1)
+    if [ -z "$until" ] || [ "$until" \> "$(date -u +%Y-%m-%dT%H:%M:%S)" ]; then
+      exit 0
+    fi
+  fi
+fi
+
 cli() {
   printf '%s' "$body" | "$bin" guard "$verb" "$@"
   exit $?
