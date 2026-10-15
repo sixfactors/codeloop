@@ -86,6 +86,31 @@ describe('engine', () => {
     expect(after.events.filter(e => e.action === 'fail')).toHaveLength(fails);
   });
 
+  it('treats a check that crashes as check-error: one event with the tail, no retry counted', () => {
+    writeLane('market', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "node -e \\"function f(){throw new Error('boom')} f()\\"" }\n`);
+    createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
+    for (let i = 0; i < 4; i++) {
+      appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
+      expect(advanceCard(dir, 'c-1').outcome).toBe('check-error');
+    }
+    const card = readCards(dir).cards[0];
+    expect(card.retries.draft ?? 0).toBe(0);
+    expect(card.gate).toBeUndefined();
+    const errors = card.events.filter(e => e.action === 'check-error');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].note).toMatch(/boom/);
+    expect(card.events.some(e => e.action === 'fail')).toBe(false);
+  });
+
+  it('treats an exit code other than 0 or 1 as a crash, and a plain exit 1 with a message as a failure', () => {
+    writeLane('market', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo tool missing >&2; exit 127" }\n`);
+    createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
+    expect(advanceCard(dir, 'c-1').outcome).toBe('check-error');
+    writeLane('plain', `retries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo no brief >&2; exit 1" }\n`);
+    createCard(dir, { lane: 'plain', title: 't', id: 'c-2' });
+    expect(advanceCard(dir, 'c-2').outcome).toBe('failed');
+  });
+
   it('refuses to advance a parked card', () => {
     writeLane('market', GATED);
     parkOnCopyGate('c-1');

@@ -62,7 +62,8 @@ export function resolveRole(flag?: string): Role {
   return role;
 }
 
-export type Outcome = 'moved' | 'parked' | 'done' | 'failed' | 'stuck' | 'unchanged';
+/** `check-error`: the stage's check command itself crashed, so the work was never judged and no retry is spent. */
+export type Outcome = 'moved' | 'parked' | 'done' | 'failed' | 'stuck' | 'unchanged' | 'check-error';
 
 export interface AdvanceResult {
   card: Card;
@@ -127,14 +128,32 @@ const approved = (card: Card, stage: Stage) => approval(card, stage) !== undefin
 /** True for a public step nobody has approved yet: no work and no check may run for it. */
 export const awaitsApproval = (card: Card, stage: Stage) => !!stage.gate?.outward && !approved(card, stage);
 
-/** Runs the stage's done command without touching the card. null when the stage has no command. */
-export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string): { passed: boolean; output: string } | null {
+const STACK_FRAME = /^\s+at\s.+(?:\(.*\)|:\d+(?::\d+)?)\s*$/;
+
+/**
+ * A check passes with 0 and fails with 1. Any other exit code, or an output that is a stack trace
+ * (two or more `at ...` frames led by an Error or a bare trace and no message of the check's own),
+ * means the command crashed, for example a CLI rebuilt while the run was using it.
+ */
+export function checkCrashed(status: number | null, output: string): boolean {
+  if (status !== 0 && status !== 1) return true;
+  if (status === 0) return false;
+  const lines = output.split('\n').map(l => l.trimEnd()).filter(Boolean);
+  if (lines.filter(l => STACK_FRAME.test(l)).length < 2) return false;
+  const message = lines.filter(l => !STACK_FRAME.test(l) && !/^(Node\.js v|node:|file:\/\/|\^+\s*$|\s*throw |\s*\^|\s*at )/.test(l) && !/^\w*(Error|Exception)\b/.test(l) && !/^\s*\{?\s*(code|errno|syscall|path):/.test(l) && !/^[{}]$/.test(l));
+  return message.length === 0;
+}
+
+/** Runs the stage's done command without touching the card. null when the stage has no command. `crashed` carries the output tail when the command itself broke. */
+export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string): { passed: boolean; output: string; crashed?: string } | null {
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
   const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : checkEnv();
   const run = spawnSync(substitute(stage.done.cmd, card, { shell: true }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
-  return { passed: run.status === 0, output: tail(`${run.stdout ?? ''}${run.stderr ?? ''}`) };
+  const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
+  const passed = run.status === 0;
+  return { passed, output, ...(checkCrashed(run.status, `${run.stdout ?? ''}${run.stderr ?? ''}`) ? { crashed: output } : {}) };
 }
 
 /**
@@ -613,6 +632,14 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     }
   }
   if (check) {
+    if (check.crashed !== undefined) {
+      // The tool broke, not the work: one event with the tail (not one per rerun), no retry spent.
+      const last = before.events.filter(e => e.stage === stage.id).at(-1);
+      if (last?.action === 'check-error' && last.note === check.crashed) return { card: before, outcome: 'check-error', output, started: [], because: {} };
+      card.events.push(event(now, 'engine', 'check-error', stage.id, check.crashed));
+      writeCards(projectDir, file, replace(file.cards, card));
+      return { card, outcome: 'check-error', output, started: [], because: {} };
+    }
     if (!check.passed) {
       // A story at its retry cap is parked: a further failure is not counted and nothing is written,
       // so `retries` never passes `lane.retries` however often the check is rerun.

@@ -44,8 +44,9 @@ export interface OrchTurn {
   /** The engine's result of the advance after the merge. */
   advance?: Outcome;
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
+  /** `check-error`: the stage check itself crashed; no retry is spent. `builder-unavailable`: the agent cannot run (not logged in); no retry is spent. */
   /** `merge-failed`: the gate passed but the merge did not; the work was right, so it costs no retry. */
-  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions';
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions' | 'check-error' | 'builder-unavailable';
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -172,6 +173,13 @@ function agentStartsToday(projectDir: string, agent: AgentConfig, now: Date): nu
   return readCards(projectDir).cards.flatMap(c => c.events).filter(e => e.action === 'agent-start' && e.agent === agent.name && now.getTime() - new Date(e.at).getTime() < DAY_MS).length;
 }
 
+/** The engine's `check-error` event, written once per distinct tail: a crashed check spends no retry. */
+function checkError(projectDir: string, id: string, stage: string, tail: string): void {
+  const last = findCard(readCards(projectDir).cards, id).events.filter(e => e.stage === stage).at(-1);
+  if (last?.action === 'check-error' && last.note === tail) return;
+  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note: tail }));
+}
+
 /** A failed turn costs a retry, the same way a failed check does; the lane's last retry parks the story stuck. */
 function countFailure(projectDir: string, id: string, note: string): 'failed' | 'stuck' {
   const file = readCards(projectDir);
@@ -212,6 +220,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     if (hb) turn.note = `using hand-back ${hb.head.slice(0, 8)} recorded at ${hb.at}, before this turn started (${turn.startedAt}); it is not the last gated head`;
   }
   let mergeFailed = false;
+  let crashed = false;
   // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
   const open = openQuestions(projectDir, card);
   if (open.length) {
@@ -230,7 +239,11 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     // 5. gate
     const gate = runGate(projectDir, card.id, { handbackId: hb.head });
     turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
-    if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
+    if (gate.checkCrashed !== undefined) {
+      checkError(projectDir, card.id, turn.stage, gate.checkCrashed);
+      turn.findings.push(...gate.findings);
+      crashed = true;
+    } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
     else {
       // 6. merge, then the engine's own advance
       try {
@@ -238,7 +251,10 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
         turn.merge = { sha: merged.sha, mode: merged.mode };
         const adv = advanceCard(projectDir, card.id, { unattended: true });
         turn.advance = adv.outcome;
-        if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
+        if (adv.outcome === 'check-error') {
+          crashed = true;
+          turn.findings.push(`stage check crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+        } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
           turn.findings.push(`stage check failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
         } else {
@@ -260,6 +276,7 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   }
 
   if (!turn.findings.length) turn.outcome = 'merged';
+  else if (crashed) turn.outcome = 'check-error';
   else if (mergeFailed) turn.outcome = 'merge-failed';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
   turn.endedAt = new Date().toISOString();
@@ -478,6 +495,7 @@ export async function orchRun(projectDir: string, cardRef: string, opts: OrchOpt
     if (turn.outcome === 'questions') return stop('waiting for answers');
     if (turn.outcome === 'merge-failed') return stop(`merge failed: ${turn.findings.at(-1)}`);
     if (turn.outcome === 'stuck') return stop('stuck');
+    if (turn.outcome === 'check-error') return stop(`the stage check itself crashed; fix the tool before retrying: ${turn.findings.at(-1)?.slice(0, 300) ?? ''}`);
     const tripped = breaker(turns);
     if (tripped) return stop(tripped);
   }

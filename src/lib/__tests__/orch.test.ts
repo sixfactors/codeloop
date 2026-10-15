@@ -125,6 +125,23 @@ describe('orchRun stops a story that keeps failing', () => {
   }, 90_000);
 });
 
+describe('a stage check that crashes', () => {
+  const CRASHING = 'id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: code\n    done: { cmd: "node -e \\"function f(){throw new Error(\'boom\')} f()\\"" }\n  - id: ship\n    done: { cmd: "true" }\n';
+
+  it('is check-error, spends no retry, writes one event with the tail and stops the run', async () => {
+    project(CRASHING, WORKING_AGENT);
+    const run = await orchRun(dir, 'c-001');
+    expect(run.turns).toHaveLength(1);
+    expect(run.turns[0].outcome).toBe('check-error');
+    expect(run.stopped).toMatch(/the stage check itself crashed; fix the tool before retrying/);
+    const card = readCards(dir).cards[0];
+    expect(card.retries.code ?? 0).toBe(0);
+    expect(card.events.filter(e => e.action === 'check-error')).toHaveLength(1);
+    expect(card.events.filter(e => e.action === 'check-error')[0].note).toMatch(/boom/);
+    expect(card.gate).toBeUndefined();
+  }, 60_000);
+});
+
 describe('a merge that cannot land', () => {
   it('is merge-failed, costs no retry, stops the run and feeds the finding into the next brief', async () => {
     project(TWO_STAGE, WORKING_AGENT);

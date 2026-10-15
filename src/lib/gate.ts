@@ -31,6 +31,8 @@ export interface GateRecord {
   claim: { path: string; found: boolean } | null;
   verdict: 'pass' | 'fail';
   findings: string[];
+  /** The output tail when the stage check command itself crashed; the work was not judged. */
+  checkCrashed?: string;
   at: string;
 }
 
@@ -95,7 +97,7 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   // there; only the proof is rerun. A failed or missing selfcheck changes nothing.
   const skipCheck = hb.selfcheck?.pass === true;
   const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined, hb.head);
-  if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed${why(checked.output)}`);
+  if (checked && !checked.passed) findings.push(`stage ${stage.id} check ${checked.crashed !== undefined ? 'crashed' : 'failed'}${why(checked.output)}`);
 
   let claim: GateRecord['claim'] = null;
   const onHead = (p: string) => spawnSync('git', ['cat-file', '-e', `${hb.head}:${p}`], { cwd: workDir, encoding: 'utf8' }).status === 0;
@@ -116,6 +118,7 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
     claim,
     verdict,
     findings,
+    ...(checked?.crashed !== undefined ? { checkCrashed: checked.crashed } : {}),
     at: new Date().toISOString(),
   };
 
