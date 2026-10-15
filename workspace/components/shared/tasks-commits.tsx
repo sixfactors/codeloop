@@ -2,8 +2,7 @@
 
 // What the story has to do and what has landed: tasks.md's tasks with their ticks and layer, and
 // the commits carrying the story's trailer, newest first, each merged into the trunk or held on a
-// branch. Both come from GET /api/cards/:id/full as the API reads them; nothing is counted here
-// beyond the ticks shown.
+// branch. Both, and the done tally, come from GET /api/cards/:id/full; nothing is counted here.
 
 import { CheckSquare, GitCommit, GitMerge, GitBranch, Square } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -15,12 +14,11 @@ import type { StoryCommit, Task } from '@/lib/types';
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-function Tasks({ tasks }: { tasks: Task[] }) {
+function Tasks({ tasks, counts }: { tasks: Task[]; counts?: { done: number; total: number } }) {
   if (!tasks.length) return <EmptyState compact icon={CheckSquare} title="No tasks yet" description="The plan phase writes tasks.md." />;
-  const done = tasks.filter((t) => t.done).length;
   return (
-    <section className="flex min-w-0 flex-col gap-1.5" data-testid="story-tasks" data-count={tasks.length} data-done={done}>
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase">Tasks <span className="font-normal normal-case tabular-nums">{done} of {tasks.length} done</span></h4>
+    <section className="flex min-w-0 flex-col gap-1.5" data-testid="story-tasks" data-count={tasks.length}>
+      <h4 className="text-xs font-semibold text-muted-foreground uppercase">Tasks{counts ? <span className="ml-1 font-normal normal-case tabular-nums">{counts.done} of {counts.total} done</span> : null}</h4>
       <ItemGroup className="gap-0.5">
         {tasks.map((t) => (
           <Item key={t.id} size="sm" className="items-start px-1 py-1" data-testid="task-row" data-done={t.done || undefined}>
@@ -66,11 +64,12 @@ function Commits({ commits }: { commits: StoryCommit[] }) {
   );
 }
 
-export function TasksAndCommits({ tasks, commits }: { tasks: Task[]; commits: StoryCommit[] }) {
+/** `counts` is the journey's task tally from the API. */
+export function TasksAndCommits({ tasks, counts, commits }: { tasks: Task[]; counts?: { done: number; total: number }; commits: StoryCommit[] }) {
   return (
     <AttributeCard title="Tasks and commits" icon={CheckSquare} testId="tasks-commits">
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
-        <Tasks tasks={tasks} />
+        <Tasks tasks={tasks} counts={counts} />
         <Commits commits={commits} />
       </div>
     </AttributeCard>
