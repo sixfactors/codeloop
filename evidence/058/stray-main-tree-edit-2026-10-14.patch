@@ -1,0 +1,46 @@
+diff --git a/src/lib/cards.ts b/src/lib/cards.ts
+index 541dcf3..eba22d5 100644
+--- a/src/lib/cards.ts
++++ b/src/lib/cards.ts
+@@ -23,7 +23,8 @@ export interface CardEvent {
+   log?: string;
+ }
+ 
+-export type Size = 'S' | 'M' | 'L';
++/** `trivial` is a one-line fix: it enters the lane at build (stages with `when: size >= S` are skipped) and verify caps its diff at 3 files / 50 lines. */
++export type Size = 'trivial' | 'S' | 'M' | 'L';
+ 
+ /** The story standard's fields (docs/story-standard.md). Every one is optional: older cards carry none. */
+ export interface StoryFields {
+diff --git a/src/lib/story.ts b/src/lib/story.ts
+index 454149d..c7d89d5 100644
+--- a/src/lib/story.ts
++++ b/src/lib/story.ts
+@@ -3,7 +3,15 @@ import { readCards, RefusalError, writeCards, type Card, type Size, type StoryFi
+ 
+ /** The personas every board knows; `personas:` in config.yaml adds the repo's own. */
+ export const KNOWN_PERSONAS = ['founder', 'builder', 'reviewer', 'dev', 'visitor', 'team'];
+-export const SIZES: Size[] = ['S', 'M', 'L'];
++export const SIZES: Size[] = ['trivial', 'S', 'M', 'L'];
++export const SIZE_LIST = 'trivial, S, M or L';
++
++/** The size a flag or filter names, in any case; undefined when it is none of them. */
++export function parseSize(value: string): Size | undefined {
++  const v = value.trim();
++  const size = v.toLowerCase() === 'trivial' ? 'trivial' : v.toUpperCase();
++  return SIZES.includes(size as Size) ? (size as Size) : undefined;
++}
+ export const POINTS = [1, 2, 3, 5, 8];
+ const MAX_TITLE_WORDS = 16;
+ // Each one marks a mechanism (a flag, a file, a path, a key, a call) rather than what the user can now do.
+@@ -53,8 +61,8 @@ export function checkStory(projectDir: string, card: Card): string[] {
+   if (persona && !knownPersonas(projectDir).includes(persona)) {
+     problems.push(`persona "${persona}" is not known (${knownPersonas(projectDir).join(', ')}); add it under personas: in .codeloop/config.yaml`);
+   }
+-  if (card.size === undefined) problems.push('no size: S, M or L');
+-  else if (!SIZES.includes(card.size)) problems.push(`size "${card.size}" is not S, M or L`);
++  if (card.size === undefined) problems.push(`no size: ${SIZE_LIST}`);
++  else if (!SIZES.includes(card.size)) problems.push(`size "${card.size}" is not ${SIZE_LIST}`);
+   if (card.points !== undefined && !POINTS.includes(card.points)) problems.push(`points ${card.points} is not one of ${POINTS.join(', ')}`);
+   return problems;
+ }

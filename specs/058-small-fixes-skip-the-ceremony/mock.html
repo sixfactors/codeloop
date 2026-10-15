@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-mock-template: 1 -->
+<!-- codeloop mock lineage: c-058 <- base -->
+<title>c-058 Small fixes skip the ceremony</title>
+<style>
+/* codeloop-tokens:start */
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --sunk: #efefec;
+  --text: #1d1d1b;
+  --muted: #6b6b64;
+  --faint: #9a9a92;
+  --border: #dcdcd6;
+  --border-strong: #b9b9b0;
+  --accent: #c2512f;
+  --accent-soft: #f6e3dc;
+  --accent-text: #ffffff;
+  --agent: #3d5bd9;
+  --agent-soft: #e3e8fb;
+  --ok: #2f7d4f;
+  --ok-soft: #e0f0e6;
+  --warn: #a86a00;
+  --warn-soft: #f8ecd2;
+  --danger: #b3261e;
+  --danger-soft: #f7dedc;
+  --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.875rem;
+  --space-4: 1.25rem;
+  --line: 0.0625rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --surface: #1f1f1d;
+    --sunk: #2a2a27;
+    --text: #ecece6;
+    --muted: #a3a39a;
+    --faint: #75756d;
+    --border: #36362f;
+    --border-strong: #4d4d45;
+    --accent: #e0805f;
+    --accent-soft: #3d241b;
+    --accent-text: #161615;
+    --agent: #8ea2f2;
+    --agent-soft: #232a47;
+    --ok: #6cc08d;
+    --ok-soft: #1c3326;
+    --warn: #e0b04f;
+    --warn-soft: #3a2f16;
+    --danger: #ef8a83;
+    --danger-soft: #3e1f1d;
+  }
+}
+/* codeloop-tokens:end */
+/* codeloop-blocks:start */
+/* App frame: chrome bar, side nav, main area. Use for any full screen. */
+.app-frame { border: var(--line) solid var(--border-strong); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.chrome { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-3); border-bottom: var(--line) solid var(--border); background: var(--sunk); font-size: 0.8rem; color: var(--muted); }
+.chrome .crumb { color: var(--text); font-weight: 600; }
+.chrome .search { margin-left: auto; padding: 0.125rem var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.app { display: grid; grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr); min-height: 18rem; }
+.nav { display: flex; flex-direction: column; gap: 0.125rem; padding: var(--space-3) var(--space-2); border-right: var(--line) solid var(--border); font-size: 0.84rem; }
+.nav .group { margin: var(--space-3) var(--space-2) var(--space-1); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.nav .item { display: flex; justify-content: space-between; gap: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.nav .item.on { background: var(--sunk); font-weight: 600; }
+.nav .count { padding: 0 var(--space-2); border-radius: 999rem; background: var(--accent-soft); color: var(--accent); font-size: 0.7rem; }
+.main { min-width: 0; padding: var(--space-3) var(--space-4); }
+.title { margin: 0 0 0.125rem; font-size: 1.05rem; }
+.sub { margin-bottom: var(--space-3); font-size: 0.8rem; color: var(--muted); }
+.section-label { display: flex; gap: var(--space-2); align-items: center; margin: var(--space-3) 0 var(--space-1); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+
+/* Identity and status */
+.key { font: 600 0.78rem var(--mono); color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.125rem var(--space-2); border: var(--line) solid var(--border); border-radius: 999rem; background: var(--sunk); font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+.pill.agent { border-color: transparent; background: var(--agent-soft); color: var(--agent); }
+.pill.you { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.pill.ok { border-color: transparent; background: var(--ok-soft); color: var(--ok); }
+.pill.warn { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
+.pill.danger { border-color: transparent; background: var(--danger-soft); color: var(--danger); }
+.live { display: inline-block; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; }
+.holder { display: inline-grid; flex: none; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--muted); color: var(--surface); font-size: 0.66rem; font-weight: 700; }
+.holder.agent { border-radius: var(--radius-sm); background: var(--agent); }
+.prio { font-size: 0.74rem; font-weight: 700; }
+.prio.p1 { color: var(--danger); } .prio.p2 { color: var(--warn); } .prio.p3, .prio.p4 { color: var(--muted); }
+.proof { display: inline-flex; gap: 0.125rem; }
+.proof i { display: inline-block; width: 0.625rem; height: 0.375rem; border-radius: 0.125rem; background: var(--border-strong); }
+.proof i.pass { background: var(--ok); } .proof i.fail { background: var(--danger); }
+
+/* Actions */
+.btn { padding: 0.125rem 0.6rem; border: var(--line) solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: 600 0.74rem var(--font); white-space: nowrap; }
+.btn.primary { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+
+/* Row: one item in a list */
+.list-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-2); border-bottom: var(--line) solid var(--border); font-size: 0.85rem; }
+.list-row .grow { flex: 1 1 12rem; min-width: 0; }
+.list-row .actions { display: flex; gap: var(--space-2); margin-left: auto; }
+
+/* Board: columns of tiles */
+.columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-2); }
+.column { display: flex; flex-direction: column; gap: var(--space-2); min-height: 7rem; padding: var(--space-2); border-radius: var(--radius-sm); background: var(--sunk); }
+.column-head { display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); border: var(--line) solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 0.8rem; }
+.tile .meta { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.swimlane { margin: var(--space-3) 0 var(--space-1); font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+
+/* Record: content with a property panel */
+.record { display: grid; grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem); gap: var(--space-4); }
+.props { display: flex; flex-direction: column; gap: var(--space-2); padding-left: var(--space-3); border-left: var(--line) solid var(--border); font-size: 0.82rem; }
+.prop { display: grid; grid-template-columns: 5rem 1fr; gap: var(--space-2); align-items: center; }
+.prop .label { color: var(--muted); }
+.tabs { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; border-bottom: var(--line) solid var(--border); font-size: 0.82rem; }
+.tabs .tab { padding: var(--space-2) 0; color: var(--muted); }
+.tabs .tab.on { border-bottom: 0.125rem solid var(--accent); color: var(--text); font-weight: 600; }
+.callout { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--sunk); font-size: 0.85rem; }
+.callout.you { background: var(--accent-soft); }
+.check-line { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-1) 0; font-size: 0.82rem; }
+
+/* Tree: ranked hierarchy */
+.tree-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--space-1) var(--space-2); border-bottom: var(--line) solid var(--border); font-size: 0.82rem; }
+.tree-row.depth-1 { padding-left: 1.4rem; } .tree-row.depth-2 { padding-left: 2.5rem; }
+
+@media (max-width: 47.5rem) {
+  .app { grid-template-columns: minmax(0, 1fr); } .nav { display: none; }
+  .record { grid-template-columns: minmax(0, 1fr); } .props { padding-left: 0; padding-top: var(--space-2); border-left: 0; border-top: var(--line) solid var(--border); }
+  .columns { grid-auto-flow: column; grid-auto-columns: 10rem; grid-template-columns: none; overflow-x: auto; }
+}
+/* codeloop-blocks:end */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); line-height: 1.5; background: var(--bg); color: var(--text); }
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: 72rem; margin: 0 auto; padding: var(--space-4); }
+.bar { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: baseline; padding-bottom: var(--space-3); border-bottom: var(--line) solid var(--border); }
+.bar h1 { margin: 0; font-size: 1.25rem; }
+.bar .meta, .muted { color: var(--muted); }
+.screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-4); align-items: start; }
+section[data-screen] { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+section[data-screen] > h2 { margin: 0; font-size: 1rem; }
+.frame { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field input, .field select { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius); }
+.button { font: inherit; padding: var(--space-2) var(--space-3); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius); }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.badge { padding: 0 var(--space-2); border: var(--line) solid var(--border); border-radius: var(--radius); font-size: 0.875rem; }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.danger { color: var(--danger); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: var(--space-2); text-align: left; border-bottom: var(--line) solid var(--border); }
+.note { margin: 0; padding-left: var(--space-3); border-left: var(--line) solid var(--border); color: var(--muted); font-size: 0.875rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="bar">
+    <h1>Small fixes skip the ceremony</h1>
+    <span class="meta">c-058 · codeloop · board</span>
+  </header>
+  <main class="screens">
+    <!--
+      One <section data-screen="name"> per screen named under `screens:` in the spec.
+      Build each screen from the design system's blocks (.codeloop/design-system/README.md lists
+      them): an app-frame with chrome, nav and main, then rows, tiles, records and pills inside it.
+      Use real content and show the state the screen is about. Notes about a screen go in
+      <p class="note"> below the frame, outside it. Colours come only from the tokens: var(--accent), never a literal.
+    -->
+    <section data-screen="board-with-size">
+      <h2>board-with-size</h2>
+      <div class="app-frame">
+        <div class="chrome"><span>codeloop ▾</span><span class="crumb">Board</span><span class="search">size:trivial lane:build</span></div>
+        <div class="app">
+          <nav class="nav">
+            <span class="item">Home</span>
+            <span class="item on">Board</span>
+            <span class="item">Plan</span>
+            <span class="item">Wiki</span>
+            <span class="item">Reports</span>
+          </nav>
+          <div class="main">
+            <h3 class="title">Board</h3>
+            <div class="sub">Group by: holder · size filter: trivial · 2 of 34 cards</div>
+            <div class="list-row">
+              <span class="pill ok">trivial</span>
+              <span class="pill">S</span>
+              <span class="pill">M</span>
+              <span class="pill">L</span>
+              <span class="pill">lane: build</span>
+              <span class="grow muted">Filter shows only trivial cards; they enter at Build</span>
+            </div>
+            <div class="swimlane">You · DG</div>
+            <div class="columns">
+              <div class="column">
+                <div class="column-head"><span>Up next</span><span>0</span></div>
+              </div>
+              <div class="column">
+                <div class="column-head"><span>Shape</span><span>0</span></div>
+              </div>
+              <div class="column">
+                <div class="column-head"><span>Spec</span><span>0</span></div>
+              </div>
+              <div class="column">
+                <div class="column-head"><span>Build</span><span>2</span></div>
+                <div class="tile">
+                  <span>Fix the typo on the inbox line</span>
+                  <div class="meta">
+                    <span class="key">c-091</span>
+                    <span class="pill ok">trivial</span>
+                    <span class="prio p3">P3</span>
+                    <span class="holder agent">A</span>
+                  </div>
+                </div>
+                <div class="tile">
+                  <span>Rename the install flag</span>
+                  <div class="meta">
+                    <span class="key">c-094</span>
+                    <span class="pill ok">trivial</span>
+                    <span class="prio p4">P4</span>
+                    <span class="holder agent">A</span>
+                  </div>
+                </div>
+              </div>
+              <div class="column">
+                <div class="column-head"><span>Test</span><span>0</span></div>
+              </div>
+              <div class="column">
+                <div class="column-head"><span>Review</span><span>0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Proves the board: trivial cards show a size badge and sit in Build (never Shape/Spec); research, interview, mock and spec were skipped because size is trivial.</p>
+    </section>
+    <section data-screen="card-drawer-size">
+      <h2>card-drawer-size</h2>
+      <div class="app-frame">
+        <div class="chrome"><span>codeloop ▾</span><span>Board</span><span class="crumb">c-091</span><span class="search">⌘K</span></div>
+        <div class="app">
+          <nav class="nav">
+            <span class="item">Home</span>
+            <span class="item on">Board</span>
+            <span class="item">Plan</span>
+            <span class="item">Wiki</span>
+          </nav>
+          <div class="main">
+            <div class="record">
+              <div>
+                <div class="sub">Founder ships without ceremony › c-091 · Story</div>
+                <h3 class="title">Fix the typo on the inbox line</h3>
+                <div class="sub">As a founder, I can read the inbox line without a typo, so that I trust the tool.</div>
+                <div class="tabs">
+                  <span class="tab on">Proof</span>
+                  <span class="tab">Activity</span>
+                </div>
+                <div class="callout you">
+                  <strong>Waiting on you: local check.</strong>
+                  size: trivial, skipped research/spec · 1 file, 2 lines under the 3-file / 50-line cap.
+                </div>
+                <div class="list-row">
+                  <span class="grow">Approve to keep verify → review; send back re-sizes to S and parks at the spec gate.</span>
+                  <span class="actions">
+                    <button class="btn">Send back</button>
+                    <button class="btn primary">Approve</button>
+                  </span>
+                </div>
+                <div class="check-line"><span class="pill ok">pass</span> Diff under trivial cap · <span class="key">check diff</span></div>
+                <div class="check-line"><span class="pill ok">pass</span> Events: create → build → verify · no research.md or spec.md</div>
+              </div>
+              <div class="props">
+                <div class="prop"><span class="label">Status</span><span><span class="pill you">Local check</span></span></div>
+                <div class="prop"><span class="label">Stage</span><span>verify</span></div>
+                <div class="prop"><span class="label">Size</span><span><span class="pill ok">trivial</span></span></div>
+                <div class="prop"><span class="label">Skipped</span><span>research, interview, mock, spec</span></div>
+                <div class="prop"><span class="label">Holder</span><span><span class="holder">DG</span> you</span></div>
+                <div class="prop"><span class="label">Owner</span><span><span class="holder">DG</span></span></div>
+                <div class="prop"><span class="label">Priority</span><span class="prio p3">P3</span></div>
+                <div class="prop"><span class="label">Diff</span><span>1 file · 2 lines</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Proves the card drawer: size trivial is visible, skipped stages are named, and the local-gate note tells the founder the ceremony was skipped once.</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>
