@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { dirname, join } from 'path';
+import { connect } from 'net';
 import { fileURLToPath } from 'url';
 import { createHubApp } from '../lib/hub.js';
 import { findWorkspaceBuild, hubListener, loadNext, staticChunks } from '../lib/next-server.js';
@@ -17,10 +18,24 @@ export const hubCommand = new Command('hub')
   .description('Run the one board that serves every registered project, each under its own path')
   .option('-p, --port <port>', 'Port to listen on', String(DEFAULT_HUB_PORT))
   .option('--host <host>', 'Address to listen on', '127.0.0.1')
-  .option('--stop', 'Stop the hub')
+  .option('--stop', 'Stop the hub and return once its port is closed')
+  .option('--restart', 'Stop the hub, wait for its port to close, then start a new one on the same port')
   .option('--open', 'Open the browser after starting')
   .option('--new-token', 'Issue a new token and sign every browser out (default: reuse the last run\'s)')
-  .action(async (options: { port: string; host: string; stop?: boolean; open?: boolean; newToken?: boolean }) => {
+  .action(async (options: { port: string; host: string; stop?: boolean; restart?: boolean; open?: boolean; newToken?: boolean }) => {
+    if (options.restart) {
+      const old = readHubState();
+      const port = old?.port ?? parseInt(options.port, 10);
+      const host = old?.host ?? options.host;
+      if (old) {
+        await stopHub(old);
+        removeHubState();
+      }
+      const state = await ensureHubRunning(port, host);
+      console.log(chalk.green(`  Hub restarted: ${chalk.cyan(hubUrl(state))}`));
+      if (options.open) openUrl(`${hubUrl(state)}/`);
+      return;
+    }
     if (options.stop) {
       const state = readHubState();
       removeHubState();
@@ -28,12 +43,8 @@ export const hubCommand = new Command('hub')
         console.log(chalk.dim('  Not running'));
         return;
       }
-      try {
-        process.kill(state.pid);
-        console.log(chalk.green(`  Stopped hub (PID ${state.pid})`));
-      } catch {
-        console.log(chalk.yellow(`  Process ${state.pid} not found (already stopped?)`));
-      }
+      const outcome = await stopHub(state);
+      console.log(outcome === 'missing' ? chalk.yellow(`  Process ${state.pid} not found (already stopped?)`) : chalk.green(`  Stopped hub (PID ${state.pid})`));
       return;
     }
 
@@ -47,6 +58,47 @@ export const hubCommand = new Command('hub')
 
     await runHubForeground(port, options.host, { open: options.open, token: process.env.CODELOOP_SERVE_TOKEN, newToken: options.newToken });
   });
+
+/** True while something accepts connections on the port. */
+function listening(host: string, port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const c = connect({ host: host === '0.0.0.0' ? '127.0.0.1' : host, port });
+    c.once('connect', () => (c.destroy(), resolve(true)));
+    c.once('error', () => resolve(false));
+  });
+}
+
+/** Resolves once nothing accepts connections on the port; false if it still does after `timeoutMs`. */
+export async function waitForPortClosed(host: string, port: number, timeoutMs = 15_000, pollMs = 100): Promise<boolean> {
+  const end = Date.now() + timeoutMs;
+  while (await listening(host, port)) {
+    if (Date.now() >= end) return false;
+    await new Promise(r => setTimeout(r, pollMs));
+  }
+  return true;
+}
+
+/**
+ * Stops the recorded hub and returns only after its listener has closed, so whatever starts next on
+ * the port does not race the old one (a start that loses that race leaves the browser refused).
+ * SIGKILL follows if SIGTERM has not closed the port in 10 s.
+ */
+export async function stopHub(state: HubState, timeoutMs = 15_000): Promise<'stopped' | 'missing'> {
+  try {
+    process.kill(state.pid);
+  } catch {
+    return (await waitForPortClosed(state.host, state.port, 1000)) ? 'missing' : 'stopped';
+  }
+  if (!(await waitForPortClosed(state.host, state.port, Math.min(10_000, timeoutMs)))) {
+    try {
+      process.kill(state.pid, 'SIGKILL');
+    } catch {
+      // gone between the checks
+    }
+    await waitForPortClosed(state.host, state.port, Math.max(1000, timeoutMs - 10_000));
+  }
+  return 'stopped';
+}
 
 /**
  * Builds and serves the hub in this process: the hub's own API (project dispatch + `/api/hub/*`)
