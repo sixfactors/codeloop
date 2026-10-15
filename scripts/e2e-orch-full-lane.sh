@@ -52,10 +52,10 @@ set -eu
 BRIEF="$(cat)"
 STAGE="$(printf '%s\n' "$BRIEF" | sed -n 's/^Stage: //p' | head -1)"
 ID="${CODELOOP_CARD:?}"
-SPEC="$(ls -d specs/*/ | head -1)"; SPEC="${SPEC%/}"
-NNN="${SPEC#specs/}"; NNN="${NNN%%-*}"
+SPEC="$(ls -d .codeloop/specs/*/ | head -1)"; SPEC="${SPEC%/}"
+NNN="${SPEC#.codeloop/specs/}"; NNN="${NNN%%-*}"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-MOCKDIR="app/mocks/${SPEC#specs/}"
+MOCKDIR="app/mocks/${SPEC#.codeloop/specs/}"
 
 export GIT_AUTHOR_NAME=scripted-builder GIT_AUTHOR_EMAIL=builder@example.test GIT_COMMITTER_NAME=scripted-builder GIT_COMMITTER_EMAIL=builder@example.test
 commit() { # subject, body
@@ -329,8 +329,8 @@ EOF
     commit "feat(records): records store, service and page" "Adds the store, the service that lists it and the page that renders it, plus a helper outside the plan."
   else
     # The gate named the unplanned file: answer it in review.md's Scope table, where the review stage picks it up.
-    mkdir -p "evidence/$NNN"
-    cat > "evidence/$NNN/review.md" <<'EOF'
+    mkdir -p ".codeloop/evidence/$NNN"
+    cat > ".codeloop/evidence/$NNN/review.md" <<'EOF'
 # Review
 
 ## Scope
@@ -344,8 +344,8 @@ EOF
   handback "codeloop task check $ID --all-done && npm test && codeloop check rubric $ID" "src/records-service.ts"
   ;;
 verify)
-  mkdir -p "usecases/$NNN" "evidence/$NNN"
-  cat > "usecases/$NNN/uc-$NNN-01.yaml" <<'EOF'
+  mkdir -p ".codeloop/usecases/$NNN" ".codeloop/evidence/$NNN"
+  cat > ".codeloop/usecases/$NNN/uc-$NNN-01.yaml" <<'EOF'
 id: uc-001-01
 accept: US1
 failure_mode: the store is missing or not an array, so the service throws and the page is blank
@@ -355,7 +355,7 @@ layers:
       node -e "const r=JSON.parse(require('fs').readFileSync('src/store/records.json','utf8')); if(!Array.isArray(r)||!r.length) process.exit(1)" && test -f src/records-service.ts
     expect: { exit: 0 }
 EOF
-  cat > "usecases/$NNN/uc-$NNN-02.yaml" <<'EOF'
+  cat > ".codeloop/usecases/$NNN/uc-$NNN-02.yaml" <<'EOF'
 id: uc-001-02
 accept: US2
 failure_mode: the page renders without the shared list component, so a founder sees no records
@@ -366,13 +366,13 @@ layers:
 EOF
   # Each use case must fail on a tree without the feature.
   EMPTY="$(mktemp -d)"
-  for f in "usecases/$NNN"/*.yaml; do
+  for f in ".codeloop/usecases/$NNN"/*.yaml; do
     CMD="$(node -e "console.log(require('yaml').parse(require('fs').readFileSync('$f','utf8')).layers.cli.run)" 2>/dev/null || true)"
     [ -n "$CMD" ] || continue
     if (cd "$EMPTY" && sh -c "$CMD") >/dev/null 2>&1; then echo "use case $f passes on an empty tree" >&2; exit 1; fi
   done
   CALL="$(walk_call)"
-  cat > "evidence/$NNN/verify.md" <<EOF
+  cat > ".codeloop/evidence/$NNN/verify.md" <<EOF
 ## Live walk
 
 stack: npm run dev
@@ -385,19 +385,19 @@ $CALL
 external: none: the page reads src/store/records.json and calls nothing outside this repo
 EOF
   codeloop verify "$ID" > /dev/null
-  cat >> "evidence/$NNN/verify.md" <<EOF
+  cat >> ".codeloop/evidence/$NNN/verify.md" <<EOF
 
 ## Rubric
 
-- V4 pass: \`cd "\$(mktemp -d)" && grep -q RecordsList app/records/page.tsx\` exits 1 on an empty tree for both use cases in usecases/$NNN/
-- V6 pass: every claim has a file, evidence/$NNN/uc-001-01.json and evidence/$NNN/uc-001-02.json
+- V4 pass: \`cd "\$(mktemp -d)" && grep -q RecordsList app/records/page.tsx\` exits 1 on an empty tree for both use cases in .codeloop/usecases/$NNN/
+- V6 pass: every claim has a file, .codeloop/evidence/$NNN/uc-001-01.json and .codeloop/evidence/$NNN/uc-001-02.json
 EOF
   commit "test(verify): use cases and live walk for the records list" "One use case per acceptance line, each seen failing on an empty tree, and the walk against the real store."
-  handback "codeloop verify $ID && codeloop check rubric $ID" "evidence/$NNN/verify.md"
+  handback "codeloop verify $ID && codeloop check rubric $ID" ".codeloop/evidence/$NNN/verify.md"
   ;;
 review)
   CALL="$(walk_call)"
-  cat > "evidence/$NNN/review.md" <<EOF
+  cat > ".codeloop/evidence/$NNN/review.md" <<EOF
 # Review $ID
 
 verdict: approve
@@ -417,16 +417,16 @@ verdict: approve
 ## Rubric
 
 - W2 pass: repeated the walk step, \`$CALL\` answered from the real store
-- W3 pass: every finding in the table above has a verdict and evidence at evidence/$NNN/review.md:7
-- W4 pass: no fix-now findings, \`codeloop verify $ID\` still says result: pass in evidence/$NNN/verify.md
+- W3 pass: every finding in the table above has a verdict and evidence at .codeloop/evidence/$NNN/review.md:7
+- W4 pass: no fix-now findings, \`codeloop verify $ID\` still says result: pass in .codeloop/evidence/$NNN/verify.md
 - W5 pass: no deferred findings, so no proposed cards are owed, \`codeloop card list\`
 EOF
   commit "docs(review): records list review approved" "Findings triaged, the one out-of-plan file kept with a reason, one walk step repeated."
-  handback "codeloop check file evidence/$NNN/review.md --has 'verdict: approve' && codeloop check scope $ID && codeloop check wiki-landed $ID --stage review && codeloop check rubric $ID" "evidence/$NNN/review.md"
+  handback "codeloop check file .codeloop/evidence/$NNN/review.md --has 'verdict: approve' && codeloop check scope $ID && codeloop check wiki-landed $ID --stage review && codeloop check rubric $ID" ".codeloop/evidence/$NNN/review.md"
   ;;
 staging)
   npm test >/dev/null
-  cat > "evidence/$NNN/staging.md" <<'EOF'
+  cat > ".codeloop/evidence/$NNN/staging.md" <<'EOF'
 # Staging
 
 result: pass
@@ -434,17 +434,17 @@ checked: `npm test` exited 0 on the merged tree
 note: scripted run, nothing was deployed
 EOF
   commit "docs(staging): staging evidence" "Staging check recorded by the scripted builder."
-  handback "codeloop check file evidence/$NNN/staging.md --has 'result: pass' && codeloop check rubric $ID" "evidence/$NNN/staging.md"
+  handback "codeloop check file .codeloop/evidence/$NNN/staging.md --has 'result: pass' && codeloop check rubric $ID" ".codeloop/evidence/$NNN/staging.md"
   ;;
 live)
-  cat > "evidence/$NNN/prod.md" <<'EOF'
+  cat > ".codeloop/evidence/$NNN/prod.md" <<'EOF'
 # Production
 
 result: pass
 note: scripted run, nothing was deployed
 EOF
   commit "docs(live): production evidence" "Production check recorded by the scripted builder."
-  handback "codeloop check file evidence/$NNN/prod.md --has 'result: pass' && codeloop check rubric $ID" "evidence/$NNN/prod.md"
+  handback "codeloop check file .codeloop/evidence/$NNN/prod.md --has 'result: pass' && codeloop check rubric $ID" ".codeloop/evidence/$NNN/prod.md"
   ;;
 *)
   echo "scripted builder has no step for stage '$STAGE'" >&2
@@ -512,7 +512,7 @@ The app keeps records in one JSON file, `src/store/records.json`, read whole by 
 | records.json | the saved records |
 EOF
 expect 0 "start creates c-001 in the build lane" codeloop start "Saved records list" --persona founder --can "see my saved records in one list" --so "I stop losing them between sessions" --size M
-SPECDIR="$(ls -d specs/*/ | head -1)"; SPECDIR="${SPECDIR%/}"
+SPECDIR="$(ls -d .codeloop/specs/*/ | head -1)"; SPECDIR="${SPECDIR%/}"
 perl -0pi -e 's/^screens:[ \t]*\n/screens:\n- Records list\n- Empty state\n/m' "$SPECDIR/spec.md"
 printf '\nentities:\n- Record\n' >> "$SPECDIR/spec.md"
 git add -A && git commit -qm "chore: init codeloop, card c-001 and its draft spec"
@@ -618,9 +618,9 @@ json "build: the failing turn failed at the gate, before any merge" "(t=>!t.merg
 settled build
 settled verify
 expect 0 "build: every task is ticked on main" codeloop task check c-001 --all-done
-expect 0 "verify: verify.md carries a budget line" grep -q '^budget: ' evidence/001/verify.md
-expect 0 "verify: verify.md carries a health line" grep -q '^health: ' evidence/001/verify.md
-expect 0 "verify: verify.md says result: pass" grep -q '^result: pass' evidence/001/verify.md
+expect 0 "verify: verify.md carries a budget line" grep -q '^budget: ' .codeloop/evidence/001/verify.md
+expect 0 "verify: verify.md carries a health line" grep -q '^health: ' .codeloop/evidence/001/verify.md
+expect 0 "verify: verify.md says result: pass" grep -q '^result: pass' .codeloop/evidence/001/verify.md
 expect 0 "owner approves the local gate" codeloop approve c-001 --as owner
 
 # ------------------------------------------------------------------------------------------------
@@ -630,7 +630,7 @@ drive --until live
 cp "$ORCH_OUT" "$LOG"
 reached "review|pr" "run advanced through review and parked at the pr gate"
 settled review
-expect 0 "review: review.md has the Scope table row for the unplanned file" grep -q 'src/unplanned-helper.ts | keep' evidence/001/review.md
+expect 0 "review: review.md has the Scope table row for the unplanned file" grep -q 'src/unplanned-helper.ts | keep' .codeloop/evidence/001/review.md
 expect 0 "review: check scope passes" codeloop check scope c-001
 expect 0 "reviewer approves the pr gate" codeloop approve c-001 --as reviewer
 
@@ -641,7 +641,7 @@ drive --until live
 cp "$ORCH_OUT" "$LOG"
 reached "live|prod" "run advanced through staging and the card is parked at the prod gate"
 settled staging
-expect 0 "prod gate: the live stage has not run while parked" test ! -e evidence/001/prod.md
+expect 0 "prod gate: the live stage has not run while parked" test ! -e .codeloop/evidence/001/prod.md
 expect 0 "owner approves the prod gate (the scripted builder deploys nothing)" codeloop approve c-001 --as owner
 drive
 cp "$ORCH_OUT" "$LOG"

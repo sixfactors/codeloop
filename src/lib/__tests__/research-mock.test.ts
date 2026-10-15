@@ -24,7 +24,7 @@ function write(path: string, text: string): void {
 }
 const append = (path: string, text: string) => write(path, read(path) + text);
 
-const SPEC = 'specs/001-add-csv-export';
+const SPEC = '.codeloop/specs/001-add-csv-export';
 const SOURCES = ['- source: https://acme.test/docs/export — export lives in the list toolbar', '- source: https://globex.test/changelog — shipped bulk export in March', '- source: https://example.test/forum/42 - users ask for a column picker'];
 const TEMPLATE = readFileSync(resolve('templates/mock/template.html'), 'utf-8');
 
@@ -239,14 +239,14 @@ describe('mocks', () => {
     startCard(dir, { lane: 'build', title: 'Import wizard', id: 'c-002' });
     newMock(dir, 'c-001', 'exports');
     newMock(dir, 'c-002', 'exports');
-    write('docs/mocks/acme-app/billing/c-777.html', '<title>Old invoice page</title>');
+    write('.codeloop/mocks/archive/acme-app/billing/c-777.html', '<title>Old invoice page</title>');
     utimesSync(join(dir, MOCK), new Date('2026-09-01'), new Date('2026-09-01'));
     utimesSync(join(dir, findMock(dir, 'c-002')!), new Date('2026-09-20'), new Date('2026-09-20'));
-    utimesSync(join(dir, 'docs/mocks/acme-app/billing/c-777.html'), new Date('2026-08-01'), new Date('2026-08-01'));
+    utimesSync(join(dir, '.codeloop/mocks/archive/acme-app/billing/c-777.html'), new Date('2026-08-01'), new Date('2026-08-01'));
 
     expect(writeMocksIndex(dir)).toEqual({ path: '.codeloop/mocks/index.html', mocks: 3 });
     const index = read('.codeloop/mocks/index.html');
-    const order = ['acme-app', 'exports', '@/specs/002-import-wizard/mock.html', 'Import wizard', `@/${MOCK}`, 'Add CSV export', 'billing', 'acme-app/billing/c-777.html', 'Old invoice page'].map(s => index.indexOf(s));
+    const order = ['acme-app', 'exports', '@/.codeloop/specs/002-import-wizard/mock.html', 'Import wizard', `@/${MOCK}`, 'Add CSV export', 'billing', 'acme-app/billing/c-777.html', 'Old invoice page'].map(s => index.indexOf(s));
     expect(order.every(i => i >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(index).toContain('codeloop-tokens:start');
@@ -259,7 +259,7 @@ describe('mocks', () => {
     writeMocksIndex(dir);
     write('secret.html', 'top secret');
     write(`${SPEC}/spec-secret.html`, 'top secret');
-    write('docs/mocks/acme-app/old/c-777.html', '<title>Old page</title>');
+    write('.codeloop/mocks/archive/acme-app/old/c-777.html', '<title>Old page</title>');
     const { app } = createApp(dir);
     expect(await (await app.request(`/mocks/@/${MOCK}`)).text()).toContain('<title>c-001 Add CSV export</title>');
     expect(await (await app.request('/mocks/')).text()).toContain(`@/${MOCK}`);

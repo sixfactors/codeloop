@@ -166,7 +166,7 @@ describe('a stage that waits on answers', () => {
   // First run: asks three questions through the CLI and stops. Later runs: the questions exist, so it builds and hands back.
   const ASKING_AGENT = `#!/bin/sh
 set -e
-if ! ls "$CODELOOP_PROJECT_DIR"/specs/*/interview.md >/dev/null 2>&1; then
+if ! ls "$CODELOOP_PROJECT_DIR"/.codeloop/specs/*/interview.md >/dev/null 2>&1; then
   for q in one two three; do node "${CLI}" ask "$CODELOOP_CARD" "Question $q?" --recommended yes; done
   exit 0
 fi

@@ -154,7 +154,7 @@ export function evalProposal(projectDir: string, id: string, now: Date = clock()
       }
       const tmp = mkdtempSync(join(tmpdir(), 'codeloop-eval-'));
       try {
-        const got = !shell(fixture.setup, tmp) ? 'setup-failed' : shell(substitute(stage.done!.cmd!, 'eval-001', { shell: true }), tmp) ? 'pass' : 'fail';
+        const got = !shell(fixture.setup, tmp) ? 'setup-failed' : shell(substitute(stage.done!.cmd!, 'eval-001', { shell: true, projectDir: tmp }), tmp) ? 'pass' : 'fail';
         const ok = got === fixture.expect;
         runs.push({ stage: stage.id, fixture: fixture.name, expect: fixture.expect, got, ok });
         if (!ok) vacuous.push(`stage ${stage.id}: fixture ${fixture.name} expected ${fixture.expect}, got ${got}`);
@@ -193,7 +193,7 @@ export function evalProposal(projectDir: string, id: string, now: Date = clock()
   const recent = [...finished].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)).slice(-REPLAY_CARDS);
   for (const card of recent) {
     for (const stage of changed.filter(s => card.events.some(e => e.action === 'advance' && e.stage === s.id))) {
-      const passed = shell(substitute(stage.done!.cmd!, card, { shell: true }), projectDir);
+      const passed = shell(substitute(stage.done!.cmd!, card, { shell: true, projectDir }), projectDir);
       const ok = accepted.has(card.id);
       replayed.push({ card: card.id, stage: stage.id, passed, accepted: ok });
       if (!passed && !ok) {

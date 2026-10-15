@@ -111,7 +111,7 @@ export function startCardRun(projectDir: string, ref: string, opts: { agent?: st
     startedAt: now.toISOString(),
     logPath: `${AGENT_RUNS_DIR}/${runId}.log`,
   });
-  append(projectDir, record, `run ${runId}: ${card.id} ${stage.id}\ncheck: ${stage.done?.cmd ? substitute(stage.done.cmd, card, { shell: true }) : `event ${stage.done?.event}`}\n${agent ? `agent ${agent.name} starts if the check fails: ${agent.cmd}` : 'no agent configured; the check alone decides'}\n`);
+  append(projectDir, record, `run ${runId}: ${card.id} ${stage.id}\ncheck: ${stage.done?.cmd ? substitute(stage.done.cmd, card, { shell: true, projectDir }) : `event ${stage.done?.event}`}\n${agent ? `agent ${agent.name} starts if the check fails: ${agent.cmd}` : 'no agent configured; the check alone decides'}\n`);
 
   const finished = (async () => {
     let final: RunRecord;

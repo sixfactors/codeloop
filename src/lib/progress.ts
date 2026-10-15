@@ -5,6 +5,7 @@
  * branch. The doctor's, the check's and the hooks' own lines are left out so the tool's reactions
  * never count as the story's progress.
  */
+import { evidenceOf } from './paths.js';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { readActivity } from './activity.js';
@@ -42,7 +43,7 @@ export function storyTasks(projectDir: string, card: Card): Pick<Task, 'id' | 'd
 export function evidenceFiles(projectDir: string, card: Card): EvidenceFile[] {
   const out = new Map<string, number>();
   for (const root of roots(projectDir, card)) {
-    const rel = join('evidence', cardKey(card));
+    const rel = evidenceOf(projectDir, cardKey(card));
     const walk = (dir: string) => {
       let names: string[];
       try { names = readdirSync(join(root, dir)); } catch { return; }

@@ -10,10 +10,10 @@ import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedW
 import { parseQuestions, type Question } from '../interview.js';
 import type { Lane } from '../lane.js';
 import { storyState, type StoryState } from '../states.js';
-import { CARD_MOCKS_DIR, MOCK_FILE, MOCKS_DIR, mockHref } from '../mock.js';
-import { EVIDENCE_DIR, FileDriver } from '../store/file.js';
+import { CARD_MOCKS_DIR, MOCK_FILE, mockHref } from '../mock.js';
+import { FileDriver } from '../store/file.js';
+import { evidenceDir, folderIn, mocksArchiveDir, specsDir } from '../paths.js';
 
-const SPECS_DIR = 'specs';
 import { openStore, type Artifact, type Change, type Epic, type Feature, type Initiative, type Store, type WikiPage } from '../store/index.js';
 
 export type IndexedRepo = 'cards' | 'pages' | 'lanes' | 'initiatives' | 'epics' | 'features' | 'artifacts';
@@ -566,7 +566,7 @@ export class ProjectIndex {
     // under docs/mocks: the order findMock uses. Cards are not loaded yet when this first runs.
     this.mockBySpec.clear();
     for (const folder of this.specFolders) {
-      const spec = `${SPECS_DIR}/${folder}`;
+      const spec = `${specsDir(this.projectDir)}/${folder}`;
       if (existsSync(join(this.projectDir, spec, MOCK_FILE))) this.mockBySpec.set(spec, `${spec}/${MOCK_FILE}`);
     }
     const own = join(this.projectDir, CARD_MOCKS_DIR);
@@ -576,7 +576,8 @@ export class ProjectIndex {
         if (f.endsWith('.html') && f !== 'index.html' && !this.mockByCard.has(id)) this.mockByCard.set(id, `${CARD_MOCKS_DIR}/${f}`);
       }
     }
-    const root = join(this.projectDir, MOCKS_DIR);
+    const archive = mocksArchiveDir(this.projectDir);
+    const root = join(this.projectDir, archive);
     if (!existsSync(root)) return;
     const dirs = (p: string) => readdirSync(p, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name).sort();
     for (const project of dirs(root)) {
@@ -584,7 +585,7 @@ export class ProjectIndex {
         for (const f of readdirSync(join(root, project, topic)).sort()) {
           if (!f.endsWith('.html')) continue;
           const id = basename(f, '.html');
-          if (!this.mockByCard.has(id)) this.mockByCard.set(id, `${MOCKS_DIR}/${project}/${topic}/${f}`);
+          if (!this.mockByCard.has(id)) this.mockByCard.set(id, `${archive}/${project}/${topic}/${f}`);
         }
       }
     }
@@ -592,7 +593,7 @@ export class ProjectIndex {
 
   private loadEvidence(): void {
     this.evidenceKeys.clear();
-    const root = join(this.projectDir, EVIDENCE_DIR);
+    const root = join(this.projectDir, evidenceDir(this.projectDir));
     if (!existsSync(root)) return;
     for (const d of readdirSync(root, { withFileTypes: true })) if (d.isDirectory()) this.evidenceKeys.add(d.name);
   }
@@ -669,13 +670,13 @@ export class ProjectIndex {
   private specDirOf(card: { id: string; key?: string; spec?: string }): string | undefined {
     if (card.spec) return card.spec;
     const key = cardKey(card);
-    if (this.specFolders.includes(key)) return `${SPECS_DIR}/${key}`;
+    if (this.specFolders.includes(key)) return `${specsDir(this.projectDir)}/${key}`;
     const found = this.specFolders.filter(d => d.startsWith(`${key}-`));
-    return found.length === 1 ? `${SPECS_DIR}/${found[0]}` : undefined;
+    return found.length === 1 ? `${specsDir(this.projectDir)}/${found[0]}` : undefined;
   }
 
   private loadSpecFolders(): void {
-    const dir = join(this.projectDir, SPECS_DIR);
+    const dir = join(this.projectDir, specsDir(this.projectDir));
     this.specFolders = existsSync(dir) ? readdirSync(dir) : [];
   }
 
@@ -778,7 +779,7 @@ export class ProjectIndex {
       case 'artifacts':
         this.loadMocks();
         diffs.push(...(await this.reloadArtifacts()));
-        diffs.push(...this.rederive(change.path?.startsWith(`${MOCKS_DIR}/`) || change.path?.startsWith(`${CARD_MOCKS_DIR}/`) ? [basename(change.path, '.html')] : [...this.cardsById.keys()]));
+        diffs.push(...this.rederive([folderIn('root', 'mocks'), folderIn('dotfolder', 'mocks'), CARD_MOCKS_DIR].some(d => change.path?.startsWith(`${d}/`)) ? [basename(change.path!, '.html')] : [...this.cardsById.keys()]));
         break;
       case 'lanes': {
         const id = change.id ?? (change.path ? basename(change.path).replace(/\.ya?ml$/, '') : undefined);

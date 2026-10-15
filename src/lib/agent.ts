@@ -9,7 +9,7 @@ import { RefusalError, safeName, type Card } from './cards.js';
 import { listCompetitors } from './competitors.js';
 import { loadConfig } from './config.js';
 import { stageBrief } from './flow.js';
-import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX } from './lane.js';
+import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX, substitute } from './lane.js';
 import { checkEnv } from './shell.js';
 import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
@@ -189,7 +189,9 @@ export function buildBrief(projectDir: string, card: Card): string {
 
   if (stage.skill) {
     const body = skillBody(projectDir, stage.skill);
-    lines.push(`## Skill: ${stage.skill}`, '', body ?? `The skill's text is not in ${SKILLS_INDEX}; use the /${stage.skill} skill if your tool has it.`, '');
+    // Skill text names story paths as placeholders ({spec}, {evidence}, {usecases}, {shape}); the brief
+    // gives this card's real paths in this project's layout.
+    lines.push(`## Skill: ${stage.skill}`, '', body ? substitute(body, card, { projectDir }) : `The skill's text is not in ${SKILLS_INDEX}; use the /${stage.skill} skill if your tool has it.`, '');
   }
 
   const laneStage = lane.stages.find(s => s.id === card.stage);

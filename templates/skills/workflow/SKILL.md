@@ -3,10 +3,10 @@ name: workflow
 stage: design
 lane: build
 inputs:
-  - specs/{id}/spec.md
-  - specs/{id}/interview.md
+  - {spec}/spec.md
+  - {spec}/interview.md
 outputs:
-  - "docs/artifacts/<project>/<topic>/{id}-workflow.html: one sequence diagram per flow, a swimlane table, a state diagram for the main entity"
+  - "{artifacts}/<project>/<topic>/{id}-workflow.html: one sequence diagram per flow, a swimlane table, a state diagram for the main entity"
 check: "codeloop check artifact {id} --kind workflow"
 questions: 3
 ---
@@ -23,8 +23,8 @@ request, an approval chain, a sync job, a multi-party handoff, rather than a sin
 
 ## Inputs
 
-- `specs/{id}/spec.md`, the acceptance lines; every flow traces to one.
-- `specs/{id}/interview.md`, answers to open questions about failure handling or ownership.
+- `{spec}/spec.md`, the acceptance lines; every flow traces to one.
+- `{spec}/interview.md`, answers to open questions about failure handling or ownership.
 
 ## Procedure
 

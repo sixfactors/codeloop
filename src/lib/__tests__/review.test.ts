@@ -282,16 +282,16 @@ describe('two cards with the same number', () => {
     createCard(dir, { lane: 'build', title: 'First', id: 'CL-001' });
     createCard(dir, { lane: 'build', title: 'Second', id: 'c-001' });
 
-    expect(newSpec(dir, 'CL-001').dir).toBe('specs/001-first');
-    expect(newSpec(dir, 'c-001').dir).toBe('specs/c-001-second');
+    expect(newSpec(dir, 'CL-001').dir).toBe('.codeloop/specs/001-first');
+    expect(newSpec(dir, 'c-001').dir).toBe('.codeloop/specs/c-001-second');
 
-    write('specs/c-001-second/spec.md', 'acceptance:\n- US1 Given a, when b, then c.\n');
-    write('usecases/c-001/uc.yaml', 'id: uc-1\naccept: US1\nlayers:\n  cli: { run: "true" }\n');
+    write('.codeloop/specs/c-001-second/spec.md', 'acceptance:\n- US1 Given a, when b, then c.\n');
+    write('.codeloop/usecases/c-001/uc.yaml', 'id: uc-1\naccept: US1\nlayers:\n  cli: { run: "true" }\n');
     // The live walk is read from the card's own evidence folder, the same key verify writes to.
-    write('evidence/c-001/verify.md', '## Live walk\nstack: make up\nurl: http://localhost:3000/\nsteps:\n- opened it\n- saw it\nnetwork:\n- GET http://localhost:3000/api 200\nexternal: none: the feature calls nothing outside\n');
+    write('.codeloop/evidence/c-001/verify.md', '## Live walk\nstack: make up\nurl: http://localhost:3000/\nsteps:\n- opened it\n- saw it\nnetwork:\n- GET http://localhost:3000/api 200\nexternal: none: the feature calls nothing outside\n');
     expect((await verify(dir, 'C-001')).exitCode).toBe(0);
-    expect(existsSync(join(dir, 'evidence/c-001/verify.md'))).toBe(true);
-    expect(existsSync(join(dir, 'evidence/001'))).toBe(false);
+    expect(existsSync(join(dir, '.codeloop/evidence/c-001/verify.md'))).toBe(true);
+    expect(existsSync(join(dir, '.codeloop/evidence/001'))).toBe(false);
     await expect(verify(dir, '1')).rejects.toThrow(/matches CL-001, c-001/);
   });
 });

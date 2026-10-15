@@ -7,7 +7,7 @@
 |---|---|---|
 
 <!-- A deferred finding also exists as a line of its own: -->
-<!-- codeloop card propose <lane> "<title>" --description "<finding>" --source evidence/{nnn}/review.md -->
+<!-- codeloop card propose <lane> "<title>" --description "<finding>" --source {evidence}/review.md -->
 
 <!-- Every fix-now finding above must be fixed and codeloop verify {id} re-run green before this line can say approve. -->
 ## Rubric

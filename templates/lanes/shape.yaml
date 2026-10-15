@@ -7,19 +7,19 @@ retries: 3
 stages:
   - id: brief
     skill: brief
-    output: "shape/{id}/brief.md"
+    output: "{shape}/brief.md"
     done: { cmd: "codeloop check brief {id}" }
   - id: interview
     skill: interview
-    output: "shape/{id}/interview.md"
+    output: "{shape}/interview.md"
     done: { cmd: "codeloop check questions {id} --min 3" }
   - id: breakdown
     skill: breakdown
-    output: "shape/{id}/breakdown.md"
+    output: "{shape}/breakdown.md"
     done: { cmd: "codeloop check breakdown {id}" }
   - id: rank
     skill: breakdown
-    output: "shape/{id}/breakdown.md"
+    output: "{shape}/breakdown.md"
     done: { cmd: "codeloop check breakdown {id} --ranked" }
     gate: { name: plan, approver: owner }
 # on_done.queue always runs, with no lanes.auto_start gate: the owner's approval of the rank stage's

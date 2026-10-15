@@ -35,6 +35,18 @@ when package.json names a version this file has no heading for.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
+### Everything under .codeloop
+- codeloop writes nothing into a project's source tree: specs, evidence, shape, use cases, mocks and
+  artifacts live under `.codeloop/` (`store.layout: dotfolder`, the default). The only writes outside
+  are the host files a project opted into and, with `mock.target: app`, the app's own mocks folder.
+- `store.layout: root` keeps the pre-0.5 folders at the repo root, and a project that still has them
+  is read as root until it moves; every command prints a one-line notice and `codeloop doctor` names
+  the folders. `codeloop store move --layout dotfolder [--dry-run]` moves them with `git mv`, rewrites
+  the board's paths and the project's lanes, ignores `.codeloop/state` and leaves a `specs/` pointer.
+- Lane and skill templates name story paths as `{spec}`, `{evidence}`, `{usecases}`, `{shape}` and
+  `{artifacts}`, filled in for the project's layout; a brief carries the real paths.
+- codeloop retries its own git commands for a few seconds while another builder holds `index.lock`.
+
 ### One main tree by default
 - The default is one main tree: `orch.isolation: tree` runs each builder in the main tree on the
   checked-out branch, holding a lease on its plan's files; the gate judges the story's own trailered

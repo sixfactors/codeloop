@@ -3,12 +3,12 @@ name: test-design
 stage: verify
 lane: build
 inputs:
-  - specs/{id}/spec.md
+  - {spec}/spec.md
   - src/lib/verify.ts
   - usecases/*/*.yaml (format reference)
   - .codeloop/config.yaml (deploy.<env>.base_url)
 outputs:
-  - usecases/{nnn}/*.yaml
+  - {usecases}/*.yaml
 check: "codeloop verify {id}"
 questions: 2
 ---
@@ -26,7 +26,7 @@ can never pass no matter what the code does.
 
 ## Inputs
 
-1. `specs/{id}/spec.md`, the `## Failure modes` list and the `acceptance:` lines. Each failure
+1. `{spec}/spec.md`, the `## Failure modes` list and the `acceptance:` lines. Each failure
    mode becomes exactly one use case; each use case's `accept:` must name a real `USn`.
 2. `src/lib/verify.ts`, the schema this reads: `id`, `accept`, `failure_mode`, and `layers.cli`
    (`run`, `expect.exit`, `expect.stdout`) or `layers.api` (`request`, `expect.status`). A case
@@ -39,14 +39,14 @@ can never pass no matter what the code does.
 
 ## Procedure
 
-1. Read `specs/{id}/spec.md`'s `## Failure modes` list. Each line becomes exactly one use case; a
+1. Read `{spec}/spec.md`'s `## Failure modes` list. Each line becomes exactly one use case; a
    failure mode with no use case is invisible to `codeloop verify --mutate`.
 2. For each failure mode, pick the acceptance line it threatens. A use case with no matching
    acceptance line is noise `codeloop verify` can't place, `result.missing` only flags acceptance
    lines with zero cases, it doesn't catch a case pointed at a `USn` that doesn't exist, so get this
    right by hand.
-3. Name the file `usecases/{nnn}/<slug>-<nn>.yaml`. The `id:` field inside it names the evidence
-   file (`evidence/{nnn}/<id>.json`), so keep it filesystem-safe and matching the filename stem.
+3. Name the file `{usecases}/<slug>-<nn>.yaml`. The `id:` field inside it names the evidence
+   file (`{evidence}/<id>.json`), so keep it filesystem-safe and matching the filename stem.
 4. Write `accept: USn` exactly matching one of `spec.md`'s acceptance numbers.
 5. Write `failure_mode:` as one sentence describing how it breaks, not how it's fixed.
 6. Pick the real seam this failure mode is reachable through:
@@ -98,7 +98,7 @@ See `checklist.md`:
 
 - [ ] one use case per failure mode line in `spec.md`, none skipped
 - [ ] every use case's `accept:` matches an existing `USn` in `spec.md`
-- [ ] `id:` is unique within `usecases/{nnn}/` and filesystem-safe
+- [ ] `id:` is unique within `{usecases}/` and filesystem-safe
 - [ ] every use case has at least one runnable layer (`cli` or `api`); a ui-only failure mode is noted as manual instead of written as an unrunnable case
 - [ ] each case was run by hand and its asserted exit code / stdout / status observed, not guessed
 - [ ] `codeloop verify {id} --mutate` has been run at least once and the case does not appear in `vacuous`
@@ -110,7 +110,7 @@ codeloop verify {id}
 ```
 
 Exit 2 when an acceptance line has no use case. Exit 1 when any case fails. Exit 0 on a real pass,
-writing `evidence/{nnn}/verify.md` and one `evidence/{nnn}/<id>.json` per case. Add `--mutate` to
+writing `{evidence}/verify.md` and one `{evidence}/<id>.json` per case. Add `--mutate` to
 also require non-vacuousness (exit 4 if any cli case still passes before the feature's first
 commit, exit 5 if that commit doesn't exist yet to compare against).
 

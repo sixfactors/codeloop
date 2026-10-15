@@ -6,7 +6,7 @@ import { startCard } from '../flow.js';
 import { checkMock, cleanupMock, findMock, mockTarget, newMock } from '../mock.js';
 
 let dir: string;
-const SPEC = 'specs/001-add-csv-export';
+const SPEC = '.codeloop/specs/001-add-csv-export';
 const PAGE = 'src/app/mocks/001-add-csv-export/page.tsx';
 
 const read = (path: string) => readFileSync(join(dir, path), 'utf-8');

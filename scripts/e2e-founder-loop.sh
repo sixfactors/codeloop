@@ -120,9 +120,9 @@ YAML
 expect 0 "lane lint passes on the e2e lanes" codeloop lane lint
 
 # --- build card: checks, spec gate, permissions --------------------------------------------
-expect 0 "start creates the card, its spec folder and a Next line" sh -c "codeloop start 'Add CSV export' | tee start.out | grep -q '^Next: run the design skill to write specs/001-add-csv-export/research.md, then .codeloop next c-001.'"
+expect 0 "start creates the card, its spec folder and a Next line" sh -c "codeloop start 'Add CSV export' | tee start.out | grep -q '^Next: run the design skill to write .codeloop/specs/001-add-csv-export/research.md, then .codeloop next c-001.'"
 expect 0 "spec new on an existing spec folder changes nothing" sh -c "codeloop spec new c-001 | grep -q '(0 files created)'"
-S=specs/001-add-csv-export
+S=.codeloop/specs/001-add-csv-export
 expect 0 "spec folder has four files and is recorded on the card" sh -c "test -f $S/research.md -a -f $S/spec.md -a -f $S/plan.md -a -f $S/tasks.md && codeloop card show c-001 --json | grep -q '\"spec\": \"$S\"'"
 expect 2 "next with no id uses the one active card; the check fails" codeloop next
 expect 0 "the failed check ends with what is missing, the skill and the retry command" sh -c "codeloop next 1 | tail -1 | grep -q '^Next: .*research.md is missing.*The design skill produces.*codeloop next c-001'"
@@ -282,8 +282,8 @@ expect 0 "new commit created a second release card" test "$(cards_in release)" =
 
 # --- verify: use cases, evidence, mutate; stats; commit-msg hook ----------------------------
 expect 2 "verify refuses: acceptance line US1 has no use case" codeloop verify 001
-mkdir -p usecases/001
-cat > usecases/001/uc-1.yaml <<'YAML'
+mkdir -p .codeloop/usecases/001
+cat > .codeloop/usecases/001/uc-1.yaml <<'YAML'
 id: uc-1
 accept: US1
 failure_mode: "the export file is never written"
@@ -291,21 +291,21 @@ layers:
   cli: { run: "test -f feature-marker.txt", expect: { exit: 0 } }
 YAML
 expect 1 "verify fails while the use case fails" codeloop verify 001
-expect 0 "evidence says result: fail" grep -q 'result: fail' evidence/001/verify.md
+expect 0 "evidence says result: fail" grep -q 'result: fail' .codeloop/evidence/001/verify.md
 expect 0 "init --hooks installs the commit-msg hook" codeloop init --hooks
 git checkout -q -b feat/c-001-csv-export
 echo "exported" > feature-marker.txt
 git add feature-marker.txt && commit "feat: csv export"
 expect 0 "hook added the Feature trailer from the branch name" sh -c "git log -1 --format=%B | grep -q '^Feature: c-001$'"
 expect 2 "verify refuses while nobody has walked the feature on the real stack" sh -c "codeloop verify 001 2>&1 | grep -q 'no .## Live walk. section'; test \$? -eq 0 && codeloop verify 001 > /dev/null 2>&1; exit \$?"
-expect 1 "check verify fails a walk answered by a mock" sh -c "printf '\\n## Live walk\\nstack: make up\\nurl: http://localhost:3000/export\\nsteps:\\n- clicked Export\\n- got a file\\nnetwork:\\n- GET http://localhost:3000/__mock/export 200 (mock)\\nexternal: none: export reads only our database\\n' >> evidence/001/verify.md && codeloop check verify 001"
-sed -i.bak 's#__mock/export 200 (mock)#api/export 200#' evidence/001/verify.md && rm -f evidence/001/verify.md.bak
+expect 1 "check verify fails a walk answered by a mock" sh -c "printf '\\n## Live walk\\nstack: make up\\nurl: http://localhost:3000/export\\nsteps:\\n- clicked Export\\n- got a file\\nnetwork:\\n- GET http://localhost:3000/__mock/export 200 (mock)\\nexternal: none: export reads only our database\\n' >> .codeloop/evidence/001/verify.md && codeloop check verify 001"
+sed -i.bak 's#__mock/export 200 (mock)#api/export 200#' .codeloop/evidence/001/verify.md && rm -f .codeloop/evidence/001/verify.md.bak
 expect 0 "check verify passes a walk on the real stack" codeloop check verify 001
 expect 0 "verify passes once the use case passes and the walk is recorded" codeloop verify 001
-json "evidence json carries the sha and the layer result" "d.pass && d.sha.length===40 && d.layers[0].layer==='cli'" cat evidence/001/uc-1.json
-json "verify evidence is attached to the card" "d.evidence.includes('evidence/001/verify.md')" codeloop card show c-001 --json
+json "evidence json carries the sha and the layer result" "d.pass && d.sha.length===40 && d.layers[0].layer==='cli'" cat .codeloop/evidence/001/uc-1.json
+json "verify evidence is attached to the card" "d.evidence.includes('.codeloop/evidence/001/verify.md')" codeloop card show c-001 --json
 expect 0 "verify --mutate: the use case fails before the feature commit" codeloop verify 001 --mutate
-cat > usecases/001/uc-2.yaml <<'YAML'
+cat > .codeloop/usecases/001/uc-2.yaml <<'YAML'
 id: uc-2
 accept: US1
 failure_mode: "a check that cannot fail"
@@ -349,7 +349,7 @@ kit_cards=$(imported speckit)
 expect 0 "speckit import created two cards" test "$(echo $kit_cards | wc -w | tr -d ' ')" = 2
 first_kit=${kit_cards%%:*}
 expect 2 "imported spec fails the check until its [?] tags are filled" codeloop spec check "$first_kit"
-sed -i.bak 's/\[?\]/[api]/' specs/$first_kit-login/tasks.md && rm specs/$first_kit-login/tasks.md.bak
+sed -i.bak 's/\[?\]/[api]/' .codeloop/specs/$first_kit-login/tasks.md && rm .codeloop/specs/$first_kit-login/tasks.md.bak
 expect 0 "imported spec passes once the flagged tag is filled" codeloop spec check "$first_kit"
 expect 0 "speckit source files are untouched" cmp -s "$WORK/kit/specs/001-login/tasks.md" "$WORK/kit-tasks.orig"
 expect 0 "import bmad" codeloop import bmad "$WORK/bmad"
@@ -514,7 +514,7 @@ agents:
 YAML
 RUNS=.codeloop/state/agent-runs
 codeloop start "Agent export" > /dev/null
-expect 0 "brief names the output and the check and carries the skill text" sh -c "codeloop brief 1 --out brief.md > /dev/null && grep -q '^Output: specs/001-agent-export/research.md' brief.md && grep -q 'codeloop check file specs/001-agent-export/research.md --has verdict:' brief.md && grep -q '^## Skill: design' brief.md && grep -q 'Do not run .codeloop approve' brief.md"
+expect 0 "brief names the output and the check and carries the skill text" sh -c "codeloop brief 1 --out brief.md > /dev/null && grep -q '^Output: .codeloop/specs/001-agent-export/research.md' brief.md && grep -q 'codeloop check file .codeloop/specs/001-agent-export/research.md --has verdict:' brief.md && grep -q '^## Skill: design' brief.md && grep -q 'Do not run .codeloop approve' brief.md"
 expect 0 "run --agent --dry-run says what would start and starts nothing" sh -c "codeloop run --agent fake --dry-run | grep -q 'c-001: would start agent fake on research' && test ! -e .codeloop/state"
 # One run keeps going: the agent does research, the check passes, moves to spec, the agent does
 # spec too, and the card waits at the spec gate - it does not stop after the first stage any more.
@@ -543,7 +543,7 @@ mkdir "$WORK/shipped" && cd "$WORK/shipped"
 codeloop init --tools claude --starter generic > /dev/null
 expect 0 "wiki competitor add writes the page with its links" sh -c "codeloop wiki competitor add acme --docs https://acme.test/docs --changelog https://acme.test/changelog | grep -q '.codeloop/wiki/competitors/acme.md' && grep -q '^changelog: https://acme.test/changelog' .codeloop/wiki/competitors/acme.md"
 codeloop start "Add CSV export" > /dev/null
-R=specs/001-add-csv-export
+R=.codeloop/specs/001-add-csv-export
 M=$R/mock.html
 expect 0 "the research brief carries the competitor page" sh -c "codeloop brief 1 | grep -q '^### acme (.codeloop/wiki/competitors/acme.md)'"
 expect 1 "check research fails on the unfilled template" codeloop check research 1

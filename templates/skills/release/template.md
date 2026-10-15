@@ -1,6 +1,6 @@
 # Release evidence: {staging|prod}
 
-<!-- evidence/{nnn}/staging.md and evidence/{nnn}/prod.md share this shape. -->
+<!-- {evidence}/staging.md and {evidence}/prod.md share this shape. -->
 
 ```markdown
 result: pass | fail

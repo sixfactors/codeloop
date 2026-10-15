@@ -3,10 +3,10 @@ name: system-design
 stage: design
 lane: build
 inputs:
-  - specs/{id}/spec.md
+  - {spec}/spec.md
   - docs/architecture.md (or the repo's own architecture doc, for the layer names already in use)
 outputs:
-  - "docs/artifacts/<project>/<topic>/{id}-system-design.html: context, layers, deployment, network, data stores, tech choices, risks"
+  - "{artifacts}/<project>/<topic>/{id}-system-design.html: context, layers, deployment, network, data stores, tech choices, risks"
 check: "codeloop check artifact {id} --kind system-design"
 questions: 4
 ---
@@ -24,7 +24,7 @@ feature slice, a new service, a deployment topology change, a data-store migrati
 
 ## Inputs
 
-- `specs/{id}/spec.md`, what the system must do and for whom.
+- `{spec}/spec.md`, what the system must do and for whom.
 - The repo's own architecture doc (e.g. `docs/architecture.md`), for the layer names, hosting
   platform and datastore already in use, a tech-choices table that reinvents what the repo
   already runs is a review flag, not a decision.

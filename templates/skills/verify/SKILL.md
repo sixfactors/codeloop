@@ -3,13 +3,13 @@ name: verify
 stage: verify
 lane: build
 inputs:
-  - specs/{id}/spec.md
-  - "usecases/{nnn}/*.yaml (one per acceptance line, written or extended this stage)"
+  - {spec}/spec.md
+  - "{usecases}/*.yaml (one per acceptance line, written or extended this stage)"
   - src/lib/verify.ts
 outputs:
-  - "usecases/{nnn}/uc-*.yaml, one per acceptance line"
-  - "evidence/{nnn}/verify.md"
-  - "evidence/{nnn}/<uc-id>.json, one per use case"
+  - "{usecases}/uc-*.yaml, one per acceptance line"
+  - "{evidence}/verify.md"
+  - "{evidence}/<uc-id>.json, one per use case"
 check: "codeloop verify {id}"
 questions: 3
 ---
@@ -30,17 +30,17 @@ with "an acceptance line has no use case."
 
 ## Inputs
 
-- `specs/{id}/spec.md`, acceptance lines and the "Failure modes" list.
-- `usecases/{nnn}/`, existing use case files for this card, if any (the directory name is the
+- `{spec}/spec.md`, acceptance lines and the "Failure modes" list.
+- `{usecases}/`, existing use case files for this card, if any (the directory name is the
   card's number, zero-padded).
-- `src/lib/verify.ts`, what the runner actually does: loads every `.yaml` in `usecases/{nnn}/`,
+- `src/lib/verify.ts`, what the runner actually does: loads every `.yaml` in `{usecases}/`,
   runs each one's `cli` layer (a shell command) and/or `api` layer (an HTTP request) against the
   configured `base_url`, and fails the whole run if any acceptance line has no use case, or if any
   use case's layers don't all pass.
 
 ## Procedure
 
-1. **List the acceptance lines** from `spec.md`. For each one with no `usecases/{nnn}/*.yaml`
+1. **List the acceptance lines** from `spec.md`. For each one with no `{usecases}/*.yaml`
    whose `accept:` field names it, write one.
 2. **Name the failure mode first.** Before writing the use case's `run`/`request`, write its
    `failure_mode:`, the specific way this acceptance line breaks in production if the feature is
@@ -68,7 +68,7 @@ with "an acceptance line has no use case."
    `verify: { setup: "<commands>" }` in `.codeloop/config.yaml`. `verify: { workspace: tree }` runs
    in the working tree instead.
    Confirm the new use case passes for the right reason -
-   read its `evidence/{nnn}/<uc-id>.json` and check the `layers` output, not just the exit code.
+   read its `{evidence}/<uc-id>.json` and check the `layers` output, not just the exit code.
 6. **Prove it can fail.** Temporarily break the feature (revert the fix, or hand-edit the
    assertion to something the current code can't satisfy) and re-run. A use case that stays green
    when the feature is broken is not testing anything, fix the use case, not the feature, when
@@ -77,13 +77,13 @@ with "an acceptance line has no use case."
    `cli` use case at the commit *before* that trailer, in a disposable worktree. Any use case that
    still passes there never depended on the feature, it's vacuous. Exit code 4 means at least one
    vacuous use case was found; fix or remove it, don't ignore the list.
-8. **Read `evidence/{nnn}/verify.md`** after a full run, it has the acceptance-to-use-case table
+8. **Read `{evidence}/verify.md`** after a full run, it has the acceptance-to-use-case table
    the stage's gate reads. Confirm every acceptance line has a row and every row says `pass`.
 9. **Walk the feature as a person, on the real stack.** Use cases run against harnesses that wire
    their own URLs and fakes, so they can pass while the page a person opens still runs on a mock.
    Start the repo's normal dev stack the way a teammate would (`make up`, `npm run dev`: whatever
    the README says, never a harness), open the feature in a browser, and use it. Watch the network
-   panel. Record it in `evidence/{nnn}/verify.md`, outside the marked block:
+   panel. Record it in `{evidence}/verify.md`, outside the marked block:
    ```markdown
    ## Live walk
    stack: make up
@@ -123,7 +123,7 @@ before the use case's `cli` command runs it directly).
 ## Questions to ask before working
 
 ## Q1 Does every acceptance line already have a use case, or is this stage starting from zero?
-recommended: Check `usecases/{nnn}/` first; extend what's there rather than rewriting use cases
+recommended: Check `{usecases}/` first; extend what's there rather than rewriting use cases
 that already pass for the right reason.
 answer:
 
@@ -153,7 +153,7 @@ See `template.md` in this folder for the use case YAML skeleton.
   before being trusted
 - [ ] `--mutate` has been run since the card's `Feature: {id}` commit exists, and found no
   vacuous use case (or any found were fixed, not left as "known vacuous")
-- [ ] `evidence/{nnn}/verify.md` shows `result: pass` and a row for every acceptance line
+- [ ] `{evidence}/verify.md` shows `result: pass` and a row for every acceptance line
 - [ ] the `## Live walk` section names the normal dev stack, the page, at least two steps, the calls
   that answered (none a mock or stub), and a real external call or `external: none: <why>`
 
@@ -162,8 +162,8 @@ See `template.md` in this folder for the use case YAML skeleton.
 `codeloop verify {id}` exits 0. It exits 2 if any acceptance line has no use case, `spec.md` has
 no acceptance lines, or the live walk is missing or names a mock (off only with
 `verify: { live_walk: false }` in config); 1 if any use case failed; 4 if `--mutate` found a vacuous use case; 5 if
-`--mutate` could not run. Read `evidence/{nnn}/verify.md` for the table backing the stage's gate
-(`codeloop check file evidence/{nnn}/verify.md --has 'result: pass'` is what the lane actually
+`--mutate` could not run. Read `{evidence}/verify.md` for the table backing the stage's gate
+(`codeloop check file {evidence}/verify.md --has 'result: pass'` is what the lane actually
 checks).
 
 ## Examples

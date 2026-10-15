@@ -5,13 +5,13 @@ lane: build
 inputs:
   - docs/architecture.md
   - .codeloop/wiki/architecture/*.md
-  - specs/{id}/spec.md
-  - specs/{id}/tasks.md
+  - {spec}/spec.md
+  - {spec}/tasks.md
   - "the api stage's contract entry for the routes this card touches"
 outputs:
   - "typed client method + hook per route, for each [sdk] task"
   - "a CLI command that prints the new data, if the repo ships a CLI"
-  - "specs/{id}/tasks.md: every [sdk] line ticked"
+  - "{spec}/tasks.md: every [sdk] line ticked"
 check: "codeloop task check {id} --all-done && npm test"
 questions: 3
 ---
@@ -25,7 +25,7 @@ if there's a CLI, running it proves the whole path end to end without a UI.
 
 ## Role
 
-The builder working the `[sdk]` tasks in `specs/{id}/tasks.md`, after `api`'s tasks are ticked and
+The builder working the `[sdk]` tasks in `{spec}/tasks.md`, after `api`'s tasks are ticked and
 its tests are green. Per `docs/architecture.md`'s onion, this stage calls only the API the
 previous stage exposed, it never reaches past it into the service layer, and it never duplicates
 response-parsing or type-declaration logic that already lives here for another entity.
@@ -37,7 +37,7 @@ response-parsing or type-declaration logic that already lives here for another e
 - The `api` stage's contract entry for this card (`docs/architecture/service-contracts.md` or
   equivalent), the exact request/response shape, status codes, and whether the change is
   additive or breaking.
-- `specs/{id}/tasks.md`, work only `[sdk]`-tagged lines.
+- `{spec}/tasks.md`, work only `[sdk]`-tagged lines.
 - The SDK's own existing module and hook for a sibling entity, if one exists, copy its shape
   rather than inventing a new one.
 

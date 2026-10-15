@@ -1,3 +1,4 @@
+import { evidenceOf } from './paths.js';
 import { existsSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { findCard, readCards, type Card } from './cards.js';
@@ -128,9 +129,9 @@ function researchPath(card: Card): string | null {
   return card.spec ? `${card.spec}/research.md` : null;
 }
 
-function reviewPath(card: Card): string | null {
+function reviewPath(projectDir: string, card: Card): string | null {
   const nnn = /(\d{3,})/.exec(card.spec ?? '')?.[1];
-  return nnn ? `evidence/${nnn}/review.md` : null;
+  return nnn ? `${evidenceOf(projectDir, nnn)}/review.md` : null;
 }
 
 /**
@@ -151,7 +152,7 @@ export function wikiLanded(projectDir: string, ref: string, stage?: string): str
     return [`${card.id} compared options in ${path} but no decision page carries the card, and the research cannot make one: ${made.problems.join('; ')}`];
   }
   if (at === 'review') {
-    const path = reviewPath(card);
+    const path = reviewPath(projectDir, card);
     if (!path || !existsSync(join(projectDir, path))) return [];
     const repeats = readFileSync(join(projectDir, path), 'utf-8').split('\n').filter(l => /fix[ -]now/i.test(l) && /\b(repeat|again|recurr|second time|same mistake)/i.test(l));
     if (!repeats.length || carries('gotcha')) return [];

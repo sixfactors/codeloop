@@ -1,3 +1,4 @@
+import { evidenceOf, usecasesOf } from './paths.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { specPath } from './project-root.js';
 import { dirname, isAbsolute, join } from 'path';
@@ -70,8 +71,8 @@ export function stageRubric(projectDir: string, stage: Stage): RubricRow[] {
 }
 
 /** Where a stage's attest lines live: its output, or `{spec}/rubric-<stage>.md` for a stage without a text output. */
-export function attestPath(card: Card, stage: Stage): string | null {
-  if (stage.output && !/\.html?$/i.test(stage.output)) return substitute(stage.output, card);
+export function attestPath(card: Card, stage: Stage, projectDir?: string): string | null {
+  if (stage.output && !/\.html?$/i.test(stage.output)) return substitute(stage.output, card, { projectDir });
   return card.spec ? `${card.spec}/rubric-${stage.id}.md` : null;
 }
 
@@ -86,7 +87,7 @@ interface Ctx {
 const read = (projectDir: string, path: string | null) => (path && existsSync(specPath(projectDir, path)) ? readFileSync(specPath(projectDir, path), 'utf-8') : '');
 const specText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/spec.md` : null);
 const researchText = (c: Ctx) => read(c.projectDir, c.card.spec ? `${c.card.spec}/research.md` : null);
-const evidence = (c: Ctx, file: string) => read(c.projectDir, `evidence/${cardKey(c.card)}/${file}`);
+const evidence = (c: Ctx, file: string) => read(c.projectDir, `${evidenceOf(c.projectDir, cardKey(c.card))}/${file}`);
 const PATH_OR_URL = /https?:\/\/\S+|(?:[\w.-]+\/)+[\w.-]+|\b[\w-]+\.[a-z]{1,5}\b/i;
 
 /**
@@ -139,10 +140,10 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
   S7: c => (c.card.size === 'L' ? ['the story is size L; split it before the gate'] : []),
   B1: c => (c.card.spec ? readTasks(c.projectDir, c.card.spec).tasks.filter(t => !t.done).map(t => `${t.id} is not ticked`) : ['the card has no spec folder']),
   B4: c => checkScope(c.projectDir, c.card.id),
-  V1: c => (/^result:\s*pass\b/im.test(evidence(c, 'verify.md')) ? [] : [`evidence/${cardKey(c.card)}/verify.md does not say \`result: pass\``]),
+  V1: c => (/^result:\s*pass\b/im.test(evidence(c, 'verify.md')) ? [] : [`${evidenceOf(c.projectDir, cardKey(c.card))}/verify.md does not say \`result: pass\``]),
   V2: c => {
     const lines = c.card.spec ? readAcceptance(c.projectDir, c.card.spec) : [];
-    const dir = specPath(c.projectDir, 'usecases', cardKey(c.card));
+    const dir = specPath(c.projectDir, usecasesOf(c.projectDir, cardKey(c.card)));
     const named = new Set(existsSync(dir) ? readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf-8').matchAll(/^accept:\s*(US\d+)/gm)].map(m => m[1])) : []);
     return lines.map((_, i) => `US${i + 1}`).filter(us => !named.has(us)).map(us => `${us} has no use case naming it`);
   },
@@ -191,7 +192,7 @@ export function evaluateRubric(projectDir: string, ref: string, stageId?: string
   const path = rubricPath(projectDir, stage);
   if (!path) return { ...empty, stage: stage.id };
   const ctx: Ctx = { projectDir, card, stage };
-  const attestFile = attestPath(card, stage);
+  const attestFile = attestPath(card, stage, projectDir);
   const attestText = read(projectDir, attestFile);
   const attested = attestLines(attestText);
   const pending = pendingLines(attestText);
@@ -242,7 +243,7 @@ export function rubricBrief(projectDir: string, card: Card, stage: Stage): strin
     '',
     ...rows.map(r => `${r.id} | ${r.criterion} | ${CHECKS[r.id] || r.judged !== 'check' ? r.judged : 'attest (no mechanical check yet)'}`),
     '',
-    `End ${attestPath(card, stage) ?? 'the output'} with a \`## Rubric\` heading and one \`- Rn pass: <evidence>\` line for each of ${attest.map(r => r.id).join(', ') || 'no rows'}; the evidence names a path, a line, a URL or a command a second person can check.`,
+    `End ${attestPath(card, stage, projectDir) ?? 'the output'} with a \`## Rubric\` heading and one \`- Rn pass: <evidence>\` line for each of ${attest.map(r => r.id).join(', ') || 'no rows'}; the evidence names a path, a line, a URL or a command a second person can check.`,
     '',
   ];
 }
@@ -250,7 +251,7 @@ export function rubricBrief(projectDir: string, card: Card, stage: Stage): strin
 /** The brief a stage's reviewer agent gets: the rubric's review rows and the output to judge. */
 export function reviewBrief(projectDir: string, card: Card, stage: Stage): string {
   const rows = stageRubric(projectDir, stage).filter(r => r.judged === 'review' || r.judged === 'attest');
-  const output = attestPath(card, stage);
+  const output = attestPath(card, stage, projectDir);
   return [
     `# Review: ${card.id} ${stage.id}`,
     '',
@@ -281,7 +282,7 @@ export function attestRows(projectDir: string, stage: Stage): RubricRow[] {
 export function scaffoldRubric(projectDir: string, ref: string): { path: string | null; added: string[] } {
   const card = findCard(readCards(projectDir).cards, ref);
   const stage = loadLane(projectDir, card.lane).stages.find(s => s.id === card.stage);
-  const path = stage ? attestPath(card, stage) : null;
+  const path = stage ? attestPath(card, stage, projectDir) : null;
   if (!stage || !path) return { path: null, added: [] };
   const text = read(projectDir, path);
   const have = new Set([...attestLines(text).keys(), ...pendingLines(text)]);

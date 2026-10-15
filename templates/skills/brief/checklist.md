@@ -1,4 +1,4 @@
-# Brief checklist, shape/{id}
+# Brief checklist, {shape}
 
 - [ ] `problem:` is one paragraph, in the person's own words, not rewritten as a feature title
 - [ ] `users:` names a persona that exists (built-in six, or `.codeloop/config.yaml` `personas:`)

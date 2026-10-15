@@ -58,8 +58,8 @@ export function stageBrief(projectDir: string, card: Card) {
   return {
     skill: stage.skill,
     role: stage.role,
-    output: stage.output && substitute(stage.output, card),
-    done: stage.done?.cmd ? substitute(stage.done.cmd, card, { shell: true }) : stage.done?.event && `event ${stage.done.event}`,
+    output: stage.output && substitute(stage.output, card, { projectDir }),
+    done: stage.done?.cmd ? substitute(stage.done.cmd, card, { shell: true, projectDir }) : stage.done?.event && `event ${stage.done.event}`,
     notes: stage.notes ?? [],
     // A rejection at this stage's own gate asks for a redo; a return is a rejection at the next
     // stage's entry gate, which judged this stage's work before that stage ran.
@@ -79,7 +79,7 @@ export function nextHint(projectDir: string, card: Card, failure?: string): stri
   if (card.stage === PROPOSED) return `Next: \`codeloop approve ${card.id}\` puts it in the ${card.lane} lane, or \`codeloop reject ${card.id} "<why not>"\` drops it.`;
   const stage = currentStage(projectDir, card);
   if (!stage) return 'Next: nothing left on this card. `codeloop inbox` shows what else is waiting.';
-  const output = stage.output ? substitute(stage.output, card) : undefined;
+  const output = stage.output ? substitute(stage.output, card, { projectDir }) : undefined;
   // Skills are not slash commands in every host; the brief carries the skill's text wherever it runs.
   const skill = stage.skill ? `the ${stage.skill} skill` : `the ${stage.id} stage`;
 

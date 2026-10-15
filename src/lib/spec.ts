@@ -1,3 +1,4 @@
+import { specsDir } from './paths.js';
 import { specPath } from './project-root.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -34,16 +35,17 @@ export function resolveSpecDir(projectDir: string, ref: string): string {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   if (card?.spec) return card.spec;
   const key = card ? cardKey(card) : cardNumber(ref);
-  if (existsSync(specPath(projectDir, 'specs', key))) return `specs/${key}`;
-  const specs = specPath(projectDir, 'specs');
+  const root = specsDir(projectDir);
+  if (existsSync(specPath(projectDir, root, key))) return `${root}/${key}`;
+  const specs = specPath(projectDir, root);
   const found = existsSync(specs) ? readdirSync(specs).filter(d => d.startsWith(`${key}-`)) : [];
-  if (found.length === 1) return `specs/${found[0]}`;
-  throw new RefusalError(found.length ? `specs/${key}-* matches ${found.length} folders; pass the card id` : `no spec folder for ${ref}; run \`codeloop spec new <card-id>\``);
+  if (found.length === 1) return `${root}/${found[0]}`;
+  throw new RefusalError(found.length ? `${root}/${key}-* matches ${found.length} folders; pass the card id` : `no spec folder for ${ref}; run \`codeloop spec new <card-id>\``);
 }
 
 export function newSpec(projectDir: string, cardId: string, role: Role = 'agent'): { dir: string; created: string[] } {
   const card = findCard(readCards(projectDir).cards, cardId);
-  const dir = card.spec ?? `specs/${cardKey(card)}-${slugify(card.title)}`;
+  const dir = card.spec ?? `${specsDir(projectDir)}/${cardKey(card)}-${slugify(card.title)}`;
   const created: string[] = [];
   mkdirSync(specPath(projectDir, dir), { recursive: true });
   for (const name of ['research.md', 'spec.md', 'plan.md', 'tasks.md']) {

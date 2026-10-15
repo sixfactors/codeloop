@@ -34,13 +34,13 @@ stages:
   writeFileSync(join(dir, '.codeloop/wiki/initiatives/fast-loop.md'), '---\ntitle: Fast loop\nstatus: active\n---\nWe believe a founder keeps using a loop that sizes its ceremony to the work.\n');
   createCard(dir, { lane: 'build', title: 'Ship the thing', id: 'c-1' });
   newSpec(dir, 'c-1');
-  writeFileSync(join(dir, 'specs/001-ship-the-thing/spec.md'), '# Spec\n\nscreens:\n  - inbox\n');
+  writeFileSync(join(dir, '.codeloop/specs/001-ship-the-thing/spec.md'), '# Spec\n\nscreens:\n  - inbox\n');
   addQuestions(dir, 'c-1', [{ question: 'Which colour?', recommended: 'blue' }]);
   newMock(dir, 'c-1', 'board');
   writeFileSync(join(dir, '.codeloop/wiki/cards/c-1.md'), '---\ntitle: Ship the thing\ncard: c-1\n---\nStory: as a founder.\n');
-  mkdirSync(join(dir, 'evidence/001'), { recursive: true });
-  writeFileSync(join(dir, 'evidence/001/verify.md'), '# verify\npass\n');
-  writeFileSync(join(dir, 'evidence/001/shot.png'), Buffer.from([0x89, 0x50]));
+  mkdirSync(join(dir, '.codeloop/evidence/001'), { recursive: true });
+  writeFileSync(join(dir, '.codeloop/evidence/001/verify.md'), '# verify\npass\n');
+  writeFileSync(join(dir, '.codeloop/evidence/001/shot.png'), Buffer.from([0x89, 0x50]));
 });
 
 afterEach(() => {
@@ -90,14 +90,14 @@ describe('workspace API reads', () => {
   it('full card carries spec, tasks, questions, evidence, mock and the wiki card page', async () => {
     const { app } = createApp(dir);
     const full = await (await app.request('/api/cards/c-1/full')).json();
-    expect(full.card).toMatchObject({ id: 'c-1', mock: '/mocks/@/specs/001-ship-the-thing/mock.html', openQuestions: 1 });
-    expect(full.spec.dir).toBe('specs/001-ship-the-thing');
+    expect(full.card).toMatchObject({ id: 'c-1', mock: '/mocks/@/.codeloop/specs/001-ship-the-thing/mock.html', openQuestions: 1 });
+    expect(full.spec.dir).toBe('.codeloop/specs/001-ship-the-thing');
     expect(full.spec.text).toContain('screens:');
     expect(Array.isArray(full.tasks)).toBe(true);
     expect(full.questions).toEqual([{ n: 1, question: 'Which colour?', recommended: 'blue', answer: '' }]);
     expect(full.evidence).toMatchObject({ id: '001', cardId: 'c-1' });
     expect(full.evidence.files.map((f: { name: string; kind: string }) => [f.name, f.kind])).toEqual([['shot.png', 'image'], ['verify.md', 'md']]);
-    expect(full.mock).toBe('/mocks/@/specs/001-ship-the-thing/mock.html');
+    expect(full.mock).toBe('/mocks/@/.codeloop/specs/001-ship-the-thing/mock.html');
     expect(full.page).toMatchObject({ id: '.codeloop/wiki/cards/c-1.md', title: 'Ship the thing' });
 
     expect((await app.request('/api/cards/c-9/full')).status).toBe(404);
@@ -107,11 +107,11 @@ describe('workspace API reads', () => {
     const { app } = createApp(dir);
     const evidence = await (await app.request('/api/evidence/001')).json();
     expect(evidence.files.find((f: { name: string }) => f.name === 'verify.md').content).toBe('# verify\npass\n');
-    expect(evidence.files.find((f: { name: string }) => f.name === 'shot.png')).toEqual({ name: 'shot.png', kind: 'image', path: 'evidence/001/shot.png' });
+    expect(evidence.files.find((f: { name: string }) => f.name === 'shot.png')).toEqual({ name: 'shot.png', kind: 'image', path: '.codeloop/evidence/001/shot.png' });
     expect((await app.request('/api/evidence/999')).status).toBe(404);
 
     const artifacts = await (await app.request('/api/artifacts')).json();
-    expect(artifacts.artifacts[0]).toMatchObject({ kind: 'mock', cardId: 'c-1', project: 'demo', topic: 'board', from: 'base', lineage: ['c-1', 'base'], href: '/mocks/@/specs/001-ship-the-thing/mock.html' });
+    expect(artifacts.artifacts[0]).toMatchObject({ kind: 'mock', cardId: 'c-1', project: 'demo', topic: 'board', from: 'base', lineage: ['c-1', 'base'], href: '/mocks/@/.codeloop/specs/001-ship-the-thing/mock.html' });
   });
 
   it('keeps /api/cards as the board reads it, paged and without event logs', async () => {
@@ -121,7 +121,7 @@ describe('workspace API reads', () => {
     // The card's own version is a hash of its content, not of cards.json, so one card moving does not move them all.
     expect(body.cards[0].version).toMatch(/^[0-9a-f]{40}$/);
     expect(body.cards[0]).not.toHaveProperty('events');
-    expect(body.cards[0]).toMatchObject({ id: 'c-1', mock: '/mocks/@/specs/001-ship-the-thing/mock.html', openQuestions: 1, specDir: 'specs/001-ship-the-thing', hasEvidence: true });
+    expect(body.cards[0]).toMatchObject({ id: 'c-1', mock: '/mocks/@/.codeloop/specs/001-ship-the-thing/mock.html', openQuestions: 1, specDir: '.codeloop/specs/001-ship-the-thing', hasEvidence: true });
     expect(body).toMatchObject({ total: 1, nextCursor: null });
 
     const withEvents = await (await app.request('/api/cards?include=events')).json();

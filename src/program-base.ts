@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { assertStoreReady } from './lib/store-home.js';
+import { legacyNotice } from './lib/paths.js';
 import { projectRoot } from './lib/project-root.js';
 
 // Read from package.json directly: createRequire plus a JSON parse is the same work, and this keeps
@@ -33,6 +34,12 @@ export function baseProgram(): Command {
     // store.home: user keeps the board outside the repo, reached through links in the main tree;
     // every command but `store` itself needs them in place first.
     if (top.name() !== 'store' && existsSync(join(root, '.codeloop'))) assertStoreReady(root);
+    // The legacy layout is announced on every command a person runs (on stderr, so JSON stays clean);
+    // the hooks a host runs on every tool call stay quiet.
+    if (!['store', 'guard', 'hookd'].includes(top.name()) && existsSync(join(root, '.codeloop'))) {
+      const notice = legacyNotice(root);
+      if (notice) console.error(notice);
+    }
   });
   return program;
 }

@@ -3,12 +3,12 @@ name: mock
 stage: mock
 lane: build
 inputs:
-  - specs/{id}/spec.md
-  - specs/{id}/interview.md
+  - {spec}/spec.md
+  - {spec}/interview.md
   - .codeloop/design-system/README.md
   - .codeloop/design-system/blocks.css
 outputs:
-  - "specs/{id}/mock.html: one section per screen named in the spec, each drawn as the product from the design system's blocks"
+  - "{spec}/mock.html: one section per screen named in the spec, each drawn as the product from the design system's blocks"
 check: "codeloop check mock {id}"
 questions: 4
 ---
@@ -27,8 +27,8 @@ The designer working the `mock` stage. A card with nothing to draw writes `scree
 
 ## Inputs
 
-- `specs/{id}/spec.md`: the acceptance lines and `screens:`; every screen traces to one.
-- `specs/{id}/interview.md`: answered design questions.
+- `{spec}/spec.md`: the acceptance lines and `screens:`; every screen traces to one.
+- `{spec}/interview.md`: answered design questions.
 - `.codeloop/design-system/`: `tokens.css` (colours, radius, spacing, fonts) and `blocks.css` (the
   building blocks). The README lists every block and what it is for. This is the project's own
   design system; the owner changes it there, never inside a mock.
@@ -45,7 +45,7 @@ The designer working the `mock` stage. A card with nothing to draw writes `scree
    `prio`, `proof` and `btn` for the details. When a screen needs something the blocks lack, add the
    block to `.codeloop/design-system/blocks.css` (and a row to its README), then use it. Never style
    inside the mock.
-3. **Create the file.** `codeloop mock new {id} --topic <topic>` writes `specs/{id}/mock.html` with
+3. **Create the file.** `codeloop mock new {id} --topic <topic>` writes `{spec}/mock.html` with
    the design system inlined. A proposal without a spec folder gets `.codeloop/mocks/{id}.html`.
 4. **Draw each screen as the product.** One `<section data-screen="<name>">` per screen. Inside, the
    app frame with the real navigation, the real page title, and real content: story titles, keys,

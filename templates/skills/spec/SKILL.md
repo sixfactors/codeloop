@@ -5,14 +5,14 @@ lane: build
 inputs:
   - docs/story-standard.md
   - .codeloop/wiki/decisions/*.md
-  - specs/{id}/research.md
-  - specs/{id}/interview.md
+  - {spec}/research.md
+  - {spec}/interview.md
   - templates/spec/spec.md
   - templates/spec/tasks.md
   - .codeloop/config.yaml (personas)
 outputs:
-  - specs/{id}/spec.md
-  - specs/{id}/tasks.md
+  - {spec}/spec.md
+  - {spec}/tasks.md
 check: "codeloop spec check {id}"
 questions: 2
 ---
@@ -32,9 +32,9 @@ task with no layer tag, each one is a named failure the check catches, not a sty
 
 1. `docs/story-standard.md`, the whole standard this stage is graded against: title check, the
    three-part story, INVEST, acceptance format, size and split, one metric, `done_when`.
-2. `specs/{id}/research.md`, the verdict and the grounded pain; the story's "so that" comes from
+2. `{spec}/research.md`, the verdict and the grounded pain; the story's "so that" comes from
    here, not from imagination.
-3. `specs/{id}/interview.md`, every answered question. An unresolved one means a field in
+3. `{spec}/interview.md`, every answered question. An unresolved one means a field in
    `spec.md` is still a guess.
 4. `templates/spec/spec.md`, `templates/spec/tasks.md`, the skeletons `codeloop spec new` writes;
    fill them in, don't restructure them.

@@ -1,3 +1,4 @@
+import { shapeDir } from './paths.js';
 import { specPath } from './project-root.js';
 /**
  * The shape workflow: a problem in, an epic of small, ordered, independently shippable stories
@@ -28,7 +29,7 @@ const PLACEHOLDER_DONE_WHEN = /^(all (tasks|stories) complete|done|tbd)\.?$/i;
 /** Creates `shape/{id}/brief.md`, `breakdown.md` and `interview.md` from the shared templates, with the problem filled into the brief. Existing files are left alone, same as `newSpec`. */
 export function newShape(projectDir: string, cardId: string, problem: string, role: Role = 'agent'): { dir: string; created: string[] } {
   const card = findCard(readCards(projectDir).cards, cardId);
-  const dir = card.spec ?? `shape/${card.id}`;
+  const dir = card.spec ?? `${shapeDir(projectDir)}/${card.id}`;
   const created: string[] = [];
   mkdirSync(specPath(projectDir, dir), { recursive: true });
   for (const name of ['brief.md', 'breakdown.md', 'interview.md']) {

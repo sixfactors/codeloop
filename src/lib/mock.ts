@@ -1,3 +1,4 @@
+import { folderIn, mocksArchiveDir } from './paths.js';
 import { specPath } from './project-root.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, resolve, sep } from 'path';
@@ -10,7 +11,10 @@ import { resolveSpecDir, slugify } from './spec.js';
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TEMPLATE = 'templates/mock/template.html';
 /** Where mocks used to live. Still read so existing mocks keep showing; nothing new is written here. */
-export const MOCKS_DIR = 'docs/mocks';
+/** The older per-topic mocks folder in the root layout; `mocksArchiveDir(projectDir)` is the one for a project. */
+export const MOCKS_DIR = folderIn('root', 'mocks');
+/** The older per-topic mocks folder under either layout, for callers that hold only a path. */
+const ARCHIVE_PREFIXES = [folderIn('root', 'mocks'), folderIn('dotfolder', 'mocks')].map(d => `${d}/`);
 /** A card's mock sits beside its spec as `<spec folder>/mock.html`. */
 export const MOCK_FILE = 'mock.html';
 /** Mocks for cards with no spec folder yet (proposals), and the gallery page. */
@@ -61,11 +65,12 @@ function mockPathFor(projectDir: string, cardId: string): string {
 }
 
 function legacyMock(projectDir: string, cardId: string): string | undefined {
-  const root = specPath(projectDir, MOCKS_DIR);
+  const archive = mocksArchiveDir(projectDir);
+  const root = specPath(projectDir, archive);
   if (!existsSync(root)) return undefined;
   for (const project of dirs(root)) {
     for (const topic of dirs(join(root, project))) {
-      if (existsSync(join(root, project, topic, `${cardId}.html`))) return `${MOCKS_DIR}/${project}/${topic}/${cardId}.html`;
+      if (existsSync(join(root, project, topic, `${cardId}.html`))) return `${archive}/${project}/${topic}/${cardId}.html`;
     }
   }
   return undefined;
@@ -97,13 +102,16 @@ export function mockMeta(html: string): { project?: string; topic?: string } {
 }
 
 /** The board's link to a mock. Older mocks keep their docs/mocks address; the rest are served by path under `/mocks/@/`. */
-export const mockHref = (path: string) => (path.startsWith(`${MOCKS_DIR}/`) ? `/${path.replace(`${MOCKS_DIR}/`, 'mocks/')}` : `/mocks/@/${path}`);
+export const mockHref = (path: string) => {
+  const archived = ARCHIVE_PREFIXES.find(p => path.startsWith(p));
+  return archived ? `/mocks/${path.slice(archived.length)}` : `/mocks/@/${path}`;
+};
 
 /** True for a project-relative path the board may serve: a mock, or an artifact page under docs/artifacts. */
 export const isMockPath = (path: string) =>
   (path.startsWith(`${CARD_MOCKS_DIR}/`) && path.endsWith('.html')) ||
-  (path.startsWith('specs/') && path.endsWith(`/${MOCK_FILE}`)) ||
-  (path.startsWith('docs/artifacts/') && path.endsWith('.html'));
+  ([folderIn('root', 'specs'), folderIn('dotfolder', 'specs')].some(d => path.startsWith(`${d}/`)) && path.endsWith(`/${MOCK_FILE}`)) ||
+  ([folderIn('root', 'artifacts'), folderIn('dotfolder', 'artifacts')].some(d => path.startsWith(`${d}/`)) && path.endsWith('.html'));
 
 const dirs = (path: string) => readdirSync(path).filter(d => statSync(join(path, d)).isDirectory()).sort();
 
@@ -254,10 +262,11 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
   const { cards } = readCards(projectDir);
   const listed = allMocks(projectDir);
   // Older mocks under docs/mocks whose card is gone still belong in the gallery.
-  const legacyRoot = specPath(projectDir, MOCKS_DIR);
+  const archive = mocksArchiveDir(projectDir);
+  const legacyRoot = specPath(projectDir, archive);
   const orphans = (existsSync(legacyRoot) ? dirs(legacyRoot) : []).flatMap(project =>
     dirs(join(legacyRoot, project)).flatMap(topic =>
-      readdirSync(join(legacyRoot, project, topic)).filter(f => f.endsWith('.html')).map(f => ({ id: f.replace(/\.html$/, ''), path: `${MOCKS_DIR}/${project}/${topic}/${f}` })),
+      readdirSync(join(legacyRoot, project, topic)).filter(f => f.endsWith('.html')).map(f => ({ id: f.replace(/\.html$/, ''), path: `${archive}/${project}/${topic}/${f}` })),
     ),
   ).filter(o => !listed.some(m => m.path === o.path));
   const found = [...listed, ...orphans].map(({ id, path }) => {
@@ -265,7 +274,8 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
     const html = readFileSync(full, 'utf-8');
     const meta = mockMeta(html);
     const title = cards.find(c => c.id === id)?.title ?? /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? id;
-    const legacy = path.startsWith(`${MOCKS_DIR}/`) ? path.split('/').slice(2) : [];
+    const archived = ARCHIVE_PREFIXES.find(p => path.startsWith(p));
+    const legacy = archived ? path.slice(archived.length).split('/') : [];
     return { project: meta.project ?? legacy[0] ?? 'mocks', topic: meta.topic ?? legacy[1] ?? 'other', id, title, from: mockLineage(html)[1], href: mockHref(path).replace(/^\/mocks\//, ''), at: statSync(full).mtimeMs };
   });
   const newest = (items: typeof found) => Math.max(...items.map(i => i.at));

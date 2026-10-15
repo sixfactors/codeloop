@@ -148,18 +148,18 @@ describe('shape() and newShape()', () => {
     const created = shape(dir, problem);
     expect(created.card.lane).toBe('shape');
     expect(created.card.title).toBe(problem);
-    expect(created.card.spec).toBe(`shape/${created.card.id}`);
-    expect(readFileSync(join(dir, `shape/${created.card.id}/brief.md`), 'utf-8')).toContain(`problem: ${problem}`);
-    expect(readFileSync(join(dir, `shape/${created.card.id}/breakdown.md`), 'utf-8')).toContain('# Epic:');
+    expect(created.card.spec).toBe(`.codeloop/shape/${created.card.id}`);
+    expect(readFileSync(join(dir, `.codeloop/shape/${created.card.id}/brief.md`), 'utf-8')).toContain(`problem: ${problem}`);
+    expect(readFileSync(join(dir, `.codeloop/shape/${created.card.id}/breakdown.md`), 'utf-8')).toContain('# Epic:');
   });
 
   it('newShape leaves an existing file alone', () => {
     writeLane('shape', 'stages:\n  - id: brief\n    done: { cmd: "true" }\n');
     createCard(dir, { lane: 'shape', title: 'a problem', id: 'c-1' });
-    write('shape/c-1/brief.md', 'already written');
+    write('.codeloop/shape/c-1/brief.md', 'already written');
     const { created } = newShape(dir, 'c-1', 'a problem');
-    expect(created).toEqual(['shape/c-1/breakdown.md', 'shape/c-1/interview.md']);
-    expect(readFileSync(join(dir, 'shape/c-1/brief.md'), 'utf-8')).toBe('already written');
+    expect(created).toEqual(['.codeloop/shape/c-1/breakdown.md', '.codeloop/shape/c-1/interview.md']);
+    expect(readFileSync(join(dir, '.codeloop/shape/c-1/brief.md'), 'utf-8')).toBe('already written');
   });
 });
 

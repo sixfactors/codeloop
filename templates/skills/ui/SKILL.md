@@ -4,14 +4,14 @@ stage: build
 lane: build
 inputs:
   - .codeloop/wiki/architecture/*.md
-  - specs/{id}/spec.md
+  - {spec}/spec.md
   - "the sdk stage's hooks for the data this card shows"
   - "the app's existing component registry (components/ui, components/shared, components/<feature>)"
   - "the app's design tokens (globals.css or equivalent)"
 outputs:
   - "one real route/page per screen named in spec.md's screens: list"
   - "every required interactive state (default, hover, focus, active, disabled, loading, empty)"
-  - "specs/{id}/tasks.md: every [ui] line ticked"
+  - "{spec}/tasks.md: every [ui] line ticked"
 check: "codeloop task check {id} --all-done && npm test"
 questions: 5
 ---
@@ -26,14 +26,14 @@ drawn from, not a fresh interpretation.
 
 ## Role
 
-The builder working the `[ui]` tasks in `specs/{id}/tasks.md`, after `sdk` has exposed the data
+The builder working the `[ui]` tasks in `{spec}/tasks.md`, after `sdk` has exposed the data
 this card shows. Per `docs/architecture.md`, this stage calls only the SDK's hooks, never a raw
 fetch, never a second copy of a type the SDK already declares, never a client-side join of two
 calls that the API should have returned pre-joined.
 
 ## Inputs
 
-- `specs/{id}/spec.md`, the `screens:` list (one name per screen the mock drew) and the
+- `{spec}/spec.md`, the `screens:` list (one name per screen the mock drew) and the
   acceptance lines each screen must satisfy.
 - The card's mock, if the lane ran a `mock` stage before `build`, the shipped screens must match
   it in substance; where the registry and the mock disagree, the registry wins and the mock is

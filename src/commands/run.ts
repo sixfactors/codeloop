@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { legacyFolders } from '../lib/paths.js';
 import { loadAgents, resolveAgent } from '../lib/agent.js';
 import { RefusalError } from '../lib/cards.js';
 import { clock } from '../lib/clock.js';
@@ -76,6 +77,8 @@ export const doctorCommand = new Command('doctor')
       console.log(JSON.stringify(actions, null, 2));
       return;
     }
-    if (!actions.length) console.log('doctor: nothing to do');
+    const legacy = legacyFolders(projectRoot());
+    if (legacy.length) console.log(`  legacy layout: ${legacy.map(d => `${d}/`).join(', ')} at the repo root; run \`codeloop store move --layout dotfolder\``);
+    if (!actions.length && !legacy.length) console.log('doctor: nothing to do');
     actions.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
   }));

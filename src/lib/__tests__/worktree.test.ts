@@ -135,3 +135,16 @@ describe('pruneWorktrees', () => {
     expect(readCards(dir).cards.find(c => c.id === 'c-001')!.worktree).toBeUndefined();
   });
 });
+
+describe('an index.lock held by another builder', () => {
+  it('codeloop retries its own merge until the lock is released instead of failing', () => {
+    const wt = ensureStoryWorktree(dir, 'c-001');
+    expect(land(wt.path).verdict).toBe('pass');
+    writeFileSync(join(dir, '.git/index.lock'), '');
+    // Another process releases the lock 300 ms from now, as a builder's own commit would.
+    execSync(`(sleep 0.3; rm -f ${join(dir, '.git/index.lock')}) > /dev/null 2>&1 &`, { cwd: dir });
+    const merged = mergeStory(dir, 'c-001');
+    expect(merged.sha).toBe(sh('git rev-parse HEAD'));
+    expect(existsSync(join(dir, 'b.txt'))).toBe(true);
+  });
+});

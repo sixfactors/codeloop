@@ -5,14 +5,14 @@ lane: build
 inputs:
   - docs/architecture.md
   - .codeloop/wiki/architecture/*.md
-  - specs/{id}/spec.md
-  - specs/{id}/tasks.md
-  - specs/{id}/research.md
+  - {spec}/spec.md
+  - {spec}/tasks.md
+  - {spec}/research.md
 outputs:
   - "service function + route + DTO for each [api] task"
   - "contract doc entry (request, response, status codes, errors)"
   - "tests through the real HTTP seam"
-  - "specs/{id}/tasks.md: every [api] line ticked"
+  - "{spec}/tasks.md: every [api] line ticked"
 check: "codeloop task check {id} --all-done && npm test"
 questions: 4
 ---
@@ -26,7 +26,7 @@ change; the order and the boundary between them do not.
 
 ## Role
 
-The builder working the `build` stage of `specs/{id}/tasks.md`. Owns every task tagged `[api]` for
+The builder working the `build` stage of `{spec}/tasks.md`. Owns every task tagged `[api]` for
 this card. Does not touch `[sdk]` or `[ui]` tasks, those run after this stage's tests pass, per
 `docs/architecture.md`'s onion (service → API → SDK → CLI + UI, in that order, one direction only).
 
@@ -34,11 +34,11 @@ this card. Does not touch `[sdk]` or `[ui]` tasks, those run after this stage's 
 
 - `docs/architecture.md`, which layer owns what, and the rule that a capability is added service
   first, never SDK or UI first.
-- `specs/{id}/spec.md`, the acceptance lines (`US1 Given... when... then...`). Each `[api]` task
+- `{spec}/spec.md`, the acceptance lines (`US1 Given... when... then...`). Each `[api]` task
   must trace to one of these.
-- `specs/{id}/tasks.md`, the task list. Work only the lines tagged `[api]`; a task with no layer
+- `{spec}/tasks.md`, the task list. Work only the lines tagged `[api]`; a task with no layer
   tag fails `codeloop spec check {id}`.
-- `specs/{id}/research.md`, the `exists:` verdict. `have` or `unlock` means something already
+- `{spec}/research.md`, the `exists:` verdict. `have` or `unlock` means something already
   does this; read it before writing a new route.
 - The service's existing spine: its ERD or schema file, its service-contracts doc, its data-flow
   doc, if the repo keeps one. Read it before adding a field or an endpoint, a contract already
@@ -146,7 +146,7 @@ See `template.md` in this folder for the contract-doc entry format to fill per e
 ## Done
 
 `codeloop task check {id} --all-done && npm test` exits 0. `task check` fails while any task under
-the card's `specs/{id}/tasks.md` is unticked; `npm test` (or the repo's configured test command)
+the card's `{spec}/tasks.md` is unticked; `npm test` (or the repo's configured test command)
 must be green, including the new tests written in step 3.
 
 ## Examples
