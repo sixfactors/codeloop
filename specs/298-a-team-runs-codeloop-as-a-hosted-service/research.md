@@ -2,7 +2,7 @@
 
 ## What exists
 
-exists: unlock — the hub (`src/lib/hub.ts`), the http SDK transport (`src/sdk/http.ts`), the version-checked store (`src/lib/store/`) and a board sync to a remote workspace (`src/lib/cloud.ts`) are built; none is exposed as a multi-user hosted service. Accounts, a secret store, runners and webhooks are absent: build.
+exists: unlock - the hub (`src/lib/hub.ts`), the http SDK transport (`src/sdk/http.ts`), the version-checked store (`src/lib/store/`) and a board sync to a remote workspace (`src/lib/cloud.ts`) are built; none is exposed as a multi-user hosted service. Accounts, a secret store, runners and webhooks are absent: build.
 
 ## How others host it
 
@@ -27,9 +27,9 @@ exists: unlock — the hub (`src/lib/hub.ts`), the http SDK transport (`src/sdk/
 
 ## Sources
 
-- source: src/lib/hub.ts — one process, many projects, each in its own context
-- source: src/sdk/http.ts:10 — baseUrl, token and project options
-- source: src/lib/cloud.ts — board sync with conflict copies
-- source: src/lib/store/README.md — versions and ConflictError
+- source: src/lib/hub.ts - one process, many projects, each in its own context
+- source: src/sdk/http.ts:10 - baseUrl, token and project options
+- source: src/lib/cloud.ts - board sync with conflict copies
+- source: src/lib/store/README.md - versions and ConflictError
 
 verdict: unlock (A first; B and C stay options)
