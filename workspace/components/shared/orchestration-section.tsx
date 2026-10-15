@@ -24,6 +24,9 @@ const OUTCOME: Record<OrchTurn['outcome'], string> = {
   briefed: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
   questions: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
   'merge-failed': 'border-transparent bg-destructive/15 text-destructive',
+  'check-error': 'border-transparent bg-destructive/15 text-destructive',
+  'builder-unavailable': 'border-transparent bg-destructive/15 text-destructive',
+  locked: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
   // refused: added when the orchestrator records a turn it would not start (not on the trunk yet).
 };
 
@@ -31,6 +34,9 @@ const OUTCOME: Record<OrchTurn['outcome'], string> = {
 const OUTCOME_MEANS: Partial<Record<keyof typeof OUTCOME, string>> = {
   questions: 'The builder asked questions instead of handing back. The loop waits for your answers.',
   'merge-failed': 'The gate passed but the merge did not. The work was right, so this costs no retry.',
+  'check-error': 'The stage check itself crashed. Fix the tool before retrying; this costs no retry.',
+  'builder-unavailable': 'The builder exited at once twice. It is marked unavailable until a person clears it.',
+  locked: 'Another run holds the repo lock. The turn waited and stopped; it costs no retry.',
 };
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });

@@ -21,6 +21,7 @@ import { openQuestions } from './interview.js';
 import { loadLane } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
+import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
 import { dropLease, holdsLease, isolation, placeTurn, takeLease, treeRange, type Mode } from './orch-isolation.js';
 import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
@@ -87,6 +88,8 @@ export interface OrchOptions {
   lockWaitMs?: number;
   /** Minutes to wait for a session or person's hand-back; `false` returns at once with outcome `briefed`. Default `orch.wait_minutes` (120). */
   wait?: number | false;
+  /** Replaces the process-table reading and the sleep when waiting under `limits.max_memory_mb`; tests only. */
+  memory?: MemoryProbe;
 }
 
 export const ORCH_OUTBOX_DIR = `${ORCH_DIR}/outbox`;
@@ -439,6 +442,9 @@ async function orchTurnSteps(projectDir: string, cardRef: string, opts: OrchOpti
     return settleLocked(projectDir, record, turn, got ? 'no hand-back' : 'no hand-back within the wait', opts);
   }
   void builderName;
+  // A builder is a new process tree; start it only while codeloop's total is under the ceiling.
+  // Waited for outside the lock, so a turn waiting on memory never holds back another story's gate.
+  await waitUnderCeiling(projectDir, opts.memory);
   let log = '';
   recordEvent(projectDir, card.id, (_cards, current) => {
     const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;

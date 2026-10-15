@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { followLink } from './store-home.js';
 import { join } from 'path';
 import { appendActivity, MIRRORED_EVENTS } from './activity.js';
@@ -156,10 +156,34 @@ export class ConflictError extends Error {
   }
 }
 
+let readCache: Map<string, { stamp: string; file: CardFile }> | undefined;
+
+/**
+ * Within `fn` a read of an unchanged cards.json returns the one parsed object. For read-only
+ * reports that call readCards once per card (the monitor); the callers share the object, so
+ * nothing inside may modify what it reads or hand it to writeCards.
+ */
+export function withCardsReadCache<T>(fn: () => T): T {
+  const saved = readCache;
+  readCache = new Map();
+  try {
+    return fn();
+  } finally {
+    readCache = saved;
+  }
+}
+
 export function readCards(projectDir: string): CardFile {
   const file = join(projectDir, CARDS_PATH);
   if (!existsSync(file)) return { version: 0, cards: [] };
-  return JSON.parse(readFileSync(file, 'utf-8')) as CardFile;
+  if (!readCache) return JSON.parse(readFileSync(file, 'utf-8')) as CardFile;
+  const st = statSync(file);
+  const stamp = `${st.mtimeMs}:${st.size}`;
+  const hit = readCache.get(file);
+  if (hit?.stamp === stamp) return hit.file;
+  const parsed = JSON.parse(readFileSync(file, 'utf-8')) as CardFile;
+  readCache.set(file, { stamp, file: parsed });
+  return parsed;
 }
 
 /**
