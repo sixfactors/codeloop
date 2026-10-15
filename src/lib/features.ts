@@ -9,7 +9,7 @@ import { basename, join } from 'path';
 import { RefusalError, type Card } from './cards.js';
 import { parseFrontmatter } from './skills.js';
 import { EpicSchema, FeatureSchema, type Epic, type Feature, type Rice } from './store/schema.js';
-import { WIKI_DIR } from './wiki.js';
+import { WIKI_DIR } from './wiki-dir.js';
 
 export const EPICS_DIR = `${WIKI_DIR}/epics`;
 export const FEATURES_DIR = `${WIKI_DIR}/features`;

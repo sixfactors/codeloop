@@ -21,7 +21,7 @@ const env = () => {
   delete e.CODELOOP_WORK_DIR;
   return e;
 };
-const cl = (cwd: string, ...args: string[]) => execFileSync(process.execPath, [CLI, ...args], { cwd, env: env(), encoding: 'utf-8' });
+const cl = (cwd: string, ...args: string[]) => execFileSync(process.execPath, [CLI, ...args], { cwd, env: env(), encoding: 'utf-8', timeout: 60_000, killSignal: 'SIGKILL' });
 const cards = () => JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).cards as { id: string; title: string; spec?: string }[];
 const config = (extra: string) => writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}${extra}`);
 

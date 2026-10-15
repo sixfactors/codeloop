@@ -10,6 +10,7 @@ import { nextHint } from '../flow.js';
 import { planRun, runDue, runDueWithAgent } from '../run.js';
 import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus } from '../schedule.js';
 import { capture } from '../wiki.js';
+import { runCli } from '../../__tests__/cli.js';
 
 const CLI = resolve('dist/index.js');
 let dir: string;
@@ -66,7 +67,7 @@ describe('no agent configured', () => {
     expect(runDue(dir)).toEqual({ created: [], skipped: [], advanced: [{ id: 'c-001', outcome: 'failed' }], lanes: [{ lane: 'build', trigger: 'none', status: 'manual' }] });
     expect(existsSync(join(dir, '.codeloop/state/briefs'))).toBe(false);
     expect(() => resolveAgent(dir)).toThrow(/no agent is configured/);
-    const cli = spawnSync('node', [CLI, 'run', '--agent'], { cwd: dir, encoding: 'utf-8' });
+    const cli = runCli(['run', '--agent'], { cwd: dir, encoding: 'utf-8' });
     expect(cli.status).toBe(2);
   });
 });

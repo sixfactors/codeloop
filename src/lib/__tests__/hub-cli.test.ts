@@ -3,6 +3,7 @@ import { spawnSync } from 'child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
+import { runCli } from '../../__tests__/cli.js';
 
 const CLI = resolve('dist/index.js');
 // Scoped away from the real ~/.codeloop, and off the port range this session was told to leave
@@ -12,7 +13,7 @@ let home: string;
 let a: string;
 let b: string;
 
-const run = (args: string[], cwd: string) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf-8', env: { ...process.env, CODELOOP_HOME: home } });
+const run = (args: string[], cwd: string) => runCli([...args], { cwd, encoding: 'utf-8', env: { ...process.env, CODELOOP_HOME: home } });
 
 function project(name: string): string {
   const dir = mkdtempSync(join(tmpdir(), `codeloop-hub-cli-${name}-`));
