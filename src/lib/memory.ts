@@ -18,6 +18,17 @@ export interface CodeloopProcess {
 
 const kindOf = (command: string): CodeloopProcess['kind'] => (/hookd/.test(command) ? 'hookd' : /\b(hub|serve)\b/.test(command) ? 'hub' : 'cli');
 
+/**
+ * A node (or the shim itself) with codeloop's entry anywhere in its argv. The bin shim starts
+ * `node --max-old-space-size=N <pkg>/dist/index.js ...`, so the entry is not the first argument;
+ * a global install is reached through a `.../bin/codeloop` symlink whose path need not contain "codeloop" earlier.
+ */
+export function isCodeloopCommand(command: string): boolean {
+  const [first = '', ...rest] = command.split(' ');
+  if (!/(^|\/)(node|nodejs|codeloop|codeloop-hook)$/.test(first)) return false;
+  return [first, ...rest].some(t => /\/bin\/codeloop(-hook)?$/.test(t) || (/codeloop/.test(t) && /\/dist\/(index|hookd-main)\.js$/.test(t)));
+}
+
 /** Every running process that is the codeloop CLI or its daemon, with resident size in MB. */
 export function codeloopProcesses(): CodeloopProcess[] {
   const ps = spawnSync('ps', ['-axo', 'pid=,rss=,command='], { encoding: 'utf-8' });
@@ -27,10 +38,7 @@ export function codeloopProcesses(): CodeloopProcess[] {
     const m = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
     if (!m) continue;
     const command = m[3];
-    // Node running dist/index.js or hookd-main.js of a codeloop install, or the codeloop shim itself.
-    if (!/(^|\/)(node|codeloop)\b/.test(command.split(' ')[0] ?? '')) continue;
-    if (!/codeloop[^ ]*\/(dist\/(index|hookd-main)\.js|bin\/codeloop)|node_modules\/\.bin\/codeloop|@protoboxai\/codeloop/.test(command)) continue;
-    rows.push({ pid: Number(m[1]), mb: Math.round((Number(m[2]) / 1024) * 10) / 10, kind: kindOf(command), command });
+    if (isCodeloopCommand(command)) rows.push({ pid: Number(m[1]), mb: Math.round((Number(m[2]) / 1024) * 10) / 10, kind: kindOf(command), command });
   }
   return rows.sort((a, b) => b.mb - a.mb);
 }
