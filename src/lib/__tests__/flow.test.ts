@@ -119,7 +119,7 @@ describe('start', () => {
 });
 
 describe('run', () => {
-  it('does not count a failure again while the stage output is unchanged', () => {
+  it('reports unchanged and counts nothing on a rerun when nothing under the story moved, even after an edit outside it', () => {
     lane('market', '  - id: draft\n    output: out/{id}.md\n    done: { cmd: "grep -q claim out/{id}.md" }\n');
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
     const retries = () => readCards(dir).cards[0].retries.draft;
@@ -128,9 +128,10 @@ describe('run', () => {
     expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'unchanged' }]);
     expect(retries()).toBe(1);
 
+    // out/ is outside the story's spec, evidence and use-case folders, so the check is not rerun.
     write('out/c-1.md', 'still no good');
-    expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'failed' }]);
-    expect(retries()).toBe(2);
+    expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'unchanged' }]);
+    expect(retries()).toBe(1);
   });
 });
 
