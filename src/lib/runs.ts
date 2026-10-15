@@ -4,6 +4,7 @@
  * .codeloop/state/agent-runs/ beside the logs `codeloop run --agent` writes, so a board can read
  * either. The run goes on after the start returns; `getRun` and `streamRun` follow it.
  */
+import { Budget } from './budget.js';
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { appendActivity } from './activity.js';
@@ -115,7 +116,7 @@ export function startCardRun(projectDir: string, ref: string, opts: { agent?: st
   const finished = (async () => {
     let final: RunRecord;
     try {
-      const turn = await workCard(projectDir, card.id, stage.id, agent, now, record.logPath);
+      const turn = await workCard(projectDir, card.id, stage.id, agent, now, record.logPath, Budget.for(projectDir, now.getTime()));
       if (turn.agent) append(projectDir, record, turn.agent.started ? `agent ${turn.agent.agent} exited ${turn.agent.exit} after ${Math.round((turn.agent.durationMs ?? 0) / 1000)}s` : `agent ${turn.agent.agent} not started: ${turn.agent.reason}`);
       if (turn.output) append(projectDir, record, turn.output);
       const ok = turn.outcome === 'moved' || turn.outcome === 'done' || turn.outcome === 'parked';

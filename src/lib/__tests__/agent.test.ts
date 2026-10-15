@@ -288,7 +288,7 @@ describe('run --agent', () => {
 
     const result = await run();
     expect(result.agents!.map(a => a.started)).toEqual([true, false]);
-    expect(result.agents![1].reason).toBe('agent fake has started 1 time in the last 24 hours (max_runs_per_day is 1)');
+    expect(result.agents![1].reason).toBe('agent fake has started 1 time today (max_runs_per_day is 1)');
     expect(readFileSync(join(dir, 'agent-ran'), 'utf-8')).toBe('ran\n');
     expect(card('c-002').events.some(e => e.action.startsWith('agent-'))).toBe(false);
 

@@ -35,7 +35,7 @@ function project(lane: string, agentScript: string) {
   mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
   writeFileSync(join(dir, 'fake-agent.sh'), agentScript);
   chmodSync(join(dir, 'fake-agent.sh'), 0o755);
-  writeFileSync(join(dir, '.codeloop/config.yaml'), `project:\n  name: demo\nagents:\n  default: fake\n  fake:\n    cmd: "sh ${join(dir, 'fake-agent.sh')} {brief}"\n    timeout_minutes: 2\n`);
+  writeFileSync(join(dir, '.codeloop/config.yaml'), `project:\n  name: demo\nagents:\n  default: fake\n  fake:\n    cmd: "sh ${join(dir, 'fake-agent.sh')} {brief}"\n    timeout_minutes: 2\norch:\n  quick_exit_seconds: 0\n`);
   writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), lane);
   writeFileSync(join(dir, 'a.txt'), 'a\n');
   writeFileSync(join(dir, '.gitignore'), '.codeloop/state/\n');
@@ -232,7 +232,7 @@ describe('projectRoot', () => {
 
 describe('after the merge', () => {
   const afterMerge = (build: string, restart = 'echo restarted > restarted.txt') =>
-    writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}orch:\n  after_merge:\n    build: "${build}"\n    restart: "${restart}"\n`);
+    writeFileSync(join(dir, '.codeloop/config.yaml'), readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8').replace('orch:\n', `orch:\n  after_merge:\n    build: "${build}"\n    restart: "${restart}"\n`));
 
   it('runs the project build and restart on the main tree and records each as a post-merge line', async () => {
     project(TWO_STAGE, WORKING_AGENT);

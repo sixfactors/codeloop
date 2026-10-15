@@ -140,6 +140,9 @@ export function checkCrashed(status: number | null, output: string): boolean {
   if (status === 0) return false;
   const lines = output.split('\n').map(l => l.trimEnd()).filter(Boolean);
   if (lines.filter(l => STACK_FRAME.test(l)).length < 2) return false;
+  // Node ends an uncaught exception with its version line; a check failing on purpose never prints
+  // it. The echoed source line of an `-e` script would otherwise read as the check's own message.
+  if (lines.some(l => /^Node\.js v\d+/.test(l))) return true;
   const message = lines.filter(l => !STACK_FRAME.test(l) && !/^(Node\.js v|node:|file:\/\/|\^+\s*$|\s*throw |\s*\^|\s*at )/.test(l) && !/^\w*(Error|Exception)\b/.test(l) && !/^\s*\{?\s*(code|errno|syscall|path):/.test(l) && !/^[{}]$/.test(l));
   return message.length === 0;
 }

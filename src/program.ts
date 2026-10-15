@@ -8,6 +8,7 @@ import { openCommand } from './commands/open.js';
 import { hubCommand } from './commands/hub.js';
 import { projectsCommand } from './commands/projects.js';
 import { storeCommand } from './commands/store.js';
+import { agentCommand, psCommand } from './commands/ps.js';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { assertStoreReady } from './lib/store-home.js';
@@ -99,6 +100,8 @@ export function buildProgram(): Command {
   program.addCommand(runCommand);
   program.addCommand(doctorCommand);
   program.addCommand(orchCommand);
+  program.addCommand(psCommand);
+  program.addCommand(agentCommand);
   program.addCommand(briefCommand);
   program.addCommand(scheduleCommand);
   program.addCommand(adoptCommand);

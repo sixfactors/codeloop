@@ -1,3 +1,6 @@
+import { startAgent } from './agent-ledger.js';
+import { clock } from './clock.js';
+import { trackChild } from './procs.js';
 import { specPath } from './project-root.js';
 import { spawn } from 'child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
@@ -17,7 +20,7 @@ import { rubricBrief } from './rubric.js';
 export const BRIEFS_DIR = '.codeloop/state/briefs';
 export const AGENT_RUNS_DIR = '.codeloop/state/agent-runs';
 const DEFAULT_TIMEOUT_MINUTES = 20;
-const DEFAULT_MAX_RUNS_PER_DAY = 20;
+const DEFAULT_MAX_RUNS_PER_DAY = 10;
 const LOG_TAIL_BYTES = 64_000;
 
 export interface AgentConfig {
@@ -263,11 +266,19 @@ function cardOfBrief(briefFile: string): string | undefined {
 }
 
 /** `cwd` and `env` let the orchestrator start the agent in a story's worktree while the board stays in `projectDir`. */
-export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string, opts: { cwd?: string; env?: Record<string, string> } = {}): Promise<AgentRun> {
+export function runAgent(projectDir: string, agent: AgentConfig, briefFile: string, logFile: string, opts: { cwd?: string; env?: Record<string, string>; now?: Date } = {}): Promise<AgentRun> {
+  // Every start is counted in the day's ledger, and refused once the agent is unavailable or at
+  // max_runs_per_day: the one place an agent process is spawned is the one place it is counted.
+  try {
+    startAgent(projectDir, agent.name, agent.maxRunsPerDay, opts.now ?? clock());
+  } catch (e) {
+    return Promise.reject(e);
+  }
   mkdirSync(dirname(logFile), { recursive: true });
   // Appended, not truncated: a run started from the API writes the check's output ahead of the agent's.
   const out = openSync(logFile, 'a');
   const started = Date.now();
+  let untrack: () => void = () => undefined;
   return new Promise(done => {
     let timedOut = false;
     let finished = false;
@@ -275,6 +286,7 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
       if (finished) return;
       finished = true;
       clearTimeout(timer);
+      untrack();
       closeSync(out);
       keepTail(logFile);
       done({ exit, timedOut, durationMs: Date.now() - started });
@@ -288,6 +300,8 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
       stdio: ['ignore', out, out],
       env: { ...checkEnv(), CODELOOP_ROLE: 'agent', CODELOOP_AGENT_RUN: agent.name, ...(cardOfBrief(briefFile) ? { CODELOOP_CARD: cardOfBrief(briefFile) } : {}), ...opts.env },
     });
+    // Its own process group, registered: killed with this process, listed by `codeloop ps`.
+    untrack = trackChild(projectDir, child.pid, `agent ${agent.name}`, agent.cmd);
     const timer = setTimeout(() => {
       timedOut = true;
       // `detached` made the shell a process group leader, so this reaches the agent and its children.

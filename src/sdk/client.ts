@@ -250,6 +250,9 @@ export interface Transport {
   migrateWiki(opts?: { dryRun?: boolean }): Promise<WikiMigrateResult>;
   wikiMerge(a: string, b: string): Promise<WikiEntry>;
   migrateDecisions(opts?: { dryRun?: boolean }): Promise<{ from: string; to: string | null; why: string }[]>;
+  procs(): Promise<{ pid: number; parent: number; purpose: string; cmd: string; at: string; alive: boolean; orphan: boolean }[]>;
+  killOrphans(): Promise<number[]>;
+  clearAgent(name: string): Promise<boolean>;
   /** The shape with page counts: every section in spec order, empty ones left out. Local only. */
   wikiShape(): Promise<WikiShapeCount[]>;
   /** Refreshes the facts, starts a card in the `wiki` lane titled "Explain the architecture", and runs it unless `opts.run` is false. Local only. */
@@ -359,6 +362,12 @@ export class CodeloopClient {
 
   /** A stage's rubric: scaffold writes `- Rn pending:` lines for the attest rows a card in flight still owes. */
   readonly rubric = { scaffold: (ref: string) => this.transport.rubricScaffold(ref) };
+
+  /** The child processes codeloop started here, and the cleanup of those whose parent is gone. */
+  readonly procs = { list: () => this.transport.procs(), killOrphans: () => this.transport.killOrphans() };
+
+  /** Agent availability: `clear` says an agent marked unavailable can run again. */
+  readonly agents = { clear: (name: string) => this.transport.clearAgent(name) };
 
   /** The board: every story in one row of the six states, already grouped by the server. */
   readonly board = { get: (opts?: { lane?: string }) => this.transport.board(opts) };

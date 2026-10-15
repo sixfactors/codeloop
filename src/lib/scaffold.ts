@@ -246,7 +246,7 @@ function replaceTopLevelKey(text: string, key: string, block: string): string {
 }
 
 const AGENT_TIMEOUT_MINUTES = 15;
-const AGENT_MAX_RUNS_PER_DAY = 50;
+const AGENT_MAX_RUNS_PER_DAY = 10;
 const AGENT_BINARY: Record<ToolId, string> = { claude: 'claude', codex: 'codex', cursor: 'cursor-agent' };
 
 function commandOnPath(name: string): boolean {

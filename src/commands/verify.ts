@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import { isUnavailable, todaysStarts } from '../lib/agent-ledger.js';
+import { loadAgents } from '../lib/agent.js';
 import chalk from 'chalk';
 import { findCard, readCards } from '../lib/cards.js';
 import { runSelfcheck } from '../lib/selfcheck.js';
@@ -73,8 +75,14 @@ export const statsCommand = new Command('stats')
       return;
     }
     const stats = computeStats(cards, lanes);
-    if (opts.json) console.log(JSON.stringify(stats, null, 2));
-    else print(opts.card ?? opts.lane ?? 'all cards', stats);
+    const agentStartsToday = todaysStarts(projectDir);
+    if (opts.json) console.log(JSON.stringify({ ...stats, agentStartsToday }, null, 2));
+    else {
+      print(opts.card ?? opts.lane ?? 'all cards', stats);
+      const agents = loadAgents(projectDir).agents;
+      const rows = Object.entries(agents).map(([name, a]) => `${name} ${agentStartsToday[name] ?? 0}/${a.maxRunsPerDay}${isUnavailable(projectDir, name) ? ' (unavailable)' : ''}`);
+      if (rows.length) console.log(`  agent starts today: ${rows.join(', ')}`);
+    }
   }));
 
 /** Registered under `card` in program.ts; it lives here because it shares verify's budget check. */
