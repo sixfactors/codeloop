@@ -7,7 +7,7 @@ import { cardKey, findCard, readCards, type Card } from './cards.js';
 import { readQuestions } from './interview.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
 import { loadLane, loadSkillsIndex, substitute, type Stage } from './lane.js';
-import { checkMock } from './mock.js';
+import { checkMock, specScreenRefs, specScreens } from './mock.js';
 import { checkResearch } from './research.js';
 import { checkScope } from './scope-creep.js';
 import { checkSpec, readAcceptance, readTasks } from './spec.js';
@@ -28,8 +28,11 @@ export interface RubricRow {
 }
 
 export interface RubricResult extends RubricRow {
-  /** pending: a review row with no stage reviewer, left to the person at the gate. */
-  status: 'pass' | 'fail' | 'pending';
+  /**
+   * pending: a review row with no stage reviewer, left to the person at the gate.
+   * na: the row judges something the card does not have (a frame, for a card with no new screen); `finding` says why.
+   */
+  status: 'pass' | 'fail' | 'pending' | 'na';
   /** What failed, or the attested evidence. */
   finding?: string;
   evidence?: string;
@@ -200,7 +203,13 @@ export function evaluateRubric(projectDir: string, ref: string, stageId?: string
   const reviewText = review ? read(projectDir, review.file) : '';
   const verdict = /^verdict:\s*(\S+)/im.exec(reviewText)?.[1]?.toLowerCase();
 
+  // The mock stage's frame rows (M2, M4) judge a drawing; a card whose spec draws nothing has none to judge.
+  const screens = stage.id === 'mock' ? specScreens(specText(ctx)) : [];
+  const noNewScreen = stage.id === 'mock' && (screens === 'none' || (screens.length === 0 && specScreenRefs(specText(ctx)).length > 0));
+  const naReason = `not applicable: no new screen (${screens === 'none' ? '`screens: none`' : 'every screen references an existing mock'} in the spec)`;
+
   const rows: RubricResult[] = parseRubric(readFileSync(path, 'utf-8')).map(row => {
+    if (noNewScreen && (row.judged === 'attest' || (row.judged === 'check' && !CHECKS[row.id]))) return { ...row, status: 'na', finding: naReason };
     const check = row.judged === 'check' ? CHECKS[row.id] : undefined;
     if (check) {
       let found: string[];

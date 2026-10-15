@@ -153,3 +153,30 @@ describe('rubric scaffold, for a card in flight when its rubric arrives', () => 
     expect(evaluateRubric(dir, 'c-001').problems.map(p => p.slice(0, 2))).toEqual(['R5', 'R7']);
   });
 });
+
+describe('mock rubric for a card that draws nothing', () => {
+  const MOCK_LANE = 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: mock\n    skill: mock\n    done: { cmd: "true" }\n';
+  const setup = (screens: string) => {
+    write('.codeloop/lanes/build.yaml', MOCK_LANE);
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [card('c-001', 'mock')] }, null, 2));
+    write('specs/001/spec.md', `Story: As a founder, I can export, so that I save time.\n\nscreens: ${screens}\n\n- US1 Given a, when b, then c.\n`);
+    write('specs/001/rubric-mock.md', '## Rubric\n\n- M2 pending: one frame per screen\n- M4 pending: every acceptance line can be pointed at\n');
+  };
+  const rowsOf = () => Object.fromEntries(evaluateRubric(dir, 'c-001').rows.map(r => [r.id, r]));
+
+  it('screens: none makes the frame rows not applicable, with the reason on the row', () => {
+    setup('none');
+    const report = evaluateRubric(dir, 'c-001');
+    expect(report.problems.filter(p => /^M[24]/.test(p))).toEqual([]);
+    expect(rowsOf().M2).toMatchObject({ status: 'na', finding: expect.stringMatching(/^not applicable: no new screen/) });
+    expect(rowsOf().M4.status).toBe('na');
+    expect(rowsOf().M3.status).toBe('pending');
+  });
+
+  it('a spec naming a new screen still fails on the pending frame rows', () => {
+    setup('\n  - invoice export');
+    const report = evaluateRubric(dir, 'c-001');
+    expect(report.problems.filter(p => /^M[24]/.test(p))).toHaveLength(2);
+    expect(rowsOf().M2.status).toBe('fail');
+  });
+});
