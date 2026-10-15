@@ -124,3 +124,35 @@ describe('process.cwd() in commands', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Everything codeloop writes lives under .codeloop (docs/plans: everything under .codeloop): only
+ * src/lib/paths.ts knows where specs, evidence, shape, use cases, mocks and artifacts live. A
+ * root-relative path to one of them anywhere else would write into the product's source tree.
+ */
+describe('story paths: only paths.ts names the folders', () => {
+  const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const ALLOWED: Record<string, string> = {
+    'lib/paths.ts': 'the one module that knows the layouts',
+    'lib/layout-move.ts': 'moves projects between the layouts, so it names both',
+    'lib/import.ts': "reads a Spec Kit project's own specs/ folder, which is that tool's layout, not codeloop's",
+  };
+  const ROOT_PATH = /join\([^)]*['"`](specs|evidence|shape|usecases)['"`/]|[`'"](specs|evidence|shape|usecases)\/[$a-z{<]|['"`]docs\/(mocks|artifacts)/;
+  const files = (dir: string): string[] =>
+    readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap(e => (e.isDirectory() ? (e.name === '__tests__' ? [] : files(`${dir}/${e.name}`)) : e.name.endsWith('.ts') ? [`${dir}/${e.name}`] : []));
+
+  it('no module outside paths.ts joins a root-relative specs, evidence, shape, usecases or docs/mocks path', () => {
+    const found = ['lib', 'commands', 'sdk']
+      .flatMap(files)
+      .filter(f => !ALLOWED[f])
+      .flatMap(f =>
+        readFileSync(join(ROOT, f), 'utf-8')
+          .split('\n')
+          .map((line, i) => ({ line: line.trim(), at: `${f}:${i + 1}` }))
+          // Comments describe the layout; only code can write into it.
+          .filter(({ line }) => !/^(\/\/|\*|\/\*)/.test(line) && ROOT_PATH.test(line))
+          .map(({ at, line }) => `${at}: ${line.slice(0, 120)}`),
+      );
+    expect(found).toEqual([]);
+  });
+});

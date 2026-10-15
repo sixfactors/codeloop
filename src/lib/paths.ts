@@ -11,7 +11,7 @@
  * read as `root`, so an upgrade never strands its board; `codeloop store move --layout dotfolder`
  * moves it.
  */
-import { existsSync, lstatSync } from 'fs';
+import { existsSync, lstatSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from './config.js';
 
@@ -94,4 +94,16 @@ export function layoutOfSpec(spec: string | undefined): Layout {
 export function legacyNotice(projectDir: string): string | undefined {
   if (layout(projectDir) !== 'root') return undefined;
   return 'codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/';
+}
+
+/** Root-level story folders still holding content: what `codeloop doctor` reports as the legacy layout. */
+export function legacyFolders(projectDir: string): string[] {
+  return (['specs', 'evidence', 'shape', 'usecases'] as const)
+    .map(k => ROOT[k])
+    .filter(dir => {
+      const full = join(projectDir, dir);
+      if (!isDir(full)) return false;
+      // The pointer README `store move --layout dotfolder` leaves is not content.
+      return readdirSync(full).some(f => f !== 'README.md');
+    });
 }

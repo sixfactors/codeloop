@@ -54,6 +54,22 @@ After a merge the orchestrator does what a person otherwise runs by hand on the 
 
 The builder is an agent by default. `--builder session:<id-or-label-prefix>` or `--builder person` starts nothing: the orchestrator writes the brief, appends it to `.codeloop/state/orch/outbox/<session>.md` (or `person.md`), writes an `orch-brief` activity line with `to`, prints the brief path and the hand-back line, and polls for a hand-back recorded after the turn began, every 15 seconds, up to `orch.wait_minutes` (default 120) or `--wait <min>`. A builder quiet for `monitor.stall_minutes` gets one `doctor` nudge line. No hand-back in time fails the turn with "no hand-back within the wait" and costs a retry. `--no-wait` returns at once with outcome `briefed`; `codeloop orch resume <card>` gates, merges and advances once the hand-back exists, and `codeloop orch inbox` prints the briefs addressed to this session or to the person that are still unanswered.
 
+## Everything under .codeloop
+
+codeloop never writes into a project's source tree. What it owns is under `.codeloop/`: the board, config, lanes and wiki, and with `store.layout: dotfolder` (the default) the story folders too.
+
+| Content | Path |
+|---|---|
+| specs | `.codeloop/specs/NNN-slug/` |
+| evidence | `.codeloop/evidence/NNN/` |
+| shape | `.codeloop/shape/c-NNN/` |
+| use cases | `.codeloop/usecases/NNN/` |
+| mocks gallery and older per-topic mocks | `.codeloop/mocks/`, `.codeloop/mocks/archive/` |
+| artifacts | `.codeloop/artifacts/` |
+| state, briefs, runs, activity, locks | `.codeloop/state/` (ignored) |
+
+The only writes outside are the host files a project opted into (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.cursor/`, `.agents/`, git hooks) and, with `mock.target: app`, the app's own mocks folder. `src/lib/paths.ts` is the one module that knows these folders; a layering test fails on a root-relative story path anywhere else, and a write-guard test runs a story's writers on a fixture and fails on any change outside `.codeloop/`. `store.layout: root` keeps `specs/`, `evidence/`, `shape/`, `usecases/`, `docs/mocks` and `docs/artifacts` at the repo root for a project that cannot move yet; a project that still has them is read that way, prints a notice on each command, and `codeloop doctor` names the folders. `codeloop store move --layout dotfolder --dry-run` shows the move, and without `--dry-run` it makes it.
+
 ## One board for every worktree
 
 A command run in a linked worktree with no `CODELOOP_PROJECT_DIR` resolves the project to the repository's main tree (`git rev-parse --git-common-dir`), so every worktree reads and writes the one board. Where the board and story files live is `store.home` in `.codeloop/config.yaml`:
