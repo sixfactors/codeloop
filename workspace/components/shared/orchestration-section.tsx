@@ -27,6 +27,8 @@ const OUTCOME: Record<OrchTurn['outcome'], string> = {
   'check-error': 'border-transparent bg-destructive/15 text-destructive',
   'builder-unavailable': 'border-transparent bg-destructive/15 text-destructive',
   locked: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  'waiting-lease': 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  queued: 'border-transparent bg-muted text-muted-foreground',
   // refused: added when the orchestrator records a turn it would not start (not on the trunk yet).
 };
 
@@ -37,6 +39,8 @@ const OUTCOME_MEANS: Partial<Record<keyof typeof OUTCOME, string>> = {
   'check-error': 'The stage check itself crashed. Fix the tool before retrying; this costs no retry.',
   'builder-unavailable': 'The builder exited at once twice. It is marked unavailable until a person clears it.',
   locked: 'Another run holds the repo lock. The turn waited and stopped; it costs no retry.',
+  'waiting-lease': 'Another story holds a lease on a file this plan names. The turn waits; the doctor retries it.',
+  queued: 'More builders are running than the limit allows. The turn waits its turn; the doctor retries it.',
 };
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
