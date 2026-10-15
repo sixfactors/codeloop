@@ -55,9 +55,23 @@ function storyPaths(card: Card): string[] {
   return [...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : []), `specs/${key}-`, `specs/${key}/`, `evidence/${key}/`, `shape/${card.id}/`];
 }
 
+const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+/** How long codeloop keeps retrying a git command another builder's index.lock blocks, in one tree. */
+export const INDEX_LOCK_WAIT_MS = 5_000;
+
+/**
+ * Runs git. In tree mode builders share one index, so a command can meet another process's
+ * `.git/index.lock`; that is a moment's wait, not a failure, and the command is retried until the
+ * lock is gone or INDEX_LOCK_WAIT_MS has passed.
+ */
 const git = (cwd: string, args: string[]) => {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
-  return { ok: r.status === 0, out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim() };
+  const deadline = Date.now() + INDEX_LOCK_WAIT_MS;
+  for (let wait = 100; ; wait = Math.min(wait * 2, 1000)) {
+    const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: 120_000 });
+    const result = { ok: r.status === 0, out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim() };
+    if (result.ok || !/index\.lock/.test(result.err) || Date.now() >= deadline) return result;
+    sleepSync(wait);
+  }
 };
 
 function must(cwd: string, args: string[], what: string): string {
