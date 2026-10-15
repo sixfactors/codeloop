@@ -162,7 +162,7 @@ function changedSince(projectDir: string, card: Card, lane: Lane, at: string): b
   const stage = lane.stages.find(s => s.id === card.stage);
   if (stage?.output) {
     try {
-      if (statSync(join(projectDir, substitute(stage.output, card))).mtimeMs > checked) return true;
+      if (statSync(join(projectDir, substitute(stage.output, card, { projectDir }))).mtimeMs > checked) return true;
     } catch { /* no output file yet */ }
   }
   return readActivity(projectDir, card.id, { limit: 1000 }).items.some(i => i.kind !== 'check' && Date.parse(i.at) > checked);

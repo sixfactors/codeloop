@@ -3,6 +3,7 @@
  * passed. Merging never rebases and never touches a file the main tree has uncommitted edits to, so
  * a person working in the main tree is not overwritten by a story landing.
  */
+import { evidenceOf, shapeDir, specsDir } from './paths.js';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
@@ -50,9 +51,9 @@ export class MergeConflictError extends RefusalError {
 }
 
 /** The folders and files a story owns: its spec folder, evidence and shape files. */
-function storyPaths(card: Card): string[] {
+function storyPaths(projectDir: string, card: Card): string[] {
   const key = cardKey(card);
-  return [...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : []), `specs/${key}-`, `specs/${key}/`, `evidence/${key}/`, `shape/${card.id}/`];
+  return [...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : []), `${specsDir(projectDir)}/${key}-`, `${specsDir(projectDir)}/${key}/`, `${evidenceOf(projectDir, key)}/`, `${shapeDir(projectDir)}/${card.id}/`];
 }
 
 const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -163,7 +164,7 @@ export function mergeStory(projectDir: string, cardRef: string, opts: Pick<Workt
         throw new RefusalError(`merge of ${branch} into ${trunk} failed: ${merged.err || merged.out}`);
       }
       // The builder's story files are authoritative: the trunk may only hold a scaffolded stub of them.
-      const own = storyPaths(card);
+      const own = storyPaths(projectDir, card);
       const outside = conflicted.find(p => !own.some(o => p === o || p.startsWith(o)));
       if (outside) {
         abort();

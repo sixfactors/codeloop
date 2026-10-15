@@ -20,8 +20,8 @@ function card(projectDir: string, id: string) {
     ...found,
     brief: stage && {
       skill: stage.skill,
-      output: stage.output && substitute(stage.output, found),
-      done: stage.done?.cmd ? substitute(stage.done.cmd, found, { shell: true }) : stage.done?.event,
+      output: stage.output && substitute(stage.output, found, { projectDir }),
+      done: stage.done?.cmd ? substitute(stage.done.cmd, found, { shell: true, projectDir }) : stage.done?.event,
       notes: stage.notes ?? [],
       rejections: found.events.filter(e => e.action === 'reject' && e.stage === stage.id).map(e => e.note),
     },

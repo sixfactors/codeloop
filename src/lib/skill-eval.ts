@@ -6,6 +6,7 @@
  * stage, the stage's `check` decides whether the work passed, and a second agent call grades the
  * output against the skill's checklist. Records land under `.codeloop/state/skill-evals/`.
  */
+import { specsDir } from './paths.js';
 import { parseRubric } from './rubric.js';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -205,7 +206,7 @@ export async function evalFixture(projectDir: string, skill: SkillDef, fixtureId
     writeFileSync(join(tempDir, '.codeloop/skills.index.yaml'), stringify([{ name: skill.name, source: skillFile, kind: 'skill', description: '' }]));
 
     const card = createCard(tempDir, { lane: skill.lane, title: `eval ${skill.name} ${fixtureId}`, id: 'c-001', now });
-    const specDir = `specs/${cardNumber(card.id)}`;
+    const specDir = `${specsDir(tempDir)}/${cardNumber(card.id)}`;
     annotateCard(tempDir, card.id, { spec: specDir }, 'spec-set', { now });
     mkdirSync(join(tempDir, specDir), { recursive: true });
     for (const file of readdirSync(srcDir).filter(f => f !== 'expected.md')) {
@@ -216,7 +217,7 @@ export async function evalFixture(projectDir: string, skill: SkillDef, fixtureId
     const turn = await workCard(tempDir, card.id, skill.stage, agent, now, stageLog);
     const doneCheckPassed = turn.outcome === 'moved' || turn.outcome === 'done';
 
-    const outputPath = skill.outputs[0] ? substitute(skill.outputs[0], card) : undefined;
+    const outputPath = skill.outputs[0] ? substitute(skill.outputs[0], card, { projectDir: tempDir }) : undefined;
     const output = outputPath && existsSync(join(tempDir, outputPath)) ? readFileSync(join(tempDir, outputPath), 'utf-8') : '';
 
     const graderBrief = writeBrief(join(tempDir, '.codeloop/state'), 'grader', gradingPrompt(skill, checklist, output));

@@ -1,3 +1,4 @@
+import { evidenceOf, usecasesOf } from './paths.js';
 import { specPath, workDir } from './project-root.js';
 import { spawnSync } from 'child_process';
 import { checkEnv } from './shell.js';
@@ -154,7 +155,7 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   // reads the story's files from it, while the board stays under projectDir.
   // `ref` without `work`: a tree-mode story's commit range on the main tree's branch.
   const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : ref ? { ...checkEnv(), CODELOOP_STORY_REF: ref } : checkEnv();
-  const run = spawnSync(substitute(stage.done.cmd, card, { shell: true }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
+  const run = spawnSync(substitute(stage.done.cmd, card, { shell: true, projectDir }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
   const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
   const passed = run.status === 0;
   return { passed, output, ...(checkCrashed(run.status, `${run.stdout ?? ''}${run.stderr ?? ''}`) ? { crashed: output } : {}) };
@@ -183,11 +184,11 @@ function filesUnder(root: string, rel: string): string[] {
  */
 function stageFingerprint(projectDir: string, card: Card, stage: Stage): string {
   const hash = createHash('sha1').update(stage.done?.cmd ?? stage.done?.event ?? '');
-  const output = !stage.gate?.outward && stage.output ? specPath(projectDir, substitute(stage.output, card)) : null;
+  const output = !stage.gate?.outward && stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
   if (output) hash.update('\0').update(existsSync(output) && statSync(output).isFile() ? readFileSync(output, 'utf-8').replace(VOLATILE_LINE, '') : 'missing');
   // The card's evidence folder is what verify writes on every run, so it is never part of what was approved.
-  const evidence = `evidence/${cardKey(card)}/`;
-  const owned = [...filesUnder(workDir(projectDir), `usecases/${cardKey(card)}`), ...(planFiles(projectDir, card) ?? []).filter(f => !/[*?]/.test(f)).flatMap(f => filesUnder(workDir(projectDir), f.replace(/\/$/, '')))]
+  const evidence = `${evidenceOf(projectDir, cardKey(card))}/`;
+  const owned = [...filesUnder(workDir(projectDir), usecasesOf(projectDir, cardKey(card))), ...(planFiles(projectDir, card) ?? []).filter(f => !/[*?]/.test(f)).flatMap(f => filesUnder(workDir(projectDir), f.replace(/\/$/, '')))]
     .filter(rel => !rel.startsWith(evidence));
   for (const rel of [...new Set(owned)].sort()) hash.update('\0').update(rel).update('\0').update(readFileSync(specPath(projectDir, rel)));
   return hash.digest('hex');
@@ -197,7 +198,7 @@ function stageFingerprint(projectDir: string, card: Card, stage: Stage): string 
 // next card's research starts from it. Returns the pages that gained rows.
 function researchFindings(projectDir: string, card: Card, stage: Stage): string[] {
   if (stage.id !== 'research' || !stage.output) return [];
-  const file = specPath(projectDir, substitute(stage.output, card));
+  const file = specPath(projectDir, substitute(stage.output, card, { projectDir }));
   return existsSync(file) && statSync(file).isFile() ? appendFindings(projectDir, card, readFileSync(file, 'utf-8')) : [];
 }
 
@@ -207,7 +208,7 @@ function researchFindings(projectDir: string, card: Card, stage: Stage): string[
 // one (wiki-rules.ts); `check wiki-landed` refuses the stage when options were compared and it cannot.
 function researchDecision(projectDir: string, card: Card, stage: Stage, now: Date): string | null {
   if (stage.id !== 'research' || !stage.output) return null;
-  const file = specPath(projectDir, substitute(stage.output, card));
+  const file = specPath(projectDir, substitute(stage.output, card, { projectDir }));
   if (!existsSync(file) || !statSync(file).isFile()) return null;
   const made = decisionFromResearch(projectDir, card, readFileSync(file, 'utf-8'));
   if (!made || made.problems.length) return null;
@@ -652,7 +653,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       // there is nothing new to judge, so it must not use up a retry.
       // The check's own output is no guide (test runners print timings), so a stage with no output
       // file is judged by the working tree instead.
-      const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card)) : null;
+      const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
       const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? output;
       const fingerprint = createHash('sha1').update(work).digest('hex');
       if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
@@ -704,7 +705,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     if (problem) throw new RefusalError(problem);
   }
   card.stage = next ? next.id : DONE;
-  if (stage.output) card.evidence.push(substitute(stage.output, card));
+  if (stage.output) card.evidence.push(substitute(stage.output, card, { projectDir }));
   card.events.push(event(now, 'engine', 'advance', stage.id, `to ${card.stage}`));
   for (const page of researchFindings(projectDir, card, stage)) card.events.push(event(now, 'engine', 'findings', stage.id, page));
   const decision = researchDecision(projectDir, card, stage, now);

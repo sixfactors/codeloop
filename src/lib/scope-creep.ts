@@ -1,3 +1,4 @@
+import { evidenceOf } from './paths.js';
 import { specPath } from './project-root.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -36,7 +37,7 @@ export function checkScope(projectDir: string, cardId: string, opts: { ref?: str
   const card = findCard(readCards(projectDir).cards, cardId);
   const creep = scopeCreep(projectDir, card.id, opts);
   if (!creep.length) return [];
-  const review = `evidence/${cardKey(card)}/review.md`;
+  const review = `${evidenceOf(projectDir, cardKey(card))}/review.md`;
   const file = specPath(projectDir, review);
   const rows = existsSync(file) ? scopeRows(readFileSync(file, 'utf-8')) : [];
   const problems: string[] = [];

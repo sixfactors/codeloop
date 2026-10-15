@@ -3,12 +3,12 @@ name: interview
 stage: spec
 lane: build
 inputs:
-  - specs/{id}/research.md
-  - specs/{id}/spec.md (draft, if scaffolded)
-  - specs/{id}/interview.md (if one is already open)
+  - {spec}/research.md
+  - {spec}/spec.md (draft, if scaffolded)
+  - {spec}/interview.md (if one is already open)
   - src/lib/interview.ts
 outputs:
-  - specs/{id}/interview.md
+  - {spec}/interview.md
 check: "codeloop spec check {id}"
 questions: 5
 ---
@@ -25,11 +25,11 @@ take by just saying so. Bad work asks five questions whose answers are already o
 
 ## Inputs
 
-1. `specs/{id}/research.md`, the verdict and the pain. Don't re-ask what research already
+1. `{spec}/research.md`, the verdict and the pain. Don't re-ask what research already
    answered.
-2. `specs/{id}/spec.md`, if scaffolded, draft every field mentally first; a question exists only
+2. `{spec}/spec.md`, if scaffolded, draft every field mentally first; a question exists only
    where the draft has a genuine fork.
-3. `specs/{id}/interview.md`, if one already exists, read what's open before adding more;
+3. `{spec}/interview.md`, if one already exists, read what's open before adding more;
    `addQuestions` refuses past five total.
 4. `src/lib/interview.ts`, the format it parses: `## Q<n> <question>`, an optional `options:` list
    (`- A: <text>` to `- D: <text>`), then `recommended:` and `answer:` lines, nothing else.
@@ -60,7 +60,7 @@ take by just saying so. Bad work asks five questions whose answers are already o
    In a chat with the person, ask **one question at a time** and wait; never show the queue.
    Headless, write all of them to the output file and stop.
 5. Write the `## Qn` blocks straight into this stage's output file, the path the brief names
-   (`specs/{id}/interview.md` for a build story, `shape/{id}/interview.md` for a shaping story).
+   (`{spec}/interview.md` for a build story, `{shape}/interview.md` for a shaping story).
    codeloop reads the questions from that file: the board and the inbox show them as soon as it is
    saved, with nothing else to run. To add questions to a file that already has some, use
    `codeloop ask {id} --file <path>`, which numbers on from the last.

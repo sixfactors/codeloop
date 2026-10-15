@@ -129,8 +129,8 @@ export function cardNumber(cardId: string): string {
 
 /**
  * `{id}` is the card id; `{nnn}` is its digits zero-padded to 3 (c-7 → 007); `{spec}` is the
- * card's spec folder, `<specs>/{nnn}` when the card has none recorded; `{evidence}` and `{usecases}`
- * are the card's evidence and use-case folders. The folders follow the project's `store.layout`
+ * card's spec folder, `<specs>/{nnn}` when the card has none recorded; `{evidence}`, `{usecases}` and
+ * `{shape}` are the card's evidence, use-case and shape folders, `{artifacts}` the artifacts folder. The folders follow the project's `store.layout`
  * (paths.ts): pass `projectDir`, or the layout is read from the card's own spec path.
  */
 export function substitute(template: string, card: string | { id: string; key?: string; spec?: string }, opts: { shell?: boolean; projectDir?: string } = {}): string {
@@ -144,7 +144,9 @@ export function substitute(template: string, card: string | { id: string; key?: 
     .replaceAll('{nnn}', value(nnn))
     .replaceAll('{spec}', value(spec ?? `${folderIn(which, 'specs')}/${nnn}`))
     .replaceAll('{evidence}', value(`${folderIn(which, 'evidence')}/${nnn}`))
-    .replaceAll('{usecases}', value(`${folderIn(which, 'usecases')}/${nnn}`));
+    .replaceAll('{usecases}', value(`${folderIn(which, 'usecases')}/${nnn}`))
+    .replaceAll('{shape}', value(`${folderIn(which, 'shape')}/${id}`))
+    .replaceAll('{artifacts}', value(folderIn(which, 'artifacts')));
 }
 
 /**

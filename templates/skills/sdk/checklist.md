@@ -1,7 +1,7 @@
 # sdk checklist
 
 - [ ] `codeloop task check {id} --all-done && npm test` passes
-- [ ] Every `[sdk]` task in `specs/{id}/tasks.md` is ticked
+- [ ] Every `[sdk]` task in `{spec}/tasks.md` is ticked
 - [ ] Type declared once in the SDK's shared types, re-exported from the hooks file
 - [ ] Client method calls the HTTP client only, no UI import, no app-specific branching
 - [ ] Envelope unwrapping reuses the shared function; nothing hand-parses a response

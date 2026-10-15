@@ -5,7 +5,7 @@ import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mainTreeOf } from '../project-root.js';
-import { ensureStoreLinks, moveStore, STORE_ITEMS, userStoreDir } from '../store-home.js';
+import { ensureStoreLinks, moveStore, storeItems, userStoreDir } from '../store-home.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
 const GIT = 'git -c user.email=a@b -c user.name=t';
@@ -32,7 +32,7 @@ function files(base: string): Record<string, string> {
     if (statSync(p).isDirectory()) for (const f of readdirSync(p)) walk(join(p, f));
     else out[relative(base, p)] = readFileSync(p, 'utf-8');
   };
-  for (const item of STORE_ITEMS) walk(join(base, item));
+  for (const item of storeItems(dir)) walk(join(base, item));
   return out;
 }
 
@@ -70,7 +70,7 @@ describe('one board for every worktree', () => {
     expect(store).toBe(join(home, 'projects', 'demo'));
     const spec = cards()[0].spec!;
     expect(existsSync(join(store, spec, 'research.md'))).toBe(true);
-    expect(lstatSync(join(dir, 'specs')).isSymbolicLink()).toBe(true);
+    expect(lstatSync(join(dir, '.codeloop/specs')).isSymbolicLink()).toBe(true);
     expect(lstatSync(join(dir, '.codeloop/cards.json')).isSymbolicLink()).toBe(true);
     // The worktree reads the same research.md: the check finds the file and judges its content.
     let out = '';
@@ -105,7 +105,7 @@ describe('one board for every worktree', () => {
 
     moveStore(dir, 'repo', io);
     expect(io.read()).toMatch(/^ {2}home: repo$/m);
-    expect(lstatSync(join(dir, 'specs')).isSymbolicLink()).toBe(false);
+    expect(lstatSync(join(dir, '.codeloop/specs')).isSymbolicLink()).toBe(false);
     expect(files(dir)).toEqual(before);
   }, 60_000);
 });
@@ -113,16 +113,16 @@ describe('one board for every worktree', () => {
 describe('store.move names what user home moves', () => {
   it('with a subset, store move --to user leaves evidence in the repo and store where prints it as repo', () => {
     cl(dir, 'start', 'Founders can export invoices');
-    execSync('mkdir -p evidence/001 && echo "result: pass" > evidence/001/verify.md', { cwd: dir });
+    execSync('mkdir -p .codeloop/evidence/001 && echo "result: pass" > .codeloop/evidence/001/verify.md', { cwd: dir });
     config('store:\n  move: [cards, state, specs, shape]\n');
-    const evidenceBefore = readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8');
+    const evidenceBefore = readFileSync(join(dir, '.codeloop/evidence/001/verify.md'), 'utf-8');
 
     const out = cl(dir, 'store', 'move', '--to', 'user');
     // The move holds the repo lock, whose file is in .codeloop/state, so state exists and moves too.
-    expect(out).toContain('copied .codeloop/cards.json, .codeloop/state, specs');
+    expect(out).toContain('copied .codeloop/cards.json, .codeloop/state, .codeloop/specs');
     expect(out).not.toMatch(/copied .*evidence/);
-    expect(existsSync(join(userStoreDir(dir), 'evidence'))).toBe(false);
-    expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toBe(evidenceBefore);
+    expect(existsSync(join(userStoreDir(dir), '.codeloop/evidence'))).toBe(false);
+    expect(readFileSync(join(dir, '.codeloop/evidence/001/verify.md'), 'utf-8')).toBe(evidenceBefore);
     expect(readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')).toMatch(/^store:\n {2}home: user\n {2}move: \[cards, state, specs, shape\]$/m);
 
     // The refusal names only the moved paths still in the repo, never evidence.
@@ -132,13 +132,13 @@ describe('store.move names what user home moves', () => {
     } catch (e) {
       refused = String((e as { stderr?: string }).stderr ?? e);
     }
-    expect(refused).toMatch(/repo copies are still at \.codeloop\/cards\.json, \.codeloop\/state, specs;/);
+    expect(refused).toMatch(/repo copies are still at \.codeloop\/cards\.json, \.codeloop\/state, \.codeloop\/specs;/);
 
-    for (const p of ['.codeloop/cards.json', '.codeloop/state', 'specs']) rmSync(join(dir, p), { recursive: true, force: true });
+    for (const p of ['.codeloop/cards.json', '.codeloop/state', '.codeloop/specs']) rmSync(join(dir, p), { recursive: true, force: true });
     cl(dir, 'card', 'list'); // the next ordinary command links the moved paths
     const where = cl(dir, 'store', 'where');
-    expect(where).toMatch(/^ {2}evidence\s+repo\s+\S*\/demo\/evidence$/m);
-    expect(where).toMatch(/^ {2}specs\s+user\s+\S*\/home\/projects\/demo\/specs \(linked\)$/m);
-    expect(lstatSync(join(dir, 'evidence')).isSymbolicLink()).toBe(false);
+    expect(where).toMatch(/^ {2}\.codeloop\/evidence\s+repo\s+\S*\/demo\/\.codeloop\/evidence$/m);
+    expect(where).toMatch(/^ {2}\.codeloop\/specs\s+user\s+\S*\/home\/projects\/demo\/\.codeloop\/specs \(linked\)$/m);
+    expect(lstatSync(join(dir, '.codeloop/evidence')).isSymbolicLink()).toBe(false);
   }, 60_000);
 });

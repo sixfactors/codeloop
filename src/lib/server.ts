@@ -8,7 +8,8 @@ import { checkBoardPassword, readBoardAuth } from './auth.js';
 import { ConflictError, RefusalError } from './cards.js';
 import { getIndex, type ActivityFrame, type Diff, type ProjectIndex } from './index/index.js';
 import { readInboxSeen } from './inbox.js';
-import { CARD_MOCKS_DIR, isMockPath, MOCKS_DIR } from './mock.js';
+import { CARD_MOCKS_DIR, isMockPath } from './mock.js';
+import { mocksArchiveDir } from './paths.js';
 import * as services from './services.js';
 import { openStore, type Store } from './store/index.js';
 import type { StoryFlags } from './story.js';
@@ -502,7 +503,7 @@ export function createApp(
       if (!file.startsWith(projectRoot + sep) || !isMockPath(rel) || !isFile(file)) return c.text('Not found', 404);
       return serve(file);
     }
-    const root = resolve(projectDir, MOCKS_DIR);
+    const root = resolve(projectDir, mocksArchiveDir(projectDir));
     const file = resolve(root, wanted || 'index.html');
     if (!file.startsWith(root + sep) || !isFile(file)) return c.text('Not found', 404);
     return serve(file);

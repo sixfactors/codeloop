@@ -8,6 +8,7 @@
  * reader keeps joining the project root as before; `ensureStoreLinks` makes them, and refuses while
  * a real repo copy still sits where a link belongs.
  */
+import { folder, mocksArchiveDir } from './paths.js';
 import { cpSync, existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, rmSync, symlinkSync } from 'fs';
 import { basename, dirname, join, relative, resolve } from 'path';
 import { loadConfig } from './config.js';
@@ -16,19 +17,30 @@ import { RefusalError } from './cards.js';
 
 export type StoreHome = 'repo' | 'user';
 
-/** The board and story paths that move with `store.home`, relative to the project root. */
-export const STORE_ITEMS = ['.codeloop/cards.json', '.codeloop/state', '.codeloop/mocks', 'specs', 'evidence', 'shape', 'docs/mocks'] as const;
+/** The names `store.move` takes. Each is one store path, which follows the project's `store.layout`. */
+export const STORE_NAMES = ['cards', 'state', 'mocks', 'specs', 'shape', 'evidence', 'docs-mocks'] as const;
+export type StoreName = (typeof STORE_NAMES)[number];
 
-/** The names `store.move` takes, each one store path. */
-export const STORE_NAMES: Record<string, (typeof STORE_ITEMS)[number]> = {
-  cards: '.codeloop/cards.json',
-  state: '.codeloop/state',
-  mocks: '.codeloop/mocks',
-  specs: 'specs',
-  shape: 'shape',
-  evidence: 'evidence',
-  'docs-mocks': 'docs/mocks',
-};
+/** The store path a name stands for in this project's layout. */
+export function storePath(projectDir: string, name: StoreName): string {
+  switch (name) {
+    case 'cards': return '.codeloop/cards.json';
+    case 'state': return '.codeloop/state';
+    case 'mocks': return '.codeloop/mocks';
+    case 'docs-mocks': return mocksArchiveDir(projectDir);
+    default: return folder(projectDir, name);
+  }
+}
+
+/**
+ * The board and story paths that move with `store.home`, relative to the project root. A path that
+ * sits inside another listed path (the dotfolder layout's mock archive inside .codeloop/mocks) moves
+ * with its parent and is not listed twice.
+ */
+export function storeItems(projectDir: string, names: readonly StoreName[] = STORE_NAMES): string[] {
+  const paths = names.map(n => storePath(projectDir, n));
+  return paths.filter(p => !paths.some(q => q !== p && p.startsWith(`${q}/`)));
+}
 
 /**
  * The store paths `user` home moves: `store.move` in config, default all of them. A project whose
@@ -38,10 +50,10 @@ export const STORE_NAMES: Record<string, (typeof STORE_ITEMS)[number]> = {
 export function movedItems(projectDir: string): string[] {
   const store = (loadConfig(projectDir) as { store?: { move?: unknown } }).store;
   const list = store && typeof store === 'object' ? store.move : undefined;
-  if (!Array.isArray(list)) return [...STORE_ITEMS];
-  const unknown = list.filter(n => typeof n !== 'string' || !STORE_NAMES[n]);
-  if (unknown.length) throw new RefusalError(`store.move names ${unknown.join(', ')}; use ${Object.keys(STORE_NAMES).join(', ')}`);
-  return STORE_ITEMS.filter(item => (list as string[]).some(n => STORE_NAMES[n] === item));
+  if (!Array.isArray(list)) return storeItems(projectDir);
+  const unknown = list.filter(n => typeof n !== 'string' || !(STORE_NAMES as readonly string[]).includes(n));
+  if (unknown.length) throw new RefusalError(`store.move names ${unknown.join(', ')}; use ${STORE_NAMES.join(', ')}`);
+  return storeItems(projectDir, list as StoreName[]);
 }
 
 export function storeHome(projectDir: string): StoreHome {
@@ -134,7 +146,7 @@ export function storeWhere(projectDir: string): StoreWhere {
   return {
     home,
     dir: storeDir(projectDir),
-    items: STORE_ITEMS.map(item => {
+    items: storeItems(projectDir).map(item => {
       const path = join(projectDir, item);
       const moved = home === 'user' && movedItems(projectDir).includes(item);
       return { item, path, resolved: moved ? join(userStoreDir(projectDir), item) : path, link: isLink(path), home: moved ? 'user' : 'repo' };

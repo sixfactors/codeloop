@@ -1,3 +1,4 @@
+import { artifactsDir, folderIn } from './paths.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -6,7 +7,8 @@ import { loadConfig } from './config.js';
 import { slugify } from './spec.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const ARTIFACTS_DIR = 'docs/artifacts';
+/** The root-layout artifacts folder; `artifactsDir(projectDir)` is the one for a project. */
+export const ARTIFACTS_DIR = folderIn('root', 'artifacts');
 export const ARTIFACT_KINDS = ['mock', 'system-design', 'workflow'] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
@@ -42,7 +44,7 @@ const dirs = (path: string) => (existsSync(path) ? readdirSync(path).filter(d =>
 
 /** Every artifact file under docs/artifacts, newest-scan order not guaranteed, callers sort. */
 function allArtifactFiles(projectDir: string): { project: string; topic: string; file: string; full: string }[] {
-  const root = join(projectDir, ARTIFACTS_DIR);
+  const root = join(projectDir, artifactsDir(projectDir));
   return dirs(root).flatMap(project =>
     dirs(join(root, project)).flatMap(topic =>
       (existsSync(join(root, project, topic)) ? readdirSync(join(root, project, topic)) : [])
@@ -56,7 +58,7 @@ function allArtifactFiles(projectDir: string): { project: string; topic: string;
 export function findArtifact(projectDir: string, cardId: string, kind?: ArtifactKind): string | undefined {
   const suffix = kind ? `-${kind}.html` : undefined;
   const match = allArtifactFiles(projectDir).find(a => (suffix ? a.file === `${cardId}${suffix}` : new RegExp(`^${cardId}-(?:${ARTIFACT_KINDS.join('|')})\\.html$`).test(a.file)));
-  return match && `${ARTIFACTS_DIR}/${match.project}/${match.topic}/${match.file}`;
+  return match && `${artifactsDir(projectDir)}/${match.project}/${match.topic}/${match.file}`;
 }
 
 /** The chain an artifact was copied along, this artifact first and `base` last. */
@@ -78,13 +80,13 @@ export function artifactFrontmatter(html: string, kind: ArtifactKind): Record<st
 }
 
 function latestArtifact(projectDir: string, project: string, topic: string, kind: ArtifactKind, except: string): string | undefined {
-  const folder = join(projectDir, ARTIFACTS_DIR, project, topic);
+  const folder = join(projectDir, artifactsDir(projectDir), project, topic);
   if (!existsSync(folder)) return undefined;
   const newest = readdirSync(folder)
     .filter(f => f.endsWith(`-${kind}.html`) && f !== `${except}-${kind}.html`)
     .map(f => ({ f, at: statSync(join(folder, f)).mtimeMs }))
     .sort((a, b) => b.at - a.at)[0];
-  return newest && `${ARTIFACTS_DIR}/${project}/${topic}/${newest.f}`;
+  return newest && `${artifactsDir(projectDir)}/${project}/${topic}/${newest.f}`;
 }
 
 /**
@@ -99,7 +101,7 @@ export function newArtifact(projectDir: string, ref: string, topic: string, kind
   const existing = findArtifact(projectDir, card.id, kind);
   if (existing) return { path: existing, created: false };
   const project = projectName(projectDir);
-  const path = `${ARTIFACTS_DIR}/${project}/${folder}/${card.id}-${kind}.html`;
+  const path = `${artifactsDir(projectDir)}/${project}/${folder}/${card.id}-${kind}.html`;
 
   let parent: { id: string; path: string } | undefined;
   if (from === 'latest') {
@@ -189,7 +191,7 @@ export function checkArtifact(projectDir: string, ref: string, kind?: ArtifactKi
   const card = findCardOrNone(readCards(projectDir).cards, ref);
   const id = card?.id ?? ref;
   const path = findArtifact(projectDir, id, kind);
-  if (!path) return [`no ${kind ?? ''} artifact for ${id} under ${ARTIFACTS_DIR}; run \`codeloop artifact new ${id} --kind ${kind ?? '<mock|system-design|workflow>'} --topic <topic>\``];
+  if (!path) return [`no ${kind ?? ''} artifact for ${id} under ${artifactsDir(projectDir)}; run \`codeloop artifact new ${id} --kind ${kind ?? '<mock|system-design|workflow>'} --topic <topic>\``];
   const resolvedKind = kind ?? (ARTIFACT_KINDS.find(k => path.endsWith(`-${k}.html`)) as ArtifactKind);
   const html = readFileSync(join(projectDir, path), 'utf-8').replace(/\r\n/g, '\n');
 
@@ -312,8 +314,8 @@ export function writeArtifactsIndex(projectDir: string): { path: string; artifac
     '</div></body></html>',
   ].join('\n');
 
-  const path = `${ARTIFACTS_DIR}/index.html`;
-  mkdirSync(join(projectDir, ARTIFACTS_DIR), { recursive: true });
+  const path = `${artifactsDir(projectDir)}/index.html`;
+  mkdirSync(join(projectDir, artifactsDir(projectDir)), { recursive: true });
   writeFileSync(join(projectDir, path), html);
   return { path, artifacts: found.length };
 }

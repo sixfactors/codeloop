@@ -1,3 +1,4 @@
+import { evidenceOf, shapeDir, usecasesOf } from './paths.js';
 import { specPath, workDir } from './project-root.js';
 import { loadConfig } from './config.js';
 import { existsSync, readFileSync } from 'fs';
@@ -88,6 +89,6 @@ export function outsidePlanScope(projectDir: string, card: Card, path: string): 
   const rel = relative(workDir(projectDir), abs);
   if (!rel || rel.startsWith('..') || isAbsolute(rel)) return rel !== '';
   const nnn = cardKey(card);
-  const own = ['.codeloop/', `evidence/${nnn}/`, `usecases/${nnn}/`, `shape/${card.id}/`, ...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : [])];
+  const own = ['.codeloop/', `${evidenceOf(projectDir, nnn)}/`, `${usecasesOf(projectDir, nnn)}/`, `${shapeDir(projectDir)}/${card.id}/`, ...(card.spec ? [`${card.spec.replace(/\/$/, '')}/`] : [])];
   return own.some(prefix => rel === prefix.slice(0, -1) || rel.startsWith(prefix));
 }

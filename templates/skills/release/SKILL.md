@@ -4,12 +4,12 @@ stage: staging
 lane: build
 inputs:
   - .codeloop/config.yaml
-  - "evidence/{nnn}/verify.md (the verify stage's pass result)"
+  - "{evidence}/verify.md (the verify stage's pass result)"
   - "the card's Feature: {id} commit(s)"
 outputs:
-  - evidence/{nnn}/staging.md
-  - evidence/{nnn}/prod.md
-check: "codeloop check file evidence/{nnn}/staging.md --has 'result: pass' (staging); codeloop check file evidence/{nnn}/prod.md --has 'result: pass' (live, behind the prod outward gate)"
+  - {evidence}/staging.md
+  - {evidence}/prod.md
+check: "codeloop check file {evidence}/staging.md --has 'result: pass' (staging); codeloop check file {evidence}/prod.md --has 'result: pass' (live, behind the prod outward gate)"
 questions: 4
 ---
 
@@ -32,14 +32,14 @@ grant itself the approval.
 
 - `.codeloop/config.yaml`, `deploy.staging` / `deploy.production` (or `deploy.prod`): the deploy
   command and the base URL verify uses for `--env staging` / `--env production`.
-- `evidence/{nnn}/verify.md`, confirm it says `result: pass` before deploying anything. Deploying
+- `{evidence}/verify.md`, confirm it says `result: pass` before deploying anything. Deploying
   a card that hasn't passed `verify` is deploying unverified code.
 - The commit(s) carrying `Feature: {id}`, what's actually shipping, and what the rollback target
   is (the commit immediately before the first one).
 
 ## Procedure
 
-1. **Confirm verify passed.** Read `evidence/{nnn}/verify.md`; if it doesn't say `result: pass`,
+1. **Confirm verify passed.** Read `{evidence}/verify.md`; if it doesn't say `result: pass`,
    stop and go back to the `verify` stage.
 2. **Deploy to staging** with the project's configured staging deploy command.
 3. **Run the use cases against staging**: `codeloop verify {id} --env staging --no-record` (or
@@ -48,7 +48,7 @@ grant itself the approval.
 4. **Run the smoke test** beyond the card's own use cases, the project's broader staging health
   check (auth flow, core routes, whatever the repo's smoke-test command covers). A card can pass
   its own use cases while something it touched breaks a different path.
-5. **Write `evidence/{nnn}/staging.md`**:
+5. **Write `{evidence}/staging.md`**:
    ```markdown
    result: pass | fail
    sha: <commit>
@@ -69,7 +69,7 @@ grant itself the approval.
   (verifying against live data without mutating it, read-only use cases only, or ones that clean
   up what they create).
 10. **Run the production smoke test.**
-11. **Write `evidence/{nnn}/prod.md`** in the same shape as step 5, `env: prod`.
+11. **Write `{evidence}/prod.md`** in the same shape as step 5, `env: prod`.
 12. **If either environment's use cases or smoke test fail**: do not write `result: pass`. Write
    `result: fail` with what broke, roll back using the line from step 7, and send the card back to
    `build` (or wherever the failure traces to) rather than forcing the gate.
@@ -98,7 +98,7 @@ mid-incident.
 
 ## Questions to ask before working
 
-## Q1 Does evidence/{nnn}/verify.md say result: pass?
+## Q1 Does {evidence}/verify.md say result: pass?
 recommended: If not, stop; do not deploy unverified code to staging.
 answer:
 
@@ -123,22 +123,22 @@ See `template.md` in this folder for the `staging.md` / `prod.md` evidence skele
 
 ## Checklist
 
-- [ ] `evidence/{nnn}/verify.md` said `result: pass` before any deploy started
+- [ ] `{evidence}/verify.md` said `result: pass` before any deploy started
 - [ ] Staged: deploy command ran, use cases ran with `--env staging`, broader smoke test ran
-- [ ] `evidence/{nnn}/staging.md` written with `result: pass` and the literal string the gate
+- [ ] `{evidence}/staging.md` written with `result: pass` and the literal string the gate
   checks for
 - [ ] Rollback command identified and recorded before touching production
 - [ ] The outward gate's approval was explicit, not assumed, before any prod deploy command ran
 - [ ] Prod: deploy command ran, use cases ran with `--env production` (read-only, or
   self-cleaning), broader smoke test ran
-- [ ] `evidence/{nnn}/prod.md` written with `result: pass`
+- [ ] `{evidence}/prod.md` written with `result: pass`
 - [ ] Any failure at either hop was written as `result: fail` with what broke, and rolled back -
   never silently retried until green
 
 ## Done
 
-Staging: `codeloop check file evidence/{nnn}/staging.md --has 'result: pass'` exits 0. Production
-(behind the `prod` outward gate): `codeloop check file evidence/{nnn}/prod.md --has 'result: pass'`
+Staging: `codeloop check file {evidence}/staging.md --has 'result: pass'` exits 0. Production
+(behind the `prod` outward gate): `codeloop check file {evidence}/prod.md --has 'result: pass'`
 exits 0. Both are literal substring checks on the file, the file must exist, be non-empty, and
 contain the string `result: pass`.
 

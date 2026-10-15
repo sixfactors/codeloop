@@ -19,7 +19,7 @@ function write(path: string, text: string): void {
   mkdirSync(dirname(join(dir, path)), { recursive: true });
   writeFileSync(join(dir, path), text);
 }
-const SPEC = 'specs/001-add-csv-export';
+const SPEC = '.codeloop/specs/001-add-csv-export';
 const STORY = { persona: 'founder', can: 'export the list as CSV', so: 'I can hand it to finance' };
 const post = ({ app, token }: ReturnType<typeof createApp>, path: string, body: object = {}) =>
   app.request(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': token }, body: JSON.stringify(body) });
@@ -93,7 +93,7 @@ describe('questions', () => {
   it('ask refuses a sixth question, and a proposal gets its spec folder', () => {
     const { card } = proposeCard(dir, { lane: 'build', title: 'Try a dark theme' });
     const { path } = addQuestions(dir, card.id, [{ question: 'Dark by default?', recommended: 'no' }]);
-    expect(path).toBe('specs/002-try-a-dark-theme/interview.md');
+    expect(path).toBe('.codeloop/specs/002-try-a-dark-theme/interview.md');
     expect(read(path)).toBe('## Q1 Dark by default?\nrecommended: no\nanswer: \n');
     addQuestions(dir, card.id, [2, 3, 4, 5].map(n => ({ question: `Q number ${n}` })));
     expect(() => addQuestions(dir, card.id, [{ question: 'One more' }])).toThrow(/6 questions would be on c-002, the limit is 5/);
@@ -136,7 +136,7 @@ describe('mocks build on each other', () => {
   const screens = (spec: string, names: string) => write(`${spec}/spec.md`, read(`${spec}/spec.md`).replace(/^screens:.*$/m, `screens:\n${names}`));
   const draw = (path: string, name: string, body = '') => write(path, read(path).replace('  </main>', `    <section data-screen="${name}"><h2>${name}</h2>${body}</section>\n  </main>`));
   const M1 = `${SPEC}/mock.html`;
-  const M2 = 'specs/002-pick-export-columns/mock.html';
+  const M2 = '.codeloop/specs/002-pick-export-columns/mock.html';
 
   it('mock new copies the newest mock in the topic, marks each section data-from, and scaffolds the new screens', () => {
     screens(SPEC, '- export-dialog\n');
@@ -147,7 +147,7 @@ describe('mocks build on each other', () => {
     utimesSync(join(dir, M1), new Date('2026-09-01'), new Date('2026-09-01'));
 
     startCard(dir, { lane: 'build', title: 'Pick export columns', id: 'c-002' });
-    screens('specs/002-pick-export-columns', '- export-dialog\n- column-picker\n');
+    screens('.codeloop/specs/002-pick-export-columns', '- export-dialog\n- column-picker\n');
     expect(newMock(dir, 'c-002', 'exports')).toEqual({ path: M2, created: true, from: 'c-001' });
     const html = read(M2);
     expect(html).toContain('<!-- codeloop mock lineage: c-002 <- c-001 <- base -->');
@@ -170,11 +170,11 @@ describe('mocks build on each other', () => {
     draw(M1, 'export-dialog');
     draw(M1, 'export-done');
     startCard(dir, { lane: 'build', title: 'Pick export columns', id: 'c-002' });
-    screens('specs/002-pick-export-columns', '- export-dialog\n');
+    screens('.codeloop/specs/002-pick-export-columns', '- export-dialog\n');
     newMock(dir, 'c-002', 'exports');
     write(M2, read(M2).replace(/<section data-screen="export-done"[\s\S]*?<\/section>\n/, ''));
     expect(checkMock(dir, 'c-002')).toEqual([`${M2} dropped <section data-screen="export-done"> inherited from c-001; list it under \`screens_removed:\` in the spec if that is meant`]);
-    write('specs/002-pick-export-columns/spec.md', read('specs/002-pick-export-columns/spec.md') + '\nscreens_removed:\n- export-done\n');
+    write('.codeloop/specs/002-pick-export-columns/spec.md', read('.codeloop/specs/002-pick-export-columns/spec.md') + '\nscreens_removed:\n- export-done\n');
     expect(checkMock(dir, 'c-002')).toEqual([]);
   });
 });

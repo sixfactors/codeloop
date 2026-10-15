@@ -4,12 +4,12 @@ stage: review
 lane: build
 inputs:
   - git diff (first `Feature: {id}` commit..HEAD)
-  - specs/{id}/spec.md
-  - evidence/{nnn}/verify.md
+  - {spec}/spec.md
+  - {evidence}/verify.md
   - .codeloop/wiki/ (gotchas for changed files)
 outputs:
-  - evidence/{nnn}/review.md
-check: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id}"
+  - {evidence}/review.md
+check: "codeloop check file {evidence}/review.md --has 'verdict: approve' && codeloop check scope {id}"
 questions: 1
 ---
 
@@ -26,10 +26,10 @@ comments, or a `verdict: approve` line written before every fix-now finding is a
 
 1. The diff: `git diff <first Feature: {id} commit>^..HEAD`, or `git diff main...HEAD` before any
    feature commit exists yet.
-2. `specs/{id}/spec.md`, `## Not building` and `## Failure modes`. Anything in the diff outside
+2. `{spec}/spec.md`, `## Not building` and `## Failure modes`. Anything in the diff outside
    `Not building`'s stated exclusions, or not traceable to an acceptance line, is scope creep, not
    a free improvement.
-3. `evidence/{nnn}/verify.md`, must already say `result: pass`. Reviewing unverified work is
+3. `{evidence}/verify.md`, must already say `result: pass`. Reviewing unverified work is
    reviewing a guess.
 4. `.codeloop/wiki/` gotchas matching the changed files: `codeloop check gotchas --files <paths>`.
 
@@ -37,7 +37,7 @@ comments, or a `verdict: approve` line written before every fix-now finding is a
 
 A story is reviewed once, at this stage, against the rubric and the Scope table. There is no review per commit, and a reviewer does not re-review each fix. A reviewer who wants changes writes every one as a finding with a fix-now verdict in a single review.md; the builder answers them all in one turn and runs `codeloop card selfcheck {id}` before handing back.
 
-1. Confirm `evidence/{nnn}/verify.md` says `result: pass`. If it doesn't, stop here, review
+1. Confirm `{evidence}/verify.md` says `result: pass`. If it doesn't, stop here, review
    cannot approve work that hasn't been shown to work.
 2. **Repeat one step of the live walk yourself.** Pick the step in `## Live walk` that matters most,
    start the same stack, and do it in a browser. Record it in review.md as
@@ -52,12 +52,12 @@ A story is reviewed once, at this stage, against the rubric and the Scope table.
 5. For every issue found, classify it:
    - **fix now**, blocks `verdict: approve`
    - **defer**, becomes a `codeloop card propose <lane> "<title>" --description "<finding>"
-     --source evidence/{nnn}/review.md` line, not a comment left to be forgotten
+     --source {evidence}/review.md` line, not a comment left to be forgotten
    - **unnecessary**, recorded with why, so the next reviewer doesn't re-raise the same thing
 6. Write the findings table with evidence per finding, a `file:line`, a command and its output, or
    a quoted diff hunk. Never a finding with no evidence a second person could check.
 7. Fix every "fix now" item. Re-run `codeloop verify {id}`; confirm it still passes after the fix.
-8. Write `evidence/{nnn}/review.md`, ending with `verdict: approve` only once every fix-now item is
+8. Write `{evidence}/review.md`, ending with `verdict: approve` only once every fix-now item is
    resolved and verify is still green. If any fix-now item remains, end with `verdict:
    changes-requested` instead, the done check only looks for the literal string `verdict: approve`.
 9. Run the done command.
@@ -107,7 +107,7 @@ See `rubric.md` in this folder: the criteria `codeloop check rubric` judges this
 ## Done
 
 ```
-codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id} && codeloop check wiki-landed {id} --stage review && codeloop check rubric {id}
+codeloop check file {evidence}/review.md --has 'verdict: approve' && codeloop check scope {id} && codeloop check wiki-landed {id} --stage review && codeloop check rubric {id}
 ```
 
 Exit 1 when the file is missing, empty, or doesn't contain the exact string `verdict: approve` -

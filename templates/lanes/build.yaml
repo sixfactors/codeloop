@@ -48,27 +48,27 @@ stages:
       - "Work the tasks in layer order: [api] with the api skill, [sdk] with the sdk skill, [ui] with the ui skill. Tick each task line as it is done."
   - id: verify
     skill: verify
-    output: evidence/{nnn}/verify.md
+    output: "{evidence}/verify.md"
     done: { cmd: "codeloop verify {id} && codeloop check rubric {id}" }
     notes:
-      - "One use case per acceptance line, in usecases/{nnn}/uc-{nnn}-NN.yaml: id, accept (US1..), failure_mode, layers.cli.run and expect."
-      - "codeloop verify rewrites only its marked block in evidence/{nnn}/verify.md; add your own runs and tables outside it." 
+      - "One use case per acceptance line, in {usecases}/uc-{nnn}-NN.yaml: id, accept (US1..), failure_mode, layers.cli.run and expect."
+      - "codeloop verify rewrites only its marked block in {evidence}/verify.md; add your own runs and tables outside it." 
     gate: { name: local, approver: owner }
   # Review is a triage: every finding gets a verdict (fix now, defer, unnecessary) and evidence; deferred findings become proposals.
   # Every changed file outside the story's plan also gets a keep / revert / move verdict in a `## Scope` table.
   - id: review
     skill: review
-    output: evidence/{nnn}/review.md
-    done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id} && codeloop check wiki-landed {id} --stage review && codeloop check rubric {id}" }
+    output: "{evidence}/review.md"
+    done: { cmd: "codeloop check file {evidence}/review.md --has 'verdict: approve' && codeloop check scope {id} && codeloop check wiki-landed {id} --stage review && codeloop check rubric {id}" }
     gate: { name: pr, approver: reviewer }
   - id: staging
     skill: release
-    output: evidence/{nnn}/staging.md
-    done: { cmd: "codeloop check file evidence/{nnn}/staging.md --has 'result: pass' && codeloop check rubric {id}" }
+    output: "{evidence}/staging.md"
+    done: { cmd: "codeloop check file {evidence}/staging.md --has 'result: pass' && codeloop check rubric {id}" }
   - id: live
     skill: release
-    output: evidence/{nnn}/prod.md
-    done: { cmd: "codeloop check file evidence/{nnn}/prod.md --has 'result: pass' && codeloop check rubric {id}" }
+    output: "{evidence}/prod.md"
+    done: { cmd: "codeloop check file {evidence}/prod.md --has 'result: pass' && codeloop check rubric {id}" }
     gate: { name: prod, approver: owner, outward: true }
 # on_done starts the next lane's card when one here finishes. It is off until config.yaml has
 # `lanes: { auto_start: true }`; until then a finished card only announces what it would start.

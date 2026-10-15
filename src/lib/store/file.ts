@@ -10,7 +10,8 @@ import { EPICS_DIR, FEATURES_DIR, listEpics, listFeatures, loadEpic, loadFeature
 import { interviewPath, parseQuestions, renderQuestions } from '../interview.js';
 import { lanePath, LANES_DIR, loadLanes, parseLane, type Lane } from '../lane.js';
 import { withLockAsync } from '../lock.js';
-import { CARD_MOCKS_DIR, findMock, isMockPath, mockLineage, mockMeta, MOCKS_DIR } from '../mock.js';
+import { CARD_MOCKS_DIR, findMock, isMockPath, mockLineage, mockMeta } from '../mock.js';
+import { artifactsDir, evidenceDir, evidenceOf, folderIn, specsDir } from '../paths.js';
 import { parseFrontmatter } from '../skills.js';
 import { WIKI_DIR } from '../wiki.js';
 import { applyQuery, type Change, type Entity, type KeyValue, type Query, type Repo, type RepoName, type Store } from './driver.js';
@@ -18,9 +19,13 @@ import type { Artifact, Epic, Feature, Initiative, CardRecord, Evidence, Evidenc
 
 export const STORE_FILE = '.codeloop/store.json';
 export const BETS_DIR = `${WIKI_DIR}/initiatives`;
-export const EVIDENCE_DIR = 'evidence';
-export const ARTIFACTS_DIR = 'docs/artifacts';
-const SPECS_DIR = 'specs';
+// A changed path is classified by its folder in either layout: the watcher reports paths, not projects.
+const both = (kind: 'specs' | 'evidence' | 'artifacts' | 'mocks') => [folderIn('root', kind), folderIn('dotfolder', kind)].map(d => `${d}/`);
+const SPEC_PREFIXES = both('specs');
+const EVIDENCE_PREFIXES = both('evidence');
+const ARTIFACT_PREFIXES = both('artifacts');
+const ARCHIVE_PREFIXES = both('mocks');
+const under = (path: string, prefixes: string[]) => prefixes.some(p => path.startsWith(p));
 
 const sha1 = (text: string | Buffer) => createHash('sha1').update(text).digest('hex');
 const readText = (file: string) => readFileSync(file, 'utf-8');
@@ -143,7 +148,7 @@ export class FileDriver implements Store {
 
   private watch(): void {
     if (this.watchers.length) return;
-    for (const dir of ['.codeloop', SPECS_DIR, EVIDENCE_DIR, 'docs']) {
+    for (const dir of [...new Set(['.codeloop', specsDir(this.projectDir), evidenceDir(this.projectDir), 'docs'])]) {
       const full = join(this.projectDir, dir);
       if (!existsSync(full)) continue;
       try {
@@ -189,9 +194,9 @@ export function repoFor(path: string): RepoName | undefined {
   if (path.startsWith(`${FEATURES_DIR}/`)) return 'features';
   if (path.startsWith(`${WIKI_DIR}/`)) return 'pages';
   if (isMockPath(path)) return 'artifacts';
-  if (path.startsWith(`${SPECS_DIR}/`)) return path.endsWith('/interview.md') ? 'questions' : path.endsWith('.md') ? 'pages' : undefined;
-  if (path.startsWith(`${EVIDENCE_DIR}/`)) return 'evidence';
-  if (path.startsWith(`${MOCKS_DIR}/`) || path.startsWith(`${CARD_MOCKS_DIR}/`) || path.startsWith(`${ARTIFACTS_DIR}/`)) return 'artifacts';
+  if (under(path, SPEC_PREFIXES)) return path.endsWith('/interview.md') ? 'questions' : path.endsWith('.md') ? 'pages' : undefined;
+  if (under(path, EVIDENCE_PREFIXES)) return 'evidence';
+  if (under(path, ARCHIVE_PREFIXES) || path.startsWith(`${CARD_MOCKS_DIR}/`) || under(path, ARTIFACT_PREFIXES)) return 'artifacts';
   return undefined;
 }
 
@@ -276,7 +281,7 @@ class PagesRepo implements Repo<WikiPage> {
   constructor(private projectDir: string, private emit: Emit) {}
 
   private files(): string[] {
-    return [...walkMarkdown(join(this.projectDir, WIKI_DIR)), ...walkMarkdown(join(this.projectDir, SPECS_DIR))].filter(f => basename(f) !== 'INDEX.md');
+    return [...walkMarkdown(join(this.projectDir, WIKI_DIR)), ...walkMarkdown(join(this.projectDir, specsDir(this.projectDir)))].filter(f => basename(f) !== 'INDEX.md');
   }
 
   private load(file: string): WikiPage {
@@ -290,8 +295,9 @@ class PagesRepo implements Repo<WikiPage> {
 
   private fileFor(id: string): string {
     const safe = toPosix(id);
-    if (safe.includes('..') || !safe.endsWith('.md') || !(safe.startsWith(`${WIKI_DIR}/`) || safe.startsWith(`${SPECS_DIR}/`))) {
-      throw new RefusalError(`page "${id}" is not under ${WIKI_DIR}/ or ${SPECS_DIR}/`);
+    const specs = specsDir(this.projectDir);
+    if (safe.includes('..') || !safe.endsWith('.md') || !(safe.startsWith(`${WIKI_DIR}/`) || safe.startsWith(`${specs}/`))) {
+      throw new RefusalError(`page "${id}" is not under ${WIKI_DIR}/ or ${specs}/`);
     }
     return join(this.projectDir, safe);
   }
@@ -489,7 +495,7 @@ class EvidenceRepo extends ReadOnlyRepo<Evidence> {
   }
 
   async list(q?: Query<Evidence>): Promise<Evidence[]> {
-    const root = join(this.projectDir, EVIDENCE_DIR);
+    const root = join(this.projectDir, evidenceDir(this.projectDir));
     if (!existsSync(root)) return [];
     const { cards } = readCards(this.projectDir);
     const items = readdirSync(root)
@@ -499,7 +505,7 @@ class EvidenceRepo extends ReadOnlyRepo<Evidence> {
         const files = readdirSync(join(root, nnn))
           .filter(f => statSync(join(root, nnn, f)).isFile())
           .sort()
-          .map(name => ({ name, kind: KIND_BY_EXT[extname(name).toLowerCase()] ?? 'other', path: `${EVIDENCE_DIR}/${nnn}/${name}` }));
+          .map(name => ({ name, kind: KIND_BY_EXT[extname(name).toLowerCase()] ?? 'other', path: `${evidenceOf(this.projectDir, nnn)}/${name}` }));
         const cardId = cards.find(c => cardKey(c) === nnn || c.id.toLowerCase() === nnn.toLowerCase())?.id;
         // The folder's version moves when any file in it is added, removed or rewritten.
         const version = sha1(files.map(f => `${f.name}:${statSync(join(root, nnn, f.name)).mtimeMs}`).join('\n'));
@@ -521,21 +527,23 @@ class ArtifactsRepo extends ReadOnlyRepo<Artifact> {
       const path = findMock(this.projectDir, card.id);
       if (!path) return [];
       const html = readText(join(this.projectDir, path));
-      const legacy = path.startsWith(`${MOCKS_DIR}/`) ? path.split('/').slice(2) : [];
+      const archived = ARCHIVE_PREFIXES.find(p => path.startsWith(p));
+      const legacy = archived ? path.slice(archived.length).split('/') : [];
       const meta = mockMeta(html);
       const project = meta.project ?? legacy[0];
       const topic = meta.topic ?? legacy[1];
       const lineage = mockLineage(html);
       return [{ id: path, kind: 'mock', project, topic, cardId: card.id, ...(lineage[1] ? { from: lineage[1] } : {}), ...(lineage.length ? { lineage } : {}), title: card.title, version: sha1(html) }];
     });
-    const dir = join(this.projectDir, ARTIFACTS_DIR);
+    const artifacts = artifactsDir(this.projectDir);
+    const dir = join(this.projectDir, artifacts);
     const pages: Artifact[] = existsSync(dir)
       ? readdirSync(dir)
           .filter(f => f.endsWith('.html'))
           .sort()
           .map(f => {
             const html = readText(join(dir, f));
-            return { id: `${ARTIFACTS_DIR}/${f}`, kind: 'artifact', title: title(html, basename(f, '.html')), version: sha1(html) };
+            return { id: `${artifacts}/${f}`, kind: 'artifact', title: title(html, basename(f, '.html')), version: sha1(html) };
           })
       : [];
     return applyQuery([...mocks, ...pages], q);

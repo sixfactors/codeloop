@@ -303,7 +303,7 @@ function outputFile(projectDir: string, ref: string): { card: Card; path: string
   const stage = card.stage === DONE || card.stage === 'proposed' || card.stage === DROPPED ? undefined : loadLane(projectDir, card.lane).stages.find(s => s.id === card.stage);
   if (!stage) throw new RefusalError(`card ${card.id} is ${card.stage}; it has no stage output`);
   if (!stage.output) throw new RefusalError(`stage ${stage.id} of lane ${card.lane} names no output file`);
-  const path = substitute(stage.output, card);
+  const path = substitute(stage.output, card, { projectDir });
   const root = resolve(projectDir);
   const file = resolve(root, path);
   if (!file.startsWith(root + sep)) throw new RefusalError(`stage output "${path}" is outside the project`);

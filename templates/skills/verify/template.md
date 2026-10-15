@@ -1,6 +1,6 @@
 # Use case skeleton
 
-<!-- One file per use case, in usecases/{nnn}/uc-{nnn}-{seq}.yaml. -->
+<!-- One file per use case, in {usecases}/uc-{nnn}-{seq}.yaml. -->
 
 ```yaml
 id: uc-{nnn}-{seq}

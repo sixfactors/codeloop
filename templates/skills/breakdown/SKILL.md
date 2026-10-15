@@ -3,12 +3,12 @@ name: breakdown
 stage: breakdown
 lane: shape
 inputs:
-  - shape/{id}/brief.md
-  - shape/{id}/interview.md
+  - {shape}/brief.md
+  - {shape}/interview.md
   - docs/story-standard.md
   - docs/terminology.md
 outputs:
-  - shape/{id}/breakdown.md
+  - {shape}/breakdown.md
 check: "codeloop check breakdown {id} --ranked"
 questions: 2
 ---
@@ -26,9 +26,9 @@ this; the ordering itself, whether story 2 is genuinely usable without story 4, 
 
 ## Inputs
 
-1. `shape/{id}/brief.md`, the `exists:` verdicts and the problem. Every story's `exists:` verdict
+1. `{shape}/brief.md`, the `exists:` verdicts and the problem. Every story's `exists:` verdict
    is copied from here, never re-decided.
-2. `shape/{id}/interview.md`, every answered question from the interview stage. An answer here
+2. `{shape}/interview.md`, every answered question from the interview stage. An answer here
    that never reaches a story was pointless to ask.
 3. `docs/story-standard.md`, in particular the Size table and SPIDR split
    (paths, interfaces, data, rules, spike): an L story is split with these five cuts into two or

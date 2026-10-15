@@ -3,8 +3,8 @@
 Reviewer-facing. Pull this into a PR description or run it by eye before handing off to `sdk`.
 
 - [ ] `codeloop task check {id} --all-done && npm test` passes
-- [ ] Every `[api]` task in `specs/{id}/tasks.md` is ticked
-- [ ] Every ticked task traces to an acceptance line in `specs/{id}/spec.md`
+- [ ] Every `[api]` task in `{spec}/tasks.md` is ticked
+- [ ] Every ticked task traces to an acceptance line in `{spec}/spec.md`
 - [ ] Every new/changed route has a test driving the real HTTP seam (not a service-only unit test
   standing in for it)
 - [ ] Every test asserts the response body shape, not only the status code

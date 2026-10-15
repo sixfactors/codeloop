@@ -1,4 +1,4 @@
-# Breakdown checklist, shape/{id}
+# Breakdown checklist, {shape}
 
 - [ ] `hypothesis:` line present, one sentence
 - [ ] `metric:` line present, names the one metric this epic moves

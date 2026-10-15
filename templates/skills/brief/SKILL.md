@@ -3,13 +3,13 @@ name: brief
 stage: brief
 lane: shape
 inputs:
-  - shape/{id}/brief.md
+  - {shape}/brief.md
   - .codeloop/wiki/product/*.md
   - .codeloop/wiki/architecture/*.md
   - .codeloop/wiki/decisions/*.md
   - .codeloop/wiki/competitors/*.md
 outputs:
-  - shape/{id}/brief.md
+  - {shape}/brief.md
 check: "codeloop check brief {id}"
 questions: 3
 ---
@@ -28,7 +28,7 @@ particular because naming a real persona would have meant choosing one.
 
 Read these before writing anything:
 
-1. `shape/{id}/brief.md`, whose `problem:` line holds the problem as the person typed it to
+1. `{shape}/brief.md`, whose `problem:` line holds the problem as the person typed it to
    `codeloop shape "<problem>"`. Fill in the rest of the file; do not replace its structure.
    This is what you search for, not a title you invent from it.
 2. `.codeloop/wiki/product/*.md`, what the product already is. A capability described here as

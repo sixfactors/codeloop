@@ -1,3 +1,4 @@
+import { evidenceOf, usecasesOf } from './paths.js';
 import { specPath } from './project-root.js';
 import { spawnSync } from 'child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
@@ -57,12 +58,12 @@ function git(cwd: string, args: string[]): string {
 }
 
 function loadUseCases(projectDir: string, nnn: string): UseCase[] {
-  const dir = specPath(projectDir, 'usecases', nnn);
+  const dir = specPath(projectDir, usecasesOf(projectDir, nnn));
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter(f => f.endsWith('.yaml')).sort().map(f => {
     const uc = parseYaml(readFileSync(join(dir, f), 'utf-8')) as UseCase;
     // The id names the evidence file.
-    safeName(uc?.id, `use case id in usecases/${nnn}/${f}`);
+    safeName(uc?.id, `use case id in ${usecasesOf(projectDir, nnn)}/${f}`);
     return uc;
   });
 }
@@ -172,7 +173,7 @@ function exportHead(projectDir: string, nnn: string, specDir: string | undefined
   }
   // Checks that list files with git (docs checks, linters) need a repository; this one holds HEAD only.
   spawnSync('sh', ['-c', 'git init -q && git add -A && git -c user.name=verify -c user.email=verify@local -c commit.gpgsign=false commit -q -m head'], { cwd: dir });
-  for (const own of [`usecases/${nnn}`, specDir].filter((p): p is string => Boolean(p))) {
+  for (const own of [usecasesOf(projectDir, nnn), specDir].filter((p): p is string => Boolean(p))) {
     if (existsSync(join(projectDir, own))) cpSync(join(projectDir, own), join(dir, own), { recursive: true });
   }
   if (existsSync(join(projectDir, '.env')) && !existsSync(join(dir, '.env'))) cpSync(join(projectDir, '.env'), join(dir, '.env'));
@@ -195,13 +196,13 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   const acceptance = readAcceptance(projectDir, resolveSpecDir(projectDir, ref));
   const cases = loadUseCases(projectDir, nnn);
   const sha = git(projectDir, ['rev-parse', 'HEAD']);
-  const result: VerifyResult = { exitCode: 0, sha, usecaseDir: `usecases/${nnn}`, missing: acceptance.filter(us => !cases.some(uc => uc.accept === us)), cases: [], vacuous: [] };
+  const result: VerifyResult = { exitCode: 0, sha, usecaseDir: usecasesOf(projectDir, nnn), missing: acceptance.filter(us => !cases.some(uc => uc.accept === us)), cases: [], vacuous: [] };
   // Nothing to check is not a pass: no acceptance lines or no use cases must stop the stage.
   if (acceptance.length === 0) return { ...result, exitCode: 2, problem: `the spec for ${ref} has no acceptance lines (\`- US1 Given ...\`), so there is nothing to verify` };
   if (result.missing.length) return { ...result, exitCode: 2 };
 
   const baseUrl = baseUrlFor(projectDir, opts.env);
-  const out = specPath(projectDir, 'evidence', nnn);
+  const out = specPath(projectDir, evidenceOf(projectDir, nnn));
   mkdirSync(out, { recursive: true });
   // Evidence is written to the tree, but only this card's own evidence folder.
   const exported = verifyWorkspace(projectDir) === 'export' ? exportHead(projectDir, nnn, resolveSpecDir(projectDir, ref)) : undefined;
@@ -237,7 +238,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   const kept = at >= 0 && end > at ? before.slice(0, at) + block + before.slice(end + VERIFY_END.length) : `${block}\n${before ? `\n${before}` : ''}`;
   writeFileSync(file, kept.endsWith('\n') ? kept : `${kept}\n`);
   if (card && opts.record !== false) {
-    annotateCard(projectDir, card.id, { evidence: `evidence/${nnn}/verify.md` }, 'verify', { note: `result: ${ok ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
+    annotateCard(projectDir, card.id, { evidence: `${evidenceOf(projectDir, nnn)}/verify.md` }, 'verify', { note: `result: ${ok ? 'pass' : 'fail'} at ${sha.slice(0, 7) || 'no commit'}` });
   }
   if (!passed) return { ...result, exitCode: 1 };
   if (budget) result.budget = budget;
