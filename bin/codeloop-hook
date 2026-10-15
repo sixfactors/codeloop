@@ -1,0 +1,46 @@
+#!/bin/sh
+# Hook client: codeloop-hook <edit|bash|prompt|session> [args]
+# Asks the resident hook daemon (codeloop hookd) to answer instead of starting a node process per
+# tool call. Anything unusual (no nc, no socket, a dead daemon, a reply of FALLBACK) runs the
+# same `codeloop guard <verb>` the hook used to run, so a hook never depends on the daemon.
+verb=$1
+[ $# -gt 0 ] && shift
+bin=${CODELOOP_BIN:-codeloop}
+sock=${CODELOOP_HOOKD_SOCK:-${CODELOOP_HOME:-$HOME/.codeloop}/state/hookd.sock}
+body=
+[ -t 0 ] || body=$(cat)
+
+cli() {
+  printf '%s' "$body" | "$bin" guard "$verb" "$@"
+  exit $?
+}
+
+command -v nc >/dev/null 2>&1 || cli "$@"
+
+if [ ! -S "$sock" ]; then
+  # First call: start the daemon for the next one and answer this one the slow way.
+  ("$bin" hookd >/dev/null 2>&1 &)
+  cli "$@"
+fi
+
+args=
+for a in "$@"; do args="${args:+$args	}$a"; done
+len=$(printf '%s' "$body" | wc -c | tr -d ' ')
+resp=$({
+  printf '%s\n%s\n%s\n%s\n' "$verb" "$PWD" "$args" "$len"
+  env | grep -E '^(CODELOOP_|CLAUDE_CODE_|CURSOR_)[A-Za-z0-9_]*='
+  printf '\n%s' "$body"
+} | nc -w 5 -U "$sock" 2>/dev/null)
+
+code=$(printf '%s\n' "$resp" | sed -n 1p)
+case $code in
+  '' | *[!0-9]*)
+    ("$bin" hookd >/dev/null 2>&1 &)
+    cli "$@"
+    ;;
+esac
+out=$(printf '%s\n' "$resp" | sed '1d;/^--CODELOOP-STDERR--$/,$d')
+err=$(printf '%s\n' "$resp" | sed '1,/^--CODELOOP-STDERR--$/d')
+[ -n "$out" ] && printf '%s\n' "$out"
+[ -n "$err" ] && printf '%s\n' "$err" >&2
+exit "$code"

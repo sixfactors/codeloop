@@ -59,16 +59,47 @@ function trunkRef(projectDir: string): string {
  */
 export const storyRef = (ref?: string): string | undefined => ref || process.env.CODELOOP_STORY_REF?.trim() || undefined;
 
-function scan(projectDir: string, cardId: string, all: boolean, ref?: string): { sha: string; subject: string; at: number; decorations: string }[] {
+type Scanned = { sha: string; subject: string; at: number; decorations: string };
+
+// While a caller holds withCommitIndex, every card's commits come from one `git log --all`, read
+// once: the monitor asks about every card, and a log per card cost 2.7 s on a board of 171.
+let index: { dir: string; byCard: Map<string, Scanned[]> } | undefined;
+
+const cardsOf = (body: string): string[] => body.split('\n').flatMap(l => {
+  const m = /^(?:Card|Feature):\s*(\S+)\s*$/.exec(l);
+  return m ? [m[1]] : [];
+});
+
+function readLog(projectDir: string, ref: string | undefined, all: boolean): { rec: Scanned; body: string }[] {
   const log = git(projectDir, ['log', ...(ref ? [ref] : all ? ['--all'] : []), '--format=%H%x00%s%x00%b%x00%D%x00%ct%x01']);
-  const out: { sha: string; subject: string; at: number; decorations: string }[] = [];
+  const out: { rec: Scanned; body: string }[] = [];
   for (const rec of log.split('\u0001')) {
     const [sha, subject, body, decorations, ct] = rec.replace(/^\n/, '').split('\u0000');
-    if (!sha || !body || !body.split('\n').some(trailerOf(cardId))) continue;
-    out.push({ sha, subject, decorations: decorations ?? '', at: Number(ct) * 1000 });
+    if (sha && body) out.push({ rec: { sha, subject, decorations: decorations ?? '', at: Number(ct) * 1000 }, body });
   }
   return out;
 }
+
+/** Runs `fn` with all cards' story commits read from a single git log. Not reentrant across projects. */
+export function withCommitIndex<T>(projectDir: string, fn: () => T): T {
+  const byCard = new Map<string, Scanned[]>();
+  for (const { rec, body } of readLog(projectDir, undefined, true)) for (const id of new Set(cardsOf(body))) (byCard.get(id) ?? byCard.set(id, []).get(id)!).push(rec);
+  const saved = index;
+  index = { dir: projectDir, byCard };
+  try {
+    return fn();
+  } finally {
+    index = saved;
+  }
+}
+
+function scan(projectDir: string, cardId: string, all: boolean, ref?: string): Scanned[] {
+  if (index && index.dir === projectDir && all && !ref) return index.byCard.get(cardId) ?? [];
+  return readLog(projectDir, ref, all).filter(({ body }) => body.split('\n').some(trailerOf(cardId))).map(x => x.rec);
+}
+
+/** When each commit carrying the card's trailer landed, without the branch and trunk lookups storyCommits adds. */
+export const storyCommitTimes = (projectDir: string, cardId: string): number[] => scan(projectDir, cardId, true).map(c => c.at);
 
 export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
   const trunk = trunkRef(projectDir);

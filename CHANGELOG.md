@@ -35,6 +35,16 @@ when package.json names a version this file has no heading for.
 - A check that fails the same way as the last one, with no activity on the story since, no longer uses up a retry (it still writes its check line and `fail` event), so pressing Check now twice cannot park a story as stuck.
 - The story page's check sentence says when the check is out of date ("The check failed at 17:50: 20 of 20 tasks open. Changed since: 3 of 16 tasks done; run Check now.", `journey.check.stale`), and a story with a live session on it reports its holder as the agent even when parked stuck.
 
+### One main tree by default
+- The default is one main tree: `orch.isolation: tree` runs each builder in the main tree on the
+  checked-out branch, holding a lease on its plan's files; the gate judges the story's own trailered
+  commits and there is no merge step. Up to `orch.max_builders` (2) builders run at once on disjoint
+  plans; a story whose plan overlaps a held lease waits (`waiting-lease`, naming the holder) and a
+  builder over the cap is `queued`, and the doctor tick retries both. A failed gate is fixed forward;
+  nothing is reset. `worktree` and `auto` (a worktree for an L story) are options, `orch.on_conflict:
+  worktree` takes a worktree instead of waiting, and `codeloop worktree prune` removes merged, clean
+  worktrees. `orch status` shows each story's mode and lease.
+
 ### Resilience
 - One budget per run: `orch run`, `run --due`, the doctor tick and a card run stop at 12 turns, 6
   agent starts, 90 minutes or 3 failures on one stage (`orch.budget`), with the reason recorded.

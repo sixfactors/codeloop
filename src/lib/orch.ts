@@ -5,7 +5,7 @@
  * the record `.codeloop/state/orch/<card>.json`. The orchestrator itself never edits the worktree.
  */
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, loadAgents, resolveAgent, runAgent, type AgentConfig } from './agent.js';
@@ -21,7 +21,9 @@ import { openQuestions } from './interview.js';
 import { loadLane } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
+import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
+import { dropLease, holdsLease, isolation, placeTurn, takeLease, treeRange, type Mode } from './orch-isolation.js';
 import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
 import { LockedError, withRunLock, withRunLockSync } from './run-lock.js';
 import { Budget } from './budget.js';
@@ -29,6 +31,7 @@ import { Budget } from './budget.js';
 export const ORCH_DIR = '.codeloop/state/orch';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FOOTER = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates/orch/brief-footer.md');
+const FOOTER_TREE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates/orch/brief-footer-tree.md');
 
 export interface OrchTurn {
   n: number;
@@ -49,8 +52,10 @@ export interface OrchTurn {
   /** `briefed`: a session or person was handed the brief and has not handed back yet. */
   /** `check-error`: the stage check itself crashed; no retry is spent. `builder-unavailable`: the agent cannot run (not logged in); no retry is spent. */
   /** `merge-failed`: the gate passed but the merge did not; the work was right, so it costs no retry. */
-  /** `locked`: another run held the repo lock past orch.lock_wait_minutes; nothing ran and no retry is spent. */
-  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions' | 'check-error' | 'builder-unavailable' | 'locked';
+  /** `waiting-lease`: another live story leases a file this one's plan names; `queued`: orch.max_builders were already running. Neither ran a builder or costs a retry; the doctor tick tries again. `locked`: another run held the repo lock past orch.lock_wait_minutes; no retry is spent. */
+  outcome: 'merged' | 'failed' | 'stuck' | 'briefed' | 'merge-failed' | 'questions' | 'check-error' | 'builder-unavailable' | 'locked' | 'waiting-lease' | 'queued';
+  /** Where the builder worked: the main tree (`tree`, no merge step) or its own worktree. */
+  mode?: Mode;
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -83,6 +88,8 @@ export interface OrchOptions {
   lockWaitMs?: number;
   /** Minutes to wait for a session or person's hand-back; `false` returns at once with outcome `briefed`. Default `orch.wait_minutes` (120). */
   wait?: number | false;
+  /** Replaces the process-table reading and the sleep when waiting under `limits.max_memory_mb`; tests only. */
+  memory?: MemoryProbe;
 }
 
 export const ORCH_OUTBOX_DIR = `${ORCH_DIR}/outbox`;
@@ -135,6 +142,10 @@ export interface OrchStatusRow {
   idleMinutes: number;
   /** Quiet longer than `monitor.stall_minutes`. */
   stalled: boolean;
+  /** Where the last turn's builder worked, or `orch.isolation` for a story with no turn that ran a builder yet. */
+  mode: Mode | 'auto';
+  /** A builder holds this story's plan files now. */
+  lease: boolean;
 }
 
 export interface OrchReport {
@@ -167,8 +178,8 @@ function saveOrch(projectDir: string, record: OrchRecord): void {
 }
 
 /** The brief an orchestrated builder gets: the stage brief, the last gate's findings, then the rules and the hand-back line. */
-export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[]): string {
-  const footer = readFileSync(FOOTER, 'utf-8')
+export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[], mode: Mode = 'worktree'): string {
+  const footer = readFileSync(mode === 'tree' ? FOOTER_TREE : FOOTER, 'utf-8')
     .replaceAll('{{card}}', card.id)
     .replaceAll('{{worktree}}', worktree)
     .replaceAll('{{branch}}', branch)
@@ -242,14 +253,33 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   } else {
     turn.handback = { head: hb.head, proofExit: hb.proof.exit, left: hb.left, blocked: hb.blocked, at: hb.at, ...(hb.selfcheck ? { selfcheck: hb.selfcheck } : {}) };
     // 5. gate
-    const gate = runGate(projectDir, card.id, { handbackId: hb.head });
+    const gate = runGate(projectDir, card.id, { handbackId: hb.head, ...(turn.mode === 'tree' ? { storyRef: treeRange(projectDir, card.id, hb.head) } : {}) });
     turn.gate = { verdict: gate.verdict, findings: gate.findings, proof: { cmd: gate.proof.cmd, exit: gate.proof.exit } };
     if (gate.checkCrashed !== undefined) {
       checkError(projectDir, card.id, turn.stage, gate.checkCrashed);
       turn.findings.push(...gate.findings);
       crashed = true;
-    } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []));
-    else {
+    } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []), ...(turn.mode === 'tree' ? ['fix forward with a new commit on the branch; nothing was reset or reverted'] : []));
+    else if (turn.mode === 'tree') {
+      // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
+      const adv = advanceCard(projectDir, card.id, { unattended: true });
+      turn.advance = adv.outcome;
+      if (adv.outcome === 'check-error') {
+        crashed = true;
+        turn.findings.push(`stage check crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+      } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
+        turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
+        turn.findings.push(`stage check failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+      } else {
+        turn.outcome = 'merged';
+        const after = postMerge(projectDir, card.id, turn.stage, hb.head);
+        turn.postMerge = after.steps;
+        if (after.failed) {
+          turn.findings.push(after.failed);
+          turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
+        }
+      }
+    } else {
       // 6. merge, then the engine's own advance
       try {
         const merged = mergeStory(projectDir, card.id);
@@ -287,6 +317,8 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   turn.endedAt = new Date().toISOString();
   upsertTurn(record, turn);
   saveOrch(projectDir, record);
+  // The builder has handed back (or never will): its files are free for the next story.
+  dropLease(projectDir, card.id);
   // 7. report
   appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
   return turn;
@@ -367,15 +399,24 @@ async function awaitHandback(projectDir: string, cardId: string, turn: OrchTurn,
   }
 }
 
+const currentBranch = (projectDir: string): string => {
+  const r = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: projectDir, encoding: 'utf-8' });
+  if (r.status !== 0) throw new RefusalError(`cannot read the checked-out branch: ${r.stderr.trim()}`);
+  return r.stdout.trim();
+};
+
 /**
- * One turn: the story's current stage through the builder, the gate, and the merge, holding the
- * repo lock. A turn that cannot take the lock within orch.lock_wait_minutes is recorded as `locked`,
- * names the holder and spends no retry.
+ * One turn: the story's current stage through the builder, the gate, and the merge. The repo lock is
+ * held for the board steps (placing the turn, then gating and merging it) and released while the
+ * builder works, so `orch.max_builders` builders run side by side on disjoint leased plans. A turn
+ * that cannot take the lock within orch.lock_wait_minutes is recorded as `locked`, names the holder
+ * and spends no retry; one that ran its builder and then could not settle is resumed with
+ * `codeloop orch resume`.
  */
 export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
   const id = findCard(readCards(projectDir).cards, cardRef).id;
   try {
-    return await withRunLock(projectDir, `orch ${id} turn`, () => orchTurnLocked(projectDir, id, opts), opts.lockWaitMs);
+    return await orchTurnSteps(projectDir, id, opts);
   } catch (e) {
     if (!(e instanceof LockedError)) throw e;
     const record = readOrch(projectDir, id);
@@ -389,7 +430,71 @@ export async function orchTurn(projectDir: string, cardRef: string, opts: OrchOp
   }
 }
 
-async function orchTurnLocked(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
+async function orchTurnSteps(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchTurn> {
+  const locked = <T>(what: string, fn: () => Promise<T> | T) => withRunLock(projectDir, `orch ${cardRef} ${what}`, fn, opts.lockWaitMs);
+  const ready = await locked('placement', () => placeAndBrief(projectDir, cardRef, opts));
+  if ('done' in ready) return ready.done;
+  const { record, turn, card, agent, brief, wt, mode, builderName } = ready;
+  // 3. builder: outside the lock, so another story's builder can work at the same time.
+  if (!agent) {
+    if (opts.wait === false) return turn;
+    const got = await awaitHandback(projectDir, card.id, turn, waitMinutes(projectDir, opts.wait));
+    return settleLocked(projectDir, record, turn, got ? 'no hand-back' : 'no hand-back within the wait', opts);
+  }
+  void builderName;
+  // A builder is a new process tree; start it only while codeloop's total is under the ceiling.
+  // Waited for outside the lock, so a turn waiting on memory never holds back another story's gate.
+  await waitUnderCeiling(projectDir, opts.memory);
+  let log = '';
+  recordEvent(projectDir, card.id, (_cards, current) => {
+    const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
+    log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
+    return { action: 'agent-start', agent: agent.name, log };
+  });
+  turn.log = log;
+  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: mode === 'tree' ? { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } : { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
+  recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent.timeoutMinutes} minutes` } : {}) }));
+  // An agent that exits within seconds with nothing handed back could not run (not logged in, not
+  // installed): that is a stop, not a failed attempt, and the second in a row marks it unavailable.
+  const handedBack = listHandbacks(projectDir, card.id).some(h => Date.parse(h.at) >= Date.parse(turn.startedAt) && h.stage === card.stage);
+  const marked = noteAgentRun(projectDir, agent.name, { durationMs: ran.durationMs, handedBack, exit: ran.exit });
+  if (!handedBack && ran.durationMs < quickExitMs(projectDir)) {
+    turn.outcome = 'builder-unavailable';
+    turn.findings.push(`agent ${agent.name} exited ${ran.exit ?? 'without a code'} after ${Math.round(ran.durationMs / 100) / 10} s with nothing handed back${marked ? `; it is now marked unavailable until \`codeloop agent clear ${agent.name}\`` : ''} (see ${log})`);
+    turn.endedAt = new Date().toISOString();
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    dropLease(projectDir, card.id);
+    appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.join('; ') });
+    return turn;
+  }
+  return settleLocked(projectDir, record, turn, ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`, opts);
+}
+
+/**
+ * Settles under the repo lock. A builder's work is already done, so a turn that cannot take the lock
+ * is kept as `locked` with its lease, for `codeloop orch resume`, rather than thrown away.
+ */
+async function settleLocked(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandback: string, opts: OrchOptions): Promise<OrchTurn> {
+  try {
+    return await withRunLock(projectDir, `orch ${record.card} gate`, () => settle(projectDir, record, turn, noHandback), opts.lockWaitMs);
+  } catch (e) {
+    if (!(e instanceof LockedError)) throw e;
+    turn.outcome = 'locked';
+    turn.findings.push(`${e.message}; the builder's work is kept: \`codeloop orch resume ${record.card}\` gates it once the lock is free`);
+    upsertTurn(record, turn);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, record.card, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: 'locked', text: e.message });
+    return turn;
+  }
+}
+
+type Placed =
+  | { done: OrchTurn }
+  | { record: OrchRecord; turn: OrchTurn; card: Card; agent?: AgentConfig; brief: string; wt: { path: string; branch: string }; mode: Mode; builderName: string };
+
+/** Steps 1 and 2 under the lock: checks, where the builder works (or why it waits), the lease, the brief. */
+async function placeAndBrief(projectDir: string, cardRef: string, opts: OrchOptions): Promise<Placed> {
   const first = findCard(readCards(projectDir).cards, cardRef);
   if (first.stage === DONE) throw new RefusalError(`card ${first.id} is done`);
   const asked = openQuestions(projectDir, first);
@@ -408,13 +513,24 @@ async function orchTurnLocked(projectDir: string, cardRef: string, opts: OrchOpt
   } else if (spec.kind === 'session') session = findSession(projectDir, spec.ref);
   const builderName = agent?.name ?? (session ? (session.label ?? session.session) : 'person');
 
-  // 1. worktree
-  const wt = ensureStoryWorktree(projectDir, first.id);
+  // 1. where the builder works: the main tree under a lease, its own worktree, or nowhere yet
   const record = readOrch(projectDir, first.id);
+  const placed = placeTurn(projectDir, first.id);
+  if ('wait' in placed) {
+    const waiting: OrchTurn = { n: record.turns.length + 1, stage: first.stage, startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), agent: builderName, builderKind: spec.kind, worktree: '', branch: '', outcome: placed.wait === 'lease' ? 'waiting-lease' : 'queued', findings: [], note: placed.why };
+    upsertTurn(record, waiting);
+    saveOrch(projectDir, record);
+    appendActivity(projectDir, first.id, { kind: 'orch', stage: first.stage, n: waiting.n, outcome: waiting.outcome, text: placed.why });
+    return { done: waiting };
+  }
+  const mode: Mode = placed.mode;
+  const wt = mode === 'tree' ? { path: projectDir, branch: currentBranch(projectDir) } : ensureStoryWorktree(projectDir, first.id);
+  // The lease claims the plan's files for this story while the builder runs, in either mode.
+  takeLease(projectDir, first.id);
   const card = findCard(readCards(projectDir).cards, first.id);
   const n = record.turns.length + 1;
-  const turn: OrchTurn = { n, stage: card.stage, startedAt: new Date().toISOString(), agent: builderName, builderKind: spec.kind, worktree: wt.path, branch: wt.branch, outcome: 'failed', findings: [] };
-  const lastFailed = record.turns.at(-1);
+  const turn: OrchTurn = { n, stage: card.stage, startedAt: new Date().toISOString(), agent: builderName, builderKind: spec.kind, worktree: wt.path, branch: wt.branch, outcome: 'failed', findings: [], mode, note: placed.why };
+  const lastFailed = [...record.turns].reverse().find(t => t.outcome !== 'waiting-lease' && t.outcome !== 'queued');
   const carried = lastFailed && lastFailed.outcome !== 'merged' && lastFailed.outcome !== 'briefed' && lastFailed.outcome !== 'questions' && lastFailed.stage === card.stage ? lastFailed.findings : [];
 
   // A briefed turn nobody answered is closed by the next one, without costing a retry.
@@ -422,10 +538,10 @@ async function orchTurnLocked(projectDir: string, cardRef: string, opts: OrchOpt
   // 2. brief
   const brief = join(projectDir, briefPath(card));
   mkdirSync(dirname(brief), { recursive: true });
-  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried);
+  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried, mode);
   writeFileSync(brief, briefText);
 
-  // 3. builder
+  // The brief goes to a session's or the person's outbox; an agent is started by the caller, unlocked.
   if (!agent) {
     const to = session ? session.session : 'person';
     const outbox = outboxFile(projectDir, to);
@@ -437,43 +553,17 @@ async function orchTurnLocked(projectDir: string, cardRef: string, opts: OrchOpt
     appendActivity(projectDir, card.id, { kind: 'orch-brief', to: session ? (session.label ?? session.session) : 'person', stage: card.stage, n, text: `brief at ${briefPath(card)}` });
     console.log(`  brief for ${card.id} (${builderName}): ${brief}`);
     console.log(`  outbox: ${outbox}`);
-    console.log(`  hand-back line: codeloop card handback ${card.id} --branch ${wt.branch} --head "$(git rev-parse HEAD)" --proof "<proof command>" --left "<what is left>" --blocked "<what blocked you, or empty>" --worktree "${wt.path}"`);
-    if (opts.wait === false) return turn;
-    const got = await awaitHandback(projectDir, card.id, turn, waitMinutes(projectDir, opts.wait));
-    return settle(projectDir, record, turn, got ? 'no hand-back' : 'no hand-back within the wait');
+    console.log(`  hand-back line: codeloop card handback ${card.id} --branch ${wt.branch} --head "$(git rev-parse HEAD)" --proof "<proof command>" --left "<what is left>" --blocked "<what blocked you, or empty>"${mode === 'worktree' ? ` --worktree "${wt.path}"` : ''}`);
   }
-
-  let log = '';
-  recordEvent(projectDir, card.id, (_cards, current) => {
-    const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
-    log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
-    return { action: 'agent-start', agent: agent!.name, log };
-  });
-  turn.log = log;
-  const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
-  recordEvent(projectDir, card.id, () => ({ action: 'agent-run', agent: agent!.name, exit: ran.exit, durationMs: ran.durationMs, log, ...(ran.timedOut ? { note: `timed out after ${agent!.timeoutMinutes} minutes` } : {}) }));
-  // An agent that exits within seconds with nothing handed back could not run (not logged in, not
-  // installed): that is a stop, not a failed attempt, and the second in a row marks it unavailable.
-  const handedBack = listHandbacks(projectDir, card.id).some(h => Date.parse(h.at) >= Date.parse(turn.startedAt) && h.stage === card.stage);
-  const marked = noteAgentRun(projectDir, agent.name, { durationMs: ran.durationMs, handedBack, exit: ran.exit });
-  if (!handedBack && ran.durationMs < quickExitMs(projectDir)) {
-    turn.outcome = 'builder-unavailable';
-    turn.findings.push(`agent ${agent.name} exited ${ran.exit ?? 'without a code'} after ${Math.round(ran.durationMs / 100) / 10} s with nothing handed back${marked ? `; it is now marked unavailable until \`codeloop agent clear ${agent.name}\`` : ''} (see ${log})`);
-    turn.endedAt = new Date().toISOString();
-    upsertTurn(record, turn);
-    saveOrch(projectDir, record);
-    appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.join('; ') });
-    return turn;
-  }
-  return settle(projectDir, record, turn, ran.timedOut ? `no hand-back (the agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the agent exited ${ran.exit})`);
+  return { record, turn, card, ...(agent ? { agent } : {}), brief, wt, mode, builderName };
 }
 
 /** Picks up a briefed turn once its hand-back exists: gate, merge, advance. */
 export function orchResume(projectDir: string, cardRef: string): OrchTurn {
   const card = findCard(readCards(projectDir).cards, cardRef);
   const record = readOrch(projectDir, card.id);
-  const turn = [...record.turns].reverse().find(t => t.outcome === 'briefed' && !t.endedAt);
-  if (!turn) throw new RefusalError(`card ${card.id} has no briefed turn to resume`);
+  const turn = [...record.turns].reverse().find(t => (t.outcome === 'briefed' || (t.outcome === 'locked' && t.mode)) && !t.endedAt);
+  if (!turn) throw new RefusalError(`card ${card.id} has no briefed or locked turn to resume`);
   if (card.gate) throw new RefusalError(`card ${card.id} is waiting at gate "${card.gate}" (${card.awaiting} approves)`);
   const started = Date.parse(turn.startedAt);
   if (!listHandbacks(projectDir, card.id).some(h => Date.parse(h.at) >= started && h.stage === turn.stage)) throw new RefusalError(`no hand-back for ${card.id} ${turn.stage} since the brief; the builder has not handed back yet`);
@@ -554,6 +644,23 @@ export async function orchRun(projectDir: string, cardRef: string, opts: OrchOpt
   }
 }
 
+/** Stories whose last orchestrated turn waited for a lease or a builder slot and are still in a lane with no gate. */
+export function waitingOrchCards(projectDir: string): string[] {
+  const dir = join(projectDir, ORCH_DIR);
+  if (!existsSync(dir)) return [];
+  const cards = readCards(projectDir).cards;
+  return readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
+    try {
+      const rec = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as OrchRecord;
+      const last = rec.turns.at(-1);
+      const card = cards.find(c => c.id === rec.card);
+      return card && !card.gate && card.stage !== DONE && (last?.outcome === 'waiting-lease' || last?.outcome === 'queued') ? [card.id] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export function orchStatus(projectDir: string): OrchStatusRow[] {
   const dir = join(projectDir, ORCH_DIR);
   if (!existsSync(dir)) return [];
@@ -570,7 +677,8 @@ export function orchStatus(projectDir: string): OrchStatusRow[] {
     if (!card) continue;
     const last = rec.turns.at(-1);
     const idle = builderIdle(projectDir, card.id);
-    rows.push({ card: card.id, title: card.title, stage: card.stage, ...(card.gate ? { gate: card.gate } : {}), turns: rec.turns.length, lastOutcome: last?.outcome, builder: last?.agent, ...(last ? { builderLabel: builderLabel(last) } : {}), idleMinutes: idle.idleMinutes, stalled: idle.stalled });
+    const ran = [...rec.turns].reverse().find(t => t.mode);
+    rows.push({ card: card.id, title: card.title, stage: card.stage, ...(card.gate ? { gate: card.gate } : {}), turns: rec.turns.length, lastOutcome: last?.outcome, builder: last?.agent, ...(last ? { builderLabel: builderLabel(last) } : {}), idleMinutes: idle.idleMinutes, stalled: idle.stalled, mode: ran?.mode ?? (rec.turns.some(t => t.worktree && t.worktree !== projectDir) ? 'worktree' : isolation(projectDir)), lease: holdsLease(projectDir, card.id) });
   }
   return rows.sort((a, b) => a.card.localeCompare(b.card));
 }

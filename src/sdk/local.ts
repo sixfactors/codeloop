@@ -5,6 +5,7 @@
  * index-backed reads build the project index on first use and `close()` drops it.
  */
 import { clearAgent } from '../lib/agent-ledger.js';
+import { pruneWorktrees } from '../lib/worktree.js';
 import { killOrphans, listProcs } from '../lib/procs.js';
 import { closeIndex, getIndex, type ProjectIndex } from '../lib/index/index.js';
 import * as services from '../lib/services.js';
@@ -173,6 +174,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     procs: async () => listProcs(projectDir),
     killOrphans: async () => killOrphans(projectDir),
     clearAgent: async name => clearAgent(projectDir, name),
+    pruneWorktrees: async (opts = {}) => pruneWorktrees(projectDir, opts),
     wikiShape: async () => services.wikiShape(projectDir),
     buildWiki: async (opts = {}, roleOpts) => services.buildWiki(projectDir, opts, role(roleOpts)),
     close: async () => {

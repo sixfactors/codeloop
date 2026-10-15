@@ -25,7 +25,7 @@ beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'codeloop-orchpeer-')));
   dir = join(root, 'demo');
   mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
-  writeFileSync(join(dir, '.codeloop/config.yaml'), 'project:\n  name: demo\n');
+  writeFileSync(join(dir, '.codeloop/config.yaml'), 'project:\n  name: demo\norch:\n  isolation: worktree\n');
   writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE);
   writeFileSync(join(dir, 'a.txt'), 'a\n');
   writeFileSync(join(dir, '.gitignore'), '.codeloop/state/\n');

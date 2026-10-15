@@ -35,7 +35,7 @@ function project(lane: string, agentScript: string) {
   mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
   writeFileSync(join(dir, 'fake-agent.sh'), agentScript);
   chmodSync(join(dir, 'fake-agent.sh'), 0o755);
-  writeFileSync(join(dir, '.codeloop/config.yaml'), `project:\n  name: demo\nagents:\n  default: fake\n  fake:\n    cmd: "sh ${join(dir, 'fake-agent.sh')} {brief}"\n    timeout_minutes: 2\norch:\n  quick_exit_seconds: 0\n`);
+  writeFileSync(join(dir, '.codeloop/config.yaml'), `project:\n  name: demo\nagents:\n  default: fake\n  fake:\n    cmd: "sh ${join(dir, 'fake-agent.sh')} {brief}"\n    timeout_minutes: 2\norch:\n  isolation: worktree\n  quick_exit_seconds: 0\n`);
   writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), lane);
   writeFileSync(join(dir, 'a.txt'), 'a\n');
   writeFileSync(join(dir, '.gitignore'), '.codeloop/state/\n');
@@ -217,13 +217,16 @@ describe('orchRun and orchReport', () => {
 describe('projectRoot', () => {
   it('prefers CODELOOP_PROJECT_DIR over the working directory', () => {
     const before = process.env.CODELOOP_PROJECT_DIR;
+    const named = mkdtempSync(join(tmpdir(), 'codeloop-named-'));
     try {
+      process.env.CODELOOP_PROJECT_DIR = named;
+      expect(projectRoot()).toBe(named);
+      // Without it the root comes from the working directory, which a test run keeps in the temp folder.
       delete process.env.CODELOOP_PROJECT_DIR;
-      // With no env, a linked worktree (this checkout may be one) resolves to its main tree.
-      expect(projectRoot()).toBe(mainTreeOf(process.cwd()) ?? process.cwd());
-      process.env.CODELOOP_PROJECT_DIR = '/somewhere/else';
-      expect(projectRoot()).toBe('/somewhere/else');
+      expect(() => projectRoot()).toThrow(/test sandbox: refusing project root/);
+      expect(mainTreeOf(process.cwd())).toBeUndefined();
     } finally {
+      rmSync(named, { recursive: true, force: true });
       if (before === undefined) delete process.env.CODELOOP_PROJECT_DIR;
       else process.env.CODELOOP_PROJECT_DIR = before;
     }
