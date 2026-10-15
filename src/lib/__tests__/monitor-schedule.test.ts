@@ -6,10 +6,15 @@ import { ensureMonitorSchedule } from '../schedule.js';
 
 let fake: string;
 let table: string;
+let noSchedule: string | undefined;
 // Outside the temp folder on purpose: the guard skips anything under it.
 const project = resolve('.vitest-monitor-fixture');
 
 beforeEach(() => {
+  // vitest.setup.ts sets CODELOOP_NO_SCHEDULE=1 for every test; this file tests the install path,
+  // against a stand-in crontab, so it clears the variable for its own run.
+  noSchedule = process.env.CODELOOP_NO_SCHEDULE;
+  delete process.env.CODELOOP_NO_SCHEDULE;
   const bin = mkdtempSync(join(tmpdir(), 'codeloop-crontab-'));
   table = join(bin, 'table');
   fake = join(bin, 'crontab');
@@ -19,7 +24,11 @@ beforeEach(() => {
   mkdirSync(project, { recursive: true });
 });
 
-afterEach(() => rmSync(project, { recursive: true, force: true }));
+afterEach(() => {
+  if (noSchedule === undefined) delete process.env.CODELOOP_NO_SCHEDULE;
+  else process.env.CODELOOP_NO_SCHEDULE = noSchedule;
+  rmSync(project, { recursive: true, force: true });
+});
 
 describe('the monitor keeps itself running', () => {
   it('installs one hourly run --agent when agents are configured and none is scheduled, and only once', () => {
