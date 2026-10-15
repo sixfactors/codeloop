@@ -20,6 +20,8 @@ const OUTPUT_TAIL = 16 * 1024;
 
 export interface GateInput {
   handbackId?: string;
+  /** A tree-mode story's commit range (`<base>..<head>`): the scope check reads only the story's trailered commits in it. */
+  storyRef?: string;
 }
 
 export interface GateRecord {
@@ -82,7 +84,9 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   const findings: string[] = [];
   const workDir = hb.worktree || projectDir;
 
-  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env: hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree, CODELOOP_STORY_REF: hb.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const ref = input.storyRef ?? hb.head;
+  const env = hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree, CODELOOP_STORY_REF: ref } : input.storyRef ? { ...process.env, CODELOOP_STORY_REF: ref } : process.env;
+  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const proof = { cmd: hb.proof.cmd, exit: ran.status ?? 1, output: `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL) };
   const why = (out: string) => {
     const tail = out.trim().split('\n').slice(-4).join(' | ').slice(-500);
@@ -94,7 +98,7 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   // A selfcheck that passed at this exact head already ran the stage check, scope, rubric and budget
   // there; only the proof is rerun. A failed or missing selfcheck changes nothing.
   const skipCheck = hb.selfcheck?.pass === true;
-  const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined, hb.head);
+  const checked = skipCheck ? { passed: true, output: `skipped: selfcheck passed at ${hb.head.slice(0, 8)}` } : runCheck(projectDir, card, stage, hb.worktree || undefined, hb.worktree ? hb.head : input.storyRef);
   if (checked && !checked.passed) findings.push(`stage ${stage.id} check failed${why(checked.output)}`);
 
   let claim: GateRecord['claim'] = null;

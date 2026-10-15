@@ -17,6 +17,8 @@ import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.j
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { reviewBrief } from './rubric.js';
+import { startOrch, waitingOrchCards } from './orch.js';
+import { placeTurn } from './orch-isolation.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
@@ -374,7 +376,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check';
+  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check' | 'orch-retry';
   note: string;
 }
 
@@ -405,6 +407,18 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
   for (const b of stalledBuilders(projectDir, now.getTime())) {
     if (builderIdle(projectDir, b.card, now.getTime()).nudged) continue;
     log({ id: b.card, action: 'nudge-builder', note: `builder idle ${b.idleMinutes} min on ${b.stage}; asked for a hand-back` });
+  }
+  // An orchestrated turn that waited for a lease or a builder slot is tried again once one is free.
+  for (const id of waitingOrchCards(projectDir)) {
+    if (opts.skip?.has(id)) continue;
+    const placed = placeTurn(projectDir, id);
+    if ('wait' in placed) continue;
+    try {
+      startOrch(projectDir, id, opts.agent ? { agent: opts.agent } : {});
+      log({ id, action: 'orch-retry', note: `doctor started the waiting turn again (${placed.mode}): ${placed.why}` });
+    } catch (e) {
+      if (!(e instanceof RefusalError)) throw e;
+    }
   }
   for (const card of readCards(projectDir).cards) {
     if (opts.skip?.has(card.id)) continue;
