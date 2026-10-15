@@ -614,6 +614,9 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   }
   if (check) {
     if (!check.passed) {
+      // A story at its retry cap is parked: a further failure is not counted and nothing is written,
+      // so `retries` never passes `lane.retries` however often the check is rerun.
+      if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) return { card: before, outcome: 'stuck', output, started: [], because: {} };
       // An unattended run retries on a schedule. If the work has not changed since the last failure
       // there is nothing new to judge, so it must not use up a retry.
       // The check's own output is no guide (test runners print timings), so a stage with no output

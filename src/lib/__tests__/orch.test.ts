@@ -89,6 +89,42 @@ describe('orchTurn', () => {
   }, 60_000);
 });
 
+describe('orchRun stops a story that keeps failing', () => {
+  const LANE10 = TWO_STAGE.replace('retries: 3', 'retries: 10');
+  // Hands back a head whose proof prints a new number and fails, so every turn fails differently.
+  const CHANGING_FAILURE = WORKING_AGENT.replace('--proof "test -f built.txt"', '--proof "echo $RANDOM; exit 1"');
+
+  it('stops on the second identical failure instead of using every retry', async () => {
+    project(LANE10, IDLE_AGENT);
+    const run = await orchRun(dir, 'c-001');
+    expect(run.turns).toHaveLength(2);
+    expect(run.stopped).toMatch(/same failure twice/);
+    expect(readCards(dir).cards[0].retries.code).toBe(2);
+    expect(readOrch(dir, 'c-001').stopped?.reason).toMatch(/same failure twice/);
+  }, 60_000);
+
+  it('stops after three failed turns in a row on one stage even when each failure differs', async () => {
+    project(LANE10, CHANGING_FAILURE);
+    const run = await orchRun(dir, 'c-001');
+    expect(run.turns).toHaveLength(3);
+    expect(run.stopped).toMatch(/failed 3 times in a row on code/);
+    expect(readCards(dir).cards[0].retries.code).toBe(3);
+  }, 90_000);
+
+  it('never counts past lane.retries when a turn lands on a story that is already stuck', async () => {
+    project(TWO_STAGE, IDLE_AGENT);
+    await orchTurn(dir, 'c-001');
+    await orchTurn(dir, 'c-001');
+    await orchTurn(dir, 'c-001');
+    const stuck = readCards(dir).cards[0];
+    expect(stuck.gate).toBe('stuck');
+    const fails = stuck.events.filter(e => e.action === 'fail').length;
+    await expect(orchTurn(dir, 'c-001')).rejects.toThrow(/waiting at gate "stuck"/);
+    expect(readCards(dir).cards[0].events.filter(e => e.action === 'fail')).toHaveLength(fails);
+    expect(readCards(dir).cards[0].retries.code).toBe(3);
+  }, 90_000);
+});
+
 describe('a merge that cannot land', () => {
   it('is merge-failed, costs no retry, stops the run and feeds the finding into the next brief', async () => {
     project(TWO_STAGE, WORKING_AGENT);

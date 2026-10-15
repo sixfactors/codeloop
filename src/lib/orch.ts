@@ -62,6 +62,8 @@ export interface PostMergeStep {
 export interface OrchRecord {
   card: string;
   turns: OrchTurn[];
+  /** Why the last `orchRun` stopped, kept so `orch status` can say it after the process is gone. */
+  stopped?: { reason: string; at: string };
 }
 
 export interface OrchOptions {
@@ -174,10 +176,12 @@ function agentStartsToday(projectDir: string, agent: AgentConfig, now: Date): nu
 function countFailure(projectDir: string, id: string, note: string): 'failed' | 'stuck' {
   const file = readCards(projectDir);
   const card = findCard(file.cards, id);
+  // Parked stories take no more failures: `retries` never passes `lane.retries`.
+  if (card.gate === 'stuck') return 'stuck';
   const lane = loadLane(projectDir, card.lane);
   const stage = currentStage(lane, card);
   const now = clock().toISOString();
-  const failures = (card.retries[stage.id] ?? 0) + 1;
+  const failures = Math.min((card.retries[stage.id] ?? 0) + 1, lane.retries);
   const stuck = failures >= lane.retries;
   const ev = (action: string) => ({ at: now, actor: 'engine', human: false, action, stage: stage.id, note });
   const next: Card = {
@@ -431,30 +435,53 @@ export function orchInbox(projectDir: string, session: string | undefined = curr
   return out;
 }
 
-/** Turns until the story parks at a gate, is stuck or done, reaches `until`, or the agent runs out of starts for the day. */
+/** What made a turn fail, as a stable string: two turns with the same one learned nothing new. */
+const fingerprint = (t: OrchTurn) => `${t.outcome}|${t.stage}|${t.findings.join(';')}`;
+
+/** The reason a run should stop after `turns` (this invocation's turns, newest last), if it should. */
+function breaker(turns: OrchTurn[]): string | undefined {
+  const last = turns.at(-1);
+  if (!last || last.outcome === 'merged') return undefined;
+  const lastThree = turns.slice(-3);
+  if (lastThree.length === 3 && lastThree.every(t => t.outcome === 'failed' && t.stage === last.stage)) return `failed 3 times in a row on ${last.stage}; fix the cause before running again`;
+  const prev = turns.at(-2);
+  if (prev && fingerprint(prev) === fingerprint(last)) return `the same failure twice on ${last.stage} (${last.outcome}): ${last.findings.join('; ').slice(0, 300)}; not retrying`;
+  return undefined;
+}
+
+/** Turns until the story parks at a gate, is stuck or done, reaches `until`, a breaker trips, or the agent runs out of starts for the day. */
 export async function orchRun(projectDir: string, cardRef: string, opts: OrchOptions = {}): Promise<OrchRunResult> {
   const id = findCard(readCards(projectDir).cards, cardRef).id;
   const turns: OrchTurn[] = [];
+  const stop = (stopped: string): OrchRunResult => {
+    const record = readOrch(projectDir, id);
+    record.stopped = { reason: stopped, at: new Date().toISOString() };
+    saveOrch(projectDir, record);
+    return { card: id, turns, stopped };
+  };
   for (let i = 0; i < 50; i++) {
     const card = findCard(readCards(projectDir).cards, id);
-    if (card.stage === DONE) return { card: id, turns, stopped: 'done' };
-    if (card.gate === 'stuck') return { card: id, turns, stopped: 'stuck' };
-    if (card.gate) return { card: id, turns, stopped: `gate ${card.gate}` };
-    if (opts.until && card.stage === opts.until) return { card: id, turns, stopped: `reached ${opts.until}` };
+    if (card.stage === DONE) return stop('done');
+    if (card.gate === 'stuck') return stop('stuck');
+    if (card.gate) return stop(`gate ${card.gate}`);
+    if (opts.until && card.stage === opts.until) return stop(`reached ${opts.until}`);
     let turn: OrchTurn;
     try {
       turn = await orchTurn(projectDir, id, opts);
     } catch (e) {
-      if (e instanceof RefusalError && /waiting for answers/.test(e.message)) return { card: id, turns, stopped: 'waiting for answers' };
-      if (e instanceof RefusalError && /max_runs_per_day/.test(e.message)) return { card: id, turns, stopped: e.message };
+      if (e instanceof RefusalError && /waiting for answers/.test(e.message)) return stop('waiting for answers');
+      if (e instanceof RefusalError && /max_runs_per_day/.test(e.message)) return stop(e.message);
       throw e;
     }
     turns.push(turn);
-    if (turn.outcome === 'briefed') return { card: id, turns, stopped: 'briefed' };
-    if (turn.outcome === 'questions') return { card: id, turns, stopped: 'waiting for answers' };
-    if (turn.outcome === 'merge-failed') return { card: id, turns, stopped: `merge failed: ${turn.findings.at(-1)}` };
+    if (turn.outcome === 'briefed') return stop('briefed');
+    if (turn.outcome === 'questions') return stop('waiting for answers');
+    if (turn.outcome === 'merge-failed') return stop(`merge failed: ${turn.findings.at(-1)}`);
+    if (turn.outcome === 'stuck') return stop('stuck');
+    const tripped = breaker(turns);
+    if (tripped) return stop(tripped);
   }
-  return { card: id, turns, stopped: 'turn cap' };
+  return stop('turn cap');
 }
 
 export function orchStatus(projectDir: string): OrchStatusRow[] {

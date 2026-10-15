@@ -68,6 +68,24 @@ describe('engine', () => {
     expect(second.card.events.at(-1)).toMatchObject({ action: 'stuck', note: 'no brief' });
   });
 
+  it('never counts a failure past the lane retries: a rerun of a stuck story that still fails writes nothing', () => {
+    writeLane('market', `retries: 2\nstages:\n  - id: draft\n    done: { cmd: "echo run $RANDOM >&2; exit 1" }\n`);
+    createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
+    advanceCard(dir, 'c-1');
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
+    expect(advanceCard(dir, 'c-1').outcome).toBe('stuck');
+    const stuck = readCards(dir).cards[0];
+    const fails = stuck.events.filter(e => e.action === 'fail').length;
+    for (let i = 0; i < 5; i++) {
+      appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
+      expect(advanceCard(dir, 'c-1', { rerunStuck: true }).outcome).toBe('stuck');
+    }
+    const after = readCards(dir).cards[0];
+    expect(after.retries.draft).toBe(2);
+    expect(after.gate).toBe('stuck');
+    expect(after.events.filter(e => e.action === 'fail')).toHaveLength(fails);
+  });
+
   it('refuses to advance a parked card', () => {
     writeLane('market', GATED);
     parkOnCopyGate('c-1');
