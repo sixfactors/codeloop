@@ -7,6 +7,7 @@ when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
 
+- `codeloop doctor` prints each action and each long step as it happens ("rerunning the build check for c-048, up to 10 min"), stops a rerun check after 10 minutes and records `check-error: timed out after 10 min`, and takes `--dry-run` (list what it would do, change nothing) and `--no-checks` (skip the check reruns).
 - `codeloop off [--for 2h] [--why "..."]` pauses codeloop in a repo and `codeloop on` ends it (`CODELOOP_OFF=1` pauses one process tree): every hook exits at once with no board read and no activity line, `orch`, `run` and the doctor refuse to start a turn with "codeloop is off here until HH:MM (why)", `guard session`, `codeloop status`, Home (`off`) and the hub attention list (`off: true`) say so, and a pause with `--for` ends on its own. An owner action in the assistant's shell (`codeloop approve`) still asks you while codeloop is off.
 - codeloop starts in a third of the memory; the test suite runs serially.
 - The workspace story page shows a stuck or failing story that work has landed on as "Stuck · moving" or "Failing · moving", lists its tasks with ticks and layer next to its commits (merged, or the branch holding them), puts the stage's rubric rows (pass, fail, pending, with the finding) beside Approve, and shows "in build 6h 04m, working 1h 12m" on the current step and on each board card. The Orchestration section explains a turn that ended in questions or a failed merge, and Home shows how long a stalled agent has been quiet.

@@ -12,7 +12,7 @@ import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -434,18 +434,25 @@ export function monitorEnabled(projectDir: string): boolean {
  * day gets one "park it" question in the inbox. Each action is a line on the story's activity
  * stream. Stories in `skip` were already worked by this run.
  */
-export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe } = {}): Promise<DoctorAction[]> {
+export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe; onAction?: (a: DoctorAction) => void; onStep?: (line: string) => void; dryRun?: boolean; noChecks?: boolean; checkTimeoutMs?: number } = {}): Promise<DoctorAction[]> {
   if (!monitorEnabled(projectDir) || readOff(projectDir)) return [];
   const budget = Budget.for(projectDir, now.getTime());
   const actions: DoctorAction[] = [];
   const hasAgents = Object.keys(loadAgents(projectDir).agents).length > 0;
+  const dry = opts.dryRun === true;
   const log = (a: DoctorAction) => {
     actions.push(a);
-    appendActivity(projectDir, a.id, { kind: 'doctor', text: a.note });
+    if (!dry) appendActivity(projectDir, a.id, { kind: 'doctor', text: a.note });
+    opts.onAction?.(a);
   };
+  const checkMs = opts.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
   // A builder holding a card with a quiet stream gets one request for a hand-back per stall.
   for (const b of stalledBuilders(projectDir, now.getTime())) {
     if (builderIdle(projectDir, b.card, now.getTime()).nudged) continue;
+    if (dry) {
+      log({ id: b.card, action: 'nudge-builder', note: `would nudge the builder: idle ${b.idleMinutes} min on ${b.stage}` });
+      continue;
+    }
     log({ id: b.card, action: 'nudge-builder', note: `builder idle ${b.idleMinutes} min on ${b.stage}; asked for a hand-back` });
   }
   // An orchestrated turn that waited for a lease or a builder slot is tried again once one is free.
@@ -453,6 +460,10 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     if (opts.skip?.has(id)) continue;
     const placed = placeTurn(projectDir, id);
     if ('wait' in placed) continue;
+    if (dry) {
+      log({ id, action: 'orch-retry', note: `would start the waiting turn again (${placed.mode})` });
+      continue;
+    }
     try {
       startOrch(projectDir, id, opts.agent ? { agent: opts.agent } : {});
       log({ id, action: 'orch-retry', note: `doctor started the waiting turn again (${placed.mode}): ${placed.why}` });
@@ -465,7 +476,8 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     // A story that entered build before the size rule existed is not thrown out; it is told once.
     if (card.stage === SPLIT_BEFORE_STAGE && !card.events.some(e => e.action === 'split-nudge')) {
       const problem = storySizeProblem(projectDir, card);
-      if (problem) {
+      if (problem && dry) log({ id: card.id, action: 'split-nudge', note: `would tell ${card.id} to split: ${problem}` });
+      else if (problem) {
         recordEvent(projectDir, card.id, () => ({ action: 'split-nudge', note: problem }), now);
         log({ id: card.id, action: 'split-nudge', note: problem });
       }
@@ -475,9 +487,18 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     // Work landed since the check failed: rerun the check, no agent. A pass advances the story and
     // clears stuck; a failure on unchanged work costs nothing (unattended), a changed one is recorded as always.
     if (state.moving && (state.health === 'stuck' || state.health === 'failing')) {
+      if (opts.noChecks) continue;
+      if (dry) {
+        log({ id: card.id, action: 'rerun-check', note: `would rerun the ${card.stage} check (${state.health}, work landed)` });
+        continue;
+      }
+      opts.onStep?.(`rerunning the ${card.stage} check for ${card.id}, up to ${+(checkMs / 60_000).toFixed(2)} min`);
       try {
-        const r = advanceCard(projectDir, card.id, { unattended: true, rerunStuck: true, now });
-        if (r.outcome !== 'unchanged') log({ id: card.id, action: 'rerun-check', note: `doctor reran the ${card.stage} check after work landed (${state.health}): ${r.outcome}` });
+        const r = advanceCard(projectDir, card.id, { unattended: true, rerunStuck: true, now, checkTimeoutMs: checkMs });
+        if (r.outcome === 'check-error') {
+          const why = readCards(projectDir).cards.find(c => c.id === card.id)?.events.filter(e => e.action === 'check-error').at(-1)?.note ?? '';
+          log({ id: card.id, action: 'rerun-check', note: `check-error: ${why.split('\n').pop()}` });
+        } else if (r.outcome !== 'unchanged') log({ id: card.id, action: 'rerun-check', note: `doctor reran the ${card.stage} check after work landed (${state.health}): ${r.outcome}` });
       } catch (e) {
         log({ id: card.id, action: 'rerun-check', note: `doctor could not rerun the ${card.stage} check: ${(e as Error).message}` });
       }
@@ -489,6 +510,10 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
       // An agent a person has to fix first is never restarted by the doctor.
       if (isUnavailable(projectDir, agent.name)) continue;
+      if (dry) {
+        log({ id: card.id, action: 'agent-started', note: `would start agent ${agent.name} on ${card.stage} (failing, ${fails} fails)` });
+        continue;
+      }
       const spent = budget.stop(`${card.id}:${card.stage}`);
       if (spent) {
         log({ id: card.id, action: 'agent-not-started', note: `doctor stopped: ${spent}` });
@@ -500,6 +525,7 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
         log({ id: card.id, action: 'agent-not-started', note: `doctor waited: codeloop processes hold ${mem.total} MB, over limits.max_memory_mb ${mem.ceiling}` });
         break;
       }
+      opts.onStep?.(`starting agent ${agent.name} on ${card.id}`);
       const turn = await workCard(projectDir, card.id, card.stage, agent, now, undefined, budget);
       const started = Boolean(turn.agent?.started);
       log({ id: card.id, action: started ? 'agent-started' : 'agent-not-started', note: started ? `doctor started agent ${agent.name} on ${card.stage} (failing, ${fails} fails); outcome ${turn.advanced.outcome}` : `doctor did not start an agent on ${card.stage}: ${turn.agent?.reason ?? turn.advanced.note ?? turn.advanced.outcome}` });
@@ -508,6 +534,10 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     const untouched = now.getTime() - Date.parse(card.updatedAt) > DAY_MS_DOCTOR;
     if ((state.health === 'stale' || state.health === 'stuck') && untouched) {
       if (openQuestions(projectDir, card).some(q => q.question.startsWith(PARK_QUESTION))) continue;
+      if (dry) {
+        log({ id: card.id, action: 'suggest-park', note: `would ask to park ${card.id}: ${state.health} since ${card.updatedAt.slice(0, 10)}` });
+        continue;
+      }
       try {
         addQuestions(projectDir, card.id, [{ question: `${PARK_QUESTION} ${card.id} has been ${state.health} since ${card.updatedAt.slice(0, 10)}.`, recommended: `yes: \`codeloop card park ${card.id}\`` }], 'agent');
       } catch {

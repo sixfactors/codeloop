@@ -152,14 +152,18 @@ export function checkCrashed(status: number | null, output: string): boolean {
 }
 
 /** Runs the stage's done command without touching the card. null when the stage has no command. `crashed` carries the output tail when the command itself broke. */
-export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string): { passed: boolean; output: string; crashed?: string } | null {
+export const CHECK_TIMEOUT_MS = 600_000;
+
+export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string, timeoutMs: number = CHECK_TIMEOUT_MS): { passed: boolean; output: string; crashed?: string } | null {
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
   // `ref` without `work`: a tree-mode story's commit range on the main tree's branch.
   const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : ref ? { ...checkEnv(), CODELOOP_STORY_REF: ref } : checkEnv();
-  const run = spawnSync(substitute(stage.done.cmd, card, { shell: true, projectDir }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: 600_000, env });
+  const run = spawnSync(substitute(stage.done.cmd, card, { shell: true, projectDir }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: timeoutMs, env, killSignal: 'SIGKILL' });
   const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
+  // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
+  if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
   const passed = run.status === 0;
   return { passed, output, ...(checkCrashed(run.status, `${run.stdout ?? ''}${run.stderr ?? ''}`) ? { crashed: output } : {}) };
 }
@@ -590,7 +594,7 @@ function quietSinceLastCheck(projectDir: string, id: string): boolean {
  * leaves it stuck. The gate is cleared only on the working copy, so a failure with the same
  * fingerprint returns without writing anything.
  */
-export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean } & Clock = {}): AdvanceResult {
+export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean; checkTimeoutMs?: number } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
   let before = findCard(file.cards, ref);
   const id = before.id;
@@ -619,7 +623,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   // Read before this run's own check line is appended: only work by someone since the last check
   // makes the next failure a fresh attempt.
   const quiet = quietSinceLastCheck(projectDir, id);
-  const check = runCheck(projectDir, card, stage);
+  const check = runCheck(projectDir, card, stage, undefined, undefined, opts.checkTimeoutMs);
   const output = check?.output ?? '';
   if (check) appendActivity(projectDir, id, { session: currentSession(), kind: 'check', stage: stage.id, pass: check.passed, output });
   // A check may itself write the board: the scan stage proposes cards, and `verify` records its

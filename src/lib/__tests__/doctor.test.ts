@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readActivity } from '../activity.js';
+import { appendActivity, readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
 import { doctorTick } from '../run.js';
 
@@ -52,5 +52,44 @@ describe('the doctor tick', () => {
   it('does nothing with monitor: off', async () => {
     write('.codeloop/config.yaml', 'monitor: off\nagents:\n  default: fake\n  fake:\n    cmd: "true"\n');
     expect(await doctorTick(dir, new Date())).toEqual([]);
+  });
+
+  describe('a stuck story with work landed since', () => {
+    // The lane's check sleeps, standing in for a build that takes minutes.
+    beforeEach(() => {
+      write('.codeloop/lanes/slow.yaml', 'id: slow\nversion: 1\nmetric: { name: m, source: cards }\nretries: 2\nstages:\n  - id: build\n    done: { cmd: "sleep 5" }\n  - id: ship\n    done: { cmd: "false" }\n');
+      write('.codeloop/config.yaml', 'monitor: on\n');
+      const failedAt = at(2);
+      write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [
+        card('c-9', { lane: 'slow', stage: 'build', gate: 'stuck', awaiting: 'owner', retries: { build: 2 }, updatedAt: failedAt, events: [{ at: failedAt, actor: 'engine', human: false, action: 'fail', stage: 'build', note: 'nope' }] }),
+      ] }, null, 2));
+      appendActivity(dir, 'c-9', { kind: 'edit', text: 'src/x.ts' });
+    });
+
+    it('dry-run lists the rerun and changes nothing', async () => {
+      const before = { cards: readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'), activity: readActivity(dir, 'c-9').items.length };
+      const seen: string[] = [];
+      const t0 = Date.now();
+      const actions = await doctorTick(dir, new Date(), { dryRun: true, onAction: a => seen.push(a.action) });
+      expect(actions.map(a => a.action)).toEqual(['rerun-check']);
+      expect(seen).toEqual(['rerun-check']);
+      expect(Date.now() - t0).toBeLessThan(3000);
+      expect(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).toBe(before.cards);
+      expect(readActivity(dir, 'c-9').items.length).toBe(before.activity);
+    });
+
+    it('no-checks skips the rerun', async () => {
+      expect(await doctorTick(dir, new Date(), { noChecks: true })).toEqual([]);
+    });
+
+    it('a check slower than the timeout is recorded as a check-error and the doctor returns; the step line is printed first', async () => {
+      const steps: string[] = [];
+      const t0 = Date.now();
+      const actions = await doctorTick(dir, new Date(), { checkTimeoutMs: 600, onStep: l => steps.push(l) });
+      expect(Date.now() - t0).toBeLessThan(4000);
+      expect(steps[0]).toMatch(/rerunning the build check for c-9, up to /);
+      expect(actions.map(a => [a.action, a.note])).toEqual([['rerun-check', expect.stringMatching(/^check-error: timed out after /)]]);
+      expect(readCards(dir).cards[0].events.at(-1)?.action).toBe('check-error');
+    });
   });
 });

@@ -73,10 +73,19 @@ export const runCommand = new Command('run')
 export const doctorCommand = new Command('doctor')
   .description('Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories')
   .option('--json', 'JSON output')
-  .action(guard(async (opts: { json?: boolean }) => {
+  .option('--dry-run', 'list what the doctor would do; run no check, start no agent, write nothing')
+  .option('--no-checks', 'skip rerunning checks of stuck or failing stories')
+  .action(guard(async (opts: { json?: boolean; dryRun?: boolean; checks?: boolean }) => {
     const off = readOff(projectRoot());
     if (off && !opts.json) console.log(`  ${offLine(off)}`);
-    const actions = await doctorTick(projectRoot(), clock());
+    // Each action and each long step prints as it happens, so a slow check does not leave the screen blank.
+    const live = !opts.json;
+    const actions = await doctorTick(projectRoot(), clock(), {
+      dryRun: opts.dryRun,
+      noChecks: opts.checks === false,
+      onStep: live ? line => console.log(`  doctor: ${line}`) : undefined,
+      onAction: live ? d => console.log(`  doctor ${d.id}: ${d.note}`) : undefined
+    });
     if (opts.json) {
       console.log(JSON.stringify(actions, null, 2));
       return;
@@ -84,5 +93,4 @@ export const doctorCommand = new Command('doctor')
     const legacy = legacyFolders(projectRoot());
     if (legacy.length) console.log(`  legacy layout: ${legacy.map(d => `${d}/`).join(', ')} at the repo root; run \`codeloop store move --layout dotfolder\``);
     if (!actions.length && !legacy.length) console.log('doctor: nothing to do');
-    actions.forEach(d => console.log(`  doctor ${d.id}: ${d.note}`));
   }));

@@ -63,7 +63,7 @@ The builder is an agent by default. `--builder session:<id-or-label-prefix>` or 
 | `codeloop orch run <card> [--builder agent\|session:<x>\|person] [--until <gate>]` | Runs a story's stages through a builder, gating each hand-back. |
 | `codeloop orch status`, `report <card>`, `resume <card>`, `inbox` | Show stories under orchestration, report a story, finish a briefed turn, list waiting briefs. |
 | `codeloop off [--for 2h] [--why "..."]`, `codeloop on` | Pause and resume codeloop in this repo; `CODELOOP_OFF=1` pauses one process tree. |
-| `codeloop doctor` | Runs one doctor tick now and names legacy folders. |
+| `codeloop doctor` | Runs one doctor tick now and names legacy folders; prints each action as it happens, `--dry-run` lists what it would do and changes nothing, `--no-checks` skips rerunning checks, and a rerun check stops after 10 minutes as a `check-error`. |
 | `codeloop ps [--kill-orphans] [--total]` | Lists codeloop processes with memory and the agents it started; kills orphans only. |
 | `codeloop agent clear <name>` | Lets an agent marked unavailable run again. |
 | `codeloop worktree prune` | Removes worktrees whose branch is merged and whose tree is clean. |
