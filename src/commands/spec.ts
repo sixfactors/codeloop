@@ -9,7 +9,7 @@ export const specCommand = new Command('spec').description("A card's spec folder
 
 specCommand
   .command('new <card-id>')
-  .description('Create specs/<nnn>-<slug>/ from the templates and record it on the card')
+  .description('Create .codeloop/specs/<nnn>-<slug>/ (specs/ in the root layout) from the templates and record it on the card')
   .option('--as <role>', 'owner | reviewer | agent')
   .action(guard((cardId: string, opts: { as?: string }) => {
     const { dir, created } = newSpec(projectRoot(), cardId, resolveRole(opts.as));

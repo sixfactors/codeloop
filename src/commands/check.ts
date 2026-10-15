@@ -108,13 +108,13 @@ checkCommand
       if (kind) return checkArtifact(projectRoot(), card, kind);
       if (findMock(projectRoot(), card)) return checkMock(projectRoot(), card);
       if (findArtifact(projectRoot(), card)) return checkArtifact(projectRoot(), card);
-      return [`no artifact for ${card} beside its spec or under docs/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
+      return [`no artifact for ${card} beside its spec or under .codeloop/artifacts; run \`codeloop artifact new ${card} --kind mock|system-design|workflow --topic <topic>\``];
     })(),
   );
 
 checkCommand
   .command('verify <card>')
-  .description("Exit 1 unless evidence/<nnn>/verify.md has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
+  .description("Exit 1 unless the card's verify.md (.codeloop/evidence/<nnn>/) has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
   .action((card: string) => failing(async () => {
     const { checkLiveWalk, liveWalkRequired } = await import('../lib/live-walk.js');
     return liveWalkRequired(projectRoot()) ? checkLiveWalk(projectRoot(), card) : [];
@@ -122,7 +122,7 @@ checkCommand
 
 checkCommand
   .command('scope <card>')
-  .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in evidence/<nnn>/review.md")
+  .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in the card's review.md (.codeloop/evidence/<nnn>/)")
   .action((card: string) => failing(async () => (await import('../lib/scope-creep.js')).checkScope(projectRoot(), card))());
 
 checkCommand
