@@ -1,0 +1,38 @@
+import { Command } from 'commander';
+import { existsSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { assertStoreReady } from './lib/store-home.js';
+import { projectRoot } from './lib/project-root.js';
+
+// Read from package.json directly: createRequire plus a JSON parse is the same work, and this keeps
+// the fast path free of anything but fs.
+const version = (): string =>
+  (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../package.json'), 'utf-8')) as { version: string }).version;
+
+const NO_SYNC = new Set(['cloud', 'init', 'check', 'help']);
+
+/** The program shell: name, version and the step every command runs first. */
+export function baseProgram(): Command {
+  const program = new Command();
+  program
+    .name('codeloop')
+    .description('Self-improving development workflow for AI coding agents')
+    .version(version());
+
+  // With the cloud connected, every command first pushes pending writes and takes what changed there.
+  // cloud.js and the lib behind it load only when .codeloop/cloud.json exists: `guard` runs on every
+  // tool call and has no use for them otherwise.
+  program.hook('preAction', async (_program, action) => {
+    let top = action;
+    while (top.parent && top.parent !== program) top = top.parent;
+    const root = projectRoot();
+    if (!NO_SYNC.has(top.name()) && !process.env.CODELOOP_NO_SYNC && existsSync(join(root, '.codeloop/cloud.json'))) {
+      (await import('./commands/cloud.js')).syncBeforeCommand(top.name());
+    }
+    // store.home: user keeps the board outside the repo, reached through links in the main tree;
+    // every command but `store` itself needs them in place first.
+    if (top.name() !== 'store' && existsSync(join(root, '.codeloop'))) assertStoreReady(root);
+  });
+  return program;
+}

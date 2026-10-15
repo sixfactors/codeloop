@@ -1,7 +1,6 @@
 import chalk from 'chalk';
-import { ConflictError } from '../lib/cards.js';
+import { ConflictError, RefusalError } from '../lib/cards.js';
 import { CloudConflictError } from '../lib/cloud.js';
-import { RefusalError } from '../lib/engine.js';
 
 /** A refusal raised by a command's own argument check, exiting 2 like the engine's. */
 export const refuse = (message: string) => new RefusalError(message);

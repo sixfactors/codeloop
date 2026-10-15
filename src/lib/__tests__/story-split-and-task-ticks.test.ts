@@ -7,9 +7,9 @@ import { fileURLToPath } from 'url';
 import { readCards } from '../cards.js';
 import { advanceCard, createCard, placeCard, RefusalError } from '../engine.js';
 import { cardActivity } from '../services.js';
+import { runCli } from '../../__tests__/cli.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-const CLI = join(ROOT, 'dist/index.js');
 let dir: string;
 
 function write(path: string, text: string): void {
@@ -64,7 +64,7 @@ describe('Task trailer ticks the board', () => {
   const git = (...args: string[]) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd: dir, encoding: 'utf-8' });
   const commit = (trailers: string) => {
     git('commit', '-q', '--allow-empty', '-m', 'feat(x): work', '-m', trailers);
-    return spawnSync(process.execPath, [CLI, 'guard', 'commit'], { cwd: dir, encoding: 'utf-8', env: { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: '' } });
+    return runCli(['guard', 'commit'], { cwd: dir, encoding: 'utf-8', env: { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: '' } });
   };
   const tasksFile = () => readFileSync(join(dir, 'specs/001-big/tasks.md'), 'utf-8');
   const taskLines = () => cardActivity(dir, 'c-1').lines.filter(l => l.kind === 'task');

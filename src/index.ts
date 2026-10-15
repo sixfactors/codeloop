@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 
-import { skillCommand } from './commands/skill.js';
-import { buildProgram } from './program.js';
+import { lazyProgram } from './lazy.js';
 
-// Registered here rather than in program.ts: `codeloop skill eval` is new and program.ts is
-// being edited by other work in parallel. addCommand before parse puts it in the same tree
-// `--help` and the subcommand dispatch walk.
 // Bare `codeloop`: what it is and the one command to run, instead of the full command list.
 if (process.argv.length <= 2) {
   console.log('codeloop turns a problem into stories and works them through checked stages, with you approving at gates.');
@@ -17,6 +13,15 @@ if (process.argv.length <= 2) {
   process.exit(0);
 }
 
-const program = buildProgram();
-program.addCommand(skillCommand);
-program.parse();
+// `skill` is added here because program.ts is edited by other work in parallel; the lazy path
+// loads it by name, the full program gets it below.
+const lazy = await lazyProgram(process.argv);
+if (lazy) {
+  await lazy.parseAsync();
+} else {
+  const { buildProgram } = await import('./program.js');
+  const { skillCommand } = await import('./commands/skill.js');
+  const program = buildProgram();
+  program.addCommand(skillCommand);
+  await program.parseAsync();
+}
