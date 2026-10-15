@@ -14,8 +14,7 @@ acceptance:
 - US1 Given <state>, when <action>, then <result>.
 
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
-screens:
-
+screens: status pill states (mocks/132)
 ## Not building
 
 <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
