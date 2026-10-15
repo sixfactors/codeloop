@@ -21,7 +21,7 @@ const env = () => {
   delete e.CODELOOP_WORK_DIR;
   return e;
 };
-const cl = (cwd: string, ...args: string[]) => execFileSync(process.execPath, [CLI, ...args], { cwd, env: env(), encoding: 'utf-8' });
+const cl = (cwd: string, ...args: string[]) => execFileSync(process.execPath, [CLI, ...args], { cwd, env: env(), encoding: 'utf-8', timeout: 60_000, killSignal: 'SIGKILL' });
 const cards = () => JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).cards as { id: string; title: string; spec?: string }[];
 const config = (extra: string) => writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}${extra}`);
 
@@ -118,7 +118,8 @@ describe('store.move names what user home moves', () => {
     const evidenceBefore = readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8');
 
     const out = cl(dir, 'store', 'move', '--to', 'user');
-    expect(out).toContain('copied .codeloop/cards.json, specs');
+    // The move holds the repo lock, whose file is in .codeloop/state, so state exists and moves too.
+    expect(out).toContain('copied .codeloop/cards.json, .codeloop/state, specs');
     expect(out).not.toMatch(/copied .*evidence/);
     expect(existsSync(join(userStoreDir(dir), 'evidence'))).toBe(false);
     expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toBe(evidenceBefore);
@@ -131,7 +132,7 @@ describe('store.move names what user home moves', () => {
     } catch (e) {
       refused = String((e as { stderr?: string }).stderr ?? e);
     }
-    expect(refused).toMatch(/repo copies are still at \.codeloop\/cards\.json, specs;/);
+    expect(refused).toMatch(/repo copies are still at \.codeloop\/cards\.json, \.codeloop\/state, specs;/);
 
     for (const p of ['.codeloop/cards.json', '.codeloop/state', 'specs']) rmSync(join(dir, p), { recursive: true, force: true });
     cl(dir, 'card', 'list'); // the next ordinary command links the moved paths

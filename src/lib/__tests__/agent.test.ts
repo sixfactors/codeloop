@@ -10,6 +10,7 @@ import { nextHint } from '../flow.js';
 import { planRun, runDue, runDueWithAgent } from '../run.js';
 import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus } from '../schedule.js';
 import { capture } from '../wiki.js';
+import { runCli } from '../../__tests__/cli.js';
 
 const CLI = resolve('dist/index.js');
 let dir: string;
@@ -66,7 +67,7 @@ describe('no agent configured', () => {
     expect(runDue(dir)).toEqual({ created: [], skipped: [], advanced: [{ id: 'c-001', outcome: 'failed' }], lanes: [{ lane: 'build', trigger: 'none', status: 'manual' }] });
     expect(existsSync(join(dir, '.codeloop/state/briefs'))).toBe(false);
     expect(() => resolveAgent(dir)).toThrow(/no agent is configured/);
-    const cli = spawnSync('node', [CLI, 'run', '--agent'], { cwd: dir, encoding: 'utf-8' });
+    const cli = runCli(['run', '--agent'], { cwd: dir, encoding: 'utf-8' });
     expect(cli.status).toBe(2);
   });
 });
@@ -288,7 +289,7 @@ describe('run --agent', () => {
 
     const result = await run();
     expect(result.agents!.map(a => a.started)).toEqual([true, false]);
-    expect(result.agents![1].reason).toBe('agent fake has started 1 time in the last 24 hours (max_runs_per_day is 1)');
+    expect(result.agents![1].reason).toBe('agent fake has started 1 time today (max_runs_per_day is 1)');
     expect(readFileSync(join(dir, 'agent-ran'), 'utf-8')).toBe('ran\n');
     expect(card('c-002').events.some(e => e.action.startsWith('agent-'))).toBe(false);
 

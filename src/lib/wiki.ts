@@ -12,7 +12,8 @@ import { slugify } from './spec.js';
 import { NEAR_PAGE, enforceRule, samePage, titleSimilarity } from './wiki-rules.js';
 import { readCards } from './cards.js';
 
-export const WIKI_DIR = '.codeloop/wiki';
+import { WIKI_DIR } from './wiki-dir.js';
+export { WIKI_DIR };
 const KINDS = { gotcha: 'gotchas', decision: 'decisions', concept: 'concepts' } as const;
 export type Kind = keyof typeof KINDS;
 const STALE_DAYS = 90;

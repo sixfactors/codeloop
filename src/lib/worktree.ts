@@ -185,3 +185,45 @@ export function removeStoryWorktree(projectDir: string, cardRef: string): void {
   if (existsSync(card.worktree)) must(projectDir, ['worktree', 'remove', card.worktree], 'cannot remove the worktree');
   setFields(projectDir, card.id, { worktree: undefined, branch: card.branch });
 }
+
+export interface PrunedWorktree {
+  path: string;
+  branch: string;
+  removed: boolean;
+  why: string;
+}
+
+/**
+ * `codeloop worktree prune`: removes each linked worktree whose branch is merged into the trunk and
+ * whose tree is clean. A worktree with uncommitted work, or an unmerged branch, is listed and left:
+ * it may be another worker's.
+ */
+export function pruneWorktrees(projectDir: string, opts: { dryRun?: boolean } = {}): PrunedWorktree[] {
+  const trunk = trunkOf(projectDir);
+  const list = must(projectDir, ['worktree', 'list', '--porcelain'], 'cannot list worktrees');
+  const out: PrunedWorktree[] = [];
+  const main = must(projectDir, ['rev-parse', '--show-toplevel'], 'cannot read the main tree');
+  for (const block of list.split('\n\n')) {
+    const path = /^worktree (.+)$/m.exec(block)?.[1];
+    const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1];
+    if (!path || path === main) continue;
+    if (!branch) {
+      out.push({ path, branch: '', removed: false, why: 'detached HEAD; left alone' });
+      continue;
+    }
+    const merged = spawnSync('git', ['merge-base', '--is-ancestor', branch, trunk], { cwd: projectDir }).status === 0;
+    if (!merged) {
+      out.push({ path, branch, removed: false, why: `${branch} is not merged into ${trunk}` });
+      continue;
+    }
+    const dirty = existsSync(path) ? spawnSync('git', ['status', '--porcelain'], { cwd: path, encoding: 'utf8' }).stdout.trim() : '';
+    if (dirty) {
+      out.push({ path, branch, removed: false, why: 'has uncommitted changes' });
+      continue;
+    }
+    if (!opts.dryRun) must(projectDir, ['worktree', 'remove', path], `cannot remove ${path}`);
+    for (const card of readCards(projectDir).cards.filter(c => c.worktree === path)) setFields(projectDir, card.id, { worktree: undefined, branch: card.branch });
+    out.push({ path, branch, removed: !opts.dryRun, why: `${branch} is merged into ${trunk} and the tree is clean` });
+  }
+  return out;
+}

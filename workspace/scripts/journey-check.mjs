@@ -5,6 +5,10 @@
 //      current-step panel, never the first's (the panel is keyed by card id).
 //   2. live: with --live, an activity line appended by `codeloop guard bash` in the project shows in
 //      the open story's feed without a reload.
+//   moving: with --moving <id> --in <project> against a hub, the story page's pill, tasks, commits
+//      and phase time match GET /api/p/<project>/cards/<id>/full, and the board face shows the
+//      phase time the board API sends. --rubric <id> --rubric-in <project> checks the gate panel's
+//      rubric rows against the same payload. Read-only: nothing is posted.
 //   3. shots: with --shots <dir>, the story page at 1440 and 900 wide for each --cards id.
 // Exits 1 when a check fails.
 //
@@ -172,6 +176,80 @@ try {
 
   // --questions <id>: the "you" panel offers each question's options as buttons with the
   // recommended one marked, and Accept all suggested answers every open question in one click.
+
+  // Hub mode: pages under /p/<project>/, the API under /api/p/<project>/. Every value expected here
+  // comes from the API, so a screen that drops or invents a row fails.
+  const hubFull = async (project, id) => { const r = await ctx.request.get(`${BASE}/api/p/${project}/cards/${id}/full`); const j = await r.json(); return j.data ?? j; };
+  const hm = (m) => { const h = Math.floor(m / 60); return h ? `${h}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`; };
+  const shoot = async (name, widths = [1440, 900]) => {
+    if (!args.shots) return;
+    mkdirSync(resolve(String(args.shots)), { recursive: true });
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: join(resolve(String(args.shots)), `${name}-${width}.png`), fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+  };
+  if (args.moving) {
+    const id = String(args.moving);
+    const project = String(args.in ?? 'ops-ai');
+    const full = await hubFull(project, id);
+    await page.goto(withToken(`/p/${project}/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-testid="tasks-commits"]').waitFor({ timeout: 90000 });
+    const pill = await page.locator('[data-testid="current-step-panel"] [data-testid="pill-moving"]').count();
+    ok(`${id} pill reads "· moving" exactly when the API says moving`, (pill > 0) === Boolean(full.card.display?.moving), `api moving=${full.card.display?.moving}, pills=${pill}, text=${pill ? await page.locator('[data-testid="pill-moving"]').first().innerText() : '-'}`);
+    const tasks = await page.locator('[data-testid="task-row"]').count();
+    const ticked = await page.locator('[data-testid="task-row"][data-done]').count();
+    const apiDone = full.tasks.filter((t) => t.done).length;
+    ok(`${id} lists every task with its tick`, tasks === full.tasks.length && ticked === apiDone && tasks > 0, `${ticked} of ${tasks} on screen, api ${apiDone} of ${full.tasks.length}`);
+    const layers = await page.locator('[data-testid="task-layer"]').allInnerTexts();
+    ok(`${id} tasks carry their layer chips`, layers.join() === full.tasks.filter((t) => t.layer).map((t) => t.layer).join(), layers.slice(0, 5).join(','));
+    // A live project can land a commit while the page loads: compare against a read taken after it.
+    const after = await hubFull(project, id);
+    const commits = await page.locator('[data-testid="commit-row"]').count();
+    const firstWhere = await page.locator('[data-testid="commit-where"]').first().innerText();
+    const c0 = after.commits[0];
+    const want = c0 ? (c0.merged ? 'merged' : c0.branches.length ? `on ${c0.branches.join(', ')}` : 'on no branch') : '';
+    const firstSha = await page.locator('[data-testid="commit-row"]').first().innerText();
+    ok(`${id} lists every commit newest first, merged or on its branch`, commits === after.commits.length && commits > 0 && firstSha.includes(c0.sha.slice(0, 7)) && firstWhere === want, `${commits} rows, first ${c0?.sha.slice(0, 7)} "${firstWhere}"`);
+    const step = full.journey.steps.find((x) => x.state === 'current' || x.state === 'gate');
+    const wantTime = step && step.activeMinutes !== undefined ? `in ${step.id} ${hm(step.activeMinutes + step.idleMinutes)}, working ${hm(step.activeMinutes)}` : undefined;
+    const gotTime = await page.locator('[data-testid="step-time"]').innerText().catch(() => undefined);
+    // Idle minutes grow while the page loads, so the wall time may run a few minutes past the API's;
+    // the working minutes must match exactly.
+    const mins = (t) => { const m = /^(\d+)h (\d+)m$|^(\d+)m$/.exec(t ?? ''); return m ? (m[3] !== undefined ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2])) : NaN; };
+    const parts = (t) => /^in (\S+) (.+), working (.+)$/.exec(t ?? '');
+    const [g, w] = [parts(gotTime), parts(wantTime)];
+    ok(`${id} current step shows time in phase and time working`, Boolean(g && w) && g[1] === w[1] && g[3] === w[3] && Math.abs(mins(g[2]) - mins(w[2])) <= 3, `${gotTime ?? 'none'}; api ${wantTime ?? 'none'}`);
+    await shoot(`${id}-moving`);
+    // The board face: the first story the board API sends with working minutes.
+    const board = await (await ctx.request.get(`${BASE}/api/p/${project}/board`)).json();
+    const story = (board.data ?? board).phases.flatMap((ph) => Object.values(ph.cells ?? {}).flat()).find((x) => x.activeMinutes !== undefined && x.display.state !== 'done' && x.display.state !== 'shipped');
+    await page.goto(withToken(`/p/${project}/`), { waitUntil: 'domcontentloaded' });
+    if (story) {
+      const face = page.locator(`[data-testid="board-card-${story.id}"] [data-testid="board-card-time"]`).first();
+      const got = await face.innerText({ timeout: 90000 }).catch(() => undefined);
+      ok(`board face of ${story.id} shows its phase time`, got === `in ${story.stage} ${hm(story.activeMinutes + story.idleMinutes)}, working ${hm(story.activeMinutes)}`, got ?? 'none');
+      await shoot('board-phase-time');
+    } else ok('board API sends a story with working minutes', false);
+  }
+  if (args.rubric) {
+    const id = String(args.rubric);
+    const project = String(args['rubric-in'] ?? 'codeloop');
+    const full = await hubFull(project, id);
+    await page.goto(withToken(`/p/${project}/cards/${id}/`), { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-testid="rubric"]').waitFor({ timeout: 90000 });
+    const rows = await page.locator('[data-testid^="rubric-row-"]').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-testid').slice(11)}:${e.getAttribute('data-status')}`));
+    const want = full.rubric.rows.map((r) => `${r.id}:${r.status}`);
+    ok(`${id} gate panel shows every rubric row with its status`, rows.join() === want.join(), rows.join(' '));
+    const sameCard = await page.locator('[data-testid="panel-you"] [data-testid="rubric"] ~ div [data-testid="gate-approve"]').count();
+    ok(`${id} rubric sits in the gate panel above Approve`, sameCard === 1);
+    const findings = full.rubric.rows.filter((r) => r.status === 'fail' && r.finding).length;
+    const shown = await page.locator('[data-testid^="rubric-row-"][data-status="fail"] p').count();
+    ok(`${id} each failing row shows its finding`, shown === findings, `${shown} of ${findings}`);
+    await shoot(`${id}-rubric`);
+  }
   if (args.questions) {
     const id = String(args.questions);
     await page.goto(withToken(`/cards/${id}/`), { waitUntil: 'domcontentloaded' });

@@ -8,9 +8,9 @@ import { ACTIVITY_DIR } from '../activity.js';
 import { advanceCard } from '../engine.js';
 import { startCardRun } from '../runs.js';
 import { cardActivity } from '../services.js';
+import { runCli } from '../../__tests__/cli.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-const CLI = join(ROOT, 'dist/index.js');
 let dir: string;
 
 // The hooks read the session from their stdin; the parent's own host session must not leak in.
@@ -22,7 +22,7 @@ function write(path: string, text: string): void {
 }
 
 function hook(args: string[], input: Record<string, unknown>, env: Record<string, string> = {}): number | null {
-  return spawnSync(process.execPath, [CLI, ...args], { cwd: dir, encoding: 'utf-8', input: JSON.stringify(input), env: { ...ENV, ...env } }).status;
+  return runCli([...args], { cwd: dir, encoding: 'utf-8', input: JSON.stringify(input), env: { ...ENV, ...env } }).status;
 }
 
 beforeEach(() => {

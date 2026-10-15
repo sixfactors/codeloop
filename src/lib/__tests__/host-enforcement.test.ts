@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { getActiveCard, setActiveCard } from '../active-card.js';
 import { render } from '../render.js';
 import { guardSignal, WARNINGS_PATH } from '../../watch/guard.js';
+import { runCli } from '../../__tests__/cli.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const CLI = join(ROOT, 'dist/index.js');
@@ -27,7 +28,7 @@ function writeCard(id: string, stage: string, extra: Record<string, unknown> = {
 }
 
 function cli(args: string[], opts: { input?: string; env?: NodeJS.ProcessEnv } = {}): { status: number | null; stdout: string; stderr: string } {
-  const run = spawnSync(process.execPath, [CLI, ...args], { cwd: dir, encoding: 'utf-8', input: opts.input ?? '', env: { ...process.env, ...opts.env } });
+  const run = runCli([...args], { cwd: dir, encoding: 'utf-8', input: opts.input ?? '', env: { ...process.env, ...opts.env } });
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
 

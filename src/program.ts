@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import { createRequire } from 'node:module';
 import { initCommand } from './commands/init.js';
 import { updateCommand } from './commands/update.js';
 import { statusCommand } from './commands/status.js';
@@ -8,10 +7,8 @@ import { openCommand } from './commands/open.js';
 import { hubCommand } from './commands/hub.js';
 import { projectsCommand } from './commands/projects.js';
 import { storeCommand } from './commands/store.js';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { assertStoreReady } from './lib/store-home.js';
-import { projectRoot } from './lib/project-root.js';
+import { agentCommand, psCommand } from './commands/ps.js';
+import { worktreeCommand } from './commands/worktree.js';
 import { watchCommand } from './commands/watch.js';
 import { installCommand } from './commands/install.js';
 import { searchCommand } from './commands/search.js';
@@ -40,32 +37,18 @@ import { importCommand } from './commands/import.js';
 import { cardSelfcheckCommand, cardDiffCommand, cardHealthCommand, healthCommand, statsCommand, verifyCommand } from './commands/verify.js';
 import { learnCommand, wikiCommand } from './commands/wiki.js';
 import { configCommand, gateCommand, mcpCommand, renderCommand } from './commands/render.js';
-import { cloudCommand, syncBeforeCommand } from './commands/cloud.js';
+import { cloudCommand } from './commands/cloud.js';
 import { mockCommand, mocksCommand } from './commands/mock.js';
 import { artifactCommand, artifactsCommand } from './commands/artifact.js';
-import { guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
+import { attachCardActivate, guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
 import { scanCommand } from './commands/scan.js';
+// After the command modules: program-base reaches the card store first otherwise, and the wiki and
+// features modules then meet in the opposite order (WIKI_DIR read before it is defined).
+import { baseProgram } from './program-base.js';
 
+/** Every command, eagerly loaded: for `--help`, an unknown command, and tests that walk the whole tree. */
 export function buildProgram(): Command {
-  const program = new Command();
-
-  program
-    .name('codeloop')
-    .description('Self-improving development workflow for AI coding agents')
-    .version((createRequire(import.meta.url)('../package.json') as { version: string }).version);
-
-  // With the cloud connected, every command first pushes pending writes and takes what changed there.
-  program.hook('preAction', (_program, action) => {
-    let top = action;
-    while (top.parent && top.parent !== program) top = top.parent;
-    syncBeforeCommand(top.name());
-    // store.home: user keeps the board outside the repo, reached through links in the main tree;
-    // every command but `store` itself needs them in place first.
-    if (top.name() !== 'store') {
-      const root = projectRoot();
-      if (existsSync(join(root, '.codeloop'))) assertStoreReady(root);
-    }
-  });
+  const program = baseProgram();
 
   // Project management
   program.addCommand(initCommand);
@@ -84,6 +67,7 @@ export function buildProgram(): Command {
   for (const sub of [cardDiffCommand, cardHealthCommand, cardSelfcheckCommand]) {
     if (!cardCommand.commands.some(c => c.name() === sub.name())) cardCommand.addCommand(sub);
   }
+  attachCardActivate(cardCommand);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
   program.addCommand(shapeCommand);
@@ -99,6 +83,9 @@ export function buildProgram(): Command {
   program.addCommand(runCommand);
   program.addCommand(doctorCommand);
   program.addCommand(orchCommand);
+  program.addCommand(psCommand);
+  program.addCommand(worktreeCommand);
+  program.addCommand(agentCommand);
   program.addCommand(briefCommand);
   program.addCommand(scheduleCommand);
   program.addCommand(adoptCommand);

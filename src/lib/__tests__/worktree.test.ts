@@ -114,3 +114,24 @@ describe('mergeStory', () => {
     expect(sh('git log --oneline').split('\n')).toHaveLength(1);
   });
 });
+
+describe('pruneWorktrees', () => {
+  it('removes a worktree whose branch is merged and tree is clean, and keeps an unmerged or dirty one', async () => {
+    const { pruneWorktrees } = await import('../worktree.js');
+    const merged = ensureStoryWorktree(dir, 'c-001');
+    expect(land(merged.path).verdict).toBe('pass');
+    mergeStory(dir, 'c-001');
+    createCard(dir, { lane: 'build', title: 'Founders can export invoices' });
+    const open = ensureStoryWorktree(dir, 'c-002');
+    writeFileSync(join(open.path, 'c.txt'), 'c\n');
+    sh(`git add -A && ${GIT} commit -qm open`, open.path);
+
+    expect(pruneWorktrees(dir, { dryRun: true }).filter(r => r.removed)).toEqual([]);
+    const rows = pruneWorktrees(dir);
+    expect(rows.find(r => r.path === merged.path)).toMatchObject({ removed: true });
+    expect(rows.find(r => r.path === open.path)).toMatchObject({ removed: false, why: `${open.branch} is not merged into main` });
+    expect(existsSync(merged.path)).toBe(false);
+    expect(existsSync(open.path)).toBe(true);
+    expect(readCards(dir).cards.find(c => c.id === 'c-001')!.worktree).toBeUndefined();
+  });
+});

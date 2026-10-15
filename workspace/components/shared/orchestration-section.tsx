@@ -22,8 +22,15 @@ const OUTCOME: Record<OrchTurn['outcome'], string> = {
   failed: 'border-transparent bg-destructive/15 text-destructive',
   stuck: 'border-transparent bg-destructive/15 text-destructive',
   briefed: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
-  'merge-failed': 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
   questions: 'border-transparent bg-warning/15 text-warning-foreground dark:text-warning',
+  'merge-failed': 'border-transparent bg-destructive/15 text-destructive',
+  // refused: added when the orchestrator records a turn it would not start (not on the trunk yet).
+};
+
+/** What each outcome that stops a turn short means, above the note the orchestrator wrote. */
+const OUTCOME_MEANS: Partial<Record<keyof typeof OUTCOME, string>> = {
+  questions: 'The builder asked questions instead of handing back. The loop waits for your answers.',
+  'merge-failed': 'The gate passed but the merge did not. The work was right, so this costs no retry.',
 };
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -50,6 +57,13 @@ function TurnRow({ turn, detail }: { turn: OrchTurn; detail?: OrchTurnDetail }) 
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-3 border-t px-3 py-2 text-sm">
+        {OUTCOME_MEANS[turn.outcome] ? (
+          <div className="flex flex-col gap-1" data-testid="orch-outcome-note">
+            <p className="text-xs">{OUTCOME_MEANS[turn.outcome]}</p>
+            {turn.note ? <p className="text-xs break-words text-muted-foreground">{turn.note}</p> : null}
+            {turn.outcome === 'merge-failed' && turn.findings.length ? <p className="font-mono text-[11px] break-words text-destructive">{turn.findings.at(-1)}</p> : null}
+          </div>
+        ) : null}
         {detail?.handbackLine ? (
           <div className="flex flex-col gap-1.5" data-testid="orch-briefed">
             <p className="text-xs text-muted-foreground">Handed to {detail.builder}{detail.brief ? <> with the brief at <span className="font-mono">{detail.brief}</span></> : null}. When the work is done, report back with:</p>

@@ -6,6 +6,7 @@
  */
 import { spawnSync } from 'child_process';
 import { existsSync, realpathSync } from 'fs';
+import { tmpdir } from 'os';
 import { basename, dirname, join, resolve } from 'path';
 import { storeHome } from './store-home.js';
 
@@ -28,17 +29,37 @@ function treeOf(cwd: string): { main?: string; top?: string } {
   return found;
 }
 
-/** The main tree of the repository `cwd` is a linked worktree of, when that main tree has a codeloop project; else undefined. */
+const underTemp = (p: string): boolean => {
+  let probe = resolve(p);
+  while (!existsSync(probe) && dirname(probe) !== probe) probe = dirname(probe);
+  const root = realpathSync(tmpdir());
+  const real = realpathSync(probe);
+  return real === root || real.startsWith(root + '/');
+};
+
+const underTest = (): boolean => !!process.env.VITEST || process.env.NODE_ENV === 'test';
+
+/**
+ * The main tree of the repository `cwd` is a linked worktree of, when that main tree has a codeloop project; else undefined.
+ * Under a test run the link is followed only into the temp folder: a suite that runs services from
+ * this repo's own worktree would otherwise resolve to the real board and write fixture cards on it.
+ */
 export function mainTreeOf(cwd: string): string | undefined {
   const { main, top } = treeOf(cwd);
   if (!main || !top || main === top) return undefined;
+  if (underTest() && !underTemp(main)) return undefined;
   return existsSync(join(main, '.codeloop')) ? main : undefined;
 }
 
 export function projectRoot(): string {
   const dir = process.env.CODELOOP_PROJECT_DIR?.trim();
-  if (dir) return dir;
-  return mainTreeOf(process.cwd()) ?? process.cwd();
+  const root = dir || (mainTreeOf(process.cwd()) ?? process.cwd());
+  // CODELOOP_TEST_SANDBOX=1 is set by the vitest setup file and inherited by spawned CLIs: a test
+  // that resolves outside the temp folder would read or write a real board.
+  if (process.env.CODELOOP_TEST_SANDBOX === '1' && !underTemp(root)) {
+    throw new Error(`test sandbox: refusing project root ${root}, which is outside ${tmpdir()}; point the test at a temp directory`);
+  }
+  return root;
 }
 
 /**
