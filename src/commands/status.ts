@@ -10,6 +10,7 @@ import { parse as parseYaml } from 'yaml';
 import { listPages, thresholds, WIKI_DIR } from '../lib/wiki.js';
 import { getServeStatus } from './serve.js';
 import { projectRoot } from '../sdk/local.js';
+import { offLine, readOff } from '../lib/off.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -224,6 +225,11 @@ export const statusCommand = new Command('status')
     console.log();
     console.log(chalk.bold('Codeloop Status'));
     console.log();
+    const off = readOff(projectDir);
+    if (off) {
+      console.log(chalk.yellow(`  ${offLine(off)}; \`codeloop on\` turns it back on`));
+      console.log();
+    }
 
     // Skills per tool
     console.log(chalk.bold('  Skills'));

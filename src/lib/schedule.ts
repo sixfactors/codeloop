@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { dirname, join, sep } from 'path';
 import { RefusalError } from './cards.js';
 import { cronError } from './cron.js';
+import { readOff } from './off.js';
 
 export const RUN_LOG = '.codeloop/state/run.log';
 
@@ -79,7 +80,7 @@ export function scheduleStatus(projectDir: string, crontab = 'crontab'): { line?
  * test fixture must never reach the user's crontab). Returns the one line to print, or undefined.
  */
 export function ensureMonitorSchedule(projectDir: string, opts: { crontab?: string; hasAgents: boolean; monitorOn: boolean; entry?: string }): string | undefined {
-  if (!opts.monitorOn || !opts.hasAgents || process.env.CODELOOP_NO_SCHEDULE === '1') return undefined;
+  if (!opts.monitorOn || !opts.hasAgents || process.env.CODELOOP_NO_SCHEDULE === '1' || readOff(projectDir)) return undefined;
   const real = realpathSync(projectDir);
   if (real.startsWith(realpathSync(tmpdir()) + sep)) return undefined;
   const crontab = opts.crontab ?? 'crontab';

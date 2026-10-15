@@ -16,6 +16,10 @@ import { appendActivity } from '../lib/activity.js';
 import { guard } from './guard.js';
 import type { Card } from '../lib/cards.js';
 import { projectRoot, workDir } from '../lib/project-root.js';
+import { offLine, readOff } from '../lib/off.js';
+
+/** True while `codeloop off` is in force here; checked first by every hook so a paused repo costs one file read and nothing else. */
+const paused = (projectDir: string): boolean => readOff(projectDir) !== undefined;
 
 const PRESENCE_DIR = '.codeloop/state/presence';
 const safeFile = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -147,6 +151,7 @@ guardCommand
   .command('release')
   .description("SessionEnd hook: releases this session's active story, so its files are free for other sessions")
   .action(async () => {
+    if (paused(projectRoot())) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
     if (session && existsSync(join(projectRoot(), '.codeloop'))) appendActivity(projectRoot(), getActiveCard(projectRoot(), session), { session, kind: 'end' });
@@ -158,7 +163,7 @@ guardCommand
   .description("Stop hook: records in the active story's activity that the session finished a turn")
   .action(async () => {
     const projectDir = projectRoot();
-    if (!existsSync(join(projectDir, '.codeloop'))) return;
+    if (paused(projectDir) || !existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
     appendActivity(projectDir, getActiveCard(projectDir, session), { session, kind: 'stop' });
@@ -169,7 +174,7 @@ guardCommand
   .description("post-commit hook: records the commit in the activity of each card its `Card:` (or `Feature:`) trailer names")
   .action(async () => {
     const projectDir = projectRoot();
-    if (!existsSync(join(projectDir, '.codeloop'))) return;
+    if (paused(projectDir) || !existsSync(join(projectDir, '.codeloop'))) return;
     const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)%x00%(trailers:key=Task,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
     if (log.status !== 0) return;
     const [sha, subject, cardTrailer, featureTrailer, taskTrailer] = log.stdout.replace(/\n$/, '').split('\0');
@@ -201,6 +206,7 @@ guardCommand
   .option('--staged', 'Compare the git index instead of the working tree', false)
   .action(guard(async (opts: { staged?: boolean }) => {
     const projectDir = projectRoot();
+    if (paused(projectDir)) return;
     const activeId = getActiveCard(projectDir);
     if (!activeId) return;
     const { findCard, readCards } = await cardsLib();
@@ -235,6 +241,7 @@ presenceCommand
   .description('sessionStart hook: records host, session id and machine')
   .action(async () => {
     const projectDir = projectRoot();
+    if (paused(projectDir)) return;
     const input = await readStdinJson();
     const sessionId = sessionIdFrom(input);
     const dir = join(projectDir, PRESENCE_DIR);
@@ -247,6 +254,7 @@ presenceCommand
   .description('sessionEnd hook: clears the presence file')
   .action(async () => {
     const projectDir = projectRoot();
+    if (paused(projectDir)) return;
     const input = await readStdinJson();
     const file = join(projectDir, PRESENCE_DIR, `${safeFile(sessionIdFrom(input))}.json`);
     if (existsSync(file)) unlinkSync(file);
@@ -257,6 +265,7 @@ presenceCommand
   .description('subagentStart/subagentStop hooks: appends an event line to the session\'s presence log')
   .action(async (kind: string) => {
     const projectDir = projectRoot();
+    if (paused(projectDir)) return;
     const input = await readStdinJson();
     const dir = join(projectDir, PRESENCE_DIR);
     mkdirSync(dir, { recursive: true });
@@ -303,6 +312,7 @@ monitorCommand
 /** Behind `guard edit` and the hook daemon. */
 export async function guardEdit(pathArg?: string): Promise<void> {
   const projectDir = projectRoot();
+  if (paused(projectDir)) return;
   const input = await readStdinJson();
   const toolInput = input.tool_input as { file_path?: string; path?: string } | undefined;
   const path = pathArg ?? toolInput?.file_path ?? toolInput?.path;
@@ -357,6 +367,11 @@ export async function guardEdit(pathArg?: string): Promise<void> {
 export async function guardSession(): Promise<void> {
   const projectDir = projectRoot();
   if (!existsSync(join(projectDir, '.codeloop'))) return;
+  const off = readOff(projectDir);
+  if (off) {
+    console.log(offLine(off));
+    return;
+  }
   const input = await readStdinJson();
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
   const { DONE, DROPPED, findCard, findCardOrNone, readCards } = await cardsLib();
@@ -416,7 +431,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
-    if (command && existsSync(join(projectRoot(), '.codeloop'))) appendActivity(projectRoot(), getActiveCard(projectRoot(), session), { session, kind: 'cmd', text: command });
+    if (command && !paused(projectRoot()) && existsSync(join(projectRoot(), '.codeloop'))) appendActivity(projectRoot(), getActiveCard(projectRoot(), session), { session, kind: 'cmd', text: command });
     if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
     return;
   }
@@ -433,6 +448,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
 /** Behind `guard prompt` and the hook daemon. */
 export async function guardPrompt(): Promise<void> {
   const projectDir = projectRoot();
+  if (paused(projectDir)) return;
   // Not a codeloop project: nothing to say, and nothing worth loading the board libraries for.
   if (!existsSync(join(projectDir, '.codeloop'))) return;
   const input = await readStdinJson();

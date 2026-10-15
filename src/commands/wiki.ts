@@ -4,6 +4,7 @@ import { addCompetitor, listCompetitors } from '../lib/competitors.js';
 import { capture, learn, type Kind } from '../lib/wiki.js';
 import { type WikiEntry } from '../sdk/index.js';
 import { createLocalClient, projectRoot } from '../sdk/local.js';
+import { readOff } from '../lib/off.js';
 import { guard, refuse } from './guard.js';
 
 const client = () => createLocalClient(projectRoot());
@@ -22,6 +23,7 @@ wikiCommand
   .option('--card <id>', 'Card this came from')
   .option('--quiet', 'Used by the Claude Code Stop hook: exit 0 silently when no --title was given, instead of refusing', false)
   .action(guard((opts: { title?: string; scope: string[]; body: string; kind: Kind; card?: string; quiet?: boolean }) => {
+    if (opts.quiet && readOff(projectRoot())) return;
     if (!opts.title) {
       if (opts.quiet) return;
       throw refuse('--title is required (pass --quiet to no-op without one)');

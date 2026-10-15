@@ -70,6 +70,10 @@ codeloop never writes into a project's source tree. What it owns is under `.code
 
 The only writes outside are the host files a project opted into (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.cursor/`, `.agents/`, git hooks) and, with `mock.target: app`, the app's own mocks folder. `src/lib/paths.ts` is the one module that knows these folders; a layering test fails on a root-relative story path anywhere else, and a write-guard test runs a story's writers on a fixture and fails on any change outside `.codeloop/`. `store.layout: root` keeps `specs/`, `evidence/`, `shape/`, `usecases/`, `docs/mocks` and `docs/artifacts` at the repo root for a project that cannot move yet; a project that still has them is read that way, prints a notice on each command, and `codeloop doctor` names the folders. `codeloop store move --layout dotfolder --dry-run` shows the move, and without `--dry-run` it makes it.
 
+## Turning codeloop off for a while
+
+`codeloop off --for 2h --why "spike"` pauses codeloop in this repo; without `--for` the pause lasts until `codeloop on`. While paused, every hook (edit, prompt, session, stop, commit, presence) exits 0 before reading the board and writes no activity line, and `codeloop orch`, `run` and the doctor refuse to start a turn, naming the reason and the end time. The state is `.codeloop/state/off.json` (`until`, `why`, `by`, `at`); a past `until` counts as on and the file is removed on the next read. `CODELOOP_OFF=1` in the environment pauses one process tree without a file. The one thing still active is the permission prompt on `codeloop approve`, `reject` and `answer` run by an assistant, since those are the person's decisions.
+
 ## One board for every worktree
 
 A command run in a linked worktree with no `CODELOOP_PROJECT_DIR` resolves the project to the repository's main tree (`git rev-parse --git-common-dir`), so every worktree reads and writes the one board. Where the board and story files live is `store.home` in `.codeloop/config.yaml`:

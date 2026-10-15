@@ -8,6 +8,7 @@
  * current directory (checked by src/lib/__tests__/no-cwd.test.ts): a hub run from any directory
  * must behave identically.
  */
+import { readOff } from './off.js';
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
@@ -177,7 +178,7 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
       if (p.missing) return [];
       try {
         const { summary } = services.monitorReport(p.path, { limit: 0 });
-        return [{ id: p.id, name: p.name, needsYou: summary.needsYou, failing: summary.failing, stale: summary.stale, working: summary.working, stalled: services.stalledBuilders(p.path).length }];
+        return [{ id: p.id, name: p.name, needsYou: summary.needsYou, failing: summary.failing, stale: summary.stale, working: summary.working, stalled: services.stalledBuilders(p.path).length, off: readOff(p.path) !== undefined }];
       } catch {
         return [];
       }

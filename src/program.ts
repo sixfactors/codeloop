@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { updateCommand } from './commands/update.js';
 import { statusCommand } from './commands/status.js';
+import { offCommand, onCommand } from './commands/off.js';
 import { serveCommand } from './commands/serve.js';
 import { openCommand } from './commands/open.js';
 import { hubCommand } from './commands/hub.js';
@@ -55,6 +56,8 @@ export function buildProgram(): Command {
   program.addCommand(initCommand);
   program.addCommand(updateCommand);
   program.addCommand(statusCommand);
+  program.addCommand(offCommand);
+  program.addCommand(onCommand);
   program.addCommand(serveCommand);
   program.addCommand(openCommand);
   program.addCommand(hubCommand);

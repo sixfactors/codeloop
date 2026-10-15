@@ -1,4 +1,5 @@
 import { builderIdle, stalledBuilders } from './stall.js';
+import { offLine, readOff } from './off.js';
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -87,6 +88,8 @@ export interface AgentStep {
 }
 
 export function runDue(projectDir: string, now: Date = clock(), filter: RunFilter = {}): RunResult {
+  const off = readOff(projectDir);
+  if (off) return { created: [], skipped: [], advanced: [], lanes: [], stopped: offLine(off) };
   const file = join(projectDir, LAST_RUN);
   // Two schedulers started together must not both see the same slot as new.
   const result = withLock(file, () => startDue(projectDir, file, now, filter));
@@ -272,6 +275,8 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
  *  card's stage keeps advancing until its own check stops it: a failed check, a gate, stuck, done,
  *  the agent's max_runs_per_day, or the safety cap. */
 export async function runDueWithAgent(projectDir: string, wanted: AgentWanted, now: Date = clock(), filter: RunFilter = {}): Promise<RunResult> {
+  const off = readOff(projectDir);
+  if (off) return { created: [], skipped: [], advanced: [], agents: [], lanes: [], stopped: offLine(off) };
   try {
     return await withRunLock(projectDir, 'run --due', () => runDueLocked(projectDir, wanted, now, filter));
   } catch (e) {
@@ -430,7 +435,7 @@ export function monitorEnabled(projectDir: string): boolean {
  * stream. Stories in `skip` were already worked by this run.
  */
 export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe } = {}): Promise<DoctorAction[]> {
-  if (!monitorEnabled(projectDir)) return [];
+  if (!monitorEnabled(projectDir) || readOff(projectDir)) return [];
   const budget = Budget.for(projectDir, now.getTime());
   const actions: DoctorAction[] = [];
   const hasAgents = Object.keys(loadAgents(projectDir).agents).length > 0;
