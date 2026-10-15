@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { readCards } from '../cards.js';
 import { advanceCard, createCard, resizeTrivial } from '../engine.js';
 import { lintLane, parseLane } from '../lane.js';
+import { evaluateRubric } from '../rubric.js';
 import { computeStats } from '../stats.js';
 
 let dir: string;
@@ -41,14 +42,33 @@ describe('trivial cards skip the ceremony stages', () => {
     expect(advanceCard(dir, 'c-1').card.stage).toBe('verify');
     expect(advanceCard(dir, 'c-1').card.stage).toBe('done');
 
-    const events = readCards(dir).cards[0].events.map(e => `${e.action}:${e.stage}`);
-    expect(events).toEqual(['create:build', 'advance:build', 'advance:verify']);
+    const events = readCards(dir).cards[0].events;
+    expect(events.map(e => `${e.action}:${e.stage}`)).toEqual(['create:build', 'skip:research', 'skip:spec', 'advance:build', 'advance:verify']);
+    expect(events[1].note).toBe('size trivial: the stage runs only when size >= S');
     expect(existsSync(join(dir, 'specs/research.md'))).toBe(false);
   });
 
   it('keeps research first for an S card and for a card with no size', () => {
     expect(createCard(dir, { lane: 'build', title: 'a', id: 'c-1', fields: { size: 'S' } }).stage).toBe('research');
     expect(createCard(dir, { lane: 'build', title: 'b', id: 'c-2' }).stage).toBe('research');
+  });
+});
+
+describe('on the build lane codeloop ships', () => {
+  beforeEach(() => writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), readFileSync(resolve('templates/lanes/build.yaml'), 'utf-8')));
+
+  it('a trivial card enters at build, every ceremony stage is recorded as skipped, and verify still has its gate', () => {
+    const card = createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    expect(card.stage).toBe('build');
+    expect(card.events.filter(e => e.action === 'skip').map(e => e.stage)).toEqual(['research', 'interview', 'mock', 'spec', 'data-model']);
+    expect(parseLane(readFileSync(join(dir, '.codeloop/lanes/build.yaml'), 'utf-8')).stages.find(s => s.id === 'verify')?.gate?.name).toBe('local');
+  });
+
+  it("the build rubric does not ask a trivial card for the spec stage's tasks or plan", () => {
+    createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    const rows = evaluateRubric(dir, 'c-1', 'build').rows;
+    expect(rows.filter(r => r.status === 'na').map(r => r.id)).toEqual(['B1', 'B4']);
+    expect(rows.find(r => r.id === 'B2')?.status).toBe('fail');
   });
 });
 

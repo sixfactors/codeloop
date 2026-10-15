@@ -41,6 +41,7 @@ stages:
     gate: { name: spec, approver: owner }
   # Passes with no work when no task is tagged `[data]` and spec.md names no `entities:`.
   - id: data-model
+    when: "size >= S"
     skill: system-design
     output: "{spec}/data-model.md"
     done: { cmd: "codeloop check data-model {id} && codeloop check rubric {id}" }

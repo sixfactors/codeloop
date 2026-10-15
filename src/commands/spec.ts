@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { RefusalError, resolveRole } from '../lib/engine.js';
+import { RefusalError, resolveRole, skipsStage } from '../lib/engine.js';
 import { checkSpec, newSpec, readTasks, resolveSpecDir, tickTask } from '../lib/spec.js';
 import { guard } from './guard.js';
 import { projectRoot } from '../sdk/local.js';
@@ -59,6 +59,12 @@ taskCommand
   .option('--all-done', 'Require every task ticked')
   .action(guard((ref: string, opts: { allDone?: boolean }) => {
     if (!opts.allDone) throw new RefusalError('usage: codeloop task check <nnn> --all-done');
+    // A card that skipped the spec stage has no tasks.md; its diff cap bounds the change instead.
+    const skipped = skipsStage(projectRoot(), ref, 'spec');
+    if (skipped) {
+      console.log(`  no tasks: ${skipped}`);
+      return;
+    }
     const { tasks } = readTasks(projectRoot(), resolveSpecDir(projectRoot(), ref));
     const open = tasks.filter(t => !t.done);
     open.forEach(t => console.error(`  open: ${t.id} [${t.layer}] ${t.text}`));

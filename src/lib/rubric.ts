@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { cardKey, findCard, readCards, type Card } from './cards.js';
 import { readQuestions } from './interview.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
-import { loadLane, loadSkillsIndex, substitute, type Stage } from './lane.js';
+import { loadLane, loadSkillsIndex, skipReason, stageApplies, substitute, type Stage } from './lane.js';
 import { checkMock, specScreenRefs, specScreens } from './mock.js';
 import { checkResearch } from './research.js';
 import { checkScope } from './scope-creep.js';
@@ -155,6 +155,9 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
   W6: c => (/^verdict:\s*(approve|accept)\b/im.test(evidence(c, 'review.md')) ? [] : ['review.md has no `verdict: approve` line']),
 };
 
+// The rows whose check reads the spec stage's output, and what they read.
+const SPEC_ROWS: Record<string, string> = { B1: 'tasks.md', B4: 'plan.md file list' };
+
 /** The `- Rn pass: <evidence>` lines under the last `## Rubric` heading of a stage's output. */
 export function attestLines(text: string): Map<string, string> {
   const at = text.lastIndexOf('\n## Rubric');
@@ -208,8 +211,13 @@ export function evaluateRubric(projectDir: string, ref: string, stageId?: string
   const noNewScreen = stage.id === 'mock' && (screens === 'none' || (screens.length === 0 && specScreenRefs(specText(ctx)).length > 0));
   const naReason = `not applicable: no new screen (${screens === 'none' ? '`screens: none`' : 'every screen references an existing mock'} in the spec)`;
 
+  // Rows that read what the spec stage writes do not apply to a card that skipped it (size trivial).
+  const specStage = lane.stages.find(s => s.id === 'spec');
+  const skippedSpec = specStage && !stageApplies(specStage, card) ? skipReason(specStage, card) : undefined;
+
   const rows: RubricResult[] = parseRubric(readFileSync(path, 'utf-8')).map(row => {
     if (noNewScreen && (row.judged === 'attest' || (row.judged === 'check' && !CHECKS[row.id]))) return { ...row, status: 'na', finding: naReason };
+    if (skippedSpec && SPEC_ROWS[row.id]) return { ...row, status: 'na', finding: `not applicable: no ${SPEC_ROWS[row.id]}; the card skipped the spec stage (${skippedSpec})` };
     const check = row.judged === 'check' ? CHECKS[row.id] : undefined;
     if (check) {
       let found: string[];

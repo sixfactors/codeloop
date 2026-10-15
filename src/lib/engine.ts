@@ -15,7 +15,7 @@ import { currentSession } from './active-card.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
-import { firstStage, loadLane, loadLanes, nextStage, stageApplies, substitute, type Lane, type Stage } from './lane.js';
+import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
@@ -235,6 +235,20 @@ function parkIfOutward(card: Card, lane: Lane, now: Date): void {
   if (stage && awaitsApproval(card, stage)) park(card, stage, now, 'before the stage runs');
 }
 
+// A stage whose `when:` does not hold for the card is recorded as skipped, with the reason, so the
+// card's history says why it never ran research or spec.
+function skipEvents(lane: Lane, from: Stage | undefined, to: Stage | undefined, card: { size?: string }, now: Date): CardEvent[] {
+  return skippedStages(lane, from, to, card).map(s => event(now, 'engine', 'skip', s.id, skipReason(s, card)));
+}
+
+/** Why the card skips its lane's `stageId` stage, or undefined when it runs it (or the ref is not a card). */
+export function skipsStage(projectDir: string, ref: string, stageId: string): string | undefined {
+  const card = readCards(projectDir).cards.find(c => c.id === ref || cardKey(c) === ref);
+  if (!card) return undefined;
+  const stage = loadLane(projectDir, card.lane).stages.find(s => s.id === stageId);
+  return stage && !stageApplies(stage, card) ? `${card.id} skips the ${stageId} stage (${skipReason(stage, card)})` : undefined;
+}
+
 function replace(cards: Card[], card: Card): Card[] {
   return cards.map(c => (c.id === card.id ? card : c));
 }
@@ -259,7 +273,7 @@ function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date
     stage: entry.id,
     retries: {},
     evidence: [],
-    events: [event(now, actor, 'create', entry.id, note)],
+    events: [event(now, actor, 'create', entry.id, note), ...skipEvents(lane, undefined, entry, fields ?? {}, now)],
     createdAt: at,
     updatedAt: at,
   };
@@ -590,7 +604,7 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
       ...ready,
       stage: entry.id,
       laneVersion: lane.version,
-      events: [...ready.events, event(now, 'engine', 'promote', entry.id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`)],
+      events: [...ready.events, event(now, 'engine', 'promote', entry.id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`), ...(ready.start_stage ? [] : skipEvents(lane, undefined, entry, ready, now))],
       updatedAt: now.toISOString(),
     };
     parkIfOutward(card, lane, now);
@@ -742,7 +756,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   }
   card.stage = next ? next.id : DONE;
   if (stage.output) card.evidence.push(substitute(stage.output, card, { projectDir }));
-  card.events.push(event(now, 'engine', 'advance', stage.id, `to ${card.stage}`));
+  card.events.push(event(now, 'engine', 'advance', stage.id, `to ${card.stage}`), ...skipEvents(lane, stage, next, card, now));
   for (const page of researchFindings(projectDir, card, stage)) card.events.push(event(now, 'engine', 'findings', stage.id, page));
   const decision = researchDecision(projectDir, card, stage, now);
   if (decision) card.events.push(event(now, 'engine', 'decision', stage.id, decision));
@@ -810,7 +824,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
     card.stage = back ?? firstStage(lane, card).id;
     delete card.parked_from;
     card.laneVersion = lane.version;
-    card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note)];
+    card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note), ...(back ? [] : skipEvents(lane, undefined, lane.stages.find(s => s.id === card.stage), card, now))];
     parkIfOutward(card, lane, now);
   } else if (gate === 'stuck') {
     card.retries[card.stage] = 0;

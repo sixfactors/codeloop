@@ -111,6 +111,18 @@ export function firstStage(lane: Lane, card: { size?: string }): Stage {
   return lane.stages.find(s => stageApplies(s, card)) ?? lane.stages[0];
 }
 
+/** The stages between `from` (exclusive; undefined for the lane's start) and `to` (exclusive; undefined for the end) that the card skips. */
+export function skippedStages(lane: Lane, from: Stage | undefined, to: Stage | undefined, card: { size?: string }): Stage[] {
+  const start = from ? lane.stages.indexOf(from) + 1 : 0;
+  const end = to ? lane.stages.indexOf(to) : lane.stages.length;
+  return lane.stages.slice(start, end).filter(s => !stageApplies(s, card));
+}
+
+/** Why the card skips a stage, as the event note says it. */
+export function skipReason(stage: Stage, card: { size?: string }): string {
+  return `size ${card.size ?? 'M'}: the stage runs only when ${stage.when}`;
+}
+
 /** The stage after `stage` that runs for the card, or undefined at the end of the lane. */
 export function nextStage(lane: Lane, stage: Stage, card: { size?: string }): Stage | undefined {
   return lane.stages.slice(lane.stages.indexOf(stage) + 1).find(s => stageApplies(s, card));
