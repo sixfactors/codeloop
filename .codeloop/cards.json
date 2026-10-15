@@ -1,5 +1,5 @@
 {
-  "version": 1478,
+  "version": 1520,
   "cards": [
     {
       "id": "CL-001",
@@ -2919,7 +2919,7 @@
       "dedupe": "build:docs/story-standard.md:Small fixes skip the ceremony",
       "retries": {
         "research": 1,
-        "build": 1
+        "build": 3
       },
       "evidence": [
         "specs/058-small-fixes-skip-the-ceremony/research.md",
@@ -4752,10 +4752,55 @@
           "action": "fail",
           "stage": "build",
           "note": "    at Command._chainOrCall (/Users/deangrover/Projects/codeloop/node_modules/commander/lib/command.js:1386:12)\n\nNode.js v26.4.0\n\u001b[90mstderr\u001b[2m | src/lib/__tests__/story-interview.test.ts\u001b[2m > \u001b[22m\u001b[2mquestions\u001b[2m > \u001b[22m\u001b[2mthe API lists questions on every card and takes an answer only as owner with the token\n\u001b[22m\u001b[39mError: ENOENT: no such file or directory, open '/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-story-HO33P0/specs/001-add-csv-export/mock.html'\n\u001b[90m    at readFileSync (node:fs:539:20)\u001b[39m\n    at readText \u001b[90m(/Users/deangrover/Projects/codeloop/\u001b[39msrc/lib/store/file.ts:26:36\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/deangrover/Projects/codeloop/\u001b[39msrc/lib/store/file.ts:523:20\n    at Array.flatMap (<anonymous>)\n    at ArtifactsRepo.list \u001b[90m(/Users/deangrover/Projects/codeloop/\u001b[39msrc/lib/store/file.ts:520:37\u001b[90m)\u001b[39m\n    at ProjectIndex.build \u001b[90m(/Users/deangrover/Projects/codeloop/\u001b[39msrc/lib/index/index.ts:522:48\u001b[90m)\u001b[39m\n\u001b[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)\u001b[39m\n    at \u001b[90m/Users/deangrover/Projects/codeloop/\u001b[39msrc/lib/server.ts:155:5\n    at dispatch \u001b[90m(file:///Users/deangrover/Projects/codeloop/\u001b[39mnode_modules/\u001b[4mhono\u001b[24m/dist/compose.js:22:17\u001b[90m)\u001b[39m\n    at dispatch \u001b[90m(file:///Users/deangrover/Projects/codeloop/\u001b[39mnode_modules/\u001b[4mhono\u001b[24m/dist/compose.js:22:17\u001b[90m)\u001b[39m {\n  errno: \u001b[33m-2\u001b[39m,\n  code: \u001b[32m'ENOENT'\u001b[39m,\n  syscall: \u001b[32m'open'\u001b[39m,\n  path: \u001b[32m'/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-story-HO33P0/specs/001-add-csv-export/mock.html'\u001b[39m\n}"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "build",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\n  open: T001 [api] Add `trivial` to Size in src/lib/cards.ts and SIZES in src/lib/story.ts; accept `--size trivial` on card new\n  open: T002 [api] Add Stage `when` in src/lib/lane.ts (size comparisons); propose `when: size >= S` on research, interview, mock and spec in templates/lanes/build.yaml so trivial cards enter at build\n  open: T003 [docs] Add a `trivial` row to the size table in docs/story-standard.md and note that ceremony stages use `when: size >= S`\n  open: T004 [test] scripts/e2e-trivial-ceremony.sh (and a unit test): a trivial card run writes no research.md or spec.md and events are create → build → verify\n  open: T005 [ui] Show the trivial size badge on board tiles and the card drawer (board-with-size, card-drawer-size); local gate note includes \"size: trivial, skipped research/spec\"\n  open: T006 [api] Enforce the trivial diff cap (≤3 files, ≤50 lines) at verify; on breach re-size to S and park at the spec gate\n  open: T007 [test] Use case: an over-cap trivial card is re-sized to S and parked at the spec gate\n  open: T008 [api] Report cycle time for trivial cards in src/lib/stats.ts so `codeloop stats` shows it under one hour for the dogfood card\n  8 of 8 tasks open"
+        },
+        {
+          "at": "2026-10-15T16:46:43.415Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-start",
+          "stage": "build",
+          "agent": "claude",
+          "log": ".codeloop/state/agent-runs/c-058-build-33.log"
+        },
+        {
+          "at": "2026-10-15T16:56:43.413Z",
+          "actor": "engine",
+          "human": false,
+          "action": "agent-run",
+          "stage": "build",
+          "agent": "claude",
+          "exit": null,
+          "durationMs": 599998,
+          "log": ".codeloop/state/agent-runs/c-058-build-33.log",
+          "note": "timed out after 10 minutes"
+        },
+        {
+          "at": "2026-10-15T16:56:43.413Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "build",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\n  open: T001 [api] Add `trivial` to Size in src/lib/cards.ts and SIZES in src/lib/story.ts; accept `--size trivial` on card new\n  open: T002 [api] Add Stage `when` in src/lib/lane.ts (size comparisons); propose `when: size >= S` on research, interview, mock and spec in templates/lanes/build.yaml so trivial cards enter at build\n  open: T003 [docs] Add a `trivial` row to the size table in docs/story-standard.md and note that ceremony stages use `when: size >= S`\n  open: T004 [test] scripts/e2e-trivial-ceremony.sh (and a unit test): a trivial card run writes no research.md or spec.md and events are create → build → verify\n  open: T005 [ui] Show the trivial size badge on board tiles and the card drawer (board-with-size, card-drawer-size); local gate note includes \"size: trivial, skipped research/spec\"\n  open: T006 [api] Enforce the trivial diff cap (≤3 files, ≤50 lines) at verify; on breach re-size to S and park at the spec gate\n  open: T007 [test] Use case: an over-cap trivial card is re-sized to S and parked at the spec gate\n  open: T008 [api] Report cycle time for trivial cards in src/lib/stats.ts so `codeloop stats` shows it under one hour for the dogfood card\n  8 of 8 tasks open"
+        },
+        {
+          "at": "2026-10-15T16:56:43.413Z",
+          "actor": "engine",
+          "human": false,
+          "action": "stuck",
+          "stage": "build",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\n  open: T001 [api] Add `trivial` to Size in src/lib/cards.ts and SIZES in src/lib/story.ts; accept `--size trivial` on card new\n  open: T002 [api] Add Stage `when` in src/lib/lane.ts (size comparisons); propose `when: size >= S` on research, interview, mock and spec in templates/lanes/build.yaml so trivial cards enter at build\n  open: T003 [docs] Add a `trivial` row to the size table in docs/story-standard.md and note that ceremony stages use `when: size >= S`\n  open: T004 [test] scripts/e2e-trivial-ceremony.sh (and a unit test): a trivial card run writes no research.md or spec.md and events are create → build → verify\n  open: T005 [ui] Show the trivial size badge on board tiles and the card drawer (board-with-size, card-drawer-size); local gate note includes \"size: trivial, skipped research/spec\"\n  open: T006 [api] Enforce the trivial diff cap (≤3 files, ≤50 lines) at verify; on breach re-size to S and park at the spec gate\n  open: T007 [test] Use case: an over-cap trivial card is re-sized to S and parked at the spec gate\n  open: T008 [api] Report cycle time for trivial cards in src/lib/stats.ts so `codeloop stats` shows it under one hour for the dogfood card\n  8 of 8 tasks open"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.339Z",
-      "updatedAt": "2026-10-15T02:33:37.129Z",
+      "updatedAt": "2026-10-15T16:56:43.413Z",
       "story": {
         "as": "founder",
         "can": "start a one-line fix and watch it go straight to build and verify",
@@ -4769,10 +4814,12 @@
       "feature": "right-sized-cards",
       "failures": {
         "research": "9ee81f4cb9bdf56d916ef52fa9c5798c79bfaafd",
-        "build": "f24864ba2734c80862f2decea649b45a058c0df1"
+        "build": "d61bcd272df61b5b39cf5f7fc91e3ebd2f1876d4"
       },
       "worktree": "/Users/deangrover/Projects/codeloop-wt-c-058",
-      "branch": "feat/right-sized-cards-small-fixes-skip-the-c"
+      "branch": "feat/right-sized-cards-small-fixes-skip-the-c",
+      "gate": "stuck",
+      "awaiting": "owner"
     },
     {
       "id": "c-059",
@@ -4986,14 +5033,14 @@
       "title": "The board follows git",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "mock",
+      "stage": "spec",
       "description": "As a founder, I can merge a pull request or deploy and see the card move on its own, so that I never update status by hand. Initiative: founder ships without ceremony · M · metric: human turns per card",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The board follows git",
       "retries": {
         "research": 1,
         "interview": 2,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/062-the-board-follows-git/research.md",
@@ -5319,10 +5366,26 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/062-the-board-follows-git/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-07T18:01:31.851Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "story": {
         "as": "founder",
         "can": "merge a pull request or deploy and see the card move on its own",
@@ -5338,9 +5401,7 @@
         "research": "77bb8d4b64f8bf910f435f2011f73def1f837a1f",
         "interview": "15ec71410be1e7a89dd9179cf6b5d2e32612018f",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
-      },
-      "gate": "stuck",
-      "awaiting": "owner"
+      }
     },
     {
       "id": "c-063",
@@ -5551,7 +5612,7 @@
       "title": "The agent thinks before it builds",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "spec",
+      "stage": "data-model",
       "description": "As a founder, I can read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec, so that I approve a decision and not a guess. Initiative: founder ships without ceremony · M · metric: first-pass verify",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:The agent thinks before it builds",
@@ -5560,7 +5621,8 @@
       },
       "evidence": [
         "specs/066-the-agent-thinks-before-it-builds/research.md",
-        "specs/066-the-agent-thinks-before-it-builds/interview.md"
+        "specs/066-the-agent-thinks-before-it-builds/interview.md",
+        "specs/066-the-agent-thinks-before-it-builds/tasks.md"
       ],
       "events": [
         {
@@ -5788,10 +5850,27 @@
           "action": "park",
           "stage": "spec",
           "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-15T16:18:45.286Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "fingerprint": "743068bdf15a705351ab1b714970941e09afa744"
+        },
+        {
+          "at": "2026-10-15T16:18:45.301Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.370Z",
-      "updatedAt": "2026-10-14T22:53:41.265Z",
+      "updatedAt": "2026-10-15T16:18:45.301Z",
       "story": {
         "as": "founder",
         "can": "read the root cause, the options it argued against, the ways it can fail and what it is not building before I approve the spec",
@@ -5805,16 +5884,14 @@
       "feature": "agent-thinks-first",
       "failures": {
         "research": "e211d8140cd56ed77731296bdb9025b03cc96d87"
-      },
-      "gate": "spec",
-      "awaiting": "owner"
+      }
     },
     {
       "id": "c-067",
       "title": "Research writes the first draft",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "interview",
+      "stage": "spec",
       "description": "As a founder, I can get a research page with sources and screenshots and a draft spec before I spend a minute, so that my time goes to deciding, not gathering. Initiative: founder ships without ceremony · M · metric: time to spec gate",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Research writes the first draft",
@@ -5823,7 +5900,8 @@
         "interview": 2
       },
       "evidence": [
-        "specs/067-research-writes-the-first-draft/research.md"
+        "specs/067-research-writes-the-first-draft/research.md",
+        "specs/067-research-writes-the-first-draft/interview.md"
       ],
       "events": [
         {
@@ -6056,10 +6134,26 @@
           "action": "fail",
           "stage": "interview",
           "note": "I2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/067-research-writes-the-first-draft/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/067-research-writes-the-first-draft/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/067-research-writes-the-first-draft/interview.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-15T16:42:14.300Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-07T18:01:32.496Z",
-      "updatedAt": "2026-10-14T23:59:45.234Z",
+      "updatedAt": "2026-10-15T16:42:14.300Z",
       "story": {
         "as": "founder",
         "can": "get a research page with sources and screenshots and a draft spec before I spend a minute",
@@ -7227,7 +7321,7 @@
       "title": "Bring my Spec Kit or BMAD work with me",
       "lane": "build",
       "laneVersion": 1,
-      "stage": "done",
+      "stage": "proposed",
       "description": "As a dev switching tools, I can import my current Spec Kit or BMAD folders and get cards, so that trying codeloop costs nothing. Initiative: any stack, same loop · S · metric: imports succeeded",
       "source": "docs/story-standard.md",
       "dedupe": "build:docs/story-standard.md:Bring my Spec Kit or BMAD work with me",
@@ -7304,10 +7398,18 @@
           "action": "close",
           "stage": "research",
           "note": "codeloop import speckit and bmad"
+        },
+        {
+          "at": "2026-10-15T16:56:18.772Z",
+          "actor": "owner",
+          "human": true,
+          "action": "reopen",
+          "stage": "proposed",
+          "note": "from done: Done with no evidence; back to the backlog to be worked properly (Dean, 2026-10-15)"
         }
       ],
       "createdAt": "2026-10-07T18:01:34.559Z",
-      "updatedAt": "2026-10-11T21:01:57.794Z",
+      "updatedAt": "2026-10-15T16:56:18.772Z",
       "story": {
         "as": "dev switching tools",
         "can": "import my current Spec Kit or BMAD folders and get cards",
@@ -7318,7 +7420,9 @@
       "initiative": "any-stack-same-loop",
       "metric": "imports succeeded",
       "spec": "specs/083-bring-my-spec-kit-or-bmad-work-with-me",
-      "feature": "install-and-import"
+      "feature": "install-and-import",
+      "gate": "proposal",
+      "awaiting": "owner"
     },
     {
       "id": "c-084",
@@ -9557,14 +9661,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] States derived server-side from stage, gate and links; flags failing and blocked; stage kept as a sub-label.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The board reads as six states with failing and blocked flags",
       "retries": {
         "research": 1,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/119-the-board-reads-as-six-states-with-faili/research.md",
@@ -9757,18 +9861,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/119-the-board-reads-as-six-states-with-faili/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:19:49.837Z",
+          "actor": "owner",
+          "human": true,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "Need screens - why is this considered done and have so many commits when there are no mocks"
+        },
+        {
+          "at": "2026-10-15T16:42:13.581Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.059Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:42:13.581Z",
       "failures": {
         "research": "5a013c49508291c6816ac388f93a2c11973086ed",
         "interview": "9a91290815bf7f1491867acdc9f45a36c232e228",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/119-the-board-reads-as-six-states-with-faili",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/119-the-board-reads-as-six-states-with-faili"
     },
     {
       "id": "c-120",
@@ -9784,14 +9902,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] board.up_next.limit and auto_refill in config; refill on every board change; blocked stories skipped. Supersedes c-109.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Up next fills itself and its limit is a setting",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/120-up-next-fills-itself-and-its-limit-is-a/research.md",
@@ -9972,18 +10090,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/120-up-next-fills-itself-and-its-limit-is-a/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.284Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "cc077f071e234b84ae49d7d5d47098cfa52cd77a",
         "interview": "35f1a15bf15bd9439149d60d570bb1287164c208",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/120-up-next-fills-itself-and-its-limit-is-a",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/120-up-next-fills-itself-and-its-limit-is-a"
     },
     {
       "id": "c-121",
@@ -9999,14 +10131,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] Endpoints per screen returning pre-joined data: /home, /board, /plan, /releases, /stories/:id, /wiki/:path.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Each screen loads its data with one call",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/121-each-screen-loads-its-data-with-one-call/research.md",
@@ -10187,18 +10319,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/121-each-screen-loads-its-data-with-one-call/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.472Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "0c451cfc83c44221184c8a59a009e7aaebb7ccc4",
         "interview": "ca8cb81d07d495e94bc32a23153448b4b090ca5d",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/121-each-screen-loads-its-data-with-one-call",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/121-each-screen-loads-its-data-with-one-call"
     },
     {
       "id": "c-122",
@@ -10214,14 +10360,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] Query language over the index, saved views, bulk change endpoint touching only the selection. Supersedes c-112.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can find any story with a query and change many at once",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/122-i-can-find-any-story-with-a-query-and-ch/research.md",
@@ -10410,18 +10556,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/122-i-can-find-any-story-with-a-query-and-ch/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.652Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "56923604d0e2143ceff5a530cfc518b19f64f2d3",
         "interview": "c9d48fef561659530742e5bdcad6d8fc3ef0a332",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/122-i-can-find-any-story-with-a-query-and-ch",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/122-i-can-find-any-story-with-a-query-and-ch"
     },
     {
       "id": "c-123",
@@ -10652,14 +10812,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] Typed pages decision|gotcha|runbook|architecture|reference; owner, verified_at, backlinks, changed_by from commits.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Wiki pages know their owner, when they were checked and which stories changed them",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/124-wiki-pages-know-their-owner-when-they-we/research.md",
@@ -10840,18 +11000,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/124-wiki-pages-know-their-owner-when-they-we/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:20.951Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "03d0c26cc3dc81a89f82ef65f53adb125bc01337",
         "interview": "1ca25936068f9e9c4f7ef3ae605e7b05662eb94e",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/124-wiki-pages-know-their-owner-when-they-we",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/124-wiki-pages-know-their-owner-when-they-we"
     },
     {
       "id": "c-125",
@@ -11082,14 +11256,14 @@
       "feature": "ui-data-api",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[api] Decision pending from the owner (recommended yes): score moves onto the epic; migration rewrites features into epics.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:Features fold into epics",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/126-features-fold-into-epics/research.md",
@@ -11270,18 +11444,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/126-features-fold-into-epics/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.268Z",
-      "updatedAt": "2026-10-15T01:55:54.029Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "326e7ceb783357c3be63a036fa4a77c836ddb82f",
         "interview": "f90a6fda8426918f538ddccee30255eefa8893fc",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/126-features-fold-into-epics",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/126-features-fold-into-epics"
     },
     {
       "id": "c-127",
@@ -11297,14 +11485,14 @@
       "feature": "ui-sdk",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[sdk] Client methods and React hooks for the endpoints above; query keys; contract tests against the API.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The SDK has typed calls for every screen, query and bulk change",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/127-the-sdk-has-typed-calls-for-every-screen/research.md",
@@ -11485,18 +11673,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/127-the-sdk-has-typed-calls-for-every-screen/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.460Z",
-      "updatedAt": "2026-10-15T01:56:04.540Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "5cbbdf3a2fbe745b904b1387542c465627434011",
         "interview": "d2ea430d7c509e32dfce29b52c88d84c9f88b0f7",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/127-the-sdk-has-typed-calls-for-every-screen",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/127-the-sdk-has-typed-calls-for-every-screen"
     },
     {
       "id": "c-128",
@@ -11512,14 +11714,14 @@
       "feature": "ui-cli",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[cli] Commands over the SDK for fields and links.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can link, label and hand off stories from the terminal",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/128-i-can-link-label-and-hand-off-stories-fr/research.md",
@@ -11700,18 +11902,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/128-i-can-link-label-and-hand-off-stories-fr/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.695Z",
-      "updatedAt": "2026-10-15T01:56:04.540Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "4b81b4acb9f8adcc0ba4ccc746ec8b720f962e85",
         "interview": "d7bb6bf0ea3ca55ae8b3382e9a14b171a8535ef4",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/128-i-can-link-label-and-hand-off-stories-fr",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/128-i-can-link-label-and-hand-off-stories-fr"
     },
     {
       "id": "c-129",
@@ -11727,14 +11943,14 @@
       "feature": "ui-cli",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[cli] Query and release notes commands over the SDK.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can query stories and write release notes from the terminal",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/129-i-can-query-stories-and-write-release-no/research.md",
@@ -11915,18 +12131,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/129-i-can-query-stories-and-write-release-no/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:21.869Z",
-      "updatedAt": "2026-10-15T01:56:04.540Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "700d654b7a34a638c8c4846748559b1cedee8ae9",
         "interview": "692a5f79349ac9fee65cb9278a0f7b734f5a58e1",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/129-i-can-query-stories-and-write-release-no",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/129-i-can-query-stories-and-write-release-no"
     },
     {
       "id": "c-130",
@@ -12129,14 +12359,14 @@
       "feature": "ui-design-system",
       "lane": "build",
       "laneVersion": 2,
-      "stage": "mock",
+      "stage": "spec",
       "description": "[ui] .codeloop/design-system is copied at init, never overwritten by update, and read by mock new, check mock and the workspace.",
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:I can change the design system and every mock follows",
       "retries": {
         "research": 2,
         "interview": 1,
-        "mock": 3
+        "mock": 0
       },
       "evidence": [
         "specs/131-i-can-change-the-design-system-and-every/research.md",
@@ -12317,18 +12547,32 @@
           "action": "stuck",
           "stage": "mock",
           "note": "specs/131-i-can-change-the-design-system-and-every/spec.md names no screens under `screens:` (write `screens: none` for a card with nothing to draw)"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "unstick",
+          "stage": "mock",
+          "note": "the check passes after work landed on the story"
+        },
+        {
+          "at": "2026-10-15T16:41:41.698Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.239Z",
-      "updatedAt": "2026-10-15T01:56:04.540Z",
+      "updatedAt": "2026-10-15T16:41:41.698Z",
       "failures": {
         "research": "c54741bea634125521b42011c8b9070b12817abb",
         "interview": "5feaf2b5cb44495e5df8cb5b72433aa903070bd6",
         "mock": "91c0b889d50294c00116d4fbc303bbd083c95f8d"
       },
-      "spec": "specs/131-i-can-change-the-design-system-and-every",
-      "gate": "stuck",
-      "awaiting": "owner"
+      "spec": "specs/131-i-can-change-the-design-system-and-every"
     },
     {
       "id": "c-132",
@@ -12593,7 +12837,7 @@
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The app shell has six places, a project switcher and command palette",
       "retries": {
         "research": 2,
-        "interview": 2
+        "interview": 3
       },
       "evidence": [
         "specs/133-the-app-shell-has-six-places-a-project-s/research.md"
@@ -12741,15 +12985,33 @@
           "action": "answer",
           "stage": "interview",
           "note": "Q4: This card owns the shared AppShell chrome only: six nav slots with stub destinations, switcher, palette/peek/keyboard as scoped in Q1, and Settings still at the bottom. Out of scope: Home/Board/Plan/Wiki/Releases/Reports layouts and data (later screen cards), release list from git tags (c-123), the Agents live panel in the Home nav, and Settings contents (members, workflow, Up next). (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\ncodeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nI2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "stuck",
+          "stage": "interview",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\ncodeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nI2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/133-the-app-shell-has-six-places-a-project-s/interview.md"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.615Z",
-      "updatedAt": "2026-10-15T15:45:18.744Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "failures": {
         "research": "71e5694f5e0ef32f1f82367acca643ac0b409fa0",
-        "interview": "b3f5c0f72bdd35d36568c45a3687ff69a1eb8874"
+        "interview": "0c2ad189bc2c58183d83c79c857edee218c174a5"
       },
-      "spec": "specs/133-the-app-shell-has-six-places-a-project-s"
+      "spec": "specs/133-the-app-shell-has-six-places-a-project-s",
+      "gate": "stuck",
+      "awaiting": "owner"
     },
     {
       "id": "c-134",
@@ -12770,7 +13032,8 @@
       "source": "docs/artifacts/codeloop-ui-design.html",
       "dedupe": "build:docs/artifacts/codeloop-ui-design.html:The story page shows the proof beside the decision",
       "retries": {
-        "research": 0
+        "research": 0,
+        "interview": 1
       },
       "evidence": [
         "specs/134-the-story-page-shows-the-proof-beside-th/research.md",
@@ -12966,16 +13229,32 @@
           "action": "place",
           "stage": "interview",
           "note": "started at interview: work already under way"
+        },
+        {
+          "at": "2026-10-15T16:21:23.384Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "interview",
+          "note": "gate spec",
+          "fingerprint": "48a8ba485cf25e83e83623a8fc026541486309fd"
+        },
+        {
+          "at": "2026-10-15T16:21:23.406Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nc-134 Q1 has an answer no person gave; the owner answers with `codeloop answer c-134 1` or `codeloop answer c-134 --accept-all`\nc-134 Q2 has an answer no person gave; the owner answers with `codeloop answer c-134 2` or `codeloop answer c-134 --accept-all`\nc-134 Q3 has an answer no person gave; the owner answers with `codeloop answer c-134 3` or `codeloop answer c-134 --accept-all`\nc-134 Q4 has an answer no person gave; the owner answers with `codeloop answer c-134 4` or `codeloop answer c-134 --accept-all`"
         }
       ],
       "createdAt": "2026-10-12T21:10:22.827Z",
-      "updatedAt": "2026-10-14T18:51:59.974Z",
+      "updatedAt": "2026-10-15T16:21:23.406Z",
       "failures": {
-        "research": "327dccd78f7d7b978b4ad01c66cf24b1ba102ea1"
+        "research": "327dccd78f7d7b978b4ad01c66cf24b1ba102ea1",
+        "interview": "c56c1b319384c9e4b172bec2361f8cc81ade0f2a"
       },
-      "spec": "specs/134-the-story-page-shows-the-proof-beside-th",
-      "gate": "spec",
-      "awaiting": "owner"
+      "spec": "specs/134-the-story-page-shows-the-proof-beside-th"
     },
     {
       "id": "c-135",
@@ -15668,7 +15947,7 @@
       "source": "proto-orch request at Dean's ask, 2026-10-14",
       "dedupe": "build:proto-orch request at Dean's ask, 2026-10-14:Every worktree of a repo shares one board and one set of story files",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -15710,13 +15989,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/164-every-worktree-of-a-repo-shares-one-boar/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/164-every-worktree-of-a-repo-shares-one-boar/research.md has no line starting with \"verdict:\"\nspecs/164-every-worktree-of-a-repo-shares-one-boar/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T21:23:59.106Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/164-every-worktree-of-a-repo-shares-one-boar",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "4c96718689c1c65664f2d160d420b3fedd679334"
       }
     },
     {
@@ -15735,7 +16022,7 @@
       "source": "proto-orch request at Dean's ask, 2026-10-14",
       "dedupe": "build:proto-orch request at Dean's ask, 2026-10-14:Rendered host files are identical in every worktree",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -15777,13 +16064,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/165-rendered-host-files-are-identical-in-eve/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/165-rendered-host-files-are-identical-in-eve/research.md has no line starting with \"verdict:\"\nspecs/165-rendered-host-files-are-identical-in-eve/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T21:23:59.255Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/165-rendered-host-files-are-identical-in-eve",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "a5bddcd36d34ef49b99b96f5b3a6dd1665f1c238"
       }
     },
     {
@@ -15803,7 +16098,7 @@
       "source": "c-048 timeline on ops-ai, 2026-10-14",
       "dedupe": "build:c-048 timeline on ops-ai, 2026-10-14:A story with more than eight tasks is split before it enters build",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -15845,13 +16140,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/166-a-story-with-more-than-eight-tasks-is-sp/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/166-a-story-with-more-than-eight-tasks-is-sp/research.md has no line starting with \"verdict:\"\nspecs/166-a-story-with-more-than-eight-tasks-is-sp/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T22:23:53.052Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/166-a-story-with-more-than-eight-tasks-is-sp",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "f78aa83f8485710b3e16ee51c1ce3fde62ad5bf5"
       }
     },
     {
@@ -15871,7 +16174,7 @@
       "source": "c-048 timeline on ops-ai, 2026-10-14",
       "dedupe": "build:c-048 timeline on ops-ai, 2026-10-14:A commit ticks its task on the board",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -15913,13 +16216,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/167-a-commit-ticks-its-task-on-the-board/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/167-a-commit-ticks-its-task-on-the-board/research.md has no line starting with \"verdict:\"\nspecs/167-a-commit-ticks-its-task-on-the-board/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T22:23:53.249Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/167-a-commit-ticks-its-task-on-the-board",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "e85c5c8c2f61d1ded3787b46965810691fd4001d"
       }
     },
     {
@@ -15939,7 +16250,7 @@
       "source": "c-048 timeline on ops-ai, 2026-10-14",
       "dedupe": "build:c-048 timeline on ops-ai, 2026-10-14:A promoted story gets a builder within minutes",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -15973,13 +16284,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/168-a-promoted-story-gets-a-builder-within-m/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/168-a-promoted-story-gets-a-builder-within-m/research.md has no line starting with \"verdict:\"\nspecs/168-a-promoted-story-gets-a-builder-within-m/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T22:23:53.442Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/168-a-promoted-story-gets-a-builder-within-m",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "a8f05fa975ec1fc05f6c16fa3ee021f22bc18db5"
       }
     },
     {
@@ -15999,7 +16318,7 @@
       "source": "c-048 timeline on ops-ai, 2026-10-14",
       "dedupe": "build:c-048 timeline on ops-ai, 2026-10-14:A task is reviewed once at the review stage, not per commit",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -16041,13 +16360,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/169-a-task-is-reviewed-once-at-the-review-st/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/169-a-task-is-reviewed-once-at-the-review-st/research.md has no line starting with \"verdict:\"\nspecs/169-a-task-is-reviewed-once-at-the-review-st/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T22:23:53.641Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/169-a-task-is-reviewed-once-at-the-review-st",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "b684914fbe953f5a8043b7be158ff66d9bbe6744"
       }
     },
     {
@@ -16067,7 +16394,7 @@
       "source": "c-048 timeline on ops-ai, 2026-10-14",
       "dedupe": "build:c-048 timeline on ops-ai, 2026-10-14:Every story shows time in stage and time working",
       "retries": {
-        "research": 1
+        "research": 2
       },
       "evidence": [],
       "events": [
@@ -16109,13 +16436,21 @@
           "action": "fail",
           "stage": "research",
           "note": "missing file: specs/170-every-story-shows-time-in-stage-and-time/research.md"
+        },
+        {
+          "at": "2026-10-15T16:39:18.684Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/\nspecs/170-every-story-shows-time-in-stage-and-time/research.md has no line starting with \"verdict:\"\nspecs/170-every-story-shows-time-in-stage-and-time/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)"
         }
       ],
       "createdAt": "2026-10-14T22:23:53.832Z",
-      "updatedAt": "2026-10-14T23:06:30.616Z",
+      "updatedAt": "2026-10-15T16:39:18.684Z",
       "spec": "specs/170-every-story-shows-time-in-stage-and-time",
       "failures": {
-        "research": "5a013c49508291c6816ac388f93a2c11973086ed"
+        "research": "144f1708bc871a69918ed54adf5d728ff39eed44"
       }
     },
     {
@@ -16164,10 +16499,8 @@
       "feature": "codeloop",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "proposed",
+      "stage": "research",
       "description": "Editable skill library. Spec for Dean to walk through.",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -16177,10 +16510,26 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-15T16:18:33.910Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-15T16:18:33.926Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/297-i-edit-the-skills-codeloop-runs-in-the-a"
         }
       ],
       "createdAt": "2026-10-15T16:13:18.477Z",
-      "updatedAt": "2026-10-15T16:13:18.477Z"
+      "updatedAt": "2026-10-15T16:18:33.926Z",
+      "spec": "specs/297-i-edit-the-skills-codeloop-runs-in-the-a"
     },
     {
       "id": "c-298",
@@ -16195,10 +16544,8 @@
       "feature": "codeloop",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "proposed",
+      "stage": "research",
       "description": "Architecture options spec for Dean to read. Not a build card yet.",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -16208,10 +16555,116 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-15T16:18:34.071Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-15T16:18:34.085Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/298-a-team-runs-codeloop-as-a-hosted-service"
         }
       ],
       "createdAt": "2026-10-15T16:13:18.639Z",
-      "updatedAt": "2026-10-15T16:13:18.639Z"
+      "updatedAt": "2026-10-15T16:18:34.085Z",
+      "spec": "specs/298-a-team-runs-codeloop-as-a-hosted-service"
+    },
+    {
+      "id": "c-299",
+      "title": "I edit, move and reopen a story from its page",
+      "story": {
+        "as": "founder",
+        "can": "edit a story, move it to any stage or reopen a finished one from its page",
+        "so": "a card marked done by mistake or sitting at the wrong stage can be put right without editing files"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "codeloop",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "description": "Dean: c-083 is marked done with no output; he cannot move it back to the backlog from the UI.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-15T16:15:42.032Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-15T16:18:33.750Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-15T16:18:33.766Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/299-i-edit-move-and-reopen-a-story-from-its"
+        },
+        {
+          "at": "2026-10-15T16:41:51.577Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "research",
+          "note": "priority"
+        }
+      ],
+      "createdAt": "2026-10-15T16:15:42.032Z",
+      "updatedAt": "2026-10-15T16:41:51.577Z",
+      "spec": "specs/299-i-edit-move-and-reopen-a-story-from-its",
+      "priority": "P1"
+    },
+    {
+      "id": "c-300",
+      "title": "The doctor starts the stage skill once on a stuck story whose output was never written",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-15T17:02:08.205Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-15T17:34:34.611Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-15T17:34:34.626Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/300-the-doctor-starts-the-stage-skill-once-o"
+        }
+      ],
+      "createdAt": "2026-10-15T17:02:08.205Z",
+      "updatedAt": "2026-10-15T17:34:34.626Z",
+      "spec": "specs/300-the-doctor-starts-the-stage-skill-once-o"
     }
   ]
 }

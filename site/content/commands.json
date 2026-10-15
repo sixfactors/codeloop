@@ -1,6 +1,6 @@
 {
-  "version": "0.4.3",
-  "generatedAt": "2026-10-12T04:40:10.105Z",
+  "version": "0.5.0",
+  "generatedAt": "2026-10-15T15:54:39.276Z",
   "commands": [
     {
       "name": "init",
@@ -48,6 +48,31 @@
       "name": "status",
       "usage": "codeloop status [options]",
       "description": "Show codeloop status and knowledge stats",
+      "arguments": [],
+      "options": [],
+      "commands": []
+    },
+    {
+      "name": "off",
+      "usage": "codeloop off [options]",
+      "description": "Pause codeloop in this repo: hooks stop enforcing and recording, and no orch turn, run or doctor tick starts, until `codeloop on` or the --for time passes",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--for <duration>",
+          "description": "How long: 45m, 2h, 1h30m. Without it the pause lasts until `codeloop on`"
+        },
+        {
+          "signature": "--why <text>",
+          "description": "Why, shown in the refusal and at session start (default: \"\")"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "on",
+      "usage": "codeloop on [options]",
+      "description": "End a `codeloop off` pause",
       "arguments": [],
       "options": [],
       "commands": []
@@ -126,11 +151,19 @@
         },
         {
           "signature": "--stop",
-          "description": "Stop the hub"
+          "description": "Stop the hub and return once its port is closed"
+        },
+        {
+          "signature": "--restart",
+          "description": "Stop the hub, wait for its port to close, then start a new one on the same port"
         },
         {
           "signature": "--open",
           "description": "Open the browser after starting"
+        },
+        {
+          "signature": "--new-token",
+          "description": "Issue a new token and sign every browser out (default: reuse the last run's)"
         }
       ],
       "commands": []
@@ -186,6 +219,40 @@
           "description": "Apply the pending migrations and record them in .codeloop/store.json",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "store where",
+          "usage": "codeloop store where [options]",
+          "description": "Print where the board and story files resolve: store.home, the store folder and each path",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--json",
+              "description": "JSON output"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "store move",
+          "usage": "codeloop store move [options]",
+          "description": "Copy the board and story files to the other home and set store.home; the old copy is left for you to delete",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--to <home>",
+              "description": "user (~/.codeloop/projects/<id>/) or repo"
+            },
+            {
+              "signature": "--layout <layout>",
+              "description": "dotfolder (everything under .codeloop/) or root (specs/, evidence/, shape/ at the repo root)"
+            },
+            {
+              "signature": "--dry-run",
+              "description": "With --layout: print what would move, change nothing"
+            }
+          ],
           "commands": []
         }
       ]
@@ -449,6 +516,89 @@
           "commands": []
         },
         {
+          "name": "card handback",
+          "usage": "codeloop card handback [options] <id>",
+          "description": "Hand a card back: runs the proof command here and records its exit code and output on the card",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--branch <branch>",
+              "description": "The branch the work is on"
+            },
+            {
+              "signature": "--head <sha>",
+              "description": "The commit the work ends at"
+            },
+            {
+              "signature": "--proof <cmd>",
+              "description": "The command that proves the work; it is run from the project root"
+            },
+            {
+              "signature": "--left <text>",
+              "description": "What is left to do"
+            },
+            {
+              "signature": "--blocked <text>",
+              "description": "What blocked the work"
+            },
+            {
+              "signature": "--worktree <path>",
+              "description": "The git worktree the work is in; the proof is run there instead of the project root"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card gate",
+          "usage": "codeloop card gate [options] <id>",
+          "description": "Gate a card's hand-back: reruns its proof, the stage check and one claim. Exit 0 on pass, 1 on fail",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--handback <id>",
+              "description": "The hand-back to gate (its head sha); the latest by default"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "card worktree",
+          "usage": "codeloop card worktree [options] <id>",
+          "description": "Create (or reuse) the story's own git worktree and branch; prints the path and branch",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card merge",
+          "usage": "codeloop card merge [options] <id>",
+          "description": "Merge the story's branch into the trunk once its gate passed; prints the sha. Exit 2 when refused",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card activity",
+          "usage": "codeloop card activity [options] <id>",
+          "description": "What happened on a card, oldest first: edits, commands, checks, commits and gates. --follow keeps printing as it happens",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--follow",
+              "description": "Keep printing new lines until interrupted"
+            },
+            {
+              "signature": "--limit <n>",
+              "description": "Most lines to print without --follow (default: \"200\")"
+            },
+            {
+              "signature": "--json",
+              "description": "One JSON line per activity line"
+            }
+          ],
+          "commands": []
+        },
+        {
           "name": "card show",
           "usage": "codeloop card show [options] <id>",
           "description": "Show a card, its current stage brief and its events",
@@ -646,6 +796,45 @@
               "description": "owner | reviewer | agent (default: owner; agent inside an agent run)"
             }
           ],
+          "commands": []
+        },
+        {
+          "name": "card diff",
+          "usage": "codeloop card diff [options] <id>",
+          "description": "Files, lines and commits in a card's diff and the verdict against its size budget, without running verify. Exit 1 when over budget",
+          "arguments": [
+            {
+              "signature": "id",
+              "description": "Card number or id"
+            }
+          ],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card health",
+          "usage": "codeloop card health [options] <id>",
+          "description": "Health score at the start of a card's story, at HEAD, and the change. Exit 1 when it fell beyond health.tolerance",
+          "arguments": [
+            {
+              "signature": "id",
+              "description": "Card number or id"
+            }
+          ],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "card selfcheck",
+          "usage": "codeloop card selfcheck [options] <id>",
+          "description": "Run the stage check, check scope, check rubric and the diff budget in this work dir, one line each. Exit 1 if any fails; the result rides the hand-back and lets the gate skip the stage check",
+          "arguments": [
+            {
+              "signature": "id",
+              "description": "Card number or id"
+            }
+          ],
+          "options": [],
           "commands": []
         },
         {
@@ -1011,7 +1200,11 @@
       "options": [
         {
           "signature": "--recommended <answer>",
-          "description": "The answer to take when the owner has no better one"
+          "description": "The answer to take when the owner has no better one; with options, its letter"
+        },
+        {
+          "signature": "--option <text>",
+          "description": "One choice, when the fork is real; repeat for two to four (lettered A, B, C, D)"
         },
         {
           "signature": "--file <path>",
@@ -1026,13 +1219,21 @@
     },
     {
       "name": "answer",
-      "usage": "codeloop answer [options] <card> <n> [text]",
-      "description": "Answer a question on a card: `codeloop answer <card> <n> \"<text>\"`, or `--accept` to take the recommended answer",
+      "usage": "codeloop answer [options] <card> [n] [text]",
+      "description": "Answer a question on a card: `codeloop answer <card> <n> \"<text>\"`, `--accept` for the recommended answer, `--option B` for an option, or `codeloop answer <card> --accept-all`",
       "arguments": [],
       "options": [
         {
           "signature": "--accept",
           "description": "Take the recommended answer"
+        },
+        {
+          "signature": "--option <letter>",
+          "description": "Answer with that option, by its letter"
+        },
+        {
+          "signature": "--accept-all",
+          "description": "Take the recommended answer on every open question of the card, in one write"
         },
         {
           "signature": "--as <role>",
@@ -1081,6 +1282,153 @@
         }
       ],
       "commands": []
+    },
+    {
+      "name": "doctor",
+      "usage": "codeloop doctor [options]",
+      "description": "Run one doctor tick now: rerun the check of a stuck or failing story that work has landed on, nudge quiet builders, ask to park stale stories",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--json",
+          "description": "JSON output"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "orch",
+      "usage": "codeloop orch [options] [command]",
+      "description": "Run a story's current stage through a builder in its own worktree, gate the hand-back and merge it: `orch <card>`, status, report, resume, inbox",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "orch run",
+          "usage": "codeloop orch run [options] <card>",
+          "description": "Run a story's current stage through a builder (agent, live session or person)",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--until <gate>",
+              "description": "Keep going stage by stage until this gate or stage (any gate stops the run)"
+            },
+            {
+              "signature": "--agent <name>",
+              "description": "The agent to use (an entry under agents: in config.yaml)"
+            },
+            {
+              "signature": "--builder <kind>",
+              "description": "Who builds: agent[:name] (default), session:<id-or-label-prefix> for a live session, or person"
+            },
+            {
+              "signature": "--wait <minutes>",
+              "description": "Minutes to wait for a session or person to hand back (default orch.wait_minutes, 120)"
+            },
+            {
+              "signature": "--no-wait",
+              "description": "Write the brief and return at once with outcome briefed; finish with `codeloop orch resume <card>`"
+            },
+            {
+              "signature": "--dry-run",
+              "description": "Print the steps a turn would take and the brief path; start nothing"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "orch status",
+          "usage": "codeloop orch status [options]",
+          "description": "Every story under orchestration: stage, turns, last outcome, builder, idle minutes",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "orch report",
+          "usage": "codeloop orch report [options] <card>",
+          "description": "The owner's paragraph: what works now, proof, what is left, the next gate",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "orch resume",
+          "usage": "codeloop orch resume [options] <card>",
+          "description": "Finish a briefed turn: gate, merge and advance once its hand-back exists",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "orch inbox",
+          "usage": "codeloop orch inbox [options]",
+          "description": "Briefs addressed to this session or to \"person\" that no hand-back has answered yet",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "ps",
+      "usage": "codeloop ps [options]",
+      "description": "Every running codeloop process and its memory, and the agent process groups codeloop started here (with their purpose and whether the parent is gone); --total sums memory against limits.max_memory_mb",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--total",
+          "description": "Print only the memory total, as \"<used> MB of <ceiling> MB\", and exit 1 when over the ceiling"
+        },
+        {
+          "signature": "--kill-orphans",
+          "description": "Kill each agent process group whose parent codeloop process has exited; a live parent is never touched"
+        },
+        {
+          "signature": "--json",
+          "description": "JSON output"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "worktree",
+      "usage": "codeloop worktree [options] [command]",
+      "description": "Story worktrees (orch.isolation worktree or auto); the default is one main tree",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "worktree prune",
+          "usage": "codeloop worktree prune [options]",
+          "description": "Remove each story worktree whose branch is merged into the trunk and whose tree is clean; anything else is listed and left",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--dry-run",
+              "description": "List what would be removed, remove nothing"
+            }
+          ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "agent",
+      "usage": "codeloop agent [options] [command]",
+      "description": "The agents codeloop starts",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "agent clear",
+          "usage": "codeloop agent clear [options] <name>",
+          "description": "Say an agent marked unavailable can run again (after it exited at once twice with nothing handed back)",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        }
+      ]
     },
     {
       "name": "brief",
@@ -1221,6 +1569,32 @@
           "commands": []
         },
         {
+          "name": "check rubric",
+          "usage": "codeloop check rubric [options] <card>",
+          "description": "Exit 1 unless the card's stage meets its rubric: every check row passes, every attest row has a `- Rn pass: <evidence>` line under ## Rubric naming a path, line, URL or command, and a stage with `review:` has its review file with `verdict: accept`",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--stage <id>",
+              "description": "The stage to judge; defaults to the card's stage"
+            }
+          ],
+          "commands": []
+        },
+        {
+          "name": "check wiki-landed",
+          "usage": "codeloop check wiki-landed [options] <card>",
+          "description": "Exit 1 unless the stage's findings reached the wiki: a research that compared options has a decision page (or makes a valid one), a review's repeat-mistake fix-now finding has a gotcha page",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--stage <id>",
+              "description": "research or review; defaults to the card's stage"
+            }
+          ],
+          "commands": []
+        },
+        {
           "name": "check mock",
           "usage": "codeloop check mock [options] <card>",
           "description": "Exit 1 unless the card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names",
@@ -1239,6 +1613,22 @@
               "description": "mock | system-design | workflow, auto-detected from whichever artifact exists for the card when omitted"
             }
           ],
+          "commands": []
+        },
+        {
+          "name": "check verify",
+          "usage": "codeloop check verify [options] <card>",
+          "description": "Exit 1 unless the card's verify.md (.codeloop/evidence/<nnn>/) has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "check scope",
+          "usage": "codeloop check scope [options] <card>",
+          "description": "Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in the card's review.md (.codeloop/evidence/<nnn>/)",
+          "arguments": [],
+          "options": [],
           "commands": []
         },
         {
@@ -1284,6 +1674,14 @@
           "commands": []
         },
         {
+          "name": "check data-model",
+          "usage": "codeloop check data-model [options] <card>",
+          "description": "Exit 1 unless a story that changes data has a data-model.md whose stores the architecture data-model page names",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
           "name": "check questions",
           "usage": "codeloop check questions [options] <card>",
           "description": "Exit 1 unless the card's interview has at least --min questions and every one of them has an answer",
@@ -1294,6 +1692,23 @@
               "description": "Questions the interview must hold (default: \"1\")"
             }
           ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "rubric",
+      "usage": "codeloop rubric [options] [command]",
+      "description": "A stage's rubric: the criteria `codeloop check rubric` judges it by",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "rubric scaffold",
+          "usage": "codeloop rubric scaffold [options] <card>",
+          "description": "Append a `## Rubric` block to the card's stage output with a `- Rn pending:` line for each attest row it has no line for; `check rubric` then reports those rows as pending, not missing",
+          "arguments": [],
+          "options": [],
           "commands": []
         }
       ]
@@ -1334,7 +1749,7 @@
         {
           "name": "spec new",
           "usage": "codeloop spec new [options] <card-id>",
-          "description": "Create specs/<nnn>-<slug>/ from the templates and record it on the card",
+          "description": "Create .codeloop/specs/<nnn>-<slug>/ (specs/ in the root layout) from the templates and record it on the card",
           "arguments": [],
           "options": [
             {
@@ -1347,9 +1762,14 @@
         {
           "name": "spec check",
           "usage": "codeloop spec check [options] <nnn>",
-          "description": "Exit 2 unless every task is tagged and every acceptance line has a task",
+          "description": "Exit 2 unless every task is tagged, every acceptance line has a task and each task names files in its own layer",
           "arguments": [],
-          "options": [],
+          "options": [
+            {
+              "signature": "--verbose",
+              "description": "Also list file paths that sit in no configured layer"
+            }
+          ],
           "commands": []
         }
       ]
@@ -1364,7 +1784,7 @@
         {
           "name": "mock new",
           "usage": "codeloop mock new [options] <card>",
-          "description": "Create docs/mocks/<project>/<topic>/<card-id>.html from templates/mock/template.html",
+          "description": "Create the card's mock beside its spec (<spec>/mock.html) from templates/mock/template.html",
           "arguments": [],
           "options": [
             {
@@ -1376,6 +1796,14 @@
               "description": "The mock to build on: a card id, the newest in this topic, or none for the bare template (default: \"latest\")"
             }
           ],
+          "commands": []
+        },
+        {
+          "name": "mock cleanup",
+          "usage": "codeloop mock cleanup [options] <card>",
+          "description": "Delete the card's app mock page unless its spec says `mock: keep` (default drop)",
+          "arguments": [],
+          "options": [],
           "commands": []
         }
       ]
@@ -1390,7 +1818,7 @@
         {
           "name": "mocks index",
           "usage": "codeloop mocks index [options]",
-          "description": "Write docs/mocks/index.html: projects, then topics, then cards, newest first",
+          "description": "Write .codeloop/mocks/index.html: projects, then topics, then cards, newest first",
           "arguments": [],
           "options": [],
           "commands": []
@@ -1407,7 +1835,7 @@
         {
           "name": "artifact new",
           "usage": "codeloop artifact new [options] <card>",
-          "description": "Create docs/artifacts/<project>/<topic>/<card-id>-<kind>.html from templates/artifacts/<kind>/template.html. `--kind mock` is the same engine as `codeloop mock new`: it writes docs/mocks/<project>/<topic>/<card-id>.html instead.",
+          "description": "Create .codeloop/artifacts/<project>/<topic>/<card-id>-<kind>.html from templates/artifacts/<kind>/template.html. `--kind mock` is the same engine as `codeloop mock new`: it writes the mock beside the card spec as mock.html instead.",
           "arguments": [],
           "options": [
             {
@@ -1437,7 +1865,7 @@
         {
           "name": "artifacts index",
           "usage": "codeloop artifacts index [options]",
-          "description": "Write docs/artifacts/index.html: kind, then project, then topic, then cards, newest first",
+          "description": "Write .codeloop/artifacts/index.html: kind, then project, then topic, then cards, newest first",
           "arguments": [],
           "options": [],
           "commands": []
@@ -1579,6 +2007,19 @@
       "commands": []
     },
     {
+      "name": "health",
+      "usage": "codeloop health [options]",
+      "description": "Project health score: tests, lint, type errors, critical gotchas and TODOs. --ref scores an older commit",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--ref <sha>",
+          "description": "Score this commit (exported to a temp dir) instead of the working tree"
+        }
+      ],
+      "commands": []
+    },
+    {
       "name": "stats",
       "usage": "codeloop stats [options]",
       "description": "Autonomy numbers computed from card events",
@@ -1674,6 +2115,27 @@
           "description": "Report broken links, stale pages, duplicate titles and scanner filler (exit 1 on a broken link or a page in an unknown folder)",
           "arguments": [],
           "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki merge",
+          "usage": "codeloop wiki merge [options] <a> <b>",
+          "description": "Fold page b into page a: frequencies add, cards and scope join, b is removed (paths or file names, as `wiki lint` prints them)",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "wiki migrate-decisions",
+          "usage": "codeloop wiki migrate-decisions [options]",
+          "description": "Turn research mirror pages (\"<card title>: build\") into decisions titled by the choice when they compared options; remove the rest",
+          "arguments": [],
+          "options": [
+            {
+              "signature": "--dry-run",
+              "description": "Print the mapping without writing (default: false)"
+            }
+          ],
           "commands": []
         },
         {
@@ -1999,6 +2461,22 @@
           "commands": []
         },
         {
+          "name": "guard stop",
+          "usage": "codeloop guard stop [options]",
+          "description": "Stop hook: records in the active story's activity that the session finished a turn",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
+          "name": "guard commit",
+          "usage": "codeloop guard commit [options]",
+          "description": "post-commit hook: records the commit in the activity of each card its `Card:` (or `Feature:`) trailer names",
+          "arguments": [],
+          "options": [],
+          "commands": []
+        },
+        {
           "name": "guard prompt",
           "usage": "codeloop guard prompt [options]",
           "description": "UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)",
@@ -2017,6 +2495,36 @@
               "description": "Compare the git index instead of the working tree (default: false)"
             }
           ],
+          "commands": []
+        }
+      ]
+    },
+    {
+      "name": "hookd",
+      "usage": "codeloop hookd [options]",
+      "description": "The hook daemon: answers guard edit, bash, prompt and session for every session of this user over a socket (started by bin/codeloop-hook, exits after 10 idle minutes)",
+      "arguments": [],
+      "options": [
+        {
+          "signature": "--idle-minutes <n>",
+          "description": "Minutes without a request before the daemon exits (default: \"10\")"
+        }
+      ],
+      "commands": []
+    },
+    {
+      "name": "monitor",
+      "usage": "codeloop monitor [options] [command]",
+      "description": "What the monitor sees",
+      "arguments": [],
+      "options": [],
+      "commands": [
+        {
+          "name": "monitor stalled",
+          "usage": "codeloop monitor stalled [options]",
+          "description": "Builders holding a card that have written nothing to it for monitor.stall_minutes (default 30)",
+          "arguments": [],
+          "options": [],
           "commands": []
         }
       ]
