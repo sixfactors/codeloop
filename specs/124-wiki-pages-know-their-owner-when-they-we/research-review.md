@@ -1,0 +1,15 @@
+verdict: accept
+
+# c-124 research review
+
+| Finding | Evidence | Severity |
+|---|---|---|
+| Core "what exists" claims check out | `src/lib/store/schema.ts:43-51` WikiPageSchema is exactly id/folder/title/frontmatter/body/version, no owner/verified_at/changed_by. `src/lib/wiki.ts:18-29` Page interface has `cards` and `updated`, nothing else. `grep -n "owner\|verified"` on wiki.ts returns no hits. Lint at `src/lib/wiki.ts` filters `p.updated < cutoff` (90 days), confirming "stale" is mtime-based, not a verified check. | n/a (confirms research) |
+| Backlinks claim verified against the actual component | `workspace/components/shared/wiki/wiki-page-view.tsx:5-6` own comment: "Backlinks cost one request: GET /api/pages?q=<slug>", and the `Backlinks` function calls `usePages({ q: slug, limit: 50 })` client-side, filtering out the current page. Matches research's claim that backlinks are a search, not a field on the page payload. | n/a (confirms research) |
+| Missed citing existing git/Feature-trailer commit-scan prior art | The card's own feature note says `changed_by from commits`, which is exactly what research proposes to build new. But `src/lib/verify.ts:49,111` already has a `git()` helper running `git log --grep=^Feature: <id>$` to find commits by trailer, and `src/lib/run.ts:33` has a second, separately duplicated `git()` helper. Neither is cited in "What exists" or "Sources," even though they are the closest seam to the one capability research names as the card's center. A third ad hoc git-log parser risks a third duplicate of the same helper. | medium |
+| `owner` is not a blank slate in the UI, just unvalidated | `workspace/lib/wiki.ts:115` `PROPERTY_ORDER` already lists `owner` (and `updated`) as a known, ordered frontmatter key rendered generically by `properties()`. Research does say "the UI can show an owner frontmatter key if present," so this is covered, but it undersells that the display slot and ordering already exist; only validation/write-path and the other three fields are genuinely new. | low |
+| c-121/c-138 scope boundary correctly drawn | `card show c-121`: `[api] Endpoints per screen ... /wiki/:path`. `card show c-138`: `[ui] Typed pages, TOC, backlinks, changed-by, editor`, same story almost verbatim. Research's risk section explicitly separates "this card owns the api data; that card owns the Notion-style reader chrome" and flags the stub-payload-shape risk. Matches `.codeloop/wiki/architecture/ui.md` build order (api c-118-c-126, screens c-133-c-139). | n/a (confirms research) |
+
+## Summary
+
+Every checkable claim in research.md matched the code exactly, including line-level citations on schema, wiki.ts, and the backlinks component. The one real gap: it names `changed_by from commits` as the card's center but never searched for the two existing `git()` / Feature-trailer helpers already in `verify.ts` and `run.ts`, so the spec stage should reuse or consolidate one of those rather than write a third. Verdict stands: build, with that one path noted for the spec stage.
