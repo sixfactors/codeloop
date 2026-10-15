@@ -1,24 +1,25 @@
 'use client';
 
 // The current stage's rubric beside Approve: each row's criterion, how it is judged, and whether it
-// holds (pass), does not (fail, with the finding) or waits for the person at the gate (pending).
+// holds (pass), does not (fail, with the finding), does not apply (na, with why) or waits for the
+// person at the gate (pending).
 // GET /api/cards/:id/full judges the rows; this draws them in the owner's words. A row the builder
 // has not attested yet comes back as a fail whose finding is an instruction to the builder ("pending:
 // scaffolded in ...; replace `- I2 pending:` with ..."): it reads "not shown yet" here, with the
 // instruction behind "For the builder".
 
-import { CheckCircle2, ChevronRight, CircleDashed, Hand, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, CircleDashed, Hand, MinusCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from '@/components/ui/item';
 import { cn } from '@/lib/utils';
 import type { RubricRow, StageRubric } from '@/lib/types';
 
-type Shown = 'pass' | 'fail' | 'not-shown' | 'yours';
+type Shown = 'pass' | 'fail' | 'na' | 'not-shown' | 'yours';
 
-const ICON = { pass: CheckCircle2, fail: XCircle, 'not-shown': CircleDashed, yours: Hand } as const;
-const TONE: Record<Shown, string> = { pass: 'text-success', fail: 'text-destructive', 'not-shown': 'text-muted-foreground', yours: 'text-warning' };
-const OWNER_WORDS: Record<Exclude<Shown, 'pass' | 'fail'>, string> = { 'not-shown': 'Not shown yet', yours: 'Yours to judge' };
+const ICON = { pass: CheckCircle2, fail: XCircle, na: MinusCircle, 'not-shown': CircleDashed, yours: Hand } as const;
+const TONE: Record<Shown, string> = { pass: 'text-success', fail: 'text-destructive', na: 'text-muted-foreground', 'not-shown': 'text-muted-foreground', yours: 'text-warning' };
+const OWNER_WORDS: Record<Exclude<Shown, 'pass' | 'fail'>, string> = { na: 'n/a', 'not-shown': 'Not shown yet', yours: 'Yours to judge' };
 
 /** What the owner sees for a row: the builder's unattested scaffold is "not shown yet"; a row judged at the gate is "yours". */
 function shownAs(r: RubricRow): Shown {
@@ -51,6 +52,7 @@ export function RubricRows({ rubric }: { rubric: StageRubric }) {
                 </ItemTitle>
                 {shown === 'fail' && r.finding ? <ItemDescription className="line-clamp-none text-xs break-words text-destructive">{r.finding}</ItemDescription> : null}
                 {shown === 'not-shown' || shown === 'yours' ? <ItemDescription className="line-clamp-none text-xs" data-testid="rubric-owner-words">{OWNER_WORDS[shown]}</ItemDescription> : null}
+                {shown === 'na' ? <ItemDescription className="line-clamp-none text-xs break-words" data-testid="rubric-owner-words">{OWNER_WORDS.na}{r.finding ? `: ${r.finding}` : ''}</ItemDescription> : null}
                 {shown === 'not-shown' && r.finding ? (
                   <Collapsible>
                     <CollapsibleTrigger className="group flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground" data-testid="rubric-for-builder">
