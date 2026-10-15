@@ -9,7 +9,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { readActivity } from './activity.js';
 import { cardKey, type Card } from './cards.js';
-import { storyCommits } from './diff-budget.js';
+import { storyCommitTimes } from './diff-budget.js';
 import { readTasks, type Task } from './spec.js';
 
 const PROGRESS_KINDS = new Set(['edit', 'cmd', 'commit', 'handback']);
@@ -82,6 +82,6 @@ export function progressSince(projectDir: string, card: Card): number | undefine
     for (const l of page.items) if (PROGRESS_KINDS.has(String(l.kind))) bump(Date.parse(l.at));
     if (!page.next) break;
   }
-  for (const c of storyCommits(projectDir, card.id)) bump(c.at);
+  for (const at of storyCommitTimes(projectDir, card.id)) bump(at);
   return newest || undefined;
 }

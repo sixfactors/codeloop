@@ -366,8 +366,10 @@ export async function guardSession(): Promise<void> {
   const { loadAgents } = await import('../lib/agent.js');
   const { openQuestions } = await interviewLib();
   // The monitor first: what waits on a person, what is failing and its fix, what is stale.
-  for (const line of monitorLines(monitorReport(projectDir))) console.log(line);
-  for (const line of stalledLines(stalledBuilders(projectDir))) console.log(line);
+  const { withCommitIndex } = await import('../lib/diff-budget.js');
+  const { withCardsReadCache } = await cardsLib();
+  const report = withCardsReadCache(() => withCommitIndex(projectDir, () => [...monitorLines(monitorReport(projectDir)), ...stalledLines(stalledBuilders(projectDir))]));
+  for (const line of report) console.log(line);
   // And make sure something keeps acting on it between sessions.
   const scheduled = ensureMonitorSchedule(projectDir, { hasAgents: Object.keys(loadAgents(projectDir).agents).length > 0, monitorOn: monitorEnabled(projectDir) });
   if (scheduled) console.log(scheduled);
