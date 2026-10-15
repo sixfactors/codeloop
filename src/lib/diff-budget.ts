@@ -75,9 +75,12 @@ export function withCommitIndex<T>(projectDir: string, fn: () => T): T {
 }
 
 function scan(projectDir: string, cardId: string, all: boolean, ref?: string): Scanned[] {
-  if (all && !ref) {
+  if (!ref) {
     const graph = commitGraph(projectDir);
-    if (graph) return (graph.byCard.get(cardId) ?? []).map(c => ({ sha: c.sha, subject: c.subject, at: c.at, decorations: '' }));
+    if (graph) {
+      const onHead = all ? undefined : reachableFrom(graph, 'head', graph.head);
+      return (graph.byCard.get(cardId) ?? []).filter(c => !onHead || onHead[graph.index.get(c.sha)!] === 1).map(c => ({ sha: c.sha, subject: c.subject, at: c.at, decorations: '' }));
+    }
   }
   return readLog(projectDir, ref, all).filter(({ body }) => body.split('\n').some(trailerOf(cardId))).map(x => x.rec);
 }
@@ -99,15 +102,41 @@ export function storyCommits(projectDir: string, cardId: string): StoryCommit[] 
   });
 }
 
+// A commit's numstat never changes, so it is kept for the life of the process. Missing ones are
+// read together in one git call: one spawn per commit cost 45 ms each, 2.3 s for a long story.
+const numstats = new Map<string, [string, number][]>();
+
+function numstatOf(projectDir: string, wanted: string[], sha: string): [string, number][] {
+  const key = (s: string) => `${projectDir}\0${s}`;
+  if (!numstats.has(key(sha))) {
+    const missing = wanted.filter(s => !numstats.has(key(s)));
+    for (let i = 0; i < missing.length; i += 200) {
+      const chunk = missing.slice(i, i + 200);
+      const out = git(projectDir, ['show', '--numstat', '--format=%x01%H', '--no-renames', ...chunk]);
+      for (const part of out.split('\u0001')) {
+        const [id, ...rows] = part.split('\n');
+        if (!id) continue;
+        const list: [string, number][] = [];
+        for (const row of rows) {
+          const m = /^(\d+|-)\t(\d+|-)\t(.+)$/.exec(row);
+          if (m) list.push([m[3], (m[1] === '-' ? 0 : Number(m[1])) + (m[2] === '-' ? 0 : Number(m[2]))]);
+        }
+        numstats.set(key(id.trim()), list);
+      }
+      for (const s of chunk) if (!numstats.has(key(s))) numstats.set(key(s), []);
+    }
+  }
+  return numstats.get(key(sha)) ?? [];
+}
+
 /** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
 export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): { files: Map<string, number>; commits: number } {
   const shas = scan(projectDir, cardId, Boolean(opts.branches), opts.ref).map(c => c.sha);
   const files = new Map<string, number>();
   for (const sha of shas) {
-    for (const row of git(projectDir, ['show', '--numstat', '--format=', '--no-renames', sha]).split('\n')) {
-      const m = /^(\d+|-)\t(\d+|-)\t(.+)$/.exec(row);
-      if (!m || EXCLUDED.some(re => re.test(m[3]))) continue;
-      files.set(m[3], (files.get(m[3]) ?? 0) + (m[1] === '-' ? 0 : Number(m[1])) + (m[2] === '-' ? 0 : Number(m[2])));
+    for (const [path, lines] of numstatOf(projectDir, shas, sha)) {
+      if (EXCLUDED.some(re => re.test(path))) continue;
+      files.set(path, (files.get(path) ?? 0) + lines);
     }
   }
   return { files, commits: shas.length };

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { parse as parseYaml } from 'yaml';
 
@@ -10,10 +10,21 @@ type Values = Record<string, any>;
 
 const isMap = (v: unknown): v is Values => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+// Parsed once per file version: a served request reads config dozens of times. Callers get a copy
+// because some of them edit what they are handed.
+const parsedFiles = new Map<string, { stamp: string; value: Values }>();
+
 function read(projectDir: string, path: string): Values {
   const file = join(projectDir, path);
-  const parsed = existsSync(file) ? parseYaml(readFileSync(file, 'utf-8')) : null;
-  return isMap(parsed) ? parsed : {};
+  const st = statSync(file, { throwIfNoEntry: false });
+  if (!st) return {};
+  const stamp = `${st.mtimeMs}:${st.size}`;
+  const hit = parsedFiles.get(file);
+  if (hit?.stamp === stamp) return structuredClone(hit.value);
+  const parsed = parseYaml(readFileSync(file, 'utf-8'));
+  const value = isMap(parsed) ? parsed : {};
+  parsedFiles.set(file, { stamp, value });
+  return structuredClone(value);
 }
 
 // Maps merge key by key, so local.yaml can change one agent's command and leave the rest shared.

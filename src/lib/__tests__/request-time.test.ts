@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
-import { rmSync } from 'fs';
+import { rmSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createLocalClient } from '../../sdk/local.js';
 import { closeIndex } from '../index/index.js';
@@ -42,5 +43,22 @@ describe('request time on a 200 card board with 400 commits', () => {
   });
   it('serves a story in full in under 500 ms', async () => {
     expect(await time('card full', () => client.cards.full('c-048'))).toBeLessThan(500);
+  });
+});
+
+describe('request time on one long story', () => {
+  it('serves a card with 16 tasks, 60 commits and 2000 activity lines in full in under 300 ms', async () => {
+    // One card carries every commit and a plan, so the scope check has files to measure.
+    const long = buildBoard({ cards: 1, commits: 60, activityLines: 2000 });
+    try {
+      writeFileSync(join(long, 'specs/c-001/tasks.md'), Array.from({ length: 16 }, (_, i) => `- [${i % 2 ? 'x' : ' '}] T${i + 1} task ${i + 1}`).join('\n') + '\n');
+      writeFileSync(join(long, 'specs/c-001/plan.md'), '# plan\n\n## Files\n- f0.txt\n');
+      const c = createLocalClient(long);
+      await c.board.get();
+      expect(await time('long card full', () => c.cards.full('c-001'))).toBeLessThan(300);
+      await closeIndex(long);
+    } finally {
+      rmSync(long, { recursive: true, force: true });
+    }
   });
 });
