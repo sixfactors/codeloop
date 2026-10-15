@@ -223,12 +223,13 @@ try {
     const firstSha = await page.locator('[data-testid="commit-row"]').first().innerText();
     ok(`${id} lists every commit newest first, merged or on its branch`, commits === after.commits.length && commits > 0 && firstSha.includes(c0.sha.slice(0, 7)) && firstWhere === want, `${commits} rows, first ${c0?.sha.slice(0, 7)} "${firstWhere}"`);
     const step = full.journey.steps.find((x) => x.state === 'current' || x.state === 'gate');
-    const wantTime = step && step.activeMinutes !== undefined ? `in ${step.id} ${hm(step.activeMinutes + step.idleMinutes)}, working ${hm(step.activeMinutes)}` : undefined;
+    const work = (m) => (m > 0 ? `working ${hm(m)}` : 'no work yet');
+    const wantTime = step && step.activeMinutes !== undefined ? `in ${step.id} ${hm(step.activeMinutes + step.idleMinutes)}, ${work(step.activeMinutes)}` : undefined;
     const gotTime = await page.locator('[data-testid="step-time"]').innerText().catch(() => undefined);
     // Idle minutes grow while the page loads, so the wall time may run a few minutes past the API's;
     // the working minutes must match exactly.
     const mins = (t) => { const m = /^(\d+)h (\d+)m$|^(\d+)m$/.exec(t ?? ''); return m ? (m[3] !== undefined ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2])) : NaN; };
-    const parts = (t) => /^in (\S+) (.+), working (.+)$/.exec(t ?? '');
+    const parts = (t) => /^in (\S+) (.+), (working .+|no work yet)$/.exec(t ?? '');
     const [g, w] = [parts(gotTime), parts(wantTime)];
     ok(`${id} current step shows time in phase and time working`, Boolean(g && w) && g[1] === w[1] && g[3] === w[3] && Math.abs(mins(g[2]) - mins(w[2])) <= 3, `${gotTime ?? 'none'}; api ${wantTime ?? 'none'}`);
     await shoot(`${id}-moving`);
@@ -239,7 +240,7 @@ try {
     if (story) {
       const face = page.locator(`[data-testid="board-card-${story.id}"] [data-testid="board-card-time"]`).first();
       const got = await face.innerText({ timeout: 90000 }).catch(() => undefined);
-      ok(`board face of ${story.id} shows its phase time`, got === `in ${story.stage} ${hm(story.activeMinutes + story.idleMinutes)}, working ${hm(story.activeMinutes)}`, got ?? 'none');
+      ok(`board face of ${story.id} shows its phase time`, got === `${story.stage} · ${story.activeMinutes + story.idleMinutes < 60 ? `${story.activeMinutes + story.idleMinutes}m` : `${Math.floor((story.activeMinutes + story.idleMinutes) / 60)}h`}, ${work(story.activeMinutes)}`, got ?? 'none');
       await shoot('board-phase-time');
     } else ok('board API sends a story with working minutes', false);
   }

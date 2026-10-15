@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { BoardCard } from '@/components/shared/board-card';
 import { StoryBadge } from '@/components/shared/state-pill';
-import { phaseTimeText } from '@/components/shared/journey-stepper';
+import { faceTimeText } from '@/components/shared/journey-stepper';
 import { Holder } from '@/components/shared/holder';
 import { EmptyState } from '@/components/shared/empty-state';
 import { InlineError } from '@/components/shared/inline-error';
@@ -38,6 +38,18 @@ export const ago = (iso?: string) => {
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
   return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 172_800 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86_400)}d ago`;
 };
+/** The face's live line in owner words. The API's stuck line ("stuck: the check failed three times")
+ * reads as "Stuck 17h: the interview check failed 3 times"; anything else is shown as it comes. */
+function liveLine(story: BoardStory): string | undefined {
+  const last = story.lastActivity;
+  if (!last) return undefined;
+  if (/^stuck: the check failed three times/.test(last.text)) {
+    const forHow = ago(last.at)?.replace(' ago', '');
+    return `Stuck${forHow ? ` ${forHow}` : ''}: the ${story.stage} check failed 3 times`;
+  }
+  return `${last.text}${last.at ? ` · ${ago(last.at)}` : ''}`;
+}
+
 const inPhase = (iso?: string) => {
   const a = ago(iso);
   return a ? `in phase ${a.replace(' ago', '')}` : undefined;
@@ -45,7 +57,8 @@ const inPhase = (iso?: string) => {
 
 /** The card face: title, who holds it, its live line, how long it has been in this phase, one badge. */
 function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) => void }) {
-  const time = phaseTimeText(story.stage, story.activeMinutes, story.idleMinutes);
+  const time = faceTimeText(story.stage, story.activeMinutes, story.idleMinutes);
+  const line = liveLine(story);
   const who = story.holder === 'agent' ? story.agent : story.holder === 'needs-you' ? 'You' : undefined;
   return (
     <div
@@ -58,20 +71,18 @@ function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) 
       data-holder={story.holder}
       className="group flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-2.5 text-left text-sm shadow-xs transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="block leading-snug">{story.title}</span>
+      <span className="flex min-w-0 items-baseline gap-1.5 leading-snug">
+        <span className="shrink-0 font-mono text-[11px] text-muted-foreground" data-testid="board-card-id">{story.id}</span>
+        <span className="min-w-0">{story.title}</span>
+      </span>
       {who ? (
         <span className="flex min-w-0 items-center gap-1.5 text-xs">
           {story.holder === 'agent' ? <Holder agent={story.agent} /> : <Avatar className="size-5"><AvatarFallback className="bg-warning/20 text-[10px] font-semibold">Y</AvatarFallback></Avatar>}
           <span className="truncate">{who}</span>
         </span>
       ) : null}
-      {story.lastActivity ? (
-        <span className="line-clamp-2 text-xs text-muted-foreground" data-testid="board-card-live-line">
-          {story.lastActivity.text}{story.lastActivity.at ? ` · ${ago(story.lastActivity.at)}` : ''}
-        </span>
-      ) : null}
+      {line ? <span className="line-clamp-2 text-xs text-muted-foreground" data-testid="board-card-live-line">{line}</span> : null}
       <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-        <span className="font-mono">{story.id}</span>
         {story.display.state !== 'done' && story.display.state !== 'shipped'
           ? time ? <span data-testid="board-card-time">{time}</span>
           : story.phaseSince ? <span>{inPhase(story.phaseSince)}</span> : null

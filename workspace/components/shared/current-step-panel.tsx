@@ -111,14 +111,14 @@ function YouShape({ card, journey, rubric }: { card: CardT; journey: Journey; ru
       { onSuccess: () => { toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${card.id}`); setNote(''); }, onError: (e) => toast.error(`${action === 'approve' ? 'Approve' : 'Reject'} failed: ${(e as Error).message}`) }
     );
   return (
-    <AttributeCard title={holder.gate ? `Waiting for you at ${holder.gate}` : 'Questions for you'} icon={holder.gate ? Lock : Hand} className="border-warning/50" testId="panel-you">
+    <AttributeCard title={holder.gate ? (holder.gate === 'stuck' ? `Stuck at ${card.stage}` : `Waiting for you at ${card.stage}`) : 'Questions for you'} icon={holder.gate ? Lock : Hand} className="border-warning/50" testId="panel-you">
       <CheckLine journey={journey} />
       {holder.gate ? (
         <div className="mt-2 flex flex-col gap-2">
           <p className="text-xs text-muted-foreground" data-testid="gate-explain">
             {holder.gate === 'stuck'
               ? 'The check failed three times. Approve unsticks it: it clears the three fails and keeps the stage, so the next run starts fresh. Reject parks it.'
-              : `Gate ${holder.gate}, approved by the ${holder.awaiting ?? 'owner'}.`}
+              : `The ${card.stage} gate, approved by the ${holder.awaiting ?? 'owner'}.`}
           </p>
           {rubric?.rows.length ? <RubricRows rubric={rubric} /> : null}
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />

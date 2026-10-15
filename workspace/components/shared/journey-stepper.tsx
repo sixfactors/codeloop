@@ -27,7 +27,15 @@ const hm = (minutes: number) => {
  * The API sends the working and idle minutes, which together are the wall time. */
 export function phaseTimeText(stage: string, active?: number, idle?: number): string | undefined {
   if (active === undefined || idle === undefined) return undefined;
-  return `in ${stage} ${hm(active + idle)}, working ${hm(active)}`;
+  return `in ${stage} ${hm(active + idle)}, ${active > 0 ? `working ${hm(active)}` : 'no work yet'}`;
+}
+
+/** The board face's version, in owner words: "research · 66h, no work yet" or "build · 3h, working 1h 05m".
+ * The total rounds to whole hours past the first hour, since a face is read at a glance. */
+export function faceTimeText(stage: string, active?: number, idle?: number): string | undefined {
+  if (active === undefined || idle === undefined) return undefined;
+  const total = active + idle;
+  return `${stage} · ${total < 60 ? `${total}m` : `${Math.floor(total / 60)}h`}, ${active > 0 ? `working ${hm(active)}` : 'no work yet'}`;
 }
 
 export const since = (iso?: string) => (iso ? new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : undefined);

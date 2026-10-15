@@ -6,10 +6,13 @@
 import { useMemo } from 'react';
 import { DetailSheet } from '@/components/shared/detail-sheet';
 import { CardActions, CardDetail, CardHeaderTags, storyLine } from '@/components/shared/card-detail';
+import Link from 'next/link';
 import { useCard } from '@/hooks/use-api';
+import { useRoutes } from '@/components/providers/project-provider';
 
 export function CardDrawer({ id, onClose, ids = [], onNavigate }: { id: string | null; onClose: () => void; ids?: string[]; onNavigate?: (id: string) => void }) {
   const { data: card } = useCard(id ?? '');
+  const routes = useRoutes();
   const index = id ? ids.indexOf(id) : -1;
   const navigation = useMemo(
     () =>
@@ -27,7 +30,8 @@ export function CardDrawer({ id, onClose, ids = [], onNavigate }: { id: string |
     <DetailSheet
       open={Boolean(id)}
       onOpenChange={(open) => { if (!open) onClose(); }}
-      title={card?.title ?? id ?? ''}
+      title={id ? <Link href={routes.card(id)} className="hover:underline underline-offset-3" data-testid="card-sheet-title-link">{card?.title ?? id}</Link> : ''}
+      expandHref={id ? routes.card(id) : undefined}
       description={card ? storyLine(card) : undefined}
       tags={card ? <CardHeaderTags card={card} /> : undefined}
       navigation={navigation}

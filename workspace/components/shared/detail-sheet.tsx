@@ -9,7 +9,8 @@ import { useEffect, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 /** Small keyboard shortcut badge, styled for tooltip backgrounds. */
@@ -45,6 +46,8 @@ export interface DetailSheetProps {
   footerActions?: ReactNode;
   /** Sheet width from sm up. Literal keys so Tailwind can see the data-[side] variants. */
   widthClass?: keyof typeof WIDTHS;
+  /** The record's own page. Set, the header gets an expand icon beside the close icon that opens it. */
+  expandHref?: string;
   children: ReactNode;
   testId?: string;
 }
@@ -58,6 +61,7 @@ export function DetailSheet({
   navigation,
   footerActions,
   widthClass = 'sm:max-w-2xl',
+  expandHref,
   children,
   testId,
 }: DetailSheetProps) {
@@ -87,7 +91,17 @@ export function DetailSheet({
         className={cn('flex h-full w-full flex-col gap-0 bg-background p-0 data-[side=right]:w-full sm:rounded-l-2xl', WIDTHS[widthClass])}
         data-testid={testId}
       >
-        <SheetHeader className="shrink-0 border-b bg-background px-4 py-4 pr-12">
+        {expandHref ? (
+          <Tooltip>
+            {/* Sits left of the primitive's close button (absolute top-3 right-3, icon-sm). */}
+            <TooltipTrigger render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12 z-10" nativeButton={false} render={<Link href={expandHref} />} data-testid="detail-sheet-expand" />}>
+              <Maximize2 />
+              <span className="sr-only">Open full screen</span>
+            </TooltipTrigger>
+            <TooltipContent>Open full screen</TooltipContent>
+          </Tooltip>
+        ) : null}
+        <SheetHeader className={cn('shrink-0 border-b bg-background px-4 py-4', expandHref ? 'pr-20' : 'pr-12')}>
           <SheetTitle className="text-left" data-testid="detail-sheet-title">{title}</SheetTitle>
           {description && <SheetDescription className="text-left text-xs">{description}</SheetDescription>}
           {tags && <div className="flex flex-wrap items-center gap-2 pt-1">{tags}</div>}

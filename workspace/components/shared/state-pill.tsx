@@ -32,13 +32,14 @@ const HEALTH_PILL: Partial<Record<NonNullable<StoryState['health']>, { label: st
 
 const titleCase = (s: string) => s.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-/** What a gate name reads as on a pill: the gate's own name ("spec", "local-check") titled, or
- * the two states that are not a named gate at all. */
-export function waitingLabel(waitingOn?: string): string {
+/** What a story waiting at a gate reads as on a pill: the card's stage, titled, so the pill, the
+ * journey and the panel name one stage (a gate's own name can differ from the stage it sits on);
+ * the gate name only when no stage is known; or the two states that are not a gate at all. */
+export function waitingLabel(waitingOn?: string, stage?: string): string {
   if (!waitingOn) return 'Needs you';
   if (waitingOn === 'questions') return 'Questions';
   if (waitingOn === 'stuck') return 'Stuck';
-  return titleCase(waitingOn);
+  return titleCase(stage ?? waitingOn);
 }
 
 function Pill({ tone, agentDot, children, className }: { tone: Tone; agentDot?: boolean; children: React.ReactNode; className?: string }) {
@@ -57,7 +58,7 @@ function Pill({ tone, agentDot, children, className }: { tone: Tone; agentDot?: 
 export function StoryBadge({ display }: { display: StoryState }) {
   const health = display.health && display.health !== 'working' && display.health !== 'needs-you' ? HEALTH_PILL[display.health] : undefined;
   if (health) return <Pill tone={health.tone}>{moving(display, health.label)}</Pill>;
-  if (display.state === 'needs-you') return <Pill tone="you">{moving(display, waitingLabel(display.waitingOn))}</Pill>;
+  if (display.state === 'needs-you') return <Pill tone="you">{moving(display, waitingLabel(display.waitingOn, display.stage))}</Pill>;
   return null;
 }
 
@@ -88,7 +89,7 @@ export function StatePill({ display, agent, className }: { display: StoryState; 
       tone = agent ? 'agent' : 'plain';
       dot = Boolean(agent);
       break;
-    case 'needs-you': label = waitingLabel(display.waitingOn); tone = 'you'; break;
+    case 'needs-you': label = waitingLabel(display.waitingOn, display.stage); tone = 'you'; break;
     case 'done': label = 'Done'; tone = 'ok'; break;
     case 'shipped': label = 'Shipped'; tone = 'ok'; break;
   }
