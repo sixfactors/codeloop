@@ -3,20 +3,18 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realp
 import { hostname } from 'os';
 import { basename, dirname, isAbsolute, join, relative } from 'path';
 import { Command } from 'commander';
+
+// The libraries behind the board, engine and plan scope are imported inside the actions that use
+// them: `guard` runs on every tool call, and most calls (no active card, a shell command) need none.
+const cardsLib = () => import('../lib/cards.js');
+const planLib = () => import('../lib/plan-scope.js');
+const servicesLib = () => import('../lib/services.js');
+const interviewLib = () => import('../lib/interview.js');
 import chalk from 'chalk';
 import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveCard, setActiveCard } from '../lib/active-card.js';
 import { appendActivity } from '../lib/activity.js';
-import { DONE, DROPPED, findCard, findCardOrNone, inLane, readCards, type Card } from '../lib/cards.js';
-import { listCards, monitorLines, monitorReport, stalledBuilders, stalledLines } from '../lib/services.js';
-import { ensureMonitorSchedule } from '../lib/schedule.js';
-import { monitorEnabled } from '../lib/run.js';
-import { loadAgents } from '../lib/agent.js';
-import { resolveRole } from '../lib/engine.js';
-import { tickTaskFromCommit } from '../lib/spec.js';
-import { openQuestions } from '../lib/interview.js';
-import { isSharedPath, outsidePlanScope, pathInPlan, planFiles } from '../lib/plan-scope.js';
-import { cardCommand } from './card.js';
 import { guard } from './guard.js';
+import type { Card } from '../lib/cards.js';
 import { projectRoot, workDir } from '../lib/project-root.js';
 
 const PRESENCE_DIR = '.codeloop/state/presence';
@@ -79,16 +77,21 @@ function sessionIdFrom(input: Record<string, unknown>): string {
  * `codeloop card activate <id>` is attached here, not in card.ts, so that file, one of the
  * "migrated" commands the layering test holds to the SDK, stays free of a direct .codeloop/state
  * read/write. This module is the one place that state lives, for every hook below too.
+ * Attached by the caller that loads card.ts, so the guard hooks do not load the card command.
  */
-cardCommand
-  .command('activate <id>')
-  .description('Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this')
-  .action(guard(async (id: string) => {
-    const card = findCard(readCards(projectRoot()).cards, id);
-    const session = currentSession();
-    setActiveCard(projectRoot(), card.id, session);
-    console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
-  }));
+export function attachCardActivate(cardCommand: Command): void {
+  if (cardCommand.commands.some(c => c.name() === 'activate')) return;
+  cardCommand
+    .command('activate <id>')
+    .description('Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this')
+    .action(guard(async (id: string) => {
+      const { findCard, readCards } = await cardsLib();
+      const card = findCard(readCards(projectRoot()).cards, id);
+      const session = currentSession();
+      setActiveCard(projectRoot(), card.id, session);
+      console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
+    }));
+}
 
 export const guardCommand = new Command('guard').description('Hooks that enforce the codeloop protocol regardless of what the chat says');
 
@@ -106,7 +109,9 @@ guardCommand
       console.error(chalk.red('codeloop: no active card for this repo, `codeloop start "<title>"` or `codeloop card activate <id>` first'));
       process.exit(2);
     }
-    let card;
+    const { findCard, readCards } = await cardsLib();
+    const { outsidePlanScope, isSharedPath, pathInPlan, planFiles } = await planLib();
+    let card: Card;
     try {
       card = findCard(readCards(projectDir).cards, activeId);
     } catch {
@@ -148,6 +153,8 @@ guardCommand
 // Open stories by priority band, then score, then age: what a session with nothing active should pick from.
 async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
   const order: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+  const { inLane } = await cardsLib();
+  const { listCards } = await servicesLib();
   const open = (await listCards(projectDir)).filter(c => inLane(c as unknown as Card) && !c.gate);
   return open
     .sort((a, b) => (order[a.band ?? ''] ?? 9) - (order[b.band ?? ''] ?? 9) || (b.score ?? 0) - (a.score ?? 0) || a.createdAt.localeCompare(b.createdAt))
@@ -167,6 +174,12 @@ guardCommand
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+    const { DONE, DROPPED, findCard, findCardOrNone, readCards } = await cardsLib();
+    const { monitorLines, monitorReport, stalledBuilders, stalledLines } = await servicesLib();
+    const { ensureMonitorSchedule } = await import('../lib/schedule.js');
+    const { monitorEnabled } = await import('../lib/run.js');
+    const { loadAgents } = await import('../lib/agent.js');
+    const { openQuestions } = await interviewLib();
     // The monitor first: what waits on a person, what is failing and its fix, what is stale.
     for (const line of monitorLines(monitorReport(projectDir))) console.log(line);
     for (const line of stalledLines(stalledBuilders(projectDir))) console.log(line);
@@ -184,7 +197,7 @@ guardCommand
     }
     if (activeId) {
       appendActivity(projectDir, activeId, { session, kind: 'start', ...(detectHost(input) ? { host: detectHost(input) } : {}) });
-      let card;
+      let card: Card;
       try {
         card = findCard(readCards(projectDir).cards, activeId);
       } catch {
@@ -261,13 +274,15 @@ guardCommand
 guardCommand
   .command('commit')
   .description("post-commit hook: records the commit in the activity of each card its `Card:` (or `Feature:`) trailer names")
-  .action(() => {
+  .action(async () => {
     const projectDir = projectRoot();
     if (!existsSync(join(projectDir, '.codeloop'))) return;
     const log = spawnSync('git', ['log', '-1', '--format=%H%x00%s%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)%x00%(trailers:key=Task,valueonly,separator=%x2C)'], { cwd: projectDir, encoding: 'utf-8' });
     if (log.status !== 0) return;
     const [sha, subject, cardTrailer, featureTrailer, taskTrailer] = log.stdout.replace(/\n$/, '').split('\0');
     const ids = (cardTrailer?.trim() ? cardTrailer : featureTrailer ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    const { readCards } = await cardsLib();
+    const { tickTaskFromCommit } = await import('../lib/spec.js');
     let known: Set<string>;
     try { known = new Set(readCards(projectDir).cards.map(c => c.id)); } catch { return; }
     const session = currentSession();
@@ -287,6 +302,8 @@ guardCommand
   .description("UserPromptSubmit hook: prints the active card, its stage and open questions; flags a prompt whose words match none of the card's title (a heuristic, not a parser)")
   .action(async () => {
     const projectDir = projectRoot();
+    // Not a codeloop project: nothing to say, and nothing worth loading the board libraries for.
+    if (!existsSync(join(projectDir, '.codeloop'))) return;
     const input = await readStdinJson();
     const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
     const activeId = getActiveCard(projectDir, session);
@@ -304,7 +321,9 @@ guardCommand
       console.error(`\`codeloop card activate ${top[0].id}\`, or \`codeloop start "<title>"\` for new work.`);
       process.exit(2);
     }
-    let card;
+    const { findCard, readCards } = await cardsLib();
+    const { openQuestions } = await interviewLib();
+    let card: Card;
     try {
       card = findCard(readCards(projectDir).cards, activeId);
     } catch {
@@ -324,11 +343,13 @@ guardCommand
   .command('diff')
   .description("Pre-commit hook: lists changed files outside the active card's plan; exits 1 when any are found and the plan has a files list")
   .option('--staged', 'Compare the git index instead of the working tree', false)
-  .action(guard((opts: { staged?: boolean }) => {
+  .action(guard(async (opts: { staged?: boolean }) => {
     const projectDir = projectRoot();
     const activeId = getActiveCard(projectDir);
     if (!activeId) return;
-    let card;
+    const { findCard, readCards } = await cardsLib();
+    const { pathInPlan, planFiles } = await planLib();
+    let card: Card;
     try {
       card = findCard(readCards(projectDir).cards, activeId);
     } catch {
@@ -388,7 +409,8 @@ presenceCommand
 
 export const whoamiCommand = new Command('whoami')
   .description("This repo's active card, your git identity and role, and who else is present (from Cursor session hooks)")
-  .action(() => {
+  .action(async () => {
+    const { resolveRole } = await import('../lib/engine.js');
     const projectDir = projectRoot();
     const active = getActiveCard(projectDir);
     console.log(active ? `  active card: ${active}` : '  active card: none');
@@ -416,7 +438,8 @@ export const monitorCommand = new Command('monitor').description('What the monit
 monitorCommand
   .command('stalled')
   .description('Builders holding a card that have written nothing to it for monitor.stall_minutes (default 30)')
-  .action(() => {
+  .action(async () => {
+    const { stalledBuilders, stalledLines } = await servicesLib();
     const rows = stalledBuilders(projectRoot());
     for (const line of rows.length ? stalledLines(rows) : ['No stalled builders.']) console.log(line);
   });
