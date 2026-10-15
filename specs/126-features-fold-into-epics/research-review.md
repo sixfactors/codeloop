@@ -1,0 +1,17 @@
+verdict: accept
+
+## Findings
+
+| Finding | Evidence | Severity |
+|---|---|---|
+| Design doc citations are real and exact | `docs/artifacts/codeloop-ui-design.html:155` is the "Feature is not a separate object... Score moves onto the epic" caption; `:422` is the "Fold Feature into Epic... Yes" decision row. Both quoted verbatim, lines match exactly. | low (confirms accuracy) |
+| Schema claim verified in code | `src/lib/store/schema.ts:91` is `export const FeatureSchema`, which carries `rice: RiceSchema.optional()` at line 99; `EpicSchema` (lines 78-88) has no rice field. `scoreEpic` in `src/lib/index/index.ts:418` sums `this.scoredFeatures` filtered by `f.epic === e.id` — matches the claim that epic score is only a sum of its features. | low (confirms accuracy) |
+| Research misses the existing migration seam | `src/lib/store/migrations/index.ts` defines a `Migration` interface (`id`, `up`) run automatically via `runMigrations`, tracked in `.codeloop/store.json`, with one real example (`001-story-fields.ts`). This is the established mechanism for exactly the kind of one-time schema/data rewrite c-126 needs (feature pages -> epics, cards' `feature:` -> `epic:`). The research's Risks section describes the migration risk generically ("migration must rewrite sixteen feature pages and every card's `feature:`...") but never names this seam or `002-...ts` as where it lands. Spec stage could reinvent an ad hoc script instead of adding a numbered migration. | medium |
+| Feature-page and epic-page counts verified | `ls .codeloop/wiki/features/` = 16, `ls .codeloop/wiki/epics/` = 5. Matches "Sixteen feature pages and five epic pages live in this repo today." | low (confirms accuracy) |
+| Blast radius list verified | `CARD_FILTERS` in `src/lib/index/index.ts:55` includes both `epic` and `feature`; `scoreFeature`/`createFeature` usages found across `src/sdk/client.ts`, `src/sdk/local.ts`, `src/sdk/http.ts`, `src/lib/server.ts`, `src/lib/services.ts`. The named blast radius is real, not inflated. | low (confirms accuracy) |
+| Decision-pending framing matches card, but "cost of no" is thin | Card says "Decision pending from the owner (recommended yes)." Research's Risks says the owner's yes is open and "Spec gate should confirm before code lands," citing `.codeloop/wiki/decisions/ui-rebuild-bottom-up.md` correctly (verified: "Feature folding into epic (c-126) waits for the owner's yes"). But the research only says the pain persists if the owner says no — it doesn't size that cost (e.g. agents/founders keep mis-filing into feature vs epic, RICE stays split) the way it sizes the "yes" cost (full blast radius list). Asymmetric treatment. | low |
+| `exists: build` call is correct | Grepped for any existing fold/merge code path between Feature and Epic; none exists beyond the schema/scoring split already described. No `unlock` opportunity was missed. | low (confirms accuracy) |
+
+## Summary
+
+Every citation checked (design doc lines, schema.ts, terminology.md, index.ts, the decision page, file counts) is real and matches its quoted claim exactly. The one substantive gap is that the research names the migration risk but not the codebase's existing numbered-migration mechanism (`src/lib/store/migrations/`), which is the seam the build stage should plug into rather than hand-rolling a rewrite script. Not severe enough to redo research since the core exists/pain/verdict work is sound, but the spec stage should be pointed at that seam explicitly.
