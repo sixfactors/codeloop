@@ -1,10 +1,15 @@
 # c-066 tasks: The agent thinks before it builds
 
-<!--
-One line per task, each owned by one layer and tied to an acceptance line:
+- [ ] T001 [US1] [api] Parse `## Options` and `## Not building` out of spec.md in `checkSpec`, src/lib/spec.ts: fail with a named error unless Options has three list items with exactly one marked Rejected and a reason after it, and Not building has at least two non-empty lines
+- [ ] T002 [US2] [api] In the same parser, fail naming the option when it names no backticked path that exists under src/, templates/ or .codeloop/wiki/, or when the Rejected option carries no failure mode after the word Rejected, in src/lib/spec.ts
+- [ ] T003 [US3] [api] Read the card's size from the card store inside `checkSpec` (src/lib/spec.ts, lookup in src/lib/cards.ts): require Not building from S up and Options from M up; a trivial card passes with a note
+- [ ] T004 [US4] [api] When the spec stage advances on an M card, post one inbox question "A, B or C?" with the recommended letter through `addQuestions` in src/lib/interview.ts, its options read from spec.md `## Options`, skipped if the card already carries it; wired from the advance path in src/lib/flow.ts
+- [ ] T005 [US4] [api] On the accepted answer, mark that option Chosen in spec.md and clear any other Chosen in src/lib/interview.ts; when the card leaves spec, rewrite its decision page from spec.md `## Options` in src/lib/wiki-rules.ts so `decisionFromResearch` no longer wins
+- [ ] T006 [US1] [test] Tests in src/lib/__tests__/spec.test.ts and use cases usecases/066/uc-066-01 to 04: no Options fails naming the section, an option with no existing path fails naming the option, an S card passes without Options, an M card fails without them, the inbox question carries a recommended letter; each use case proved with `codeloop verify c-066 --mutate`
+- [ ] T007 [US1] [docs] Give templates/spec/spec.md an `## Options` block showing three approaches, one Rejected with its failure mode and one Chosen, and drop its `spec check --strict` promise; note the per-size rule in docs/story-standard.md under "Technical detail lives below the story"
+- [ ] T008 [US1] [docs] Create the child card with `codeloop card new build "The agent names the root cause and how it fails" --feature agent-thinks-first --size M` and record its id in the first line of spec.md `## Not building`, so the whys and premortem have a home before this card enters build
 
-    - [ ] T001 [P] [US1] [api] What to do, naming the file
+## Rubric
 
-Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in parallel.
-`codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
--->
+- S3 pass: the `## Folded into spec.md` table in specs/066-the-agent-thinks-before-it-builds/interview.md names the spec.md field each of Q1 to Q5 landed in; `grep -c 'interview Q' specs/066-the-agent-thinks-before-it-builds/spec.md` prints 10, every acceptance line, the `screens: none` note and every Not building line citing its question
+- S6 pass: `grep -n -A6 '^## Not building' specs/066-the-agent-thinks-before-it-builds/spec.md` lists five lines, whys and premortem (Q1), a new check command (Q3), stage `when:` (Q2), a second options list on the decision page (Q5), and options naming only new paths (Q4), each ending in the interview question that put it out
