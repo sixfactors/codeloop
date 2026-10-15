@@ -1,5 +1,5 @@
 {
-  "version": 1476,
+  "version": 1478,
   "cards": [
     {
       "id": "CL-001",
@@ -16150,6 +16150,68 @@
       ],
       "createdAt": "2026-10-15T02:42:00.433Z",
       "updatedAt": "2026-10-15T02:42:00.433Z"
+    },
+    {
+      "id": "c-297",
+      "title": "I edit the skills codeloop runs, in the app, and every lane uses the edit",
+      "story": {
+        "as": "dev",
+        "can": "edit a skill in the workspace app or the CLI, see a diff against the shipped template, reset it and test-run it on one card",
+        "so": "a lane stops running a skill I cannot change"
+      },
+      "persona": "dev",
+      "size": "M",
+      "feature": "codeloop",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Editable skill library. Spec for Dean to walk through.",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-15T16:13:18.477Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-15T16:13:18.477Z",
+      "updatedAt": "2026-10-15T16:13:18.477Z"
+    },
+    {
+      "id": "c-298",
+      "title": "A team runs codeloop as a hosted service and every developer's repo plugs in",
+      "story": {
+        "as": "team",
+        "can": "run one hosted codeloop that every developer's repo plugs into",
+        "so": "the board, wiki and agent runs are shared instead of living on one laptop"
+      },
+      "persona": "team",
+      "size": "L",
+      "feature": "codeloop",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Architecture options spec for Dean to read. Not a build card yet.",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-15T16:13:18.639Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-15T16:13:18.639Z",
+      "updatedAt": "2026-10-15T16:13:18.639Z"
     }
   ]
 }
