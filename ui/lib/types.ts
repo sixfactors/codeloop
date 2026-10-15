@@ -64,7 +64,7 @@ export interface LaneCard {
   /** Story fields and sizing arrive once the server derives them; every one is optional. */
   story?: { as?: string; can?: string; so?: string };
   persona?: string;
-  size?: 'S' | 'M' | 'L';
+  size?: 'trivial' | 'S' | 'M' | 'L';
   points?: number;
   bet?: string;
   /** Id of the epic card this one belongs to. */

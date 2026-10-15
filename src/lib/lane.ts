@@ -25,6 +25,8 @@ export interface Stage {
   done?: { cmd?: string; event?: string };
   gate?: Gate;
   notes?: string[];
+  /** A size comparison like `size >= S`; the stage is skipped for a card it does not hold for. */
+  when?: string;
   /** A second agent judges the stage's output against its rubric before the check; `codeloop check rubric` then needs `{spec}/review-<stage>.md` with `verdict: accept`. */
   review?: { agent: string; skill?: string };
 }
@@ -86,6 +88,34 @@ export function loadSkillsIndex(projectDir: string): SkillEntry[] | null {
   return (parseYaml(readFileSync(file, 'utf-8')) ?? []) as SkillEntry[];
 }
 
+const SIZE_ORDER = ['trivial', 'S', 'M', 'L'];
+const WHEN = /^\s*size\s*(>=|<=|==|>|<)\s*(trivial|S|M|L)\s*$/;
+
+/** Why a `when:` expression cannot be read, or undefined. */
+export function whenError(when: string): string | undefined {
+  return WHEN.test(when) ? undefined : `when "${when}" is not a size comparison like \`size >= S\` (sizes: ${SIZE_ORDER.join(', ')})`;
+}
+
+/** Whether a stage runs for the card. A card with no size counts as M, as the diff budget does. */
+export function stageApplies(stage: Stage, card: { size?: string }): boolean {
+  if (!stage.when) return true;
+  const m = WHEN.exec(stage.when);
+  if (!m) return true;
+  const have = SIZE_ORDER.indexOf(card.size ?? 'M');
+  const want = SIZE_ORDER.indexOf(m[2]);
+  return { '>=': have >= want, '<=': have <= want, '==': have === want, '>': have > want, '<': have < want }[m[1]]!;
+}
+
+/** The first stage of the lane that runs for the card. */
+export function firstStage(lane: Lane, card: { size?: string }): Stage {
+  return lane.stages.find(s => stageApplies(s, card)) ?? lane.stages[0];
+}
+
+/** The stage after `stage` that runs for the card, or undefined at the end of the lane. */
+export function nextStage(lane: Lane, stage: Stage, card: { size?: string }): Stage | undefined {
+  return lane.stages.slice(lane.stages.indexOf(stage) + 1).find(s => stageApplies(s, card));
+}
+
 export function lintLane(lane: Lane, skills: SkillEntry[] | null = null): string[] {
   const errors: string[] = [];
   const where = `lane ${lane.id ?? '(no id)'}`;
@@ -114,6 +144,10 @@ export function lintLane(lane: Lane, skills: SkillEntry[] | null = null): string
       if (stage.gate.approver !== 'owner' && stage.gate.approver !== 'reviewer') {
         errors.push(`${at}: gate has no approver (owner or reviewer)`);
       }
+    }
+    if (stage.when) {
+      const err = whenError(stage.when);
+      if (err) errors.push(`${at}: ${err}`);
     }
     if (stage.review && !stage.review.agent) errors.push(`${at}: review has no agent (a preset under agents: in .codeloop/config.yaml)`);
     if (known && stage.skill && !known.has(stage.skill)) {

@@ -15,7 +15,7 @@ import { currentSession } from './active-card.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
 
 export { RefusalError };
-import { loadLane, loadLanes, substitute, type Lane, type Stage } from './lane.js';
+import { firstStage, loadLane, loadLanes, nextStage, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
@@ -244,6 +244,7 @@ function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date
   // The id is substituted into shell commands and used in folder names, so its shape is fixed.
   if (!CARD_ID.test(id)) throw new RefusalError(`card id "${id}" must be letters, a dash and digits, like c-001 or CL-12`);
   if (cards.some(c => c.id === id)) throw new RefusalError(`card "${id}" already exists`);
+  const entry = firstStage(lane, fields);
   const at = now.toISOString();
   const number = parseInt(id.replace(/\D/g, ''), 10);
   const shared = cards.some(c => parseInt(c.id.replace(/\D/g, '') || '-1', 10) === number);
@@ -255,10 +256,10 @@ function newCard(cards: Card[], lane: Lane, title: string, id: string, now: Date
     ...fields,
     lane: lane.id,
     laneVersion: lane.version,
-    stage: lane.stages[0].id,
+    stage: entry.id,
     retries: {},
     evidence: [],
-    events: [event(now, actor, 'create', lane.stages[0].id, note)],
+    events: [event(now, actor, 'create', entry.id, note)],
     createdAt: at,
     updatedAt: at,
   };
@@ -469,6 +470,27 @@ export function parkStuck(projectDir: string, opts: Clock = {}): string[] {
   return parked;
 }
 
+/**
+ * A trivial card whose diff outgrew the trivial cap is not trivial: it becomes S and parks at the
+ * first gate of its lane's ceremony (the spec gate), where the owner decides what to write up.
+ */
+export function resizeTrivial(projectDir: string, id: string, why: string, opts: Clock = {}): Card {
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  if (before.size !== 'trivial') return before;
+  const lane = loadLane(projectDir, before.lane);
+  const gated = lane.stages.find(s => s.gate && s.id !== before.stage && stageApplies(s, { size: 'S' }) && lane.stages.indexOf(s) < lane.stages.findIndex(x => x.id === before.stage));
+  const now = opts.now ?? clock();
+  const card: Card = { ...before, size: 'S', retries: { ...before.retries }, events: [...before.events, event(now, 'engine', 'resize', before.stage, `trivial to S: ${why}`)], updatedAt: now.toISOString() };
+  if (gated) {
+    card.stage = gated.id;
+    card.retries[gated.id] = 0;
+    park(card, gated, now, 'the trivial diff cap was exceeded');
+  }
+  writeCards(projectDir, file, replace(file.cards, card));
+  return card;
+}
+
 /** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */
 export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean } = {}): Card {
   // A split carries its parent's stage over; the decision was the split, which any role may make.
@@ -563,7 +585,7 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
-    const entry = lane.stages.find(s => s.id === ready.start_stage) ?? lane.stages[0];
+    const entry = lane.stages.find(s => s.id === ready.start_stage) ?? firstStage(lane, ready);
     const card: Card = {
       ...ready,
       stage: entry.id,
@@ -713,7 +735,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     card.retries[stage.id] = 0;
     card.events.push(event(now, 'engine', 'unstick', stage.id, 'the check passes after work landed on the story'));
   }
-  const next = lane.stages[lane.stages.indexOf(stage) + 1];
+  const next = nextStage(lane, stage, card);
   if (next?.id === SPLIT_BEFORE_STAGE) {
     const problem = storySizeProblem(projectDir, card);
     if (problem) throw new RefusalError(problem);
@@ -785,7 +807,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
     // Not subject to wip: the owner chose this card. A run still works a lane `wip` cards at a time.
     const lane = loadLane(projectDir, before.lane);
     const back = before.parked_from && lane.stages.some(s => s.id === before.parked_from) ? before.parked_from : undefined;
-    card.stage = back ?? lane.stages[0].id;
+    card.stage = back ?? firstStage(lane, card).id;
     delete card.parked_from;
     card.laneVersion = lane.version;
     card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note)];

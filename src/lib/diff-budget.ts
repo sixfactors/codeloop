@@ -14,6 +14,7 @@ export interface BudgetVerdict extends StoryDiff {
 }
 
 export const DEFAULT_BUDGET: Record<Size, Budget> = {
+  trivial: { files: 3, lines: 50 },
   S: { files: 8, lines: 300 },
   M: { files: 20, lines: 1200 },
   L: { files: 40, lines: 3000 },

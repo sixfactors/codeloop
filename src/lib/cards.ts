@@ -23,7 +23,8 @@ export interface CardEvent {
   log?: string;
 }
 
-export type Size = 'S' | 'M' | 'L';
+/** `trivial` is below S: a one-line fix that skips the ceremony stages (`when: size >= S`). */
+export type Size = 'trivial' | 'S' | 'M' | 'L';
 
 /** The story standard's fields (docs/story-standard.md). Every one is optional: older cards carry none. */
 export interface StoryFields {

@@ -1,0 +1,5 @@
+id: uc-058-03
+accept: US3
+failure_mode: "an M card sized trivial dodges the spec gate because the cap does not re-size and re-park"
+layers:
+  cli: { run: "npx vitest run src/lib/__tests__/trivial-ceremony.test.ts -t 're-sized to S'", expect: { exit: 0 } }

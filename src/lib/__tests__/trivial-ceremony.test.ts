@@ -1,0 +1,81 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { readCards } from '../cards.js';
+import { advanceCard, createCard, resizeTrivial } from '../engine.js';
+import { lintLane, parseLane } from '../lane.js';
+import { computeStats } from '../stats.js';
+
+let dir: string;
+
+const LANE = `id: build
+version: 1
+metric: { name: m, source: cards }
+stages:
+  - id: research
+    when: "size >= S"
+    done: { cmd: "test -f specs/research.md" }
+  - id: spec
+    when: "size >= S"
+    done: { cmd: "true" }
+    gate: { name: spec, approver: owner }
+  - id: build
+    done: { cmd: "true" }
+  - id: verify
+    done: { cmd: "true" }
+`;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'codeloop-trivial-'));
+  mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
+  writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE);
+});
+
+afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+describe('trivial cards skip the ceremony stages', () => {
+  it('enters at build and goes build then verify then done with no research or spec file', () => {
+    const card = createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    expect(card.stage).toBe('build');
+    expect(advanceCard(dir, 'c-1').card.stage).toBe('verify');
+    expect(advanceCard(dir, 'c-1').card.stage).toBe('done');
+
+    const events = readCards(dir).cards[0].events.map(e => `${e.action}:${e.stage}`);
+    expect(events).toEqual(['create:build', 'advance:build', 'advance:verify']);
+    expect(existsSync(join(dir, 'specs/research.md'))).toBe(false);
+  });
+
+  it('keeps research first for an S card and for a card with no size', () => {
+    expect(createCard(dir, { lane: 'build', title: 'a', id: 'c-1', fields: { size: 'S' } }).stage).toBe('research');
+    expect(createCard(dir, { lane: 'build', title: 'b', id: 'c-2' }).stage).toBe('research');
+  });
+});
+
+describe('a trivial card that outgrew the cap', () => {
+  it('is re-sized to S and parked at the spec gate', () => {
+    createCard(dir, { lane: 'build', title: 'fix', id: 'c-1', fields: { size: 'trivial' } });
+    const card = resizeTrivial(dir, 'c-1', 'diff 9 files exceeds the trivial budget');
+    expect([card.size, card.stage, card.gate, card.awaiting]).toEqual(['S', 'spec', 'spec', 'owner']);
+    expect(card.events.at(-2)?.action).toBe('resize');
+  });
+});
+
+describe('when:', () => {
+  it('lint refuses an expression that is not a size comparison', () => {
+    const lane = parseLane(LANE.replace('size >= S', 'size is big'));
+    expect(lintLane(lane).some(e => e.includes('not a size comparison'))).toBe(true);
+    expect(lintLane(parseLane(LANE))).toEqual([]);
+  });
+});
+
+describe('stats', () => {
+  it('reports trivial cycle time apart from other cards', () => {
+    createCard(dir, { lane: 'build', title: 'fix', id: 'c-1', fields: { size: 'trivial' } });
+    advanceCard(dir, 'c-1');
+    advanceCard(dir, 'c-1');
+    const cards = readCards(dir).cards;
+    expect(computeStats(cards, []).trivial_cycle_time_hours).not.toBeNull();
+    expect(computeStats([{ ...cards[0], size: 'S' }], []).trivial_cycle_time_hours).toBeNull();
+  });
+});

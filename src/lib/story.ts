@@ -3,7 +3,7 @@ import { readCards, RefusalError, writeCards, type Card, type Size, type StoryFi
 
 /** The personas every board knows; `personas:` in config.yaml adds the repo's own. */
 export const KNOWN_PERSONAS = ['founder', 'builder', 'reviewer', 'dev', 'visitor', 'team'];
-export const SIZES: Size[] = ['S', 'M', 'L'];
+export const SIZES: Size[] = ['trivial', 'S', 'M', 'L'];
 export const POINTS = [1, 2, 3, 5, 8];
 const MAX_TITLE_WORDS = 16;
 // Each one marks a mechanism (a flag, a file, a path, a key, a call) rather than what the user can now do.
@@ -53,8 +53,8 @@ export function checkStory(projectDir: string, card: Card): string[] {
   if (persona && !knownPersonas(projectDir).includes(persona)) {
     problems.push(`persona "${persona}" is not known (${knownPersonas(projectDir).join(', ')}); add it under personas: in .codeloop/config.yaml`);
   }
-  if (card.size === undefined) problems.push('no size: S, M or L');
-  else if (!SIZES.includes(card.size)) problems.push(`size "${card.size}" is not S, M or L`);
+  if (card.size === undefined) problems.push('no size: trivial, S, M or L');
+  else if (!SIZES.includes(card.size)) problems.push(`size "${card.size}" is not trivial, S, M or L`);
   if (card.points !== undefined && !POINTS.includes(card.points)) problems.push(`points ${card.points} is not one of ${POINTS.join(', ')}`);
   return problems;
 }
@@ -89,8 +89,8 @@ export function storyFields(title: string, flags: StoryFlags): StoryFields {
   }
   if (flags.persona) fields.persona = flags.persona;
   if (flags.size !== undefined) {
-    const size = flags.size.toUpperCase();
-    if (!SIZES.includes(size as Size)) throw new RefusalError(`size "${flags.size}" is not S, M or L`);
+    const size = flags.size.toLowerCase() === 'trivial' ? 'trivial' : flags.size.toUpperCase();
+    if (!SIZES.includes(size as Size)) throw new RefusalError(`size "${flags.size}" is not trivial, S, M or L`);
     fields.size = size as Size;
   }
   if (flags.points !== undefined) {

@@ -17,6 +17,8 @@ export interface Stats {
   human_turns_per_card: number | null;
   unattended_span_hours: number | null;
   cycle_time_hours: number | null;
+  /** Mean hours from create to done over finished cards sized trivial; null when none finished. */
+  trivial_cycle_time_hours: number | null;
   rework: number | null;
   stuck_rate: number | null;
   first_pass_rate_by_gate: Record<string, number>;
@@ -45,6 +47,7 @@ export const CARD_METRICS: Record<string, (cards: Card[]) => number | null> = {
   first_pass_done: cards => cards.filter(c => c.stage === DONE && !rejected(c)).length,
   cycle_time_hours: cards => mean(cards.filter(c => c.stage === DONE).map(c => (ms(c.updatedAt) - ms(c.createdAt)) / HOUR)),
   cycle_time_days: cards => mean(cards.filter(c => c.stage === DONE).map(c => (ms(c.updatedAt) - ms(c.createdAt)) / DAY)),
+  trivial_cycle_time_hours: cards => mean(cards.filter(c => c.stage === DONE && c.size === 'trivial').map(c => (ms(c.updatedAt) - ms(c.createdAt)) / HOUR)),
   proposals_accepted_ratio: cards => {
     const promoted = cards.filter(c => c.events.some(e => e.action === 'promote')).length;
     const dropped = cards.filter(c => c.stage === 'dropped').length;
@@ -89,6 +92,7 @@ export function computeStats(cards: Card[], lanes: Lane[]): Stats {
     human_turns_per_card: ratio(events.filter(e => e.human).length, cards.length),
     unattended_span_hours: cards.length ? Math.max(...cards.map(unattended)) / HOUR : null,
     cycle_time_hours: done.length ? done.reduce((sum, c) => sum + ms(c.updatedAt) - ms(c.createdAt), 0) / done.length / HOUR : null,
+    trivial_cycle_time_hours: CARD_METRICS.trivial_cycle_time_hours(cards),
     rework: ratio(events.filter(e => e.action === 'reject' && judged(e)).length, events.filter(e => e.action === 'approve').length),
     stuck_rate: ratio(cards.filter(c => c.events.some(e => e.action === 'stuck')).length, cards.length),
     first_pass_rate_by_gate: Object.fromEntries(Object.entries(gates).map(([k, g]) => [k, g.first / g.total])),

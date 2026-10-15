@@ -55,7 +55,7 @@ function storyOptions(command: Command): Command {
     .option('--persona <persona>', 'Who the story is for: founder, builder, reviewer, dev, visitor, team or a persona from config.yaml')
     .option('--can <what>', 'The "I can" part of the story')
     .option('--so <outcome>', 'The "so that" part of the story')
-    .option('--size <size>', 'S (hours), M (a day or two) or L (split it)')
+    .option('--size <size>', 'trivial (a one-line fix, no ceremony), S (hours), M (a day or two) or L (split it)')
     .option('--points <n>', 'Story points: 1, 2, 3, 5 or 8')
     .option('--initiative <initiative>', 'The initiative this card serves')
     .option('--epic <card-id>', 'The parent card this one was split from')
@@ -246,7 +246,7 @@ cardCommand
   .option('--feature <slug>')
   .option('--band <band>', 'P1, P2, P3 or P4')
   .option('--persona <persona>')
-  .option('--size <size>', 'S, M or L')
+  .option('--size <size>', 'trivial, S, M or L')
   .option('--points <n>')
   .option('--all', 'Include dropped proposals')
   .action(guard(async (opts: { json?: boolean } & CardListFilter) => {
