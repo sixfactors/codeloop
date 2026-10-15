@@ -2,26 +2,35 @@
 
 ## What exists
 
-<!-- Unlock before build. One line: exists: have | unlock | port | build, with a path or URL when it is not build. have = shipped and exposed, close the card. unlock = built but not exposed, expose it. port = in a sibling repo. -->
-exists: build
+exists: build — `src/lib/cards.ts` carries StoryFields (story, size, initiative, feature, …) and CardExtras (`after`, `ticket`, `split_from`, …) but no holder, owner person, reviewer person, type, links, labels, area, risk or release. Gate `awaiting` is a role name, not who holds the card; `after` queues a story, it is not a typed link. The target fields are named in the design and in `.codeloop/wiki/architecture/ui.md`; nothing stores them yet.
 
 ## How others show it
 
-<!-- One row per competitor that has a page in .codeloop/wiki/competitors/, its name in the first cell. The row is copied to that page when this stage passes. -->
 | Competitor | How they show it | Source |
 |---|---|---|
 
 ## Options
 
+- Extend `Card` / `CardExtras` with holder, owner, reviewer, type (`story|bug|chore`), links (`blocks|blocked_by|relates|duplicates`), labels, area, risk and release; validate on write; migrate `cards.json`. Chosen — matches the design's "one home" on the story and the api-first build order in the ui-rebuild decision.
+- Keep a sidecar metadata file keyed by card id. Rejected — screens and the SDK would join two stores for every read; the design puts every field on the story.
+- Derive holder only from `events` / `awaiting` and skip schema. Rejected — type, links, labels and area cannot be derived, and history already lives in events while the current holder still needs a field.
+
 ## The pain, grounded
 
-<!-- The user pain this card answers, with a source. No source: write assumption: instead and say what would confirm it. -->
-pain:
+pain: a founder cannot answer "who has this" from the board — cards have no holder, no accountable owner person, no type and no typed links, so people ask in chat instead of reading the story. Source: docs/artifacts/codeloop-ui-design.html ("An agent is a teammate… so 'who has this' always has an answer"; story fields table) and the card story on c-118 ("nobody asks who has this"). Confirmed by `src/lib/cards.ts` missing those fields.
 
 ## Risks
 
+- Every existing `cards.json` entry must migrate without breaking compare-and-swap writes or cloud sync.
+- `awaiting` (gate role) and `holder` (person or agent) can be confused if both stay without a clear rule in the schema docs.
+- Downstream cards (board states, Up next, CLI link/label/hand-off) assume these fields; inventing a different shape here forces rework there.
+- A `blocked_by` link that never clears would starve Up next if that rule ships before link editing does.
+
 ## Sources
 
-<!-- At least three, one per line: a dash, the word source and a colon, a URL or a path in this repo (optionally path:line), a dash, a note. `codeloop check research` counts them; a path counts only when the file exists. -->
+- source: docs/artifacts/codeloop-ui-design.html:176 - story fields: holder, owner, reviewer, type, links, labels, area, risk, release
+- source: src/lib/cards.ts:26 - StoryFields and CardExtras have no holder, type or links today
+- source: .codeloop/wiki/architecture/ui.md:29 - target story fields and api-first build order (c-118 first)
+- source: .codeloop/wiki/decisions/ui-rebuild-bottom-up.md - initiative adopts the design; data layer before screens
 
-<!-- End with one line that starts with the word verdict and a colon, then build, buy or drop. The stage check looks for it. -->
+verdict: build
