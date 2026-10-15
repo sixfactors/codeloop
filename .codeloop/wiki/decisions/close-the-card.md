@@ -5,10 +5,15 @@ scope:
   - templates/skills/mock/SKILL.md
   - docs/artifacts/codeloop-ui-design.html
   - src/lib/__tests__/research-mock.test.ts
-freq: 1
+  - README.md
+  - src/lib/mcp.ts
+  - src/lib/interview.ts
+  - ui/components/card-detail.tsx
+freq: 2
 severity: warning
 cards:
   - c-130
+  - c-143
 updated: 2026-10-14
 ---
 
@@ -25,3 +30,7 @@ mocks used to come from a fixed template palette with a few generic classes, so 
 ## Consequences
 
 Close the card: the capability the story names is already shipped and exposed (`mock new`, `check mock`, design-system dir, mock skill). — matches `exists: have` and the story standard ("have = shipped and exposed, close the card"). The other options are not built; reopening one is a new decision.
+
+## Notes
+
+- 2026-10-14 (c-143): ## Options
