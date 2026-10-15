@@ -2,14 +2,15 @@
   "id": "uc-098-02",
   "accept": "US2",
   "failure_mode": "two sessions edit the same file, or a shared file blocks every story",
-  "sha": "e55ff3bf4879030a13f3bf7a7f3e8099bb56a0f5",
+  "sha": "dfc9aad00b5847d4c45c8448c5bc25183a38abb9",
   "env": "local",
+  "workspace": "export of dfc9aad",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/deangrover/Projects/codeloop\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/host-enforcement.test.ts \u001b[2m(\u001b[22m\u001b[2m35 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m32 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[33m 869\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m refuses a file in another live session's story, naming that story \u001b[33m 425\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m lets a session edit a shared file that another session's plan lists \u001b[33m 431\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m32 skipped\u001b[39m\u001b[90m (35)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:08:06\n\u001b[2m   Duration \u001b[22m 2.94s\u001b[2m (transform 60ms, setup 0ms, import 78ms, tests 869ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-1mELfD/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/host-enforcement.test.ts \u001b[2m(\u001b[22m\u001b[2m37 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m34 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[33m 919\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m refuses a file in another live session's story, naming that story \u001b[33m 428\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m lets a session edit a shared file that another session's plan lists \u001b[33m 483\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m34 skipped\u001b[39m\u001b[90m (37)\u001b[39m\n\u001b[2m   Start at \u001b[22m 14:05:57\n\u001b[2m   Duration \u001b[22m 2.87s\u001b[2m (transform 63ms, setup 0ms, import 86ms, tests 919ms, environment 0ms)\u001b[22m\n\n\nexit 0"
     }
   ]
 }
