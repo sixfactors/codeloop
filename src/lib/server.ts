@@ -366,7 +366,12 @@ export function createApp(
   app.get(api('/cards/:id/show'), handled(async c => c.json(services.showCard(projectDir, c.req.param('id')))));
   app.get(api('/cards/:id/full'), handled(async c => {
     const full = await services.cardFull(index, store, c.req.param('id'));
-    return c.json(full.evidence ? { ...full, evidence: { ...full.evidence, files: withEvidenceUrls(full.evidence.id, full.evidence.files) } } : full);
+    const nnn = full.evidence?.id ?? full.card.id.replace(/^c-/, '');
+    return c.json({
+      ...full,
+      evidence: full.evidence ? { ...full.evidence, files: withEvidenceUrls(nnn, full.evidence.files) } : full.evidence,
+      evidenceFiles: withEvidenceUrls(nnn, full.evidenceFiles),
+    });
   }));
 
   // One card with its event log, by id or number.

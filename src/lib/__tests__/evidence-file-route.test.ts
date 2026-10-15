@@ -16,6 +16,7 @@ describe('evidence file route', () => {
     mkdirSync(join(tmpDir, '.codeloop/lanes'), { recursive: true });
     writeFileSync(join(tmpDir, '.codeloop/config.yaml'), 'project:\n  name: demo\n');
     writeFileSync(join(tmpDir, '.codeloop/cards.json'), JSON.stringify({ version: 1, cards: [] }));
+    writeFileSync(join(tmpDir, '.codeloop/lanes/build.yaml'), 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: spec\n    done: { cmd: "true" }\n');
     mkdirSync(join(tmpDir, '.codeloop/evidence/048'), { recursive: true });
     writeFileSync(join(tmpDir, '.codeloop/evidence/048/grant dialog.png'), PNG);
     writeFileSync(join(tmpDir, 'secret.txt'), 'outside the evidence folder');
@@ -35,6 +36,15 @@ describe('evidence file route', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
     expect(Buffer.from(await res.arrayBuffer()).equals(PNG)).toBe(true);
+  });
+
+  it('gives the story page payload the same urls, on both evidence lists', async () => {
+    const made = await app.request('/api/cards', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': 'test-token' }, body: JSON.stringify({ lane: 'build', title: 'Evidence story', id: 'c-048' }) });
+    expect(made.status).toBe(201);
+    const full = await (await app.request('/api/cards/c-048/full')).json() as { evidence: { files: { name: string; url?: string }[] } | null; evidenceFiles: { path: string; url?: string }[] };
+    const want = '/api/evidence/048/file/grant%20dialog.png';
+    expect(full.evidence?.files.find(f => f.name === 'grant dialog.png')?.url).toBe(want);
+    expect(full.evidenceFiles.find(f => f.path.endsWith('grant dialog.png'))?.url).toBe(want);
   });
 
   it('answers 404 for a path that climbs out, a link that points out, a missing file and a bad folder', async () => {

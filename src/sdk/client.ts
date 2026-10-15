@@ -143,7 +143,11 @@ export class ApiError extends Error {
 export interface Transport {
   listCards(query?: CardsQuery, cursor?: string, opts?: { includeEvents?: boolean; includeInbox?: boolean; facets?: boolean }): Promise<CardsPayload>;
   getCard(ref: string): Promise<CardWithEvents | undefined>;
-  cardFull(ref: string): Promise<CardFull>;
+  /** Over HTTP each evidence file, in both lists, also carries `url`, where the server serves it. */
+  cardFull(ref: string): Promise<CardFull & {
+    evidence: (Omit<NonNullable<CardFull['evidence']>, 'files'> & { files: (NonNullable<CardFull['evidence']>['files'][number] & { url?: string })[] }) | null;
+    evidenceFiles: (CardFull['evidenceFiles'][number] & { url?: string })[];
+  }>;
   showCard(ref: string): Promise<CardShow>;
   cardRecords(filter?: CardListFilter): Promise<ScoredRecord[]>;
   createCard(input: NewCardInput, opts?: RoleOption): Promise<CardCreated>;
