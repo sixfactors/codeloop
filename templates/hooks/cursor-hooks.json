@@ -25,7 +25,7 @@
     ],
     "beforeShellExecution": [
       {
-        "command": "codeloop guard bash --format cursor"
+        "command": "codeloop-hook bash --format cursor"
       }
     ],
     "stop": [

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codeloop guard session"
+            "command": "codeloop-hook session"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codeloop guard edit"
+            "command": "codeloop-hook edit"
           }
         ]
       },
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codeloop guard bash"
+            "command": "codeloop-hook bash"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codeloop guard prompt"
+            "command": "codeloop-hook prompt"
           }
         ]
       }

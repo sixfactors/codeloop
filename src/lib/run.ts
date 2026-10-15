@@ -16,6 +16,7 @@ import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
+import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
 import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
 import { Budget } from './budget.js';
@@ -426,7 +427,7 @@ export function monitorEnabled(projectDir: string): boolean {
  * day gets one "park it" question in the inbox. Each action is a line on the story's activity
  * stream. Stories in `skip` were already worked by this run.
  */
-export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string } = {}): Promise<DoctorAction[]> {
+export async function doctorTick(projectDir: string, now: Date = clock(), opts: { skip?: Set<string>; agent?: string; memory?: MemoryProbe } = {}): Promise<DoctorAction[]> {
   if (!monitorEnabled(projectDir)) return [];
   const budget = Budget.for(projectDir, now.getTime());
   const actions: DoctorAction[] = [];
@@ -472,6 +473,12 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       const spent = budget.stop(`${card.id}:${card.stage}`);
       if (spent) {
         log({ id: card.id, action: 'agent-not-started', note: `doctor stopped: ${spent}` });
+        break;
+      }
+      // Last of the three gates (unavailable agent, run budget, memory): a new agent is a new process tree.
+      const mem = overCeiling(projectDir, opts.memory);
+      if (mem.over) {
+        log({ id: card.id, action: 'agent-not-started', note: `doctor waited: codeloop processes hold ${mem.total} MB, over limits.max_memory_mb ${mem.ceiling}` });
         break;
       }
       const turn = await workCard(projectDir, card.id, card.stage, agent, now, undefined, budget);

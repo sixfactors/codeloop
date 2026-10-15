@@ -1,0 +1,18 @@
+#!/bin/sh
+# Starts the CLI with a V8 heap ceiling sized to the work: V8 reads --max-old-space-size at process
+# start only, so the limit has to be on the node command line. Commands get 256 MB, the long-lived
+# hub, serve and open 1024 MB. CODELOOP_MAX_OLD_SPACE_MB overrides; CODELOOP_NODE names another node.
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+dir=$(cd "$(dirname "$self")" && pwd)
+case $1 in
+  hub | serve | open) mb=1024 ;;
+  *) mb=256 ;;
+esac
+exec "${CODELOOP_NODE:-node}" "--max-old-space-size=${CODELOOP_MAX_OLD_SPACE_MB:-$mb}" "$dir/../dist/index.js" "$@"

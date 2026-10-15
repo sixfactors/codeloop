@@ -40,6 +40,7 @@ import { cloudCommand } from './commands/cloud.js';
 import { mockCommand, mocksCommand } from './commands/mock.js';
 import { artifactCommand, artifactsCommand } from './commands/artifact.js';
 import { attachCardActivate, guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
+import { hookdCommand } from './commands/hookd.js';
 import { scanCommand } from './commands/scan.js';
 // After the command modules: program-base reaches the card store first otherwise, and the wiki and
 // features modules then meet in the opposite order (WIKI_DIR read before it is defined).
@@ -109,6 +110,7 @@ export function buildProgram(): Command {
   program.addCommand(configCommand);
   program.addCommand(cloudCommand);
   program.addCommand(guardCommand);
+  program.addCommand(hookdCommand);
   program.addCommand(monitorCommand);
   program.addCommand(presenceCommand);
   program.addCommand(whoamiCommand);

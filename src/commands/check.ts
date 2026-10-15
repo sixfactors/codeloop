@@ -1,20 +1,13 @@
 import { Command } from 'commander';
-import { checkLiveWalk, liveWalkRequired } from '../lib/live-walk.js';
 import { existsSync, readFileSync } from 'fs';
-import { findCard, readCards, RefusalError } from '../lib/cards.js';
-import { checkMock, findMock } from '../lib/mock.js';
-import { checkArtifact, findArtifact, type ArtifactKind } from '../lib/artifact.js';
-import { checkStory } from '../lib/story.js';
-import { wikiLanded } from '../lib/wiki-rules.js';
-import { evaluateRubric } from '../lib/rubric.js';
-import { questionProblems, questionsNotDecided, readQuestions } from '../lib/interview.js';
-import { checkOnline, checkResearch } from '../lib/research.js';
-import { checkBreakdown, checkBrief } from '../lib/shape.js';
-import { blockingGotchas } from '../lib/wiki.js';
-import { checkScope } from '../lib/scope-creep.js';
-import { checkArchitecture } from '../lib/architecture-check.js';
-import { checkDataModel } from '../lib/data-model.js';
+import { RefusalError } from '../lib/cards.js';
 import { projectRoot } from '../lib/project-root.js';
+import type { ArtifactKind } from '../lib/artifact.js';
+
+// Each check imports the library it runs inside its action: `check` runs as a stage's done-command
+// and `--help` lists every check, so the whole group must not load for one of them.
+const cardsLib = () => import('../lib/cards.js');
+const interviewLib = () => import('../lib/interview.js');
 
 /** Why the file does not pass, or null. With nothing to look for, an empty file still fails: `touch` is not work. */
 export function fileProblem(path: string, has: string[]): string | null {
@@ -44,7 +37,8 @@ checkCommand
   .description('Exit 1 while a critical wiki page applies to these files and has not been acknowledged')
   .requiredOption('--files <path...>', 'Changed files')
   .option('--ack <title...>', 'Titles of critical pages that were read and handled', [])
-  .action((opts: { files: string[]; ack: string[] }) => {
+  .action(async (opts: { files: string[]; ack: string[] }) => {
+    const { blockingGotchas } = await import('../lib/wiki.js');
     const blocking = blockingGotchas(projectRoot(), opts.files, opts.ack);
     for (const p of blocking) console.error(`critical: ${p.title} (freq ${p.freq}, ${p.path})\n${p.body}\n`);
     if (blocking.length) {
@@ -74,6 +68,7 @@ checkCommand
   .option('--min-sources <n>', 'How many source lines are required', '3')
   .option('--online', 'Also require each source URL to answer with 2xx or 3xx')
   .action((card: string, opts: { minSources: string; online?: boolean }) => failing(async () => {
+    const { checkOnline, checkResearch } = await import('../lib/research.js');
     const min = parseInt(opts.minSources, 10);
     if (!Number.isInteger(min) || min < 0) return [`--min-sources "${opts.minSources}" is not a number`];
     const { errors, urls } = checkResearch(projectRoot(), card, min);
@@ -84,25 +79,27 @@ checkCommand
   .command('rubric <card>')
   .description("Exit 1 unless the card's stage meets its rubric: every check row passes, every attest row has a `- Rn pass: <evidence>` line under ## Rubric naming a path, line, URL or command, and a stage with `review:` has its review file with `verdict: accept`")
   .option('--stage <id>', "The stage to judge; defaults to the card's stage")
-  .action((card: string, opts: { stage?: string }) => failing(() => evaluateRubric(projectRoot(), card, opts.stage).problems)());
+  .action((card: string, opts: { stage?: string }) => failing(async () => (await import('../lib/rubric.js')).evaluateRubric(projectRoot(), card, opts.stage).problems)());
 
 checkCommand
   .command('wiki-landed <card>')
   .description("Exit 1 unless the stage's findings reached the wiki: a research that compared options has a decision page (or makes a valid one), a review's repeat-mistake fix-now finding has a gotcha page")
   .option('--stage <id>', 'research or review; defaults to the card\'s stage')
-  .action((card: string, opts: { stage?: string }) => failing(() => wikiLanded(projectRoot(), card, opts.stage))());
+  .action((card: string, opts: { stage?: string }) => failing(async () => (await import('../lib/wiki-rules.js')).wikiLanded(projectRoot(), card, opts.stage))());
 
 checkCommand
   .command('mock <card>')
   .description("Exit 1 unless the card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names")
-  .action((card: string) => failing(() => checkMock(projectRoot(), card))());
+  .action((card: string) => failing(async () => (await import('../lib/mock.js')).checkMock(projectRoot(), card))());
 
 checkCommand
   .command('artifact <card>')
   .description("Exit 1 unless the card's artifact (mock, system-design or workflow) meets its kind's anatomy: tokens, dark mode, no raw colour, valid mermaid, and every frame/layer/flow/actor the frontmatter names")
   .option('--kind <kind>', 'mock | system-design | workflow, auto-detected from whichever artifact exists for the card when omitted')
   .action((card: string, opts: { kind?: string }) =>
-    failing(() => {
+    failing(async () => {
+      const { checkMock, findMock } = await import('../lib/mock.js');
+      const { checkArtifact, findArtifact } = await import('../lib/artifact.js');
       const kind = opts.kind as ArtifactKind | undefined;
       // The mock kind lives beside the spec via the original template/checker (`check mock`
       // is the same check under a different name); system-design and workflow live under
@@ -118,34 +115,41 @@ checkCommand
 checkCommand
   .command('verify <card>')
   .description("Exit 1 unless evidence/<nnn>/verify.md has a live walk: the feature driven in a browser on the normal dev stack, the calls that answered (none a mock), and a real external call or the reason there is none. Off with `verify: { live_walk: false }`")
-  .action((card: string) => failing(() => (liveWalkRequired(projectRoot()) ? checkLiveWalk(projectRoot(), card) : []))());
+  .action((card: string) => failing(async () => {
+    const { checkLiveWalk, liveWalkRequired } = await import('../lib/live-walk.js');
+    return liveWalkRequired(projectRoot()) ? checkLiveWalk(projectRoot(), card) : [];
+  })());
 
 checkCommand
   .command('scope <card>')
   .description("Exit 1 while a file the story changed outside its plan has no `## Scope` row (keep with a reason of 10+ words, revert, or move to <card-id>) in evidence/<nnn>/review.md")
-  .action((card: string) => failing(() => checkScope(projectRoot(), card))());
+  .action((card: string) => failing(async () => (await import('../lib/scope-creep.js')).checkScope(projectRoot(), card))());
 
 checkCommand
   .command('story <card>')
   .description("Exit 1 unless the card meets the story standard: a title saying what the user can do, a three-part story, a known persona and a size")
-  .action((card: string) => failing(() => checkStory(projectRoot(), findCard(readCards(projectRoot()).cards, card)))());
+  .action((card: string) => failing(async () => {
+    const { findCard, readCards } = await cardsLib();
+    return (await import('../lib/story.js')).checkStory(projectRoot(), findCard(readCards(projectRoot()).cards, card));
+  })());
 
 checkCommand
   .command('brief <card>')
   .description("Exit 1 unless the card's shape brief has problem:, users: and exists: filled in, and at least 3 `- source:` lines")
-  .action((card: string) => failing(() => checkBrief(projectRoot(), card).errors)());
+  .action((card: string) => failing(async () => (await import('../lib/shape.js')).checkBrief(projectRoot(), card).errors)());
 
 checkCommand
   .command('breakdown <card>')
   .description("Exit 1 unless the card's shape breakdown has a hypothesis and a metric, at most 7 stories, and every story sized S or M with an exists: verdict, a real done_when and only backward depends_on")
   .option('--ranked', 'Also require a `rice:` part on every story')
-  .action((card: string, opts: { ranked?: boolean }) => failing(() => checkBreakdown(projectRoot(), card, { ranked: !!opts.ranked }).errors)());
+  .action((card: string, opts: { ranked?: boolean }) => failing(async () => (await import('../lib/shape.js')).checkBreakdown(projectRoot(), card, { ranked: !!opts.ranked }).errors)());
 
 checkCommand
   .command('architecture')
   .description('Exit 1 unless the five architecture pages exist, name only real paths, cover every top-level folder, stay inside the noise limits, and carry no scanner leftovers')
   .option('--dir <wikiDir>', 'The architecture folder, relative to the project root', '.codeloop/wiki/architecture')
-  .action((opts: { dir: string }) => {
+  .action(async (opts: { dir: string }) => {
+    const { checkArchitecture } = await import('../lib/architecture-check.js');
     const problems = checkArchitecture(projectRoot(), { dir: opts.dir });
     if (problems.length) {
       problems.forEach(p => console.error(p));
@@ -157,7 +161,8 @@ checkCommand
 checkCommand
   .command('data-model <card>')
   .description("Exit 1 unless a story that changes data has a data-model.md whose stores the architecture data-model page names")
-  .action((card: string) => failing(() => {
+  .action((card: string) => failing(async () => {
+    const { checkDataModel } = await import('../lib/data-model.js');
     const { problems, message } = checkDataModel(projectRoot(), card);
     if (!problems.length && message) console.log(message);
     return problems;
@@ -167,7 +172,9 @@ checkCommand
   .command('questions <card>')
   .description("Exit 1 unless the card's interview has at least --min questions and every one of them has an answer")
   .option('--min <n>', 'Questions the interview must hold', '1')
-  .action((card: string, options: { min: string }) => failing(() => {
+  .action((card: string, options: { min: string }) => failing(async () => {
+    const { findCard, readCards } = await cardsLib();
+    const { questionProblems, questionsNotDecided, readQuestions } = await interviewLib();
     const found = findCard(readCards(projectRoot()).cards, card);
     const questions = readQuestions(projectRoot(), found);
     const errors: string[] = [];
