@@ -59,6 +59,8 @@ A scheduled run or the doctor does not rerun a failed stage check until somethin
 The builder is an agent by default. `--builder session:<id-or-label-prefix>` or `--builder person` starts nothing: the orchestrator writes the brief, appends it to `.codeloop/state/orch/outbox/<session>.md` (or `person.md`), writes an `orch-brief` activity line with `to`, prints the brief path and the hand-back line, and polls for a hand-back recorded after the turn began, every 15 seconds, up to `orch.wait_minutes` (default 120) or `--wait <min>`. A builder quiet for `monitor.stall_minutes` gets one `doctor` nudge line. No hand-back in time fails the turn with "no hand-back within the wait" and costs a retry. `--no-wait` returns at once with outcome `briefed`; `codeloop orch resume <card>` gates, merges and advances once the hand-back exists, and `codeloop orch inbox` prints the briefs addressed to this session or to the person that are still unanswered.
 
 
+Who holds which role, which host can be the orchestrator or a worker, and what each role is taught by which file: [Orchestrator and workers](https://codeloop.protobox.ai/docs/concepts/orchestrator-and-workers) (`site/content/docs/concepts/orchestrator-and-workers.md`). The orchestrator protocol it gives is not rendered by `codeloop render` yet.
+
 Size picks the road. Every ceremony stage in the build lane carries `when: size >= M`, so a card sized trivial or S enters at build and the journey shows research, interview, mock and spec as skipped with the reason; M and L cards walk every stage. Change the bound on a stage to change the road for a project.
 
 ## Commands added in 0.5.0 (unreleased)

@@ -32,6 +32,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Wiki and learning', href: '/docs/concepts/wiki-and-learning' },
       { title: 'Cloud and hosting', href: '/docs/concepts/cloud-and-hosting' },
       { title: 'How codeloop keeps an agent honest', href: '/docs/concepts/how-codeloop-keeps-an-agent-honest' },
+      { title: 'Orchestrator and workers', href: '/docs/concepts/orchestrator-and-workers' },
     ],
   },
   {

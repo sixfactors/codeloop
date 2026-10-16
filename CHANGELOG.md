@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- Docs: an "Orchestrator and workers" page says which host can take which role (Claude Code, Cursor, Codex, Gemini CLI, a person), which file teaches each role, the orchestrator protocol a session needs, what the engine refuses on its own, and that `render` does not write the orchestrator command yet.
 - The build lane runs research, interview, mock, spec and data-model for M and L cards only (`when: size >= M` in the template and on codeloop's own lane): a trivial or S card enters at build with the skipped stages recorded, so small work takes the short road without a second lane.
 
 - The doctor starts the stage agent once on a stuck story whose stage output was never written (missing, still the template, or without the lines its check reads), records it as `doctor-start`, and never starts it a second time; it counts against the run budget and the memory ceiling, and `doctor.scaffold_starts` (default 0) caps how many a tick, so `codeloop doctor --dry-run` lists them until it is raised.
