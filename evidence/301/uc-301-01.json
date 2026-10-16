@@ -1,0 +1,16 @@
+{
+  "id": "uc-301-01",
+  "accept": "US1",
+  "failure_mode": "a prompt with no active story is refused, or the nudge names the wrong stories",
+  "sha": "ebc8c2fc7be0198b8121037cac0b41f065eb622b",
+  "env": "local",
+  "workspace": "export of ebc8c2f",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/host-enforcement.test.ts -t names the top 3\n\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-Ay5uVa/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/host-enforcement.test.ts \u001b[2m(\u001b[22m\u001b[2m41 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m40 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 138\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m40 skipped\u001b[39m\u001b[90m (41)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:07:06\n\u001b[2m   Duration \u001b[22m 2.42s\u001b[2m (transform 70ms, setup 7ms, import 90ms, tests 138ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+    }
+  ]
+}
