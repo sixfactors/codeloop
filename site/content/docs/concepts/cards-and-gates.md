@@ -90,4 +90,4 @@ codeloop stats --lane market --compare v1 v2
 codeloop stats --card c-006
 ```
 
-Human turns per card, unattended span, cycle time, rework (rejections over approvals), stuck rate, and first-pass rate at every gate. Per lane version, so a promoted lane can be compared with the one it replaced. The [founder's week](/docs/start/founders-week) ends with real numbers.
+Human turns per card, unattended span, cycle time, rework (rejections over approvals), stuck rate, and first-pass rate at every gate. Per lane version, so a promoted lane can be compared with the one it replaced. The [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning) ends with real numbers.

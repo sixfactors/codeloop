@@ -68,7 +68,7 @@ With one page at frequency 2 the output is `nothing crossed a threshold`. A buil
 
 ## Competitor pages
 
-`codeloop wiki competitor` keeps one page per competitor with its links at the top. The scan lane reads the changelog link on each page every Monday and proposes a plan card when something new appears. The build lane's research stage copies its "how others show it" row onto the competitor's page when the stage passes. The [founder's week](/docs/start/founders-week) shows both.
+`codeloop wiki competitor` keeps one page per competitor with its links at the top. The scan lane reads the changelog link on each page every Monday and proposes a plan card when something new appears. The build lane's research stage copies its "how others show it" row onto the competitor's page when the stage passes. The [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning) shows the scan.
 
 ## Lanes learn from rejections
 

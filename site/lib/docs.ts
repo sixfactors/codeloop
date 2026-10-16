@@ -16,8 +16,22 @@ export const docsNav: NavGroup[] = [
       { title: 'Your first card', href: '/docs/start/first-card' },
       { title: 'The inbox', href: '/docs/start/inbox' },
       { title: 'Approve a gate', href: '/docs/start/approve-a-gate' },
-      { title: "A founder's week", href: '/docs/start/founders-week' },
       { title: 'You already have a project', href: '/docs/start/already-have-a-project' },
+    ],
+  },
+  {
+    title: 'Use cases',
+    items: [
+      { title: 'Ship a feature you did not watch being built', href: '/docs/use-cases/ship-a-feature-you-did-not-watch-being-built' },
+      { title: 'Let the agent work overnight and approve in the morning', href: '/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning' },
+      { title: 'Deploy without a surprise', href: '/docs/use-cases/deploy-without-a-surprise' },
+      { title: 'Publish launch copy nobody ships by accident', href: '/docs/use-cases/publish-launch-copy-nobody-ships-by-accident' },
+      { title: 'Plan the week from what is on the board', href: '/docs/use-cases/plan-the-week-from-what-is-on-the-board' },
+      { title: 'Turn bug reports into cards without duplicates', href: '/docs/use-cases/turn-bug-reports-into-cards-without-duplicates' },
+      { title: 'Break a problem into stories you can size', href: '/docs/use-cases/break-a-problem-into-stories-you-can-size' },
+      { title: 'Review a client deliverable before it leaves', href: '/docs/use-cases/review-a-client-deliverable-before-it-leaves' },
+      { title: 'Stop the agent repeating the same mistake', href: '/docs/use-cases/stop-the-agent-repeating-the-same-mistake' },
+      { title: 'Run two agents on one repo without collisions', href: '/docs/use-cases/run-two-agents-on-one-repo-without-collisions' },
     ],
   },
   {
@@ -38,7 +52,6 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Guides',
     items: [
-      { title: 'Review a client deliverable', href: '/docs/guides/review-a-client-deliverable' },
       { title: 'Run your own skills in a lane', href: '/docs/guides/run-your-own-skills-in-a-lane' },
     ],
   },

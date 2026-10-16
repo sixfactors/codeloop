@@ -46,7 +46,7 @@ All of them are computed from card events; nothing is logged separately.
 
 `codeloop stats` prints them for all cards, `--lane` for one lane, `--card` for one card, and `--compare v1 v2` side by side for two versions of a lane, which is how a promoted lane is judged against the one it replaced.
 
-From the end of the [founder's week](/docs/start/founders-week):
+From the end of the [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning):
 
 ```text
 all cards

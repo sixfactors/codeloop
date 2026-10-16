@@ -99,7 +99,7 @@ Exit codes: 2 when there is nothing to verify or an acceptance line has no use c
 
 ## A check that cannot fail is worse than none
 
-`verify --mutate` checks out the commit before the feature, builds it, and runs the use cases again. A use case that still passes is vacuous, and `verify` exits 4. `lane eval` refuses a proposal that changes a check without a fixture that fails under it. The [founder's week](/docs/start/founders-week) has an eval run with its `expected fail, got fail` line.
+`verify --mutate` checks out the commit before the feature, builds it, and runs the use cases again. A use case that still passes is vacuous, and `verify` exits 4. `lane eval` refuses a proposal that changes a check without a fixture that fails under it. [Stop the agent repeating the same mistake](/docs/use-cases/stop-the-agent-repeating-the-same-mistake) has an eval run with its `expected fail, got fail` line.
 
 ## Retries and stuck
 

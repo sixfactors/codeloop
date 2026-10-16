@@ -1,21 +1,27 @@
 ---
-title: Review a client deliverable
-description: Run a skill you already have, a client language review, as a lane stage so every deck is checked before it leaves, and you only approve the send.
+title: Review a client deliverable before it leaves
+description: Run a review skill you already have on every deck, check that its output is complete, and send nothing until you approve.
 ---
 
-A skill that reviews client decks only helps if someone remembers to run it before every send, and nothing stops a deck leaving without it.
+## The problem
 
-This guide is for work that is not code. A consultant has a skill that rewrites client decks into house style. codeloop runs it on every deliverable, checks that the output is complete, and parks the card until the person who owns the client relationship says send.
+A consultant has a skill that rewrites client decks into house style. It only helps if someone remembers to run it before every send, and nothing stops a deck leaving without it.
 
-The outputs below are from a run with Claude Code as the agent.
+## Without codeloop
 
-## What you need
+You run the skill when you remember, paste the result into the deck and email it. A run that stopped halfway looks the same as one that finished. The findings, the numbers that still need a source and the person who supplied each live in one chat, and the next deck starts from nothing. Sending is one click, with no step where the person who owns the client relationship says yes.
+
+## With codeloop
+
+You write one lane, a file that lists the stages a kind of work goes through: intake, review and sent. The review stage runs your skill. It is done when the output exists and contains the words `Findings` and `Evidence gaps`, a check codeloop runs and not the agent. The `sent` stage has an outward gate, a point where the card waits for a person and parks before the stage runs, so nothing leaves until you approve. The steps below build it and run one deck through it. The outputs are from a run with Claude Code as the agent.
+
+### Before you start
 
 - codeloop installed globally (`npm i -g @protoboxai/codeloop`), so that `codeloop` is on your path. The lane's checks call it by name.
-- `claude` on your path if you want the headless run in step 6.
+- `claude` on your path if you want the headless run in step 6 below.
 - The skill. This guide uses `client-language-review`, a skill that takes a deck or memo and returns the rewritten text, a findings table and the evidence gaps. Any skill with a file as its output works the same way. Skills synced from claude.ai live under `~/.claude/skills/synced/<id>/`; skills you wrote yourself live under `~/.claude/skills/<name>/`.
 
-## 1. Start a repo for the work
+### 1. Start a repo for the work
 
 Deliverables are files, so they live in a repo like anything else.
 
@@ -24,7 +30,7 @@ mkdir client-decks && cd client-decks && git init
 codeloop init --tools claude
 ```
 
-## 2. Index the skills you already have
+### 2. Index the skills you already have
 
 `adopt` reads skill folders and writes what it finds to `.codeloop/skills.index.yaml`, so a lane can name a skill by name. Name every folder the lane will draw from: the commands `init` wrote (the lane below uses `manage` and `ship` from there) and the folder your skill lives in.
 
@@ -51,7 +57,7 @@ grep -n client-language .codeloop/skills.index.yaml
 
 One thing to know: `adopt --from` replaces the index rather than adding to it. If you pass only the synced folder, the lane in step 3 fails `lane lint` because `manage` and `ship` are not indexed, and so do the seven default lanes. Passing both folders, as above, avoids that.
 
-## 3. Write the lane
+### 3. Write the lane
 
 A lane is a YAML file with stages. Each stage names a skill, the file it must produce and the command that decides whether it is done. Save this as `.codeloop/lanes/deliverable-review.yaml`.
 
@@ -94,7 +100,7 @@ codeloop lane lint
   9 lanes ok
 ```
 
-## 4. Start a card
+### 4. Start a card
 
 ```sh
 codeloop card new deliverable-review "Send the AI governance deck to the client without edits" \
@@ -109,7 +115,7 @@ created c-001 in deliverable-review at stage intake
 Next: run the manage skill to write review/c-001/draft.md, then `codeloop next c-001`.
 ```
 
-## 5. Intake: put the draft in the card
+### 5. Intake: put the draft in the card
 
 Paste the deck text into the file the stage names, with the `client:` line at the top.
 
@@ -140,7 +146,7 @@ c-001 failed the review check (1 so far)
 Next: missing file: review/c-001/rewrite.md. The /client-language-review skill produces review/c-001/rewrite.md. Then `codeloop next c-001`.
 ```
 
-## 6. Run the review
+### 6. Run the review
 
 You have two ways.
 
@@ -192,7 +198,7 @@ The evidence-gaps table lists eight placeholders and who supplies each: three fo
 
 A caution about `run`: it runs everything that is due in the repo, not only this lane. In the run above it also started the nightly triage lane's card and spent an agent run on it. If this repo only reviews deliverables, delete the default lanes you do not use.
 
-## 7. Approve the send
+### 7. Approve the send
 
 ```sh
 codeloop inbox
@@ -236,13 +242,15 @@ The `sent` stage then expects `review/c-001/sent.md` with a `sent:` line (date, 
 
 The same works from the board: `codeloop serve` opens the card, and once you sign in, Approve and Reject buttons put the rewrite one click away.
 
-## What this gives you
+## What you still do
 
-- Every deliverable goes through the same review, and a run that produced no rewrite, or stopped before the findings and evidence tables, cannot pass the check.
-- Nothing is sent without a person approving it, and the approval or rejection is recorded on the card with your note.
-- The card keeps the draft, the rewrite, the findings and who supplied each number, so the next deck starts from what the last one learned.
+- Read `review/c-001/rewrite.md`, fill in the placeholders marked for the client and the author, and decide whether the rewrite holds.
+- Approve the `send` gate, or reject with a note.
+- Write `review/c-001/sent.md` with a `sent:` line (date, channel, who) once the deck has gone.
 
-## Known rough edges
+Every deliverable goes through the same review, and nothing is sent without a person approving it. The approval or rejection is recorded on the card with your note, and the card keeps the draft, the rewrite, the findings and who supplied each number.
+
+## Not yet
 
 - `adopt --from` replaces the skill index, as noted in step 2.
 - `run --agent` runs every due lane in the repo; there is no flag yet to limit it to one lane or one card.

@@ -56,6 +56,26 @@ The four kinds from Diátaxis, and the section of the site each lives in:
 A tutorial that stops to explain, or an explanation that turns into steps, is two pages. The
 problem-first shape above applies to all four; in a reference page the problem is one line.
 
+## Use-case pages
+
+The owner, 2026-10-16, on the founder's week page: "too cryptic/technical - we need to explain a
+summary of what is the problem first, how human would do it without codeloop and then add how
+codeloop helps". A use-case page is a how-to told from the reader's job, and the Use cases
+section of the site is the list of them. Each page runs:
+
+1. **The problem**, in the words of the person who has it. No codeloop words yet.
+2. **Without codeloop.** How a person does this today, step by step, and where it goes wrong:
+   what they forget, what they cannot see, what the agent claims that nobody checked.
+3. **With codeloop.** The same job with the lane, the gates and the commands, with real output
+   where a page already has it. The reader should see which of the steps above disappear and
+   which become a one-click approval.
+4. **What you still do.** The decisions that stay with the person, named as gates.
+5. **Not yet**, when part of the job is still by hand.
+
+A use-case page names one lane and links to its reference row as a next step. The title says
+what the reader gets, in their words: "Ship a feature you did not watch being built", not
+"The build lane".
+
 ## Sentences
 
 - Second person, present tense, active voice. "You approve the gate", not "the gate is approved".

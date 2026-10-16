@@ -47,4 +47,4 @@ The skill decides how the work is done. The stage's `done.cmd` decides whether i
 
 ## Example
 
-The guide [Review a client deliverable](/docs/guides/review-a-client-deliverable) runs a consulting review skill as a lane stage end to end, with the real outputs.
+The guide [Review a client deliverable before it leaves](/docs/use-cases/review-a-client-deliverable-before-it-leaves) runs a consulting review skill as a lane stage end to end, with the real outputs.

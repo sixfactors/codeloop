@@ -9,7 +9,7 @@ Everything on this page is <span class="planned">planned</span> and does not wor
 
 ## Size-adaptive lanes
 
-A card gets a size from a short investigate stage that reads the code, and the founder confirms it. Lane stages take a `when:` clause, so a trivial card skips research, mock and spec and goes build, verify, review. Today every build card goes through every stage. This is the biggest gap in the [compare table](/docs/compare).
+Lane stages take a `when: size >= M` clause, so a trivial or S card enters at build and the skipped stages are recorded with the reason, while M and L cards walk every stage. This is on main and ships in 0.5.0; in the published 0.4.3 every build card goes through every stage. Still planned: a short investigate stage that reads the code and proposes the size for the founder to confirm.
 
 ## Cost per card
 

@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- Docs: a Use cases section with ten pages, each telling the problem in the reader's words, how a person does it without codeloop and where that fails, how codeloop does it, what the person still decides, and what is not there yet. The founder's week and the client-deliverable guide moved into it.
 - Every docs page opens with the problem it solves, then what codeloop does about it, then how it works; pages explain in place instead of pointing at repository files or other pages, define their terms where first used, and carry no narration about how they were written. The rule is `docs/documentation-standard.md`. The research check's printed source-line format reads `- source: <url or path> - <note>`; an em or en dash is still accepted.
 - Docs: an "Orchestrator and workers" page says which host can take which role (Claude Code, Cursor, Codex, Gemini CLI, a person), which file teaches each role, the orchestrator protocol a session needs, what the engine refuses on its own, and that `render` does not write the orchestrator command yet.
 - The build lane runs research, interview, mock, spec and data-model for M and L cards only (`when: size >= M` in the template and on codeloop's own lane): a trivial or S card enters at build with the skipped stages recorded, so small work takes the short road without a second lane.

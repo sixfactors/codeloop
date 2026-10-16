@@ -50,7 +50,7 @@ The first line is the summary: shipped this week, waiting on you, and how old th
 
 ## A fuller Monday
 
-From the [founder's week](/docs/start/founders-week), after a weekend of cron lanes:
+From the [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning), after a weekend of cron lanes:
 
 ```text
 1 shipped this week, 4 waiting on you, oldest today

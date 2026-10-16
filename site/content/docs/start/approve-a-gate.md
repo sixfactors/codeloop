@@ -82,7 +82,7 @@ refused: gate "spec" needs owner; agent cannot approve it
 refused: gate "spec" needs owner; agent cannot reject it
 ```
 
-The owner cannot pass the reviewer's gate either. In the [founder's week](/docs/start/founders-week) the review stage waits until `codeloop approve c-006 --as reviewer`.
+The owner cannot pass the reviewer's gate either. In [Ship a feature you did not watch being built](/docs/use-cases/ship-a-feature-you-did-not-watch-being-built) the review stage waits until `codeloop approve c-006 --as reviewer`.
 
 ## Gates before a public step
 
@@ -100,4 +100,4 @@ Next: publish is a public step and has not run. `codeloop approve c-009` to let 
 
 Rejections at one gate are counted per lane version. At three, `codeloop lane propose` writes a proposal that cites the cards and the notes. [Wiki and learning](/docs/concepts/wiki-and-learning) has the whole loop.
 
-Next: [A founder's week](/docs/start/founders-week), a scripted week that shows all of this over five days.
+Next: [Let the agent work overnight and approve in the morning](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning), a use case that shows all of this over a week.

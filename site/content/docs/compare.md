@@ -39,7 +39,7 @@ The rows are from reading their documentation and issue trackers in October 2026
 
 ## What the table says
 
-Spec-first and agile-persona tools help an agent write a better plan and then hand the code back to you. codeloop runs the whole loop, checks each stage with a command instead of a prompt, stops only at the gates you chose, and counts what happened. The [founder's week](/docs/start/founders-week) is the proof for every row in the last column.
+Spec-first and agile-persona tools help an agent write a better plan and then hand the code back to you. codeloop runs the whole loop, checks each stage with a command instead of a prompt, stops only at the gates you chose, and counts what happened. The [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning) shows the loop running over a week.
 
 Where codeloop is behind: a trivial fix goes through every stage of the build lane, the cost of a card is invisible, three hosts is fewer than forty, and the BMAD importer reads a file its current releases no longer write. Each is on the [Planned](/docs/planned) page.
 

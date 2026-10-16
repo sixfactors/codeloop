@@ -58,7 +58,7 @@ run:
 
 `{brief}` becomes the shell-quoted path to the stage brief. The agent and its children are killed at `timeout_minutes`. `max_runs_per_day` caps agent starts across the project in any 24 hours. The start is written to the card as an event before the process runs, in the same compare-and-swap write that checks the cap and that no other run is on the stage. No agent starts for a card at a gate or for an unapproved outward stage.
 
-Put the machine-only part in `.codeloop/local.yaml`. It is laid over `config.yaml` key by key, is gitignored, and is never pushed to the cloud. The [founder's week](/docs/start/founders-week) keeps its agent command there.
+Put the machine-only part in `.codeloop/local.yaml`. It is laid over `config.yaml` key by key, is gitignored, and is never pushed to the cloud. The [overnight-run use case](/docs/use-cases/let-the-agent-work-overnight-and-approve-in-the-morning) keeps its agent command there.
 
 ```sh
 codeloop run --dry-run
