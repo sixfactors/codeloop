@@ -1,0 +1,5 @@
+id: uc-301-01
+accept: US1
+failure_mode: "a prompt with no active story is refused, or the nudge names the wrong stories"
+layers:
+  cli: { run: "npx tsc && npm test -- src/lib/__tests__/host-enforcement.test.ts -t \"names the top 3\"", expect: { exit: 0 } }

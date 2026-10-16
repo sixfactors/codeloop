@@ -1,0 +1,5 @@
+id: uc-301-02
+accept: US2
+failure_mode: "guard.prompt: block stops blocking"
+layers:
+  cli: { run: "npx tsc && npm test -- src/lib/__tests__/host-enforcement.test.ts -t \"guard.prompt: block\"", expect: { exit: 0 } }
