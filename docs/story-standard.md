@@ -82,7 +82,7 @@ Check: `size:` is trivial, S, M or L; L cards cannot pass the spec gate unsplit.
 
 | Size | Diff budget `codeloop verify` enforces |
 |---|---|
-| trivial | 3 files, 50 lines (over it: re-sized to M, parked at the spec gate) |
+| trivial | 3 files, 50 lines; a page under docs/ counts as a file, not lines (over it: re-sized to M, parked at the spec gate) |
 | S | 8 files, 300 lines |
 | M | 20 files, 1,200 lines (also used when a card has no size) |
 | L | 40 files, 3,000 lines |

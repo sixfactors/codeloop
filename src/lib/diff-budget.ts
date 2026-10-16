@@ -24,6 +24,10 @@ export const DEFAULT_BUDGET: Record<Size, Budget> = {
 // well-documented small story look large.
 const EXCLUDED = [/^evidence\//, /^specs\//, /^\.codeloop\//, /^CHANGELOG\.md$/];
 
+// A page or write-up under docs/ is read, not reviewed line by line, and one page runs to hundreds of
+// lines; it counts as a file against the budget but adds no lines, so a doc-sized story stays trivial.
+const PROSE = /^docs\/.+\.(md|mdx|html)$/;
+
 function git(cwd: string, args: string[]): string {
   const run = spawnSync('git', args, { cwd, encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024 });
   return run.status === 0 ? run.stdout : '';
@@ -146,7 +150,7 @@ export function storyFiles(projectDir: string, cardId: string, opts: { branches?
 /** Files and added+deleted lines across the commits reachable from HEAD (or, with `branches`, from any branch) that carry a `Card:` or `Feature:` trailer for this card. */
 export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): StoryDiff {
   const { files, commits } = storyFiles(projectDir, cardId, opts);
-  return { files: files.size, lines: [...files.values()].reduce((a, b) => a + b, 0), commits };
+  return { files: files.size, lines: [...files].reduce((a, [path, n]) => a + (PROSE.test(path) ? 0 : n), 0), commits };
 }
 
 /** The budget for a size: defaults, overridden per size by `diff_budget:` in config. `budget: off` returns undefined. */

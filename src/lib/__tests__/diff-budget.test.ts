@@ -45,6 +45,15 @@ describe('storyDiff', () => {
   });
 });
 
+describe('a page under docs/', () => {
+  it('counts as a file but adds no lines, so a trivial story with a 433-line page stays within budget', () => {
+    put('docs/architecture/enterprise-architecture.html', 430); put('docs/README.md', 3); put('src/x.ts', 4);
+    commit('docs: the page', 'Card: c-001');
+    expect(storyDiff(dir, 'c-001')).toEqual({ files: 3, lines: 4, commits: 1 });
+    expect(checkBudget(dir, 'c-001', 'trivial').pass).toBe(true);
+  });
+});
+
 describe('checkBudget', () => {
   it('fails an S card over 8 files and names S', () => {
     for (let i = 0; i < 9; i++) put(`f${i}.ts`, 1);

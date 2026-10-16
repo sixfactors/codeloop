@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A page or write-up under docs/ counts against a story's size as a file, not by its lines, so a trivial story that adds one page is not re-sized.
 - A trivial story starts even when its lane is at its wip limit, and holds no slot, so a small ask is never refused behind larger work.
 - A prompt in a repo with open stories and none active is no longer refused: the agent is told the top open stories, or to start a trivial or S story for a small new ask (`codeloop start "<title>" --size trivial --activate`, which also makes it the session's active story) and carry on. Set `guard.prompt: block` to keep the old stop.
 - A trivial story that grows past its cap now stops at the spec gate again; on a lane where only M and L stories write a spec, it was re-sized to S and went straight on.
