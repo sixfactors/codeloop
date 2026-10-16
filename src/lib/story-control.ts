@@ -72,7 +72,7 @@ export function reopenCard(projectDir: string, id: string, role: Role, opts: Opt
     card = { ...rest, stage: PROPOSED, gate: PROPOSAL_GATE, awaiting: 'owner' };
   } else {
     stageIndex(lane, to);
-    assertRoomInLane(file.cards, lane, 1);
+    assertRoomInLane(file.cards, lane, 1, [], before.size);
     card = enter(before, to);
   }
   card = { ...card, events: [...before.events, event(now, role, 'reopen', card.stage, opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)], updatedAt: now.toISOString() };

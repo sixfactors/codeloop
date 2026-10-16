@@ -410,11 +410,17 @@ export function proposeCard(
 /** In the lane and not waiting on a person: the stories a lane's wip counts. */
 export const workable = (c: Card) => inLane(c) && !c.gate;
 
-export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = []): void {
-  if (lane.wip === undefined) return;
+/**
+ * Holds one of the lane's wip slots. A trivial story does not: it skips research and spec and runs
+ * in one sitting, so making it wait behind M stories turns a small ask into a refusal.
+ */
+export const holdsSlot = (c: Card) => workable(c) && c.size !== 'trivial';
+
+export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string): void {
+  if (lane.wip === undefined || size === 'trivial') return;
   // Only stories an agent can work hold a slot: one waiting at a gate or stuck is waiting on the
   // person, and that queue has its own cap (capacity.gates_per_day).
-  const holding = cards.filter(c => c.lane === lane.id && workable(c) && !freeing.includes(c.id));
+  const holding = cards.filter(c => c.lane === lane.id && holdsSlot(c) && !freeing.includes(c.id));
   if (holding.length + adding <= lane.wip) return;
   const list = holding.map(c => `${c.id} (${c.stage}${c.gate ? `, ${c.gate}` : ''}) ${c.title}`).join('; ');
   throw new RefusalError(
@@ -540,7 +546,7 @@ export function createCard(
   if (config.gatesPerDay !== undefined && parked >= config.gatesPerDay) {
     throw new RefusalError(`${parked} ${parked === 1 ? 'card is' : 'cards are'} waiting on you (capacity.gates_per_day is ${config.gatesPerDay}); clear the inbox before starting new work`);
   }
-  assertRoomInLane(file.cards, lane, 1);
+  assertRoomInLane(file.cards, lane, 1, [], input.fields?.size);
 
   const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note, input.fields);
   writeCards(projectDir, file, [...file.cards, card]);
@@ -599,8 +605,8 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
       if (opts.lane && c.lane !== opts.lane) return false;
       if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
       const lane = loadLane(projectDir, c.lane);
-      const active = file.cards.filter(x => x.lane === c.lane && workable(x)).length;
-      return lane.wip === undefined || active < lane.wip;
+      const active = file.cards.filter(x => x.lane === c.lane && holdsSlot(x)).length;
+      return lane.wip === undefined || c.size === 'trivial' || active < lane.wip;
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);

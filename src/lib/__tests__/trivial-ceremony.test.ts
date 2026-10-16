@@ -87,6 +87,16 @@ describe('a trivial card that outgrew the cap', () => {
   });
 });
 
+describe('wip', () => {
+  it('a full lane still takes a trivial story, which holds no slot', () => {
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE.replace('stages:', 'wip: 1\nstages:'));
+    createCard(dir, { lane: 'build', title: 'big', id: 'c-1', fields: { size: 'M' } });
+    expect(() => createCard(dir, { lane: 'build', title: 'another big', id: 'c-2', fields: { size: 'M' } })).toThrow(/works on 1 card/);
+    expect(createCard(dir, { lane: 'build', title: 'draw the page', id: 'c-3', fields: { size: 'trivial' } }).stage).toBe('build');
+    expect(createCard(dir, { lane: 'build', title: 'fix a typo', id: 'c-4', fields: { size: 'trivial' } }).stage).toBe('build');
+  });
+});
+
 describe('when:', () => {
   it('lint refuses an expression that is not a size comparison', () => {
     const lane = parseLane(LANE.replace('size >= M', 'size is big'));
