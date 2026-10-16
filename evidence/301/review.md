@@ -22,7 +22,7 @@ lane check's suite writing fixture evidence into the real tree (vitest setup, pr
 
 ## Rubric
 - W2 pass: repeated three walk steps in a fresh sandbox (/tmp/cl-review301.k5g6, codeloop at c7e7add dist): prompt with no active story exits 0 and prints the nudge naming c-001 and the `--size trivial --activate` line; `codeloop start "Draw the architecture page" --size trivial --activate` created c-002 at stage build and printed "active card: c-002 ... (this session only)"; with `guard.prompt: block` a new session exits 2 listing c-001 and c-002.
-- W3 pass: three findings above, each with a verdict and its evidence.
+- W3 pass: three findings in the table above, each with a verdict; the evidence names src/commands/guard-hooks.ts `gateCrossingMove`, evidence/301/verify.md line "seen but not this story's", and `git diff 93791ac..ebc8c2f --stat`.
 - W4 pass: no finding is fix-now, so nothing to re-verify; verify passed at ebc8c2f (evidence/301/verify.md).
-- W5 pass: the one defer is proposed as c-305.
+- W5 pass: the one defer is proposed as c-305 (`codeloop card show c-305`).
 - W6 pass: verdict approve, and W4 holds.
