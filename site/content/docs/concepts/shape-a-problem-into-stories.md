@@ -47,9 +47,9 @@ reopen it
 
 ## Sources
 
-- source: https://acme.example/docs/skills — the library page today, one card per skill
-- source: packages/cli/src/commands/pack.ts — `pack build` already shipped on the CLI
-- source: .codeloop/wiki/decisions/role-packs.md — packs are an explicit install, the web
+- source: https://acme.example/docs/skills - the library page today, one card per skill
+- source: packages/cli/src/commands/pack.ts - `pack build` already shipped on the CLI
+- source: .codeloop/wiki/decisions/role-packs.md - packs are an explicit install, the web
 app is the store
 ```
 
@@ -111,6 +111,7 @@ When a story reaches done, the next one starts.
   after that are made by hand.
 - Cost or time estimates beyond size and RICE's effort-in-weeks.
 
-See [Cards and gates](/docs/concepts/cards-and-gates) for how an approval moves a card once it's
-queued, and the [story standard](/docs/reference/story-standard) for the size, RICE and
+Once the owner approves the plan, each story is queued as a card, and an approval at a gate is what
+moves a card on. Next: [Cards and gates](/docs/concepts/cards-and-gates), and the
+[story standard](/docs/reference/story-standard), which holds the size, RICE and
 unlock-before-build rules this workflow shares with the rest of the board.

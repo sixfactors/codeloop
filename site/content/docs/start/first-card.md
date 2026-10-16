@@ -3,6 +3,12 @@ title: Your first card
 description: Start a card in the build lane, let the check fail, pass it, answer the interview, and reach the first gate.
 ---
 
+When you ask an agent for a feature, the only evidence that it finished is the agent saying so.
+
+codeloop gives the work a card, which is one shippable slice of work with a story, and moves it through the stages of a lane (a stage is one step, such as research or spec). A stage is done only when its check, a command run by codeloop and not by the agent, exits 0. At a gate the card stops until you decide.
+
+You start a card with one command, and the real output follows. This page takes you from that command to the first gate.
+
 ## Start a card
 
 A card is one shippable slice of work with a story. `start` creates it in the first stage of a lane, the build lane unless you say otherwise, and makes its spec folder.
@@ -57,9 +63,9 @@ codeloop next c-001
 
 ```text
 specs/001-export-invoices-as-csv/research.md has no line starting with "verdict:"
-specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
+specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> - <note>`)
 c-001 failed the research check (1 so far)
-Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`). The research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
+Next: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> - <note>`). The research skill produces specs/001-export-invoices-as-csv/research.md. Then `codeloop next c-001`.
 ```
 
 The failure is counted. After the lane's `retries` (three in every shipped lane) the card parks as stuck and shows up in the inbox for you.
@@ -70,9 +76,9 @@ In a host session, run the `/research` skill. Or hand the whole thing to an agen
 
 ```sh
 cat >> specs/001-export-invoices-as-csv/research.md <<'EOF'
-- source: https://example.com/a — accountants ask for one file per quarter
-- source: https://example.com/b — two rivals ship CSV export behind a button
-- source: https://example.com/c — our support inbox: four requests this month
+- source: https://example.com/a - accountants ask for one file per quarter
+- source: https://example.com/b - two rivals ship CSV export behind a button
+- source: https://example.com/c - our support inbox: four requests this month
 
 verdict: build
 EOF
@@ -158,7 +164,7 @@ Next: read specs/001-export-invoices-as-csv/tasks.md, then `codeloop approve c-0
 Four commands moved the card. Each move was a check command exiting 0, recorded as an event:
 
 ```text
-  2026-10-09T20:36:54.358Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> — <note>`)
+  2026-10-09T20:36:54.358Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url or path> - <note>`)
   2026-10-09T20:36:54.817Z  engine   advance research: to interview
   2026-10-09T20:36:56.400Z  engine   advance interview: to mock
   2026-10-09T20:36:56.865Z  engine   advance mock: to spec

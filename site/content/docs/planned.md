@@ -3,7 +3,9 @@ title: Planned
 description: What is on the board and not in 0.4.3. Nothing on this page works today.
 ---
 
-Everything on this page is <span class="planned">planned</span>. It is here so the rest of the docs can stay about what the CLI does now. The order is the order on codeloop's own board.
+Before you depend on codeloop you need to know what it does not do yet.
+
+Everything on this page is <span class="planned">planned</span> and does not work today. Each section says what happens now instead.
 
 ## Size-adaptive lanes
 
@@ -57,8 +59,8 @@ The cloud copy on Protobox becomes a board a team opens, with authenticated owne
 
 ## An importer for Linear, Jira or GitHub
 
-A ticket id now lives on the card (`ticket:`, shipped — see below). What is still planned is an importer that reads a Linear, Jira or GitHub tracker directly, the way `import speckit` reads a Spec Kit folder. Today the id comes in one card at a time, from a `"ACME-412: "` title prefix or `--ticket`.
+A ticket id now lives on the card (`ticket:`, shipped, listed at the end of this page). What is still planned is an importer that reads a Linear, Jira or GitHub tracker directly, the way `import speckit` reads a Spec Kit folder. Today the id comes in one card at a time, from a `"ACME-412: "` title prefix or `--ticket`.
 
-## Shipped since this page was first written
+## Shipped on main, not yet published
 
-No longer planned: thirteen stage skills and a build lane with an interview stage (`check questions`), `card split`, `skill eval`, `wiki init --from-repo`, `artifact new` with three kinds and `check artifact`, `render` writing the agent protocol into CLAUDE.md, AGENTS.md, Cursor and Copilot files, and `init --hooks` with the guard hooks; story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call; a `ticket:` field on the card, set from a ticket-style title prefix or `--ticket` and printed by `card show`. They are on `main` and not yet in the npm package; the README lists what the next publish carries.
+No longer planned: thirteen stage skills and a build lane with an interview stage (`check questions`), `card split`, `skill eval`, `wiki init --from-repo`, `artifact new` with three kinds and `check artifact`, `render` writing the agent protocol into CLAUDE.md, AGENTS.md, Cursor and Copilot files, and `init --hooks` with the guard hooks; story fields on a card (`--persona`, `--can`, `--so`, `--size`) with the story check; `ask` and `answer` with the questions band in the inbox; RICE on features with P1 to P4 bands; the Initiatives page and `initiative tree`; the SDK the CLI and the board both call; a `ticket:` field on the card, set from a ticket-style title prefix or `--ticket` and printed by `card show`. They are on `main` and not yet in the npm package. The [README](https://github.com/sixfactors/codeloop/blob/main/README.md) lists what the next publish carries.

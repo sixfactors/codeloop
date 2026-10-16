@@ -1,7 +1,9 @@
 ---
 title: Lanes
-description: The eight lanes codeloop init installs, stage by stage, from templates/lanes in the 0.4.3 package.
+description: The eight lanes codeloop init installs, stage by stage, shipped in the 0.4.3 package.
 ---
+
+You need the stages of each shipped lane, what checks each one and where it stops for a person. A lane is a file that lists the stages one kind of work goes through, and a gate is a point where a card waits for a person.
 
 Each table is one lane file. The gate column says when the card stops: after the check passes, or before the stage runs for a public step. `codeloop lane show <id>` prints the same from your repo, and [Lanes](/docs/concepts/lanes) explains the keys.
 
@@ -110,7 +112,7 @@ A lesson into a rule. Metric `repeat_gotcha_rate`. Trigger manual. WIP 2, retrie
 
 ## What `stats` can compute
 
-`codeloop stats` prints `metric <name>: <value|no-data>` per lane. A value only comes back for `source: cards` and a name the engine knows how to derive from the cards themselves: `done`, `done_cards`, `cards_done`, `done_without_reject`, `first_pass_done`, `cycle_time_hours`, `cycle_time_days`, `proposals_accepted_ratio`. Of the eight shipped lanes, that is build's `cycle_time_days` and triage's `proposals_accepted_ratio` — the rest (deploy, plan, scan's card-sourced names, and analyze's, market's and learn's analytics/knowledge-sourced ones) print `no-data` until something outside the card log feeds the number in.
+`codeloop stats` prints `metric <name>: <value|no-data>` per lane. A value only comes back for `source: cards` and a name the engine knows how to derive from the cards themselves: `done`, `done_cards`, `cards_done`, `done_without_reject`, `first_pass_done`, `cycle_time_hours`, `cycle_time_days`, `proposals_accepted_ratio`. Of the eight shipped lanes, that is build's `cycle_time_days` and triage's `proposals_accepted_ratio` - the rest (deploy, plan, scan's card-sourced names, and analyze's, market's and learn's analytics/knowledge-sourced ones) print `no-data` until something outside the card log feeds the number in.
 
 ## The skills the lanes name
 

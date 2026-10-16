@@ -3,6 +3,10 @@ title: Hosts
 description: Claude Code, Cursor, Codex and any MCP client. What init and render write for each, and how an agent is started.
 ---
 
+Your lanes and skills have to reach whichever agent host you use, and each host reads a different file format.
+
+`codeloop init` and `codeloop render` write the files each host reads, and `codeloop run --agent` starts a headless agent where the host has one. A lane is a file that lists the stages one kind of work goes through, and a skill is the prompt a stage hands its agent.
+
 ## Supported hosts
 
 | Host | Skills from `init` | Lane files from `render` | Headless agent for `run --agent` |
@@ -47,7 +51,7 @@ description: Run the verify stage of the build lane for one codeloop card, using
 
 1. Run `codeloop card show <id>`. It prints the output path, the done check, the stage notes and any earlier rejection notes. Follow those over anything remembered.
 2. Run `codeloop wiki inject --files <files you expect to touch>` and read every page it prints.
-3. Do the work with the `qa` skill (.claude/commands/qa.md). Quality gate — run all checks before promoting a task
+3. Do the work with the `qa` skill (.claude/commands/qa.md). Quality gate - run all checks before promoting a task
 4. Write the result to `evidence/{nnn}/verify.md`.
 5. Run `codeloop card advance <id>`. It runs `codeloop verify {id}`. If it exits 2, read the output, fix the work and run it again. Stop after 3 failures: the card parks as stuck for the owner.
 6. The card then waits at gate `local` for the owner. Stop there. Never run `codeloop approve` yourself.
@@ -83,7 +87,20 @@ Open the repo in the host and work a card by hand:
 
 ## Unattended
 
-Set the agent in `config.yaml` or `local.yaml`, then `codeloop run --agent` once, or `codeloop schedule install` to run it from cron. The agent gets the stage brief on stdin, works in the project directory, and is killed at the timeout. The run that started it then runs the check and moves the card. The agent process has `CODELOOP_AGENT_RUN` set and cannot approve, reject or promote. [Cloud and hosting](/docs/concepts/cloud-and-hosting) has the config block.
+Set the agent in `config.yaml` or `local.yaml`, then `codeloop run --agent` once, or `codeloop schedule install` to run it from cron. The agent gets the stage brief on stdin, works in the project directory, and is killed at the timeout. The run that started it then runs the check and moves the card. The agent process has `CODELOOP_AGENT_RUN` set and cannot approve, reject or promote.
+
+```yaml
+agents:
+  default: claude
+  claude:
+    cmd: "claude -p --permission-mode acceptEdits < {brief}"
+    timeout_minutes: 20
+    max_runs_per_day: 20
+run:
+  agent: true
+```
+
+`{brief}` becomes the shell-quoted path to the stage brief. [Cloud and hosting](/docs/concepts/cloud-and-hosting) covers the schedule and the run cap.
 
 ```yaml
 agents:

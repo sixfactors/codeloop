@@ -3,6 +3,10 @@ title: The inbox
 description: What the inbox lists, where its numbers come from, and the stats behind them.
 ---
 
+Gates, questions and proposals build up across cards, and a person needs one list that says what is waiting and for how long.
+
+The inbox is that list. A gate is a point where a card waits for a person, and a proposal is a card that nothing has started yet. This page says what goes into the inbox and how its numbers are computed.
+
 [The inbox](/docs/start/inbox) in the Start section shows how to read it. This page is about what goes in and how the numbers are computed.
 
 ## What is listed

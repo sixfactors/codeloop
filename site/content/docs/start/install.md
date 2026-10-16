@@ -3,6 +3,17 @@ title: Install
 description: One package, one command, and a .codeloop folder in your repo.
 ---
 
+When an agent works on your repo, nothing records what it was asked to do, what checked it or who approved it, so you find out by reading the diff afterwards.
+
+codeloop keeps that record in files inside your repo and moves each piece of work forward only when a check command passes. You install it with one npm package and set it up with `codeloop init`, which creates a `.codeloop` folder holding eight lanes (a lane is a file that lists the stages one kind of work goes through) and writes ten slash commands for your agent host.
+
+```sh
+npm install -g @protoboxai/codeloop
+codeloop init --tools claude
+```
+
+You need Node 20 or newer and a git repository. The steps below show the output of each command.
+
 ## Requirements
 
 Node 20 or newer and a git repository. The host is Claude Code, Cursor or Codex; `init` asks which, or takes `--tools`.

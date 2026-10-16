@@ -3,7 +3,11 @@ title: A founder's week
 description: The saved transcript of one scripted week, 14 cards and 75 assertions, read day by day.
 ---
 
-This page follows `docs/artifacts/demo-founder-week.txt` in the codeloop repo. It is the output of `scripts/demo-founder-week.sh`, which runs a whole week against the built CLI with a stand-in agent and a clock the script controls, and asserts every step. The script passed 75 checks and failed none. Every quoted line below is from that file.
+Letting an agent loop run while nobody is at the keyboard is hard to trust until you have seen what a whole week of it looks like, and where it stops and asks.
+
+codeloop runs its lanes (files that list the stages one kind of work goes through) from cron, advances each card only when its stage check passes, and parks it at a gate (a point where a card waits for a person). Over the week below, the founder types fifteen approvals and four rejections and agent runs do the rest.
+
+This page is the transcript of one scripted week. A [demo script](https://github.com/sixfactors/codeloop/blob/main/scripts/demo-founder-week.sh) runs the whole week against the built CLI with a stand-in agent and a clock the script controls, and asserts every step. It passes 75 checks and fails none.
 
 The product is a made-up invoicing app. The competitor is a made-up Rivalsoft. The agent is a fake that writes the minimum each check wants, so the week shows what the engine does, not what a model writes.
 
@@ -241,6 +245,8 @@ DEMO PASS: 75 checks passed, 0 failed
 Fifteen approvals and four rejections were the founder's whole week. Forty-nine agent runs did the rest.
 
 ## Run it yourself
+
+The script is in the codeloop repository. Clone it, build it and run it:
 
 ```sh
 git clone https://github.com/sixfactors/codeloop

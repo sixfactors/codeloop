@@ -3,7 +3,11 @@ title: You already have a project
 description: A repo with CI, a ticket tracker, your own slash commands and an open branch. What init touches, what it leaves alone, and the one folder the verify stage needs.
 ---
 
-The first three Start pages use an empty repo. This page is for a repo that already has history, CI, tickets and your own commands. Everything below was run on 2026-10-08 against a stand-in repo (`acme-app`: a `package.json` with `test`, `build` and `lint` scripts, a `.github/workflows/ci.yml`, two commands under `.claude/commands/`) with codeloop from the current branch. Outputs are pasted from that run.
+A tool that overwrites your CI, your slash commands or your open branch is a tool you will not run on a real repo.
+
+`codeloop init` adds a `.codeloop` folder and leaves everything else alone. It indexes the commands you already have so a lane can name them, and it writes into your `.claude/commands/` folder only when you pass `--yes`. A lane is a file that lists the stages one kind of work goes through, and a stage is one step in it.
+
+The first three Start pages use an empty repo. This page is for a repo that already has history, CI, tickets and your own commands. The examples below use a stand-in repo (`acme-app`: a `package.json` with `test`, `build` and `lint` scripts, a `.github/workflows/ci.yml`, two commands under `.claude/commands/`) and show real output.
 
 ## What init writes, and what it leaves alone
 
@@ -186,7 +190,7 @@ After `init` and one card, the repo root has four new folders: `.codeloop/`, `sp
 
 `codeloop init --ci github` writes three workflows next to yours and does not read yours. `codeloop-pr.yml` runs `npm ci`, `npm run build`, `npm test`, `codeloop lane lint`, and then a step named "Every commit carries a Feature trailer" that fails the PR if any commit on the branch has no `Feature: <card-id>` trailer. `codeloop-staging.yml` does nothing until `deploy.staging.command` is set in `config.yaml`. `codeloop-prod.yml` runs on a `v*` tag under the `production` environment.
 
-The trailer comes from the commit-msg hook, installed by `codeloop init --hooks`. It adds `Feature: <id>` when the branch name contains an id shaped like `c-012` or `ACME-412` and the message has none. Verified on two branches:
+The trailer comes from the commit-msg hook, installed by `codeloop init --hooks`. It adds `Feature: <id>` when the branch name contains an id shaped like `c-012` or `ACME-412` and the message has none. On two branches:
 
 ```sh
 git checkout -q -b feat/ACME-412-csv-export && git commit -q --allow-empty -m "add export" && git log -1 --format=%B

@@ -3,6 +3,10 @@ title: Stages and checks
 description: A stage is done when its check command exits 0. The engine runs the command; the agent's own report is not read.
 ---
 
+An agent can write "all tasks complete" at the bottom of a file whether or not they are.
+
+In codeloop a stage (one step in a lane) is done when its check, a command the engine runs, exits 0. The agent's own report is not read. When the check fails, the output goes into the next brief, which is the text an agent is handed for its next attempt.
+
 ## The check is a command
 
 Each stage in a lane carries `done: { cmd: "..." }`. The engine runs that command from the project root. Exit 0 moves the card to the next stage. Any other exit is a failure, counted toward the lane's `retries`, with the command's output written to the card as an event and into the next brief.
@@ -34,7 +38,7 @@ The stage is finished when this command, run from the project root, exits 0. It 
 The check last failed with:
 
     specs/001-export-invoices-as-csv/research.md has no line starting with "verdict:"
-    specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
+    specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> - <note>`)
 ```
 
 And the last part, the rules every brief ends with:
@@ -56,7 +60,7 @@ Any command works as a check: `npm test`, `make smoke`, a script. The CLI ships 
 | Command | Exit 0 when |
 |---|---|
 | `check file <path> --has <str...>` | The file exists, is not empty, and contains every string. The shipped lanes use this for most evidence files: `--has 'result: pass'`, `--has 'verdict:'`, `--has 'url:'`. |
-| `check research <card> --min-sources <n> [--online]` | `research.md` has a `verdict:` line and at least n `- source: <url> — <note>` lines. `--online` also requires each URL to answer 2xx or 3xx. |
+| `check research <card> --min-sources <n> [--online]` | `research.md` has a `verdict:` line and at least n `- source: <url> - <note>` lines. `--online` also requires each URL to answer 2xx or 3xx. |
 | `check mock <card>` | The card's mock is built from the shared template, keeps its tokens, uses no other colours and draws every screen the spec names. `screens: none` in the spec passes. |
 | `check story <card>` | The card meets the story standard. |
 | `check gotchas --files <path...> [--ack <title...>]` | No critical wiki page applies to these files without being acknowledged. |

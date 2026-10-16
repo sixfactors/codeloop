@@ -3,6 +3,10 @@ title: Cards and gates
 description: A card is one slice of work moving through a lane. A gate is where it stops for a person.
 ---
 
+When an agent decides for itself that work is done, nobody can tell finished work from work that was only claimed.
+
+In codeloop a card is one slice of work, and only the engine moves it, one stage at a time along a lane (a lane is a file that lists the stages a kind of work goes through). A stage is done when its check, a command the engine runs, exits 0. A gate is a point where the card stops until a person approves or rejects it.
+
 ## A card
 
 A card has an id (`c-001`, `c-002`, ...), a lane, a stage, a story and a list of events. It lives in `.codeloop/cards.json`. Nothing edits that file by hand: the engine in the CLI is the only thing that moves a card, and it does so only by running the lane.
@@ -17,7 +21,7 @@ A card has an id (`c-001`, `c-002`, ...), a lane, a stage, a story and a list of
 
   2026-10-07T20:02:52.942Z  agent    create research
   2026-10-07T20:02:52.947Z  agent    spec research: specs/001-export-invoices-as-csv
-  2026-10-07T20:02:53.330Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> — <note>`)
+  2026-10-07T20:02:53.330Z  engine   fail research: specs/001-export-invoices-as-csv/research.md cites 0 sources, needs 3 (`- source: <url> - <note>`)
   2026-10-07T20:03:14.870Z  engine   advance research: to mock
   2026-10-07T20:03:15.275Z  engine   advance mock: to spec
   2026-10-07T20:03:15.717Z  engine   park spec: gate spec (after the check passed)

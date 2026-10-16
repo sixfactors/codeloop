@@ -3,6 +3,10 @@ title: Lanes
 description: A lane is a YAML file that says what a kind of work goes through, what checks each step, and where a person decides.
 ---
 
+Different kinds of work need different steps. A deploy should not go through research, and a launch post should not go through a spec.
+
+codeloop describes each kind of work as a lane, a YAML file that lists its stages. A stage is one step, a check is the command that says the stage is done, and a gate is where a person decides.
+
 ## One file per kind of work
 
 A lane lives at `.codeloop/lanes/<id>.yaml`. `codeloop init` installs eight. This is the shipped build lane, unchanged:
@@ -52,7 +56,7 @@ stages:
 # on_done: { start: market }
 ```
 
-The shipped file ends with `on_done` commented out, as above — it is an opt-in second way to start the next lane's card, behind `lanes: { auto_start: true }` in `config.yaml`. `market`'s own `trigger: { on: lane.done, lane: build }` is what actually starts a market card when a build card finishes by default; see the `trigger` row below.
+The shipped file ends with `on_done` commented out, as above - it is an opt-in second way to start the next lane's card, behind `lanes: { auto_start: true }` in `config.yaml`. `market`'s own `trigger: { on: lane.done, lane: build }` is what actually starts a market card when a build card finishes by default; see the `trigger` row below.
 
 ## The keys
 
@@ -65,7 +69,7 @@ The shipped file ends with `on_done` commented out, as above — it is an opt-in
 | `wip` | How many cards the lane works at once. The run loop skips a lane that is full and says so. |
 | `retries` | Failed checks allowed on one stage before the card parks as stuck. |
 | `stages` | The list, in order. |
-| `on_done` | A lane to start a card in when a card here finishes. Off by default — a done card only announces what it would start — until `.codeloop/config.yaml` has `lanes: { auto_start: true }`. The other lane's own `trigger: { on: lane.done }` is a separate mechanism and fires either way; most downstream lanes rely on that instead. |
+| `on_done` | A lane to start a card in when a card here finishes. Off by default - a done card only announces what it would start - until `.codeloop/config.yaml` has `lanes: { auto_start: true }`. The other lane's own `trigger: { on: lane.done }` is a separate mechanism and fires either way; most downstream lanes rely on that instead. |
 
 ## A stage
 

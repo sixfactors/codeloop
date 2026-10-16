@@ -3,6 +3,10 @@ title: Cloud and hosting
 description: Everything runs from files in your repo. A board server, a cron entry and a cloud copy are each optional.
 ---
 
+Agent work that lives on one laptop cannot be seen, scheduled or approved by anyone else, but a tool that needs a server before it runs is hard to adopt.
+
+codeloop runs entirely from files in your repo. A board server, a cron entry and a cloud copy can each be added when you want them, and each is optional.
+
 ## The repo is the system
 
 Cards, lanes, wiki pages, evidence and config are files under `.codeloop/`, `specs/`, `usecases/` and `evidence/`. They are committed with the code. Nothing needs a server to run: `codeloop next`, `inbox`, `approve` and `run` read and write those files, under a lock so two processes do not lose each other's writes.

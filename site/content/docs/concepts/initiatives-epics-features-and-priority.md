@@ -3,7 +3,11 @@ title: Initiatives, epics, features and priority
 description: The four levels above a card, where the RICE score lives, and how the inbox and the Initiatives page order work by it.
 ---
 
-A card is a story: one slice a user could use, shipped through one lane run. Above it sit three levels that are wiki pages, not cards, so the board never mixes containers with work. The names follow what Jira, Linear, Azure DevOps and Aha! converge on; the mapping is in the repo's `docs/terminology.md`.
+A card is small, so a board with forty cards does not tell you which ones matter or what goal they serve.
+
+codeloop puts three levels above the card (initiative, epic and feature), each a wiki page, and orders the inbox and the Initiatives page by a RICE score (reach, impact, confidence and effort) so the work that moves the metric comes first. A card is one story: a slice a user could use, shipped through one lane run, where a lane is a file that lists the stages a kind of work goes through.
+
+A card is a story: one slice a user could use, shipped through one lane run. Above it sit three levels that are wiki pages, not cards, so the board never mixes containers with work. The names follow what Jira, Linear, Azure DevOps and Aha! converge on; the [full mapping](https://github.com/sixfactors/codeloop/blob/main/docs/terminology.md) is on GitHub.
 
 ## The levels
 

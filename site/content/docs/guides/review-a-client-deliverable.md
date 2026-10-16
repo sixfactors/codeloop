@@ -1,17 +1,19 @@
 ---
 title: Review a client deliverable
-description: Run a skill you already have, the Deloitte language review, as a lane stage so every deck is checked before it leaves, and you only approve the send.
+description: Run a skill you already have, a client language review, as a lane stage so every deck is checked before it leaves, and you only approve the send.
 ---
+
+A skill that reviews client decks only helps if someone remembers to run it before every send, and nothing stops a deck leaving without it.
 
 This guide is for work that is not code. A consultant has a skill that rewrites client decks into house style. codeloop runs it on every deliverable, checks that the output is complete, and parks the card until the person who owns the client relationship says send.
 
-Everything below was run on 2026-10-08 with codeloop from the current branch and Claude Code as the agent. The outputs are pasted from that run.
+The outputs below are from a run with Claude Code as the agent.
 
 ## What you need
 
 - codeloop installed globally (`npm i -g @protoboxai/codeloop`), so that `codeloop` is on your path. The lane's checks call it by name.
 - `claude` on your path if you want the headless run in step 6.
-- The skill. This guide uses `deloitte-language-review`, a skill that takes a deck or memo and returns the rewritten text, a findings table and the evidence gaps. Any skill with a file as its output works the same way. Skills synced from claude.ai live under `~/.claude/skills/synced/<id>/`; skills you wrote yourself live under `~/.claude/skills/<name>/`.
+- The skill. This guide uses `client-language-review`, a skill that takes a deck or memo and returns the rewritten text, a findings table and the evidence gaps. Any skill with a file as its output works the same way. Skills synced from claude.ai live under `~/.claude/skills/synced/<id>/`; skills you wrote yourself live under `~/.claude/skills/<name>/`.
 
 ## 1. Start a repo for the work
 
@@ -39,12 +41,12 @@ If your skill is under `~/.claude/skills/<name>/`, plain `codeloop adopt` with n
 Check it saw the one you want:
 
 ```sh
-grep -n deloitte .codeloop/skills.index.yaml
+grep -n client-language .codeloop/skills.index.yaml
 ```
 
 ```text
-100:- name: deloitte-language-review
-101:  source: /Users/you/.claude/skills/synced/<id>/deloitte-language-review/SKILL.md
+100:- name: client-language-review
+101:  source: /Users/you/.claude/skills/synced/<id>/client-language-review/SKILL.md
 ```
 
 One thing to know: `adopt --from` replaces the index rather than adding to it. If you pass only the synced folder, the lane in step 3 fails `lane lint` because `manage` and `ship` are not indexed, and so do the seven default lanes. Passing both folders, as above, avoids that.
@@ -68,7 +70,7 @@ stages:
     notes:
       - "Paste the deliverable into review/{id}/draft.md under a `client:` line naming who it goes to."
   - id: review
-    skill: deloitte-language-review
+    skill: client-language-review
     output: review/{id}/rewrite.md
     done: { cmd: "codeloop check file review/{id}/rewrite.md --has 'Findings' && codeloop check file review/{id}/rewrite.md --has 'Evidence gaps'" }
   - id: sent
@@ -114,7 +116,7 @@ Paste the deck text into the file the stage names, with the `client:` line at th
 ```sh
 mkdir -p review/c-001
 cat > review/c-001/draft.md <<'EOF'
-client: Deloitte, AI governance programme lead
+client: Acme Corp, AI governance programme lead
 deck: AI delivery governance, draft 3
 
 # Forty efforts, six stacks, one question nobody can answer
@@ -127,7 +129,7 @@ codeloop next c-001
 
 ```text
 c-001 moved to review
-Next: run the deloitte-language-review skill to write review/c-001/rewrite.md, then `codeloop next c-001`.
+Next: run the client-language-review skill to write review/c-001/rewrite.md, then `codeloop next c-001`.
 ```
 
 `next` runs one stage's check and moves the card one step. The intake check passed, so the card is now at review. A second `next` before the skill has run shows what the review check wants:
@@ -135,14 +137,14 @@ Next: run the deloitte-language-review skill to write review/c-001/rewrite.md, t
 ```text
 missing file: review/c-001/rewrite.md
 c-001 failed the review check (1 so far)
-Next: missing file: review/c-001/rewrite.md. The /deloitte-language-review skill produces review/c-001/rewrite.md. Then `codeloop next c-001`.
+Next: missing file: review/c-001/rewrite.md. The /client-language-review skill produces review/c-001/rewrite.md. Then `codeloop next c-001`.
 ```
 
 ## 6. Run the review
 
 You have two ways.
 
-**By hand, in Claude Code.** Open the repo, run `/deloitte-language-review` on `review/c-001/draft.md`, save the result as `review/c-001/rewrite.md`, then `codeloop next c-001`. `codeloop brief c-001` prints exactly what the stage expects, including the full skill text, if you want to paste it into another tool.
+**By hand, in Claude Code.** Open the repo, run `/client-language-review` on `review/c-001/draft.md`, save the result as `review/c-001/rewrite.md`, then `codeloop next c-001`. `codeloop brief c-001` prints exactly what the stage expects, including the full skill text, if you want to paste it into another tool.
 
 **Headless.** Tell codeloop which agent to start, then let it run the stage.
 
@@ -188,7 +190,7 @@ The first two rows of its findings table, unedited (the table has twelve):
 
 The evidence-gaps table lists eight placeholders and who supplies each: three for the client, five for the author.
 
-A caution about `run`: it runs everything that is due in the repo, not only this lane. In this run it also started the nightly triage lane's card and spent an agent run on it. If this repo only reviews deliverables, delete the default lanes you do not use.
+A caution about `run`: it runs everything that is due in the repo, not only this lane. In the run above it also started the nightly triage lane's card and spent an agent run on it. If this repo only reviews deliverables, delete the default lanes you do not use.
 
 ## 7. Approve the send
 

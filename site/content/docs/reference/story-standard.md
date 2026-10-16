@@ -3,7 +3,9 @@ title: Story standard
 description: How a card is titled, written, sized and tied to a metric. The check behind codeloop check story.
 ---
 
-How a card is written, sized, titled and tied to a metric. Every card on a codeloop board follows it, and `codeloop check story <card>` fails a card that does not. This is `docs/story-standard.md` from the codeloop repo, as shipped in 0.3.0.
+You need the rules a card must meet before the check accepts it. A card is one slice of work with a story, and a check is a command that exits 0 when a rule holds.
+
+How a card is written, sized, titled and tied to a metric. Every card on a codeloop board follows it, and `codeloop check story <card>` fails a card that does not.
 
 ## The hierarchy a card sits in
 

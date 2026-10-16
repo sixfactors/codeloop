@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { resolveSpecDir } from './spec.js';
 
-// `- source: <url or path> — <note>`. A spaced hyphen is accepted in place of the dash. Exported so
+// `- source: <url or path> - <note>`. An em or en dash is accepted in place of the hyphen. Exported so
 // the shape workflow's brief check (src/lib/shape.ts) counts sources the same way research.md does.
 export const SOURCE = /^- source: (https?:\/\/\S+) (?:—|–|-) \S.*$/;
 // A file in this repo, optionally with a line number, counts when it exists: most evidence for a
@@ -29,7 +29,7 @@ export function checkResearch(projectDir: string, ref: string, minSources: numbe
   const urls = sources.filter(s => /^https?:\/\//.test(s));
   const errors: string[] = [];
   if (!VERDICT.test(text)) errors.push(`${file} has no line starting with "verdict:"`);
-  if (sources.length < minSources) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs ${minSources} (\`- source: <url or path> — <note>\`)`);
+  if (sources.length < minSources) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs ${minSources} (\`- source: <url or path> - <note>\`)`);
   return { file, errors, urls };
 }
 

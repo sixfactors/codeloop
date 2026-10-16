@@ -60,7 +60,7 @@ export function checkBrief(projectDir: string, ref: string): { file: string; err
   if (!/^exists:[ \t]*\S/m.test(text)) errors.push(`${file} has no "exists:" line (have, unlock, port or build)`);
   // A brief's sources are mostly files in this repo or a sibling, so a path counts as well as a URL.
   const sources = text.split('\n').map(l => sourceOf(projectDir, l.trim())).filter((u): u is string => !!u);
-  if (sources.length < 3) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs at least 3 (\`- source: <url or path> — <note>\`)`);
+  if (sources.length < 3) errors.push(`${file} cites ${sources.length} ${sources.length === 1 ? 'source' : 'sources'}, needs at least 3 (\`- source: <url or path> - <note>\`)`);
   return { file, errors };
 }
 

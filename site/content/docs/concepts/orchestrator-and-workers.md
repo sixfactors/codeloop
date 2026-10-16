@@ -3,6 +3,17 @@ title: Orchestrator and workers
 description: Three roles run a card, any agent host can take any role, and each role is taught by a file codeloop writes. What those files say, what the engine refuses on its own, and what is still missing.
 ---
 
+When one agent session plans a card, edits the code and approves its own result, nothing separates the three jobs and nothing can refuse a move.
+
+codeloop splits a card's work into three roles, owner, orchestrator and worker, and keeps the state in an engine that refuses the moves a role may not make. The words this page uses:
+
+- A **brief** is the text a worker is handed for one stage: the card, the check, the skill and any feedback from the last failure.
+- A **turn** is one run of one stage by one worker: brief, worker, hand-back, gate, record.
+- A **hand-back** is the five-line report a worker returns at the end of a turn.
+- A **lease** is a claim on the files in a card's plan while a worker runs, so two workers never edit the same file.
+- A **holder** is whoever has a card now: an agent, a person, or nobody (queued).
+- An **outcome** is how a turn ended, such as `merged`, `failed`, `stuck` or `questions`.
+
 ## Three roles, one engine
 
 A card moves because three roles act on it. The engine holds the state and refuses the moves a role may not make, so a role has to be taught only what it should do, never what it cannot.
@@ -24,7 +35,7 @@ The orchestrator and the worker never have to be the same product. A Claude Code
 | Codex | yes, as a session | yes | `codex exec --full-auto "$(cat {brief})"` | `AGENTS.md` block, `.agents/skills/*` |
 | Gemini CLI, or any other CLI | no, nothing renders for it yet | only through `AGENTS.md` | any command that takes the brief as text, for example `gemini -p "$(cat {brief})"` | `AGENTS.md` block only |
 | A person | yes | yes, `--builder person` | | the brief lands in `.codeloop/state/orch/outbox/person.md` |
-| CI | no | no | a job that runs the stage check | `templates/ci/*.yml` |
+| CI | no | no | a job that runs the stage check | [the CI workflow templates](https://github.com/sixfactors/codeloop/tree/main/templates/ci) |
 
 A headless worker is one line in `.codeloop/config.yaml`; `init` writes the presets for the tools it detects and leaves one out when its binary is not on PATH:
 
@@ -41,7 +52,7 @@ agents:
     cmd: "gemini -p \"$(cat {brief})\""
 ```
 
-Gemini CLI has not been run through a gate by us; the line above is the shape, not a tested preset. A lane stage names its worker with `agent: <name>`, so research can run on a cheap model and build on a strong one.
+The Gemini CLI line above is the shape of a preset, not a tested one: no Gemini hand-back has been through a gate. A lane stage names its worker with `agent: <name>`, so research can run on a cheap model and build on a strong one.
 
 ## What each role is taught, and by which file
 
@@ -49,14 +60,14 @@ Nothing is typed into a chat. Every fact a role needs is in a file codeloop writ
 
 | The role must know | Taught by | Written by |
 |---|---|---|
-| The words: card, stage, gate, holder, lease, turn, hand-back, outcome | [Terminology](/docs/reference/story-standard) and the `## codeloop lanes` table | `codeloop render`, into `AGENTS.md` |
-| The standing protocol: read the monitor first, brief before work, one stage, never approve, ask with `codeloop ask`, capture to the wiki after | `templates/protocol.md` | `codeloop render`, into `CLAUDE.md`, `.cursor/rules/codeloop.mdc`, `.github/copilot-instructions.md`, `AGENTS.md` |
+| The words: card, stage, gate, holder, lease, turn, hand-back, outcome | The definitions at the top of this page, in the `## codeloop lanes` table | `codeloop render`, into `AGENTS.md` |
+| The standing protocol: read the monitor first, brief before work, one stage, never approve, ask with `codeloop ask`, capture to the wiki after | [the protocol template](https://github.com/sixfactors/codeloop/blob/main/templates/protocol.md) | `codeloop render`, into `CLAUDE.md`, `.cursor/rules/codeloop.mdc`, `.github/copilot-instructions.md`, `AGENTS.md` |
 | The five steps of a stage: show the card, inject the wiki, run the skill, write the output, advance | one agent, rule or skill per stage or lane | `codeloop render`, per host |
 | How to do the stage's work | the skill (`research`, `spec`, `build`, `verify`, ...) | `codeloop init`, into the host's commands or skills folder |
 | This turn: card, stage, output path, check, rubric, files leased, rejection notes, open questions | the brief | `codeloop brief <id>`, or `codeloop orch run` into `.codeloop/state/briefs/` |
-| The worker's rules: one tree, own files only, `Card:` and `Task:` trailers, no push, fix forward, selfcheck, the exact hand-back line | `templates/orch/brief-footer-tree.md`, appended to every orchestrated brief | `codeloop orch run` |
+| The worker's rules: one tree, own files only, `Card:` and `Task:` trailers, no push, fix forward, selfcheck, the exact hand-back line | [the brief footer](https://github.com/sixfactors/codeloop/blob/main/templates/orch/brief-footer-tree.md), appended to every orchestrated brief | `codeloop orch run` |
 | What it may not do | nothing; the engine refuses it | hooks, guards, `CODELOOP_AGENT_RUN` |
-| The orchestrator's loop | **not written yet**: the orchestrator is either `codeloop orch run` or a session following rules kept outside codeloop | see "What is not done" |
+| The orchestrator's loop | **not written yet**: the orchestrator is either `codeloop orch run` or a session following rules kept outside codeloop | listed under "What is not done" below |
 
 The last row is the gap. Every builder role is rendered for every host. The orchestrator role exists as code (`codeloop orch run`, `status`, `resume`, `inbox`, `report`) and as a private rules document in one team's repo, so a fresh Claude or Cursor session cannot be told "orchestrate this board" and know what that means.
 
@@ -95,9 +106,30 @@ One turn, start to end:
 7. The orchestrator reports: what the owner would notice, what is broken, the one decision. Then the next card.
 8. At night the doctor reruns failed checks only where something changed, starts the stage agent once on a story whose output was never written, and nudges a worker that went quiet.
 
-## The orchestrator protocol
+## What the engine refuses, so nobody has to teach it
 
-This is what a session must be told to hold the orchestrator role. It is written here first so it can be read and argued with; `codeloop render` does not write it yet (see below). To use it today, save it as `.claude/commands/orch.md` or `.cursor/commands/orch.md`.
+| Attempt | Refused by |
+|---|---|
+| An agent process approving, rejecting or answering | `CODELOOP_AGENT_RUN`, `CODELOOP_ROLE`, the hub's sign-in |
+| Editing a file another card's plan leases | `guard edit` (Claude Code), the pre-commit hook (every host) |
+| A third builder when `orch.max_builders` is 2 | the repo lock; the card is `queued` |
+| Starting a turn past `max_runs_per_day` or the memory ceiling | the run ledger; outcome `budget` |
+| Rerunning a failed check when nothing under the card changed | `check-skipped` once a day |
+| A commit without a `Card:` trailer on an orchestrated branch | the commit-msg hook |
+| Starting anything while `codeloop off` holds | every hook and `orch`, `run`, doctor |
+| Push, merge, rebase from a worker | not refused by the engine; the brief footer forbids it and git hooks catch a push |
+
+## What is not done
+
+- **No rendered orchestrator command.** `codeloop render` writes the builder protocol for every host and nothing for the orchestrator. Until it exists, the orchestrator is `codeloop orch run` or a session that follows the protocol below, and `codeloop orch run` does not tell a session to keep going when it finishes one turn.
+- **Cursor and Codex get fewer guards.** Cursor's hooks file carries presence and `beforeShellExecution` only, so a Cursor worker's edits are not recorded or refused at edit time; Codex has no hooks at all. Both still hit the git hooks and the gate, which is where the engine judges. [How codeloop keeps an agent honest](/docs/concepts/how-codeloop-keeps-an-agent-honest) has the per-host table.
+- **Gemini CLI is untested as a worker.** The config line is the shape; nobody has gated a Gemini hand-back.
+- **The orchestrator's state between turns lives in `.codeloop/state/orch/<card>.json`** and in the session's own memory. A session that compacts or restarts resumes from `codeloop orch status` and `codeloop orch inbox`; there is no "what I was about to do next" file.
+- **A session orchestrator pays for its own waiting.** `codeloop orch run` polls for a hand-back for up to `orch.wait_minutes`; a chat session holding that wait spends its context on it. `--no-wait` plus `orch resume` is the cheaper shape and the one a session should use.
+
+## Reference: the orchestrator protocol
+
+This is what a session must be told to hold the orchestrator role. `codeloop render` does not write it yet; "What is not done" above says why. To use it today, save it as `.claude/commands/orch.md` or `.cursor/commands/orch.md`.
 
 ```text
 # /orch: run this board
@@ -123,24 +155,3 @@ Rules
 ```
 
 A person can run the same loop by hand, one command at a time, and a Cursor session reads the same file from `.cursor/commands/`.
-
-## What the engine refuses, so nobody has to teach it
-
-| Attempt | Refused by |
-|---|---|
-| An agent process approving, rejecting or answering | `CODELOOP_AGENT_RUN`, `CODELOOP_ROLE`, the hub's sign-in |
-| Editing a file another card's plan leases | `guard edit` (Claude Code), the pre-commit hook (every host) |
-| A third builder when `orch.max_builders` is 2 | the repo lock; the card is `queued` |
-| Starting a turn past `max_runs_per_day` or the memory ceiling | the run ledger; outcome `budget` |
-| Rerunning a failed check when nothing under the card changed | `check-skipped` once a day |
-| A commit without a `Card:` trailer on an orchestrated branch | the commit-msg hook |
-| Starting anything while `codeloop off` holds | every hook and `orch`, `run`, doctor |
-| Push, merge, rebase from a worker | not refused by the engine; the brief footer forbids it and git hooks catch a push |
-
-## What is not done
-
-- **No rendered orchestrator command.** `codeloop render` writes the builder protocol for every host and nothing for the orchestrator. The protocol above should become `templates/orch/orchestrator.md`, rendered to `.claude/commands/orch.md`, `.cursor/commands/orch.md` and `.agents/skills/codeloop-orch/SKILL.md`, and `codeloop orch run` should print "run /orch in a session to keep this going" when it finishes one turn.
-- **Cursor and Codex get fewer guards.** Cursor's hooks file carries presence and `beforeShellExecution` only, so a Cursor worker's edits are not recorded or refused at edit time; Codex has no hooks at all. Both still hit the git hooks and the gate, which is where the engine judges. [How codeloop keeps an agent honest](/docs/concepts/how-codeloop-keeps-an-agent-honest) has the per-host table.
-- **Gemini CLI is untested as a worker.** The config line is the shape; nobody has gated a Gemini hand-back.
-- **The orchestrator's state between turns lives in `.codeloop/state/orch/<card>.json`** and in the session's own memory. A session that compacts or restarts resumes from `codeloop orch status` and `codeloop orch inbox`; there is no "what I was about to do next" file.
-- **A session orchestrator pays for its own waiting.** `codeloop orch run` polls for a hand-back for up to `orch.wait_minutes`; a chat session holding that wait spends its context on it. `--no-wait` plus `orch resume` is the cheaper shape and the one a session should use.

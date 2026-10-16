@@ -3,6 +3,8 @@ title: Wiki and learning
 description: Pages agents read before a stage and write after it. Frequency raises severity. Repeated rejections change the lane.
 ---
 
+An agent starts each session knowing nothing about your codebase's traps, so the same mistake is made, rejected and made again.
+
 Two things learn in codeloop. The wiki learns facts about the codebase: gotchas, decisions, concepts. The lanes learn how work should flow: a gate that keeps rejecting gets a tighter check. Both go through a person before anything is enforced.
 
 ## Wiki pages

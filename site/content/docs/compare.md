@@ -3,6 +3,10 @@ title: Compare
 description: codeloop next to the two kinds of agent-workflow tool it is most often weighed against. Where it is ahead, and where it is not.
 ---
 
+Agent-workflow tools look alike until you ask what decides that a step is done.
+
+In codeloop a command's exit code decides, where the tools below rely on the agent's own word. The table compares them row by row and says where codeloop is behind.
+
 Two kinds of tool are common today. **Spec-first tools** give an agent a sequence of slash commands that write a specification, a plan and a task list before any code, with one feature per branch and folder. **Agile-persona tools** give an agent a cast of roles (analyst, architect, developer, reviewer) and a ticket list, and run the roles in turn. Both are good at getting a better plan out of a model. This table is about what happens after the plan.
 
 The rows are from reading their documentation and issue trackers in October 2026. Where codeloop is behind, the row says so.

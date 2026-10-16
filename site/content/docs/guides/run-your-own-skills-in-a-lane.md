@@ -3,6 +3,8 @@ title: Run your own skills in a lane
 description: A lane stage names a skill. Point it at a skill you already have, from Claude Code, Cursor, Codex, BMAD or Spec Kit, and codeloop runs it with a check and a gate.
 ---
 
+You already have skills in Claude Code, Cursor, Codex, BMAD or Spec Kit, and rewriting them to fit another tool throws away work you have tuned.
+
 codeloop does not replace the skills you use. A lane stage names a skill by name, hands it a brief, and checks the file it writes. The skill can be one that ships with codeloop, one you wrote, or one from another framework.
 
 ## Where skills come from

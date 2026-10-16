@@ -3,6 +3,10 @@ title: Approve a gate
 description: Approve, reject with a note, and the three roles. What an agent cannot do.
 ---
 
+An agent that can approve its own work will mark it done. codeloop stops each card at a gate, a point where the card waits for a person, and the engine refuses `approve` and `reject` from any agent process.
+
+You approve, or reject with a note, from the command line. The card in this page is the one from your first card, parked at the build lane's spec gate: the spec stage has written `tasks.md`, its check has passed, and the card waits for you to read the file and choose.
+
 ## The card is waiting
 
 The card from [Your first card](/docs/start/first-card) is parked at the build lane's spec gate. The inbox says to read `tasks.md` and then choose.
@@ -96,4 +100,4 @@ Next: publish is a public step and has not run. `codeloop approve c-009` to let 
 
 Rejections at one gate are counted per lane version. At three, `codeloop lane propose` writes a proposal that cites the cards and the notes. [Wiki and learning](/docs/concepts/wiki-and-learning) has the whole loop.
 
-Next: [A founder's week](/docs/start/founders-week), the saved run that shows all of this over five days.
+Next: [A founder's week](/docs/start/founders-week), a scripted week that shows all of this over five days.

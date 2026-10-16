@@ -47,12 +47,12 @@ afterEach(() => {
 
 describe('check research', () => {
   it('fails on the unfilled template', () => {
-    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md has no line starting with "verdict:"`, `${SPEC}/research.md cites 0 sources, needs 3 (\`- source: <url or path> — <note>\`)`]);
+    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md has no line starting with "verdict:"`, `${SPEC}/research.md cites 0 sources, needs 3 (\`- source: <url or path> - <note>\`)`]);
   });
 
   it('fails with a verdict and too few source lines, and counts only well-formed ones', () => {
     append(`${SPEC}/research.md`, `${SOURCES.slice(0, 2).join('\n')}\n- source: not a url — nope\nsee https://stray.test/link\nverdict: build\n`);
-    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md cites 2 sources, needs 3 (\`- source: <url or path> — <note>\`)`]);
+    expect(checkResearch(dir, 'c-001', 3).errors).toEqual([`${SPEC}/research.md cites 2 sources, needs 3 (\`- source: <url or path> - <note>\`)`]);
     expect(checkResearch(dir, 'c-001', 2).errors).toEqual([]);
   });
 

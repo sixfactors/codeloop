@@ -3,6 +3,10 @@ title: The inbox
 description: One command tells you what needs a decision, what shipped, and how each lane is doing.
 ---
 
+When several cards are running, nothing tells you which one is waiting for you.
+
+`codeloop inbox` lists every card that is stopped at a gate (a gate is a point where a card waits for a person to approve or reject it), what shipped this week, and how each lane is doing, with the exact command to type next.
+
 ## Run it
 
 ```sh

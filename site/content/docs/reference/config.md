@@ -3,6 +3,8 @@ title: Config
 description: The keys in .codeloop/config.yaml that codeloop 0.4.3 reads, and the local.yaml overlay.
 ---
 
+You need to know which keys change codeloop's behaviour and which file to put machine-specific values in.
+
 ## Two files
 
 `.codeloop/config.yaml` is committed and shared. `.codeloop/local.yaml` is gitignored, never synced to the cloud, and laid over `config.yaml` key by key: a map in `local.yaml` merges with the shared one, a list or a plain value replaces it. Put agent commands, machine paths and anything secret there.
