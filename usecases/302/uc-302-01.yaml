@@ -1,0 +1,5 @@
+id: uc-302-01
+accept: US1
+failure_mode: "a grown trivial story is re-sized to S, which runs no gate, and goes straight on"
+layers:
+  cli: { run: "npm test -- src/lib/__tests__/trivial-ceremony.test.ts", expect: { exit: 0 } }
