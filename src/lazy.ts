@@ -95,6 +95,10 @@ export async function lazyProgram(argv: string[]): Promise<Command | undefined> 
     }
     (await import('./commands/guard-hooks.js')).attachCardActivate(mod.cardCommand);
   }
+  if (name === 'start') {
+    const { onStartActivate } = (await entry[0]()) as unknown as { onStartActivate: (fn: (id: string) => Promise<void>) => void };
+    onStartActivate((await import('./commands/guard-hooks.js')).activateCard);
+  }
   program.addCommand(mod[entry[1]]);
   return program;
 }

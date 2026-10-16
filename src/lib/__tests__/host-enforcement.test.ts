@@ -266,6 +266,18 @@ describe('guard prompt (UserPromptSubmit hook)', () => {
     expect(created.events.filter(e => e.action === 'skip').map(e => e.stage)).toEqual(['research', 'interview', 'mock', 'spec', 'data-model']);
   });
 
+  it('start --activate makes the new story the active one for the session that ran it', () => {
+    writeCard('c-7', 'spec');
+    const env = { CLAUDE_CODE_SESSION_ID: 'sess-1' };
+    const started = cli(['start', 'draw the architecture page', '--size', 'trivial', '--activate'], { env });
+    expect(started.status).toBe(0);
+    const created = (JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).cards as { id: string }[]).at(-1)!.id;
+    expect(getActiveCard(dir, 'sess-1')).toBe(created);
+    const prompt = cli(['guard', 'prompt'], { input: JSON.stringify({ prompt: 'draw the architecture page', session_id: 'sess-1' }), env });
+    expect(prompt.status).toBe(0);
+    expect(prompt.stdout).toContain(`active card ${created} `);
+  });
+
   it('with guard.prompt: block, exits 2 and lists the open stories when stories exist and none is active', () => {
     write('.codeloop/config.yaml', 'guard:\n  prompt: block\n');
     writeCard('c-7', 'spec');

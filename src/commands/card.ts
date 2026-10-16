@@ -18,12 +18,23 @@ function print(result: { lines: string[]; exitCode: number }): void {
   if (result.exitCode) process.exit(result.exitCode);
 }
 
-const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string } & StoryFlags) => {
-  const { stage, ...rest } = opts;
+// Set by the program from guard-hooks.ts, the one module that writes .codeloop/state, so this file
+// stays on the SDK (the layering test) while `start --activate` still marks the card active.
+let activateStarted: ((id: string) => Promise<void>) | undefined;
+export function onStartActivate(fn: (id: string) => Promise<void>): void {
+  activateStarted = fn;
+}
+
+const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => {
+  const { stage, activate, ...rest } = opts;
   const created = await client().cards.new({ ...rest, lane, title }, { as: opts.as });
   // Work already under way enters at the stage it has reached, not at the first one.
   const { card, hint } = stage && stage !== created.card.stage ? await client().cards.place(created.card.id, stage, { as: opts.as }) : created;
   console.log(`created ${card.id} in ${card.lane} at stage ${card.stage}${card.ticket ? ` for ${card.ticket}` : ''}${card.spec ? ` (${card.spec}/)` : ''}`);
+  if (activate) {
+    if (!activateStarted) throw new Error('start --activate: no activation handler attached');
+    await activateStarted(card.id);
+  }
   print({ lines: [hint], exitCode: 0 });
 };
 
@@ -426,8 +437,9 @@ export const startCommand = storyOptions(new Command('start')
   .option('--lane <lane>', 'Lane to start in', 'build')
   .option('--id <id>', 'Card id (default: next c-NNN)')
   .option('--stage <stage>', 'Start at this stage, for work already under way (the owner decides)')
+  .option('--activate', 'Make the new card the active one (this session only inside an assistant), as `card activate` does')
   .option(...ROLE))
-  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string; stage?: string } & StoryFlags) => start(opts.lane, title, opts)));
+  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => start(opts.lane, title, opts)));
 
 export const nextCommand = new Command('next')
   .description('Run the check for a card and move it on (same as card advance); with one active card the id is optional')

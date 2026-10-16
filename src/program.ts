@@ -18,7 +18,7 @@ import { removeCommand } from './commands/remove.js';
 import { publishCommand } from './commands/publish.js';
 import { loginCommand } from './commands/login.js';
 import { laneCommand } from './commands/lane.js';
-import { approveCommand, cardCommand, nextCommand, rejectCommand, startCommand } from './commands/card.js';
+import { approveCommand, cardCommand, nextCommand, onStartActivate, rejectCommand, startCommand } from './commands/card.js';
 import { shapeCommand } from './commands/shape.js';
 import { inboxCommand } from './commands/inbox.js';
 import { featureCommand } from './commands/feature.js';
@@ -41,7 +41,7 @@ import { configCommand, gateCommand, mcpCommand, renderCommand } from './command
 import { cloudCommand } from './commands/cloud.js';
 import { mockCommand, mocksCommand } from './commands/mock.js';
 import { artifactCommand, artifactsCommand } from './commands/artifact.js';
-import { attachCardActivate, guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
+import { activateCard, attachCardActivate, guardCommand, monitorCommand, presenceCommand, whoamiCommand } from './commands/guard-hooks.js';
 import { hookdCommand } from './commands/hookd.js';
 import { scanCommand } from './commands/scan.js';
 import { progressCommand } from './commands/progress.js';
@@ -73,6 +73,7 @@ export function buildProgram(): Command {
     if (!cardCommand.commands.some(c => c.name() === sub.name())) cardCommand.addCommand(sub);
   }
   attachCardActivate(cardCommand);
+  onStartActivate(activateCard);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
   program.addCommand(shapeCommand);

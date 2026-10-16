@@ -100,13 +100,16 @@ export function attachCardActivate(cardCommand: Command): void {
   cardCommand
     .command('activate <id>')
     .description('Mark a card as the active one in this repo; the guard hooks, the MCP server and `codeloop whoami` all read this')
-    .action(guard(async (id: string) => {
-      const { findCard, readCards } = await cardsLib();
-      const card = findCard(readCards(projectRoot()).cards, id);
-      const session = currentSession();
-      setActiveCard(projectRoot(), card.id, session);
-      console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
-    }));
+    .action(guard(activateCard));
+}
+
+/** Marks the card active for this session (or the repo, in a plain terminal): `card activate` and `start --activate`. */
+export async function activateCard(id: string): Promise<void> {
+  const { findCard, readCards } = await cardsLib();
+  const card = findCard(readCards(projectRoot()).cards, id);
+  const session = currentSession();
+  setActiveCard(projectRoot(), card.id, session);
+  console.log(`  active card: ${card.id}  ${card.title}${session ? ' (this session only)' : ''}`);
 }
 
 export const guardCommand = new Command('guard').description('Hooks that enforce the codeloop protocol regardless of what the chat says');
@@ -457,7 +460,7 @@ function nudgeLines(top: { id: string; title: string; stage: string; band?: stri
     'codeloop: no active story. Put this request on one before changing files:',
     '- it is one of these open stories: `codeloop card activate <id>`',
     ...candidateLines(top),
-    '- it is new and small (one sitting: a fix, a doc, a page): `codeloop start "<title>" --size trivial`, or `--size S` for a few hours, then `codeloop card activate <its id>`; it enters at build and skips research and spec',
+    '- it is new and small (one sitting: a fix, a doc, a page): `codeloop start "<title>" --size trivial --activate` (`--size S` for a few hours); it enters at build and skips research and spec',
     '- it is new and bigger, or it needs the person\'s call (approve, drop, scope): say which command they should run and why, and do not run it',
     'Then continue with the request.',
   ];
