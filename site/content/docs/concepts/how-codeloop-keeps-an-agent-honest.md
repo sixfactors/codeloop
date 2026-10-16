@@ -62,7 +62,7 @@ existing hook):
 |---|---|---|
 | `SessionStart` | `codeloop guard session` | Prints the active story and the instruction to run its brief; with none active, the top three open stories by priority band and the `card activate` command, so the session starts from the board's order |
 | `PreToolUse` on `Edit\|Write\|MultiEdit` | `codeloop guard edit` | Exits 2 with no active card, or when the path is outside the active card's plan and the plan names files |
-| `UserPromptSubmit` | `codeloop guard prompt` | Prints the active card, its stage, open-question count, and flags a prompt whose words match none of the card's title (a heuristic, stated as one). Exits 2, which blocks the prompt, when the repo has open stories and none is active; a repo with no stories yet passes |
+| `UserPromptSubmit` | `codeloop guard prompt` | Prints the active card, its stage, open-question count, and flags a prompt whose words match none of the card's title (a heuristic, stated as one). When the repo has open stories and none is active, it lets the prompt through and tells the agent to pick one of the top three or start a small story for a new ask; `guard.prompt: block` in config stops the prompt instead. A repo with no stories yet passes |
 | `Stop` | `codeloop wiki capture --quiet` | No-ops without a title; the hook is a reminder slot, not yet an auto-summarizer |
 
 **Cursor** (same install, writes `.cursor/hooks.json` from [the Cursor hooks template](https://github.com/sixfactors/codeloop/blob/main/templates/hooks/cursor-hooks.json)):

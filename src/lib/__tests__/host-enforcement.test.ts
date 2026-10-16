@@ -243,9 +243,31 @@ describe('guard prompt (UserPromptSubmit hook)', () => {
     const result = cli(['guard', 'prompt'], { input: '{}' });
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/no active card/);
+    expect(result.stdout).not.toMatch(/no active story/);
   });
 
-  it('exits 2 and lists the open stories when stories exist and none is active', () => {
+  it('lets the prompt through with no active story and names the top 3 open stories in priority order', () => {
+    const now = new Date().toISOString();
+    // Band comes from feature pages; with none every story is in one band, so age decides.
+    const card = (id: string, day: number) => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage: 'spec', retries: {}, evidence: [], events: [], createdAt: `2026-01-0${day}T00:00:00.000Z`, updatedAt: now });
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [card('c-1', 4), card('c-2', 1), card('c-3', 2), card('c-4', 3)] }));
+    const result = cli(['guard', 'prompt'], { input: JSON.stringify({ prompt: 'draw the architecture page' }) });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/no active story/);
+    expect([...result.stdout.matchAll(/^ {2}(c-\d+) /gm)].map(m => m[1])).toEqual(['c-2', 'c-3', 'c-4']);
+    expect(result.stdout).toMatch(/codeloop start "<title>" --size trivial/);
+  });
+
+  it('a trivial story started from that context enters at build with the skipped stages recorded', () => {
+    write('.codeloop/lanes/build.yaml', readFileSync(join(ROOT, 'templates/lanes/build.yaml'), 'utf-8'));
+    expect(cli(['start', 'draw the architecture page', '--size', 'trivial']).status).toBe(0);
+    const [created] = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8')).cards as { stage: string; events: { action: string; stage: string }[] }[];
+    expect(created.stage).toBe('build');
+    expect(created.events.filter(e => e.action === 'skip').map(e => e.stage)).toEqual(['research', 'interview', 'mock', 'spec', 'data-model']);
+  });
+
+  it('with guard.prompt: block, exits 2 and lists the open stories when stories exist and none is active', () => {
+    write('.codeloop/config.yaml', 'guard:\n  prompt: block\n');
     writeCard('c-7', 'spec');
     const result = cli(['guard', 'prompt'], { input: JSON.stringify({ prompt: 'anything' }) });
     expect(result.status).toBe(2);

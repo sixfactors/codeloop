@@ -445,6 +445,24 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: reason } }));
 }
 
+/** `guard.prompt` in config.yaml: `nudge` (default) lets a prompt with no active story through with the open stories as context; `block` stops it. */
+export async function promptGuardMode(projectDir: string): Promise<'nudge' | 'block'> {
+  const { loadConfig } = await import('../lib/config.js');
+  const guard = (loadConfig(projectDir) as { guard?: { prompt?: unknown } }).guard;
+  return guard && typeof guard === 'object' && guard.prompt === 'block' ? 'block' : 'nudge';
+}
+
+function nudgeLines(top: { id: string; title: string; stage: string; band?: string }[]): string[] {
+  return [
+    'codeloop: no active story. Put this request on one before changing files:',
+    '- it is one of these open stories: `codeloop card activate <id>`',
+    ...candidateLines(top),
+    '- it is new and small (one sitting: a fix, a doc, a page): `codeloop start "<title>" --size trivial`, or `--size S` for a few hours, then `codeloop card activate <its id>`; it enters at build and skips research and spec',
+    '- it is new and bigger, or it needs the person\'s call (approve, drop, scope): say which command they should run and why, and do not run it',
+    'Then continue with the request.',
+  ];
+}
+
 /** Behind `guard prompt` and the hook daemon. */
 export async function guardPrompt(): Promise<void> {
   const projectDir = projectRoot();
@@ -461,6 +479,12 @@ export async function guardPrompt(): Promise<void> {
     const top = await candidates(projectDir, 3);
     if (top.length === 0) {
       console.log('codeloop: no active card, `codeloop start "<title>"` or `codeloop card activate <id>` first');
+      return;
+    }
+    // Nudge (the default): the prompt goes through with the board's picks as context, so the agent
+    // puts the ask on a story itself. A small ask gets a trivial or S story, which enters at build.
+    if (await promptGuardMode(projectDir) === 'nudge') {
+      for (const line of nudgeLines(top)) console.log(line);
       return;
     }
     console.error(`codeloop: no active story, and ${top.length === 1 ? 'one is' : 'these are'} open. Activate one before working:`);
