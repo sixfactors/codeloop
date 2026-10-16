@@ -78,11 +78,11 @@ A card ships in under a week. Bigger is a feature with several stories: split wi
 
 Check: `size:` is trivial, S, M or L; L cards cannot pass the spec gate unsplit.
 
-`trivial` is below S: a one-line fix that skips research, interview, mock and spec (`when: size >= S` on those stages in `build.yaml`) and enters at build. Verify enforces a cap of 3 files and 50 lines; a trivial card over it is re-sized to S and parked at the spec gate.
+`trivial` is below S: a one-line fix that skips research, interview, mock and spec (`when: size >= M` on those stages, so S skips them too in `build.yaml`) and enters at build. Verify enforces a cap of 3 files and 50 lines; a trivial card over it is re-sized to the smallest size that runs the spec gate (M on the shipped lane) and parked there.
 
 | Size | Diff budget `codeloop verify` enforces |
 |---|---|
-| trivial | 3 files, 50 lines (over it: re-sized to S, parked at the spec gate) |
+| trivial | 3 files, 50 lines (over it: re-sized to M, parked at the spec gate) |
 | S | 8 files, 300 lines |
 | M | 20 files, 1,200 lines (also used when a card has no size) |
 | L | 40 files, 3,000 lines |

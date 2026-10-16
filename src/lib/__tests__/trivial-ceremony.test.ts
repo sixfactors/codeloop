@@ -15,10 +15,10 @@ version: 1
 metric: { name: m, source: cards }
 stages:
   - id: research
-    when: "size >= S"
+    when: "size >= M"
     done: { cmd: "test -f specs/research.md" }
   - id: spec
-    when: "size >= S"
+    when: "size >= M"
     done: { cmd: "true" }
     gate: { name: spec, approver: owner }
   - id: build
@@ -44,12 +44,12 @@ describe('trivial cards skip the ceremony stages', () => {
 
     const events = readCards(dir).cards[0].events;
     expect(events.map(e => `${e.action}:${e.stage}`)).toEqual(['create:build', 'skip:research', 'skip:spec', 'advance:build', 'advance:verify']);
-    expect(events[1].note).toBe('size trivial: the stage runs only when size >= S');
+    expect(events[1].note).toBe('size trivial: the stage runs only when size >= M');
     expect(existsSync(join(dir, 'specs/research.md'))).toBe(false);
   });
 
   it('keeps research first for an S card and for a card with no size', () => {
-    expect(createCard(dir, { lane: 'build', title: 'a', id: 'c-1', fields: { size: 'S' } }).stage).toBe('research');
+    expect(createCard(dir, { lane: 'build', title: 'a', id: 'c-1', fields: { size: 'M' } }).stage).toBe('research');
     expect(createCard(dir, { lane: 'build', title: 'b', id: 'c-2' }).stage).toBe('research');
   });
 });
@@ -70,20 +70,26 @@ describe('on the build lane codeloop ships', () => {
     expect(rows.filter(r => r.status === 'na').map(r => r.id)).toEqual(['B1', 'B4']);
     expect(rows.find(r => r.id === 'B2')?.status).toBe('fail');
   });
+
+  it('a trivial card that outgrew the cap parks at the spec gate', () => {
+    createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    const card = resizeTrivial(dir, 'c-1', 'diff 9 files exceeds the trivial budget');
+    expect([card.size, card.stage, card.gate, card.awaiting]).toEqual(['M', 'spec', 'spec', 'owner']);
+  });
 });
 
 describe('a trivial card that outgrew the cap', () => {
-  it('is re-sized to S and parked at the spec gate', () => {
+  it('is re-sized to the smallest size that runs the spec gate and parked at the spec gate', () => {
     createCard(dir, { lane: 'build', title: 'fix', id: 'c-1', fields: { size: 'trivial' } });
     const card = resizeTrivial(dir, 'c-1', 'diff 9 files exceeds the trivial budget');
-    expect([card.size, card.stage, card.gate, card.awaiting]).toEqual(['S', 'spec', 'spec', 'owner']);
+    expect([card.size, card.stage, card.gate, card.awaiting]).toEqual(['M', 'spec', 'spec', 'owner']);
     expect(card.events.at(-2)?.action).toBe('resize');
   });
 });
 
 describe('when:', () => {
   it('lint refuses an expression that is not a size comparison', () => {
-    const lane = parseLane(LANE.replace('size >= S', 'size is big'));
+    const lane = parseLane(LANE.replace('size >= M', 'size is big'));
     expect(lintLane(lane).some(e => e.includes('not a size comparison'))).toBe(true);
     expect(lintLane(parseLane(LANE))).toEqual([]);
   });

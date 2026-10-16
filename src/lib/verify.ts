@@ -244,7 +244,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   if (budget) result.budget = budget;
   if (budget && !budget.pass && card?.size === 'trivial' && opts.record !== false) {
     const moved = resizeTrivial(projectDir, card.id, budget.message);
-    return { ...result, exitCode: 1, problem: `${budget.message}; ${card.id} is re-sized to S and parked at the ${moved.gate ?? moved.stage} gate` };
+    return { ...result, exitCode: 1, problem: `${budget.message}; ${card.id} is re-sized to ${moved.size} and parked at the ${moved.gate ?? moved.stage} gate` };
   }
   if (budget && !budget.pass) return { ...result, exitCode: 1, problem: budget.message };
   if (health) result.health = health;

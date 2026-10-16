@@ -12,7 +12,7 @@ import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { currentSession } from './active-card.js';
-import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type StoryFields } from './cards.js';
+import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
@@ -493,9 +493,14 @@ export function resizeTrivial(projectDir: string, id: string, why: string, opts:
   const before = findCard(file.cards, id);
   if (before.size !== 'trivial') return before;
   const lane = loadLane(projectDir, before.lane);
-  const gated = lane.stages.find(s => s.gate && s.id !== before.stage && stageApplies(s, { size: 'S' }) && lane.stages.indexOf(s) < lane.stages.findIndex(x => x.id === before.stage));
+  const here = lane.stages.findIndex(x => x.id === before.stage);
+  const gatedFor = (size: Size) => lane.stages.find((s, i) => s.gate && i < here && stageApplies(s, { size }));
+  // The smallest size that runs a gate the card has already passed, so the grown card stops there;
+  // a fixed S would stop nowhere on a lane whose ceremony stages run only for M and up.
+  const size = (['S', 'M', 'L'] as const).find(z => gatedFor(z)) ?? 'S';
+  const gated = gatedFor(size);
   const now = opts.now ?? clock();
-  const card: Card = { ...before, size: 'S', retries: { ...before.retries }, events: [...before.events, event(now, 'engine', 'resize', before.stage, `trivial to S: ${why}`)], updatedAt: now.toISOString() };
+  const card: Card = { ...before, size, retries: { ...before.retries }, events: [...before.events, event(now, 'engine', 'resize', before.stage, `trivial to ${size}: ${why}`)], updatedAt: now.toISOString() };
   if (gated) {
     card.stage = gated.id;
     card.retries[gated.id] = 0;
