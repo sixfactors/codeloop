@@ -2,9 +2,9 @@
 # Verify c-302
 
 result: pass
-sha: 0b013257dc7d450a1cd9d3c7f922349643f23c1d
+sha: a5d130d3101ff48c0cf116ec03e4ef77fc10e8a8
 env: local
-workspace: export of 0b01325
+workspace: export of a5d130d
 budget: 9 files, 87 lines, limit 20 files / 1200 lines (M), pass
 health: before 88.19, after 88.19, delta 0, pass
 
@@ -25,7 +25,7 @@ network:
 - GET http://127.0.0.1:4173/home 200
 - GET http://127.0.0.1:4173/api/home 200, needsYou[0] c-001 stage spec, waitingOn spec
 - seen but not this story's: GET /mocks/?_rsc=... 404 from a link prefetch in standalone serve
-external: none
+external: none: the resize runs in the engine on local files under .codeloop and the git history, and calls nothing outside the machine
 
 ## Rubric
 - V4 pass: the trivial-ceremony test failed with engine.ts at the earlier head (2 failed, 6 passed: a grown trivial card re-sized to S found no gate and never parked) and passed after 52c86c9 (8 of 8); `npx vitest run src/lib/__tests__/trivial-ceremony.test.ts`.
