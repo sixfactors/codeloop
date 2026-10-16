@@ -1,0 +1,16 @@
+{
+  "id": "uc-302-01",
+  "accept": "US1",
+  "failure_mode": "a grown trivial story is re-sized to S, which runs no gate, and goes straight on",
+  "sha": "0b013257dc7d450a1cd9d3c7f922349643f23c1d",
+  "env": "local",
+  "workspace": "export of 0b01325",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/trivial-ceremony.test.ts\n\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-UMbmr4/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/trivial-ceremony.test.ts \u001b[2m(\u001b[22m\u001b[2m9 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 54\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:11:26\n\u001b[2m   Duration \u001b[22m 2.72s\u001b[2m (transform 164ms, setup 7ms, import 218ms, tests 54ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+    }
+  ]
+}
