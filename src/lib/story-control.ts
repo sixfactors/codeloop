@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { activeSessions } from './active-card.js';
+import { activeSessions, currentSession } from './active-card.js';
 import { DONE, DROPPED, PROPOSAL_GATE, PROPOSED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
 import { assertRoomInLane, type Role } from './engine.js';
 import { loadLane, type Lane } from './lane.js';
@@ -24,7 +24,9 @@ const ownerOnly = (role: Role, what: string): void => {
 
 /** A builder session or a live run on the card owns its stage: a move under it would be overwritten. */
 function assertNotHeld(projectDir: string, card: Card): void {
-  const session = activeSessions(projectDir).find(s => s.card === card.id);
+  // The session that holds the card is the one working it; only another session's hold refuses.
+  const own = currentSession();
+  const session = activeSessions(projectDir).find(s => s.card === card.id && s.session !== own);
   if (session) throw new RefusalError(`${card.id} is held by ${session.label ?? session.session}; wait for it to finish or stop it first`);
   const run = findRunningRun(projectDir);
   if (run?.cardId === card.id) throw new RefusalError(`${card.id} has a run in progress (${run.runId}); wait for it to finish or stop it first`);
@@ -153,8 +155,8 @@ export function editCard(projectDir: string, id: string, role: Role, edit: CardE
     names.push('feature');
   }
   if (edit.size !== undefined) {
-    const size = edit.size.toUpperCase();
-    if (!SIZES.includes(size as Size)) throw new RefusalError(`size "${edit.size}" is not S, M or L`);
+    const size = edit.size.trim().toLowerCase() === 'trivial' ? 'trivial' : edit.size.trim().toUpperCase();
+    if (!SIZES.includes(size as Size)) throw new RefusalError(`size "${edit.size}" is not trivial, S, M or L`);
     changes.size = size as Size;
     names.push('size');
   }

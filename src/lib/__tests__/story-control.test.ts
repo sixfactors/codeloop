@@ -88,7 +88,31 @@ describe('move', () => {
   });
 });
 
+describe('the session that holds the card', () => {
+  it('moves its own card on, and the move clears a gate the card was waiting at', () => {
+    const saved = process.env.CLAUDE_CODE_SESSION_ID;
+    process.env.CLAUDE_CODE_SESSION_ID = 'me';
+    try {
+      createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
+      const file = readCards(dir);
+      writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
+      setActiveCard(dir, 'c-1', 'me');
+      moveCard(dir, 'c-1', 'build', 'owner', { note: 'resized by mistake' });
+      expect([card('c-1').stage, card('c-1').gate, card('c-1').awaiting]).toEqual(['build', undefined, undefined]);
+    } finally {
+      if (saved === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+      else process.env.CLAUDE_CODE_SESSION_ID = saved;
+    }
+  });
+});
+
 describe('edit', () => {
+  it('sets the size back to trivial', () => {
+    createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1', fields: { size: 'M' } });
+    editCard(dir, 'c-1', 'owner', { size: 'trivial' });
+    expect(card('c-1').size).toBe('trivial');
+  });
+
   it('changes the title and the story line in spec.md', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
     mkdirSync(join(dir, 'specs/001-ship'), { recursive: true });
