@@ -6,6 +6,7 @@ wip: 10
 retries: 3
 stages:
   - id: research
+    when: "size >= M"
     skill: research
     output: "{spec}/research.md"
     done: { cmd: "codeloop check research {id} --min-sources 3 && codeloop check wiki-landed {id} --stage research && codeloop check rubric {id}" }
@@ -16,6 +17,7 @@ stages:
   # The agent asks before it designs: up to five questions with a recommended answer each, answered
   # from the inbox or the board. The stage waits until every question has an answer.
   - id: interview
+    when: "size >= M"
     skill: interview
     output: "{spec}/interview.md"
     done: { cmd: "codeloop check questions {id} --min 3 && codeloop check rubric {id}" }
@@ -24,18 +26,21 @@ stages:
     # review: { agent: reviewer }
   # Optional per card: a card with nothing to draw writes `screens: none` in its spec and passes without a mock.
   - id: mock
+    when: "size >= M"
     skill: mock
     done: { cmd: "codeloop check mock {id} && codeloop check rubric {id}" }
     notes:
       - "Name each screen under `screens:` in the card's spec.md, run `codeloop mock new <card> --topic <topic>`, and draw one frame per screen state in the file it creates."
       - "Draw only what is new. A screen that already exists in another card's mock is referenced with `from: mocks/<nnn>`; the building-blocks page (c-132) holds every shared state. A card with nothing to draw writes `screens: none`."
   - id: spec
+    when: "size >= M"
     skill: spec
     output: "{spec}/tasks.md"
     done: { cmd: "codeloop spec check {id} && codeloop check rubric {id}" }
     gate: { name: spec, approver: owner }
   # Passes with no work when no task is tagged `[data]` and spec.md names no `entities:`.
   - id: data-model
+    when: "size >= M"
     skill: system-design
     output: "{spec}/data-model.md"
     done: { cmd: "codeloop check data-model {id} && codeloop check rubric {id}" }

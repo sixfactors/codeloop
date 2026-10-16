@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The build lane runs research, interview, mock, spec and data-model for M and L cards only (`when: size >= M` in the template and on codeloop's own lane): a trivial or S card enters at build with the skipped stages recorded, so small work takes the short road without a second lane.
 
 - The doctor starts the stage agent once on a stuck story whose stage output was never written (missing, still the template, or without the lines its check reads), records it as `doctor-start`, and never starts it a second time; it counts against the run budget and the memory ceiling, and `doctor.scaffold_starts` (default 0) caps how many a tick, so `codeloop doctor --dry-run` lists them until it is raised.
 - Every page's browser tab reads "<page or story title> · <project>" ("Board · ops-ai", a story's own title on its page and its Evidence page); the shell renders the title, so it no longer falls back to "Codeloop workspace" when Next's metadata lands after hydration. An owner's story edit reads "edited title, priority" on the card face instead of "edited undefined", and no longer counts as work.
