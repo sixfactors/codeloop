@@ -106,6 +106,18 @@ describe('the session that holds the card', () => {
   });
 });
 
+describe('move to the stage it is at', () => {
+  it('clears a gate wait, and is refused when there is none', () => {
+    createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
+    placeCard(dir, 'c-1', 'build', 'owner');
+    expect(() => moveCard(dir, 'c-1', 'build', 'owner')).toThrow(/already at build/);
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
+    moveCard(dir, 'c-1', 'build', 'owner', { note: 'parked by mistake' });
+    expect([card('c-1').stage, card('c-1').gate]).toEqual(['build', undefined]);
+  });
+});
+
 describe('edit', () => {
   it('sets the size back to trivial', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1', fields: { size: 'M' } });

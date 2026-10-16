@@ -223,6 +223,31 @@ describe('guard bash (assistant shell tool hook)', () => {
     }
   });
 
+  it('asks the person for a card move that crosses a gate or clears a wait, and lets a move on one side of every gate through', () => {
+    write('.codeloop/lanes/build.yaml', `id: build
+version: 1
+metric: { name: m, source: cards }
+stages:
+  - id: research
+    done: { cmd: "true" }
+  - id: spec
+    done: { cmd: "true" }
+    gate: { name: spec, approver: owner }
+  - id: build
+    done: { cmd: "true" }
+  - id: verify
+    done: { cmd: "true" }
+`);
+    const now = new Date().toISOString();
+    const at = (id: string, stage: string, extra = {}) => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage, retries: {}, evidence: [], events: [], createdAt: now, updatedAt: now, ...extra });
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [at('c-1', 'build'), at('c-2', 'spec', { gate: 'spec', awaiting: 'owner' }), at('c-3', 'research')] }));
+    const asks = (command: string) => call(command).stdout.includes('"permissionDecision":"ask"');
+    expect(asks('codeloop card move c-1 verify')).toBe(false);
+    expect(asks('codeloop card move c-1 research "redo it"')).toBe(true);
+    expect(asks('codeloop card move c-3 build')).toBe(true);
+    expect(asks('codeloop card move c-2 build "resized by mistake"')).toBe(true);
+  });
+
   it('answers Cursor in its beforeShellExecution format', () => {
     expect(JSON.parse(call('codeloop approve c-5', 'cursor').stdout)).toMatchObject({ permission: 'ask' });
     expect(JSON.parse(call('npm test', 'cursor').stdout)).toEqual({ permission: 'allow' });

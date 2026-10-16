@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- An assistant's `card move` that skips a gate, undoes one, or clears a wait asks the person first, like `approve`; a move to the stage a parked card is at clears its wait.
 - `card edit --size trivial` works, and the session working a card can `card move` it (which clears a gate it was waiting at), so a story re-sized by mistake can be put back.
 - A page or write-up under docs/ counts against a story's size as a file, not by its lines, so a trivial story that adds one page is not re-sized.
 - A trivial story starts even when its lane is at its wip limit, and holds no slot, so a small ask is never refused behind larger work.

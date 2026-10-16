@@ -95,7 +95,8 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   const lane = loadLane(projectDir, before.lane);
   const from = stageIndex(lane, before.stage);
   const target = stageIndex(lane, stage);
-  if (target === from) throw new RefusalError(`${before.id} is already at ${stage}`);
+  // Moving to the stage it is at clears a wait it is parked at (a park the person decided was wrong).
+  if (target === from && !before.gate) throw new RefusalError(`${before.id} is already at ${stage}`);
   const passed = target < from ? lane.stages.slice(target, from).filter(s => s.gate).map(s => s.gate!.name) : [];
   if (passed.length && !opts.note?.trim()) throw new RefusalError(`moving ${before.id} back to ${stage} undoes the ${passed.join(' and ')} gate: say why in the note`);
   const now = opts.now ?? clock();

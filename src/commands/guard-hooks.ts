@@ -425,11 +425,38 @@ export async function guardSession(): Promise<void> {
 }
 
 /** Behind `guard bash` and the hook daemon. */
+const CARD_MOVE = /\bcodeloop\s+card\s+move\s+(\S+)\s+(\S+)/;
+
+/**
+ * `card move` that crosses a gate (skips one ahead, undoes one passed, or clears the wait the card is
+ * parked at) is the person's decision; a move between stages on one side of every gate is not.
+ * Reads the board, so it runs only when the command is a card move.
+ */
+async function gateCrossingMove(command: string): Promise<string | undefined> {
+  const m = CARD_MOVE.exec(command);
+  if (!m) return undefined;
+  try {
+    const projectDir = projectRoot();
+    const { findCard, readCards } = await cardsLib();
+    const { loadLane } = await import('../lib/lane.js');
+    const card = findCard(readCards(projectDir).cards, m[1]);
+    const stages = loadLane(projectDir, card.lane).stages;
+    const from = stages.findIndex(st => st.id === card.stage);
+    const to = stages.findIndex(st => st.id === m[2]);
+    if (from < 0 || to < 0) return undefined;
+    const crossed = stages.slice(Math.min(from, to), Math.max(from, to)).some(st => st.gate);
+    return card.gate || crossed ? m[0] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function guardBash(opts: { format: string }): Promise<void> {
   const input = await readStdinJson();
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
-  const hit = OWNER_ACTION.exec(command);
+  const moved = await gateCrossingMove(command);
+  const hit = moved ? [moved] : OWNER_ACTION.exec(command);
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.
