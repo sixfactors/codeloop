@@ -2,9 +2,9 @@
 # Verify c-302
 
 result: pass
-sha: a5d130d3101ff48c0cf116ec03e4ef77fc10e8a8
+sha: 796ba1b2b2650bce8290e80b3cc3453f5ced9107
 env: local
-workspace: export of a5d130d
+workspace: export of 796ba1b
 budget: 9 files, 87 lines, limit 20 files / 1200 lines (M), pass
 health: before 88.19, after 88.19, delta 0, pass
 
@@ -20,11 +20,11 @@ steps:
 - `codeloop start "Fix the CSV header" --size trivial`: created c-001 at stage build; events show skip research, interview, mock, spec, data-model, "size trivial: the stage runs only when size >= M".
 - committed six files, 240 lines, with `Card: c-001`, moved the story to verify and ran `codeloop verify c-001`: "diff 6 files / 240 lines exceeds the trivial budget (3 files / 50 lines); split the story; c-001 is re-sized to M and parked at the spec gate".
 - `codeloop card show c-001`: "waiting for you: spec", size M, events "resize verify: trivial to M" and "park spec: gate spec (the trivial diff cap was exceeded)".
+- seen but not this story's: a link prefetch for the gallery page answered 404 in standalone serve (console)
 - opened Home: tab title "1 thing needs you", the Needs you list shows "Fix the CSV header" at Spec (evidence/302/home-parked.png).
 network:
 - GET http://127.0.0.1:4173/home 200
 - GET http://127.0.0.1:4173/api/home 200, needsYou[0] c-001 stage spec, waitingOn spec
-- seen but not this story's: GET /mocks/?_rsc=... 404 from a link prefetch in standalone serve
 external: none: the resize runs in the engine on local files under .codeloop and the git history, and calls nothing outside the machine
 
 ## Rubric

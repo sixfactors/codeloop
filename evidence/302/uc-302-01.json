@@ -2,15 +2,15 @@
   "id": "uc-302-01",
   "accept": "US1",
   "failure_mode": "a grown trivial story is re-sized to S, which runs no gate, and goes straight on",
-  "sha": "a5d130d3101ff48c0cf116ec03e4ef77fc10e8a8",
+  "sha": "796ba1b2b2650bce8290e80b3cc3453f5ced9107",
   "env": "local",
-  "workspace": "export of a5d130d",
+  "workspace": "export of 796ba1b",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/trivial-ceremony.test.ts\n\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-bN6cfG/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/trivial-ceremony.test.ts \u001b[2m(\u001b[22m\u001b[2m9 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 53\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:12:52\n\u001b[2m   Duration \u001b[22m 2.57s\u001b[2m (transform 157ms, setup 7ms, import 217ms, tests 53ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/trivial-ceremony.test.ts\n\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-oCHDqp/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/trivial-ceremony.test.ts \u001b[2m(\u001b[22m\u001b[2m9 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 55\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:13:08\n\u001b[2m   Duration \u001b[22m 2.58s\u001b[2m (transform 161ms, setup 6ms, import 230ms, tests 55ms, environment 0ms)\u001b[22m\n\n\nexit 0"
     }
   ]
 }
