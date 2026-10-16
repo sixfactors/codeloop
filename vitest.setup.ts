@@ -9,3 +9,6 @@ import { join } from 'path';
 process.env.CODELOOP_HOME = mkdtempSync(join(tmpdir(), 'codeloop-test-home-'));
 process.env.CODELOOP_NO_SCHEDULE = '1';
 process.env.CODELOOP_TEST_SANDBOX = '1';
+// A suite started by a lane check (`npm test` in a stage's done.cmd) inherits the story's own
+// variables; they name the real tree, so the fixtures must not see them.
+for (const key of ['CODELOOP_WORK_DIR', 'CODELOOP_PROJECT_DIR', 'CODELOOP_STORY_REF', 'CODELOOP_CARD']) delete process.env[key];

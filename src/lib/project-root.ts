@@ -72,6 +72,11 @@ export function projectRoot(): string {
 export function workDir(projectDir: string): string {
   if (storeHome(projectDir) === 'user') return projectDir;
   const dir = process.env.CODELOOP_WORK_DIR?.trim();
+  // A lane check (`card selfcheck`, the gate) sets CODELOOP_WORK_DIR for `npm test`; a test that
+  // inherits a real tree's path would write its fixture's evidence and specs into that tree.
+  if (dir && process.env.CODELOOP_TEST_SANDBOX === '1' && !underTemp(dir)) {
+    throw new Error(`test sandbox: refusing work dir ${dir}, which is outside ${tmpdir()}; point the test at a temp directory`);
+  }
   if (dir) return dir;
   const main = mainTreeOf(process.cwd());
   return main && resolve(main) === resolve(projectDir) ? (treeOf(process.cwd()).top ?? projectDir) : projectDir;

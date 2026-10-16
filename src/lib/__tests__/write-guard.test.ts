@@ -10,6 +10,7 @@ import { recordHandback } from '../handback.js';
 import { acceptAllAnswers, addQuestions } from '../interview.js';
 import { newMock, writeMocksIndex } from '../mock.js';
 import { evidenceOf, usecasesOf } from '../paths.js';
+import { specPath } from '../project-root.js';
 import { runGate } from '../gate.js';
 import { verify } from '../verify.js';
 import { capture } from '../wiki.js';
@@ -60,4 +61,17 @@ describe('everything codeloop writes lives under .codeloop', () => {
     expect(changed.some(p => p.startsWith('.codeloop/artifacts/'))).toBe(true);
     expect(readFileSync(join(dir, 'src/export.ts'), 'utf-8')).toBe('export const rows = 10;\n');
   }, 60_000);
+});
+
+describe('a work dir outside the temp folder', () => {
+  it('is refused under the test sandbox, so a suite run by a lane check cannot write a fixture into the real tree', () => {
+    const saved = process.env.CODELOOP_WORK_DIR;
+    process.env.CODELOOP_WORK_DIR = resolve('.');
+    try {
+      expect(() => specPath(dir, evidenceOf(dir, '001'))).toThrow(/test sandbox: refusing work dir/);
+    } finally {
+      if (saved === undefined) delete process.env.CODELOOP_WORK_DIR;
+      else process.env.CODELOOP_WORK_DIR = saved;
+    }
+  });
 });
