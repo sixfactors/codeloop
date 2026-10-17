@@ -11,3 +11,5 @@ changelog: https://kiro.dev/changelog/
 - c-313 A small story runs its early stages in one agent turn: Spec mode drafts requirements, then design, then tasks in one session, pausing for the person to approve each document before the next | https://kiro.dev/docs/specs/
 
 - c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No public view of a team's specs: requirements, design and tasks are documents inside the editor's spec session; the docs describe no hosted or shared read-only copy | https://kiro.dev/docs/specs/
+
+- c-362 I approve and answer from chat, and the page loads fast and lists every artifact: The person confirms each spec phase (requirements, design, tasks) in chat before the next. Analyze Requirements offers a suggested fix per question to select one at a time; there is no documented accept-all and no named approver. Specs are listed in a Specs pane and by #spec in chat | https://kiro.dev/docs/specs/

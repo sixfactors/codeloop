@@ -19,3 +19,5 @@ changelog: https://github.com/github/spec-kit/releases
 - c-314 Several small stories build together in one turn: One implement run works one feature's task list; several small features mean several runs | https://github.com/github/spec-kit
 
 - c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No hosted board: artifacts are files under the project's `.specify/` folder, visible to the public only when the repository itself is public | https://github.com/github/spec-kit
+
+- c-362 I approve and answer from chat, and the page loads fast and lists every artifact: /speckit.clarify asks up to five questions one at a time, each with "Recommended: Option X"; replying "yes" or "recommended" accepts that one, never all at once. Answers go into spec.md under Clarifications with no attribution. No catalog of documents beyond the specs/ folders | https://raw.githubusercontent.com/github/spec-kit/main/templates/commands/clarify.md
