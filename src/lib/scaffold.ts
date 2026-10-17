@@ -254,10 +254,12 @@ function commandOnPath(name: string): boolean {
   return spawnSync('which', [name]).status === 0;
 }
 
+// Every brief goes on stdin: briefs reach tens of KB, and as one argv word a long one exceeds
+// the system's argument limit. `codex exec -` and `cursor-agent -p` read the prompt from stdin.
 function agentCmd(tool: ToolId, onPath: boolean): string {
   if (tool === 'claude') return 'claude -p --permission-mode acceptEdits < {brief}';
-  if (tool === 'codex') return onPath ? 'codex exec --full-auto "$(cat {brief})"' : 'codex exec "$(cat {brief})"';
-  return 'cursor-agent -p "$(cat {brief})"';
+  if (tool === 'codex') return onPath ? 'codex exec --full-auto - < {brief}' : 'codex exec - < {brief}';
+  return 'cursor-agent -p < {brief}';
 }
 
 /**

@@ -3,12 +3,13 @@ import { spawnSync } from 'child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
-import { buildBrief, loadAgents, resolveAgent } from '../agent.js';
+import { buildBrief, loadAgents, resolveAgent, runAgent } from '../agent.js';
 import { findCard, readCards, type Card } from '../cards.js';
 import { advanceCard, approveCard, createCard, recordEvent, rejectCard } from '../engine.js';
 import { nextHint } from '../flow.js';
 import { planRun, runDue, runDueWithAgent } from '../run.js';
 import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus } from '../schedule.js';
+import { applyAgentsConfig } from '../scaffold.js';
 import { capture } from '../wiki.js';
 import { runCli } from '../../__tests__/cli.js';
 
@@ -415,5 +416,31 @@ describe('schedule', () => {
     expect(readFileSync(join(dir, 'crontab.txt'), 'utf-8')).toBe('0 9 * * * /usr/bin/backup\n');
     expect(scheduleStatus(dir, crontab).line).toBeUndefined();
     expect(removeSchedule(dir, crontab)).toBe(false);
+  });
+});
+
+describe('the codex and cursor presets init writes', () => {
+  it('hand a 40 KB brief to the agent on stdin, not as one argument', async () => {
+    const bin = join(dir, 'bin');
+    for (const name of ['codex', 'cursor-agent']) write(`bin/${name}`, `#!/bin/sh\nprintf '%s args, longest %s, stdin %s\\n' "$#" "$(for a in "$@"; do printf '%s\\n' "\${#a}"; done | sort -n | tail -1)" "$(wc -c | tr -d ' ')" > ${name}.seen\n`);
+    for (const name of ['codex', 'cursor-agent']) chmodSync(join(bin, name), 0o755);
+    write('.codeloop/config.yaml', 'project:\n  name: demo\n');
+    write('brief.md', 'x'.repeat(40_000));
+    const PATH = process.env.PATH;
+    process.env.PATH = `${bin}:${PATH}`;
+    try {
+      applyAgentsConfig(dir, ['codex', 'cursor']);
+    } finally {
+      process.env.PATH = PATH;
+    }
+    for (const name of ['codex', 'cursor']) {
+      const ran = await runAgent(dir, resolveAgent(dir, name), join(dir, 'brief.md'), join(dir, `${name}.log`), { env: { PATH: `${bin}:${PATH}` } });
+      expect(ran.exit).toBe(0);
+    }
+    for (const seen of ['codex.seen', 'cursor-agent.seen']) {
+      const [, longest, stdin] = /args, longest (\d*), stdin (\d+)/.exec(readFileSync(join(dir, seen), 'utf-8'))!;
+      expect(Number(longest || 0)).toBeLessThan(100);
+      expect(Number(stdin)).toBe(40_000);
+    }
   });
 });
