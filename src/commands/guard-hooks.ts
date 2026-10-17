@@ -530,8 +530,9 @@ export async function guardPrompt(): Promise<void> {
   const activeId = getActiveCard(projectDir, session);
   if (!activeId) {
     // A repo with open stories and none active: the board's priority order decides what a session
-    // works on, not the chat. Exit 2 blocks the prompt and shows the list. A repo with no stories
-    // yet is left alone so the first session can start one.
+    // works on, not the chat. The default (nudge) lets the prompt through with that list as context;
+    // `guard.prompt: block` exits 2, which blocks the prompt. A repo with no stories yet is left
+    // alone so the first session can start one.
     const top = await candidates(projectDir, 3);
     if (top.length === 0) {
       console.log('codeloop: no active card, `codeloop start "<title>"` or `codeloop card activate <id>` first');
