@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { appendActivity } from '../activity.js';
 import { advanceCard, createCard, proposeCard } from '../engine.js';
 import { buildInbox } from '../inbox.js';
 import { closeIndex } from '../index/index.js';
@@ -96,18 +95,21 @@ retries: 3
 stages:
   - id: draft
     output: out/{id}.md
-    done: { cmd: "test -f out/{id}.md" }
+    done: { cmd: "grep -q ready out/{id}.md" }
   - id: ship
     done: { cmd: "true" }
 `);
     // c-1..c-3 are still parked at the old gate from beforeEach; create a fresh failing card.
     createCard(dir, { lane: 'market', title: 'Will fail', id: 'c-7' });
+    // Each check runs on a new draft, so each failure has real work behind it and counts.
+    mkdirSync(join(dir, 'out'), { recursive: true });
+    writeFileSync(join(dir, 'out/c-7.md'), 'first draft\n');
     const fail = advanceCard(dir, 'c-7');
     expect(fail.outcome).toBe('failed');
     // One failed check while it is being worked is not failing.
     expect(buildInbox(dir).failing).toEqual([]);
-    appendActivity(dir, 'c-7', { kind: 'edit', file: 'brief.md' });
-    advanceCard(dir, 'c-7');
+    writeFileSync(join(dir, 'out/c-7.md'), 'second draft\n');
+    expect(advanceCard(dir, 'c-7').outcome).toBe('failed');
 
     // Two failed checks, read an hour and a half later with no activity since: failing.
     const inbox = buildInbox(dir, new Date(Date.now() + 90 * 60_000));
