@@ -46,14 +46,16 @@ json() {
 }
 
 # ------------------------------------------------------------------------------------------------
-# The scripted builder. It reads the brief on stdin, finds the `Stage:` line and writes exactly what
-# that stage's check and rubric ask for into the worktree, commits with a Card trailer and hands back.
+# The scripted builder. It reads the brief on stdin and, for each `Stage:` line in order, writes exactly
+# what that stage's check and rubric ask for into the worktree and commits with a Card trailer. It
+# stops after asking interview questions, then hands back once.
 # ------------------------------------------------------------------------------------------------
 cat > "$WORK/fake-builder.sh" <<'FAKE_EOF'
 #!/usr/bin/env bash
 set -eu
 BRIEF="$(cat)"
-STAGE="$(printf '%s\n' "$BRIEF" | sed -n 's/^Stage: //p' | head -1)"
+# A carried turn briefs several stages in order, one `Stage:` line each; the builder writes them all.
+STAGES="$(printf '%s\n' "$BRIEF" | sed -n 's/^Stage: //p' | awk '!seen[$0]++')"
 ID="${CODELOOP_CARD:?}"
 SPEC="$(ls -d .codeloop/specs/*/ | head -1)"; SPEC="${SPEC%/}"
 NNN="${SPEC#.codeloop/specs/}"; NNN="${NNN%%-*}"
@@ -62,15 +64,22 @@ MOCKDIR="app/mocks/${SPEC#.codeloop/specs/}"
 
 export GIT_AUTHOR_NAME=scripted-builder GIT_AUTHOR_EMAIL=builder@example.test GIT_COMMITTER_NAME=scripted-builder GIT_COMMITTER_EMAIL=builder@example.test
 commit() { # subject, body
+  # The story's own docs live under .codeloop/; the engine's files there (cards.json, state/) stay out.
   git add -A -- . ':!.codeloop'
+  for d in .codeloop/specs .codeloop/usecases .codeloop/evidence; do if [ -e "$d" ]; then git add -A -- "$d"; fi; done
   git commit -qm "$1
 
 $2
 
 Card: $ID"
 }
+# The turn hands back once, with the proof of the stage it started at; the engine checks each later stage itself.
+PROOF="" LEFT="" ASKED=""
 handback() { # proof, left
-  codeloop card handback "$ID" --branch "$BRANCH" --head "$(git rev-parse HEAD)" --proof "$1" --left "$2" --blocked "" --worktree "$PWD"
+  if [ -z "$PROOF" ]; then PROOF="$1" LEFT="$2"; fi
+}
+send_handback() {
+  codeloop card handback "$ID" --branch "$BRANCH" --head "$(git rev-parse HEAD)" --proof "$PROOF" --left "$LEFT" --blocked "" --worktree "$PWD"
 }
 # One real HTTP round trip against the store the story built; prints `GET <url> <status>`.
 walk_call() {
@@ -85,6 +94,8 @@ walk_call() {
     });'
 }
 
+run_stage() { # stage
+STAGE=$1
 case "$STAGE" in
 research)
   cat > "$SPEC/research.md" <<EOF
@@ -145,7 +156,9 @@ recommended: Return an empty list and log the error, never throw on the page
 answer:
 EOF
     codeloop ask "$ID" --file "$Q"
-    exit 0
+    # Questions end the turn: the stages after them wait for the owner's answers.
+    ASKED=1
+    return 0
   fi
   cp "$CODELOOP_PROJECT_DIR/$SPEC/interview.md" "$SPEC/interview.md"
   cat >> "$SPEC/interview.md" <<EOF
@@ -454,6 +467,13 @@ EOF
   exit 1
   ;;
 esac
+}
+
+for S in $STAGES; do
+  run_stage "$S"
+  [ -z "$ASKED" ] || break
+done
+send_handback
 FAKE_EOF
 chmod +x "$WORK/fake-builder.sh"
 
@@ -519,20 +539,21 @@ SPECDIR="$(ls -d .codeloop/specs/*/ | head -1)"; SPECDIR="${SPECDIR%/}"
 perl -0pi -e 's/^screens:[ \t]*\n/screens:\n- Records list\n- Empty state\n/m' "$SPECDIR/spec.md"
 printf '\nentities:\n- Record\n' >> "$SPECDIR/spec.md"
 git add -A && git commit -qm "chore: init codeloop, card c-001 and its draft spec"
-expect 0 "main has the draft spec committed" test -z "$(git status --porcelain -- specs)"
+expect 0 "main has the draft spec committed" test -z "$(git status --porcelain -- .codeloop/specs)"
 
 orch_json() { cat .codeloop/state/orch/c-001.json; }
 card_json() { codeloop card show c-001 --json; }
 card_stage() { card_json | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.stage+(d.gate?'|'+d.gate:''))"; }
-# last_turn <stage> <field expression over t>
-last_turn() { orch_json | node -e "const r=JSON.parse(require('fs').readFileSync(0,'utf8')); const t=[...r.turns].reverse().find(x=>x.stage==='$1'&&x.outcome==='merged'); console.log(t?($2):'')"; }
+# last_turn <stage> <field expression over t>: the last turn that merged and moved the stage. A carried
+# turn moves several stages, and one that lands research then asks the interview questions ends as questions.
+last_turn() { orch_json | node -e "const r=JSON.parse(require('fs').readFileSync(0,'utf8')); const t=[...r.turns].reverse().find(x=>x.merge&&(x.moved||[]).includes('$1')&&(x.outcome==='merged'||x.outcome==='questions')); console.log(t?($2):'')"; }
 
 # settled <stage>: the stage's merged turn is on main, its record says merged, and the card moved on.
 settled() {
   local stage=$1 sha outcome
   sha="$(last_turn "$stage" t.merge.sha)"
   outcome="$(last_turn "$stage" t.outcome)"
-  if [ "$outcome" = merged ]; then ok "$stage: orch record says merged"; else echo "no merged turn for $stage" > "$LOG"; bad "$stage: orch record says merged"; fi
+  if [ -n "$outcome" ]; then ok "$stage: orch record says merged"; else echo "no merged turn moved $stage" > "$LOG"; bad "$stage: orch record says merged"; fi
   expect 0 "$stage: merge sha is on main" sh -c "git merge-base --is-ancestor '$sha' main && test -n '$sha'"
 }
 
@@ -586,11 +607,11 @@ expect 0 "research: globex competitor row matched" sh -c "grep -q '^- c-001 .*sa
 expect 0 "research: after_merge marker file exists" test -f .after-merge
 rm -f .after-merge
 
-json "interview: first turn ended as questions with no retry" "d.turns.some(t=>t.stage==='interview'&&t.outcome==='questions')" cat .codeloop/state/orch/c-001.json
+json "interview: the research turn ended on the interview questions with no retry" "d.turns.length===1&&d.turns[0].outcome==='questions'&&d.turns[0].moved.join()==='research'" cat .codeloop/state/orch/c-001.json
 expect 0 "interview: run says it is waiting for answers" sh -c "grep -q 'waiting for answers' '$ORCH_OUT'"
 expect 0 "interview: three questions with options are open" sh -c "test \"\$(grep -c '^## Q' $SPECDIR/interview.md)\" = 3 && grep -q '^options:' $SPECDIR/interview.md"
 expect 0 "owner accepts every recommended answer" codeloop answer c-001 --accept-all
-git add specs && git commit -qm "chore: owner answers on c-001 interview"
+git add .codeloop/specs && git commit -qm "chore: owner answers on c-001 interview"
 
 # ------------------------------------------------------------------------------------------------
 # interview, mock, spec; park at the spec gate
