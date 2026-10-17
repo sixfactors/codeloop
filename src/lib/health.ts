@@ -120,17 +120,22 @@ export function parseLintErrors(output: string): number {
 
 export const parseTypeErrors = (output: string): number => output.split('\n').filter(l => /error TS\d+/.test(l)).length;
 
-function measure(root: string, s: Settings, wikiRoot: string): Health {
-  const files = walk(root);
-  const testFiles = files.filter(f => s.tests.some(g => globMatches(g, f)));
+/**
+ * `files`: count only the critical gotchas whose scope matches one of these paths. A story's before
+ * and after are both measured on its own files, so a gotcha another story adds elsewhere in the
+ * repo between the two refs does not move this story's delta.
+ */
+function measure(root: string, s: Settings, wikiRoot: string, files?: string[]): Health {
+  const all = walk(root);
+  const testFiles = all.filter(f => s.tests.some(g => globMatches(g, f)));
   const tests = new Set(testFiles);
-  const source = files.filter(f => !tests.has(f) && s.source.some(g => globMatches(g, f)));
+  const source = all.filter(f => !tests.has(f) && s.source.some(g => globMatches(g, f)));
   const typesCmd = s.typesCmd ?? (existsSync(join(root, 'tsconfig.json')) ? 'npx tsc --noEmit' : undefined);
   const part = {
     tests: countTests(root, testFiles),
     lint: s.lintCmd ? parseLintErrors(run(s.lintCmd, root)) : null,
     types: typesCmd ? parseTypeErrors(run(typesCmd, root)) : null,
-    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical').length,
+    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical' && (!files || p.scope.some(g => files.some(f => globMatches(g, f))))).length,
     todo: countTodo(root, source),
   };
   return { ...part, score: scoreOf(part, s.weights) };
@@ -150,13 +155,13 @@ export function exportRef(projectDir: string, ref: string): { dir: string; dispo
   return { dir, dispose };
 }
 
-/** Health of the working tree, or of `ref` exported to a temp dir. Settings always come from `projectDir`. */
-export function projectHealth(projectDir: string, opts: { ref?: string } = {}): Health {
+/** Health of the working tree, or of `ref` exported to a temp dir. Settings always come from `projectDir`. `files` scopes the gotcha count, see `measure`. */
+export function projectHealth(projectDir: string, opts: { ref?: string; files?: string[] } = {}): Health {
   const s = healthSettings(projectDir);
-  if (!opts.ref) return measure(projectDir, s, projectDir);
+  if (!opts.ref) return measure(projectDir, s, projectDir, opts.files);
   const ex = exportRef(projectDir, opts.ref);
   try {
-    return measure(ex.dir, s, ex.dir);
+    return measure(ex.dir, s, ex.dir, opts.files);
   } finally {
     ex.dispose();
   }
@@ -188,6 +193,22 @@ export function storyBase(projectDir: string, cardId: string, ref: string = 'HEA
   return undefined;
 }
 
+/**
+ * The files a story changed between `base` and `head`: those of the commits whose `Card:` or
+ * `Feature:` trailer names it. On trunk other stories' commits sit in the same range, so the plain
+ * diff would claim their files too; it is used only when no commit in the range carries the trailer.
+ */
+export function storyFiles(projectDir: string, cardId: string, base: string, head: string): string[] {
+  const log = git(projectDir, ['log', `${base}..${head}`, '--format=%H%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)']);
+  const own = log.split('\n').filter(Boolean).flatMap(line => {
+    const [sha, card = '', feature = ''] = line.split('\0');
+    const ids = (card.trim() ? card : feature).split(',').map(x => x.trim());
+    return ids.includes(cardId) ? [sha] : [];
+  });
+  if (!own.length) return git(projectDir, ['diff', '--name-only', base, head]).split('\n').filter(Boolean);
+  return [...new Set(own.flatMap(sha => git(projectDir, ['diff-tree', '--no-commit-id', '--name-only', '-r', sha]).split('\n').filter(Boolean)))];
+}
+
 export interface HealthVerdict {
   /** `off` when `health: off`; `no-base` when the story has no base to compare against. */
   state: 'off' | 'no-base' | 'measured';
@@ -206,8 +227,9 @@ export function checkHealth(projectDir: string, cardId: string, opts: { ref?: st
   const base = storyBase(projectDir, cardId, ref);
   const head = git(projectDir, ['rev-parse', ref]);
   if (!base || !head) return { state: 'no-base', tolerance: s.tolerance, pass: true };
-  const before = projectHealth(projectDir, { ref: base });
-  const after = projectHealth(projectDir, { ref: head });
+  const files = storyFiles(projectDir, cardId, base, head);
+  const before = projectHealth(projectDir, { ref: base, files });
+  const after = projectHealth(projectDir, { ref: head, files });
   const delta = Math.round((after.score - before.score) * 100) / 100;
   return { state: 'measured', before, after, delta, tolerance: s.tolerance, pass: delta >= -s.tolerance, base };
 }
