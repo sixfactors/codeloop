@@ -10,8 +10,8 @@ id: c-321
 kind: system-design
 title: Codeloop Cloud architecture
 scope: [founder, builder agent, reviewer, team member, public visitor, git, Protobox]
-components: [CLI, web board, hub, core library, story files, agent records, sync worker, hosted service, Protobox store driver]
-environments: [local laptop, Codeloop Cloud, public demo]
+components: [server core, HTTP API, MCP resource tools, web board, CLI, guard hooks, SQLite store, MongoDB store, sync queue, Connect your agents page]
+environments: [local hub, Codeloop Cloud, public view]
 -->
 <title>c-321 Codeloop Cloud architecture</title>
 <style>
@@ -228,305 +228,328 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
 <div class="shell">
   <header class="page-head">
     <h1>Codeloop Cloud architecture</h1>
-    <p class="meta">c-321 · codeloop · cloud · system design</p>
-    <p class="scope">Codeloop from one laptop to a team on Codeloop Cloud, the shared context and coordination point for agents that run on your own machines: what runs where, which copy is the record, and the steps to get there.</p>
-    <p class="status">Status: proposal, 17 October 2026. Decision pending on the open questions at the end.</p>
+    <p class="meta">c-321 · codeloop · cloud · system design · version 2</p>
+    <p class="scope">Codeloop from one laptop to a team on Codeloop Cloud, the shared context and coordination point for agents that run on your own machines: one server holds the record, locally or hosted; MCP, API, web board and command line are its clients; git is an optional export.</p>
+    <p class="status">Status: proposal, version 2, 17 October 2026. Revised after the owner's decisions on the record, the client model, story ids, identity and publishing. Decision pending on the five open questions at the end.</p>
   </header>
+
+  <div class="changestrip">
+    <h2>Version 2, what changed since version 1</h2>
+    <ul>
+      <li>A server holds the record in every version. Git is an optional export and import, not a store. The per-story git folders of version 1 are dropped.</li>
+      <li>The command line becomes a client of the server's HTTP API. Nothing but the server writes the store.</li>
+      <li>Each story has a random internal id and a short readable key. Keys are assigned by the server, so two machines cannot clash.</li>
+      <li>The MCP carries most of codeloop's data operations, not a dozen workflow verbs: eight resource tools, each with an action argument and a role per action. The command line and the web board call the same API.</li>
+      <li>One identity: a codeloop account is a Protobox account. Roles come from the Protobox workspace, agents get keys from a "Connect your agents" page.</li>
+      <li>Public publishing is a per-project switch, later. "Which copy is the record" and "story number clashes" are closed and gone from the open questions.</li>
+    </ul>
+  </div>
 
   <section class="contract">
     <h3>The problem</h3>
-    <p class="lead">Every story on a codeloop board lives in one shared file. Every agent and person writes to it, so a commit that stages it carries everyone else's unsaved changes, and moving the file out of the repository takes the board's history out of git. Sharing with a second machine means syncing one large file both ways. Agents reach the board by launching the command line and reading its text.</p>
-    <p>This design gives each story its own folder in git, holding its state and an add-only history beside its plan and evidence. One local process, the <strong>hub</strong>, serves the web board and an MCP link from the same core library the command line uses. <strong>MCP</strong> (Model Context Protocol) is the standard that lets an agent in Claude Code, Cursor or Codex call tools behind one URL. Codeloop Cloud, on Protobox, is the central context and coordination point for a team's own agents: the board, the wiki and knowledge base, skills, and agent presence, served over a hosted board and one MCP link, with a filtered public view. It never runs an agent, never merges, and never touches anyone's code or git. Agents run on members' machines in Claude Code, Cursor or Codex and report in. Each step below works on its own.</p>
+    <p class="lead">Today every story on a codeloop board lives in one shared file in the repository. Every command, hook and agent rewrites that file, so a commit that stages it carries everyone else's changes, a second machine means syncing one large file both ways, and moving the file out of the repository takes the board's history out of git. Agents reach the board by launching the command line and reading its text.</p>
+    <p>Codeloop's job is visibility and context for agents across a team coding with AI: who is working on what, on which machine and branch, what was decided, and what each agent needs to know before it starts. It works with any way of structuring the work, BMAD, Spec Kit, a custom pipeline or none; its own lanes and gates are optional and configurable, one structure among several a project can run.</p>
+    <p>This design puts one <strong>server</strong> in charge of the record. Downloaded, it runs on your machine as the <strong>hub</strong> with its own store. Hosted, the same server is <strong>Codeloop Cloud</strong>: the shared context and coordination point for a team whose agents run on their own machines. Agents, the web board and the command line are all its clients. <strong>MCP</strong> (Model Context Protocol) is the standard that lets an agent in Claude Code, Cursor or Codex call tools behind one URL; the server speaks it, and plain HTTP for everything else. Codeloop Cloud never runs an agent, never merges and never touches code. Git keeps the code, and an export of the board if you want one.</p>
   </section>
 
   <section class="contract">
     <h3>Context</h3>
-    <p>Who uses the system and which outside systems it depends on.</p>
     <table>
       <tr><th>Actor or external system</th><th>Relationship</th></tr>
-      <tr><td>Founder (owner)</td><td>Runs the command line, approves gates and answers questions on the board or in the shell. The only role that decides.</td></tr>
-      <tr><td>Builder agent</td><td>Claude Code, Cursor or Codex, always on a member's machine. Calls the MCP tools and reports its presence; its edits and shell commands pass through the guard hooks, the small checks each host runs before a tool call.</td></tr>
+      <tr><td>Owner</td><td>Runs the command line, approves gates and answers questions on the board or in the shell. The only role that decides.</td></tr>
+      <tr><td>Builder agent</td><td>Claude Code, Cursor or Codex on a member's machine. Calls the MCP tools, reports its presence; its edits and shell commands pass through the guard hooks, the small checks each host runs before a tool call.</td></tr>
       <tr><td>Reviewer</td><td>Signs in, reads, rejects with a note. Never approves or answers.</td></tr>
-      <tr><td>Team member</td><td>Signs in to Codeloop Cloud, reads the board, proposes stories, adds notes.</td></tr>
-      <tr><td>Public visitor</td><td>Reads the filtered demo board and wiki. No sign-in, nothing writable.</td></tr>
-      <tr><td>Git</td><td>Holds every story folder. The record for a local project; a complete export once a project is linked to Cloud.</td></tr>
-      <tr><td>Protobox</td><td>The hosted product Cloud runs inside. Reused as is: sign-in, workspaces, API keys, the one MCP URL per workspace, and its database (MongoDB).</td></tr>
+      <tr><td>Team member</td><td>Signs in, reads the board, proposes stories, adds notes.</td></tr>
+      <tr><td>Public visitor</td><td>Reads a published board and wiki through the privacy filter. No sign-in, nothing writable. Later.</td></tr>
+      <tr><td>Git</td><td>Holds the code. Optionally holds an export of the board, and is the source for importing an older board. Never the record.</td></tr>
+      <tr><td>Protobox</td><td>Hosts Codeloop Cloud and provides identity: accounts, workspaces, roles, API keys and the workspace MCP URL. Reused as is where it fits; a device sign-in flow is new work.</td></tr>
     </table>
   </section>
 
   <section class="contract">
     <h3>Software layers</h3>
-    <p>Five layers, the same on your machine and in the cloud. The command line and the web board are thin peers: both call the core library, which holds the engine, the lanes, the checks and the role rules. Every decision about a story is made there.</p>
-    <div class="key"><span class="chip git">in git</span><span class="chip cloud">Codeloop Cloud</span><span class="chip">process, no data of its own</span></div>
-    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-label="Five layers of codeloop, local column and cloud column">
+    <p>One server core, four kinds of client, two places to run it. The core holds the engine, the lanes, the checks, the role rules and the store. The HTTP API and the MCP link are its only doors. The web board and the command line are thin clients of the API; the command line adds nothing the API lacks, it only makes the API easy to call from a shell. Local and cloud run the same server with a different store behind it.</p>
+    <div class="key"><span class="chip git">local server</span><span class="chip cloud">Codeloop Cloud</span><span class="chip">client, no data of its own</span></div>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-label="One server core with MCP, API, web board and command line as clients, run locally or as Codeloop Cloud">
 <defs>
   <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
   <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
 </defs>
-<text x="200" y="22" text-anchor="middle" class="head">Your machine</text>
+<text x="200" y="22" text-anchor="middle" class="head">Your machine: the hub</text>
 <text x="605" y="22" text-anchor="middle" class="head">Codeloop Cloud, on Protobox</text>
-<rect class="lane" x="20" y="32" width="360" height="478" rx="10"/>
-<rect class="lane" x="420" y="32" width="370" height="478" rx="10"/>
-<text x="26" y="56" class="small">Thin peers</text>
-<text x="26" y="156" class="small">Hub</text>
-<text x="26" y="256" class="small">Core library</text>
+<rect class="lane" x="20" y="32" width="360" height="518" rx="10"/>
+<rect class="lane" x="420" y="32" width="370" height="518" rx="10"/>
+<text x="26" y="56" class="small">Clients</text>
+<text x="26" y="156" class="small">Doors</text>
+<text x="26" y="256" class="small">Server core</text>
 <text x="26" y="356" class="small">Store</text>
-<text x="26" y="456" class="small">Sync</text>
+<text x="26" y="456" class="small">Execution</text>
 <rect class="box" x="100" y="40" width="85" height="54" rx="8"/>
-<text x="142.5" y="63.0" text-anchor="middle" class="">CLI</text>
-<text x="142.5" y="79.0" text-anchor="middle" class="small">codeloop</text>
+<text x="142.5" y="63" text-anchor="middle">CLI</text>
+<text x="142.5" y="79" text-anchor="middle" class="small">API client</text>
 <rect class="box" x="195" y="40" width="85" height="54" rx="8"/>
-<text x="237.5" y="63.0" text-anchor="middle" class="">Web board</text>
-<text x="237.5" y="79.0" text-anchor="middle" class="small">browser</text>
+<text x="237.5" y="63" text-anchor="middle">Web board</text>
+<text x="237.5" y="79" text-anchor="middle" class="small">browser</text>
 <rect class="box" x="290" y="40" width="85" height="54" rx="8"/>
-<text x="332.5" y="63.0" text-anchor="middle" class="">Agents</text>
-<text x="332.5" y="79.0" text-anchor="middle" class="small">MCP clients</text>
-<rect class="box" x="430" y="40" width="140" height="54" rx="8"/>
-<text x="500.0" y="63.0" text-anchor="middle" class="">Hosted board</text>
-<text x="500.0" y="79.0" text-anchor="middle" class="small">browser, signed in</text>
-<rect class="box" x="580" y="40" width="200" height="54" rx="8"/>
-<text x="680.0" y="63.0" text-anchor="middle" class="">Agents on your machines</text>
-<text x="680.0" y="79.0" text-anchor="middle" class="small">report in: one workspace MCP URL</text>
-<rect class="box" x="100" y="130" width="275" height="60" rx="8"/>
-<text x="237.5" y="156.0" text-anchor="middle" class="head">Local hub, one port</text>
-<text x="237.5" y="172.0" text-anchor="middle" class="">web API · MCP link · event stream</text>
+<text x="332.5" y="63" text-anchor="middle">Agents</text>
+<text x="332.5" y="79" text-anchor="middle" class="small">MCP, hooks</text>
+<rect class="box" x="430" y="40" width="110" height="54" rx="8"/>
+<text x="485" y="63" text-anchor="middle">Web board</text>
+<text x="485" y="79" text-anchor="middle" class="small">signed in</text>
+<rect class="box" x="550" y="40" width="110" height="54" rx="8"/>
+<text x="605" y="63" text-anchor="middle">Agents</text>
+<text x="605" y="79" text-anchor="middle" class="small">on members' machines</text>
+<rect class="box" x="670" y="40" width="110" height="54" rx="8"/>
+<text x="725" y="63" text-anchor="middle">CLI, hubs</text>
+<text x="725" y="79" text-anchor="middle" class="small">linked projects</text>
+<rect class="box git" x="100" y="130" width="275" height="60" rx="8"/>
+<text x="237.5" y="156" text-anchor="middle" class="head">HTTP API · MCP over HTTP · events</text>
+<text x="237.5" y="172" text-anchor="middle">one local port, one token</text>
 <rect class="box cloud" x="430" y="130" width="350" height="60" rx="8"/>
-<text x="605.0" y="156.0" text-anchor="middle" class="head">Hosted service: coordination only</text>
-<text x="605.0" y="172.0" text-anchor="middle" class="">board · wiki, knowledge, skills · agent presence</text>
-<rect class="box" x="100" y="230" width="275" height="54" rx="8"/>
-<text x="237.5" y="253.0" text-anchor="middle" class="head">Core library</text>
-<text x="237.5" y="269.0" text-anchor="middle" class="">engine, roles, checks, orch, worktrees, merge</text>
-<rect class="box" x="430" y="230" width="350" height="54" rx="8"/>
-<text x="605.0" y="253.0" text-anchor="middle" class="head">Core library, coordination subset</text>
-<text x="605.0" y="269.0" text-anchor="middle" class="">no merge, gate run, orch run or builder start</text>
+<text x="605" y="156" text-anchor="middle" class="head">HTTP API · MCP over HTTP · events</text>
+<text x="605" y="172" text-anchor="middle">the workspace MCP URL, a key per caller</text>
+<rect class="box git" x="100" y="230" width="275" height="60" rx="8"/>
+<text x="237.5" y="256" text-anchor="middle" class="head">Server core</text>
+<text x="237.5" y="272" text-anchor="middle">engine, lanes, checks, roles, keys, sync</text>
+<rect class="box cloud" x="430" y="230" width="350" height="60" rx="8"/>
+<text x="605" y="256" text-anchor="middle" class="head">Server core, the same code</text>
+<text x="605" y="272" text-anchor="middle">engine, lanes, checks, roles, keys, sync</text>
 <rect class="box git" x="100" y="330" width="275" height="60" rx="8"/>
-<text x="237.5" y="356.0" text-anchor="middle" class="head">Story files in git</text>
-<text x="237.5" y="372.0" text-anchor="middle" class="">.codeloop/stories/&lt;nnn&gt;/ · cache later</text>
+<text x="237.5" y="356" text-anchor="middle" class="head">SQLite</text>
+<text x="237.5" y="372" text-anchor="middle">one file per project in the codeloop home</text>
 <rect class="box cloud" x="430" y="330" width="350" height="60" rx="8"/>
-<text x="605.0" y="356.0" text-anchor="middle" class="head">Protobox store driver</text>
-<text x="605.0" y="372.0" text-anchor="middle" class="">MongoDB · one document per event</text>
+<text x="605" y="356" text-anchor="middle" class="head">MongoDB on Protobox</text>
+<text x="605" y="372" text-anchor="middle">one document per event</text>
 <rect class="box" x="100" y="430" width="275" height="60" rx="8"/>
-<text x="237.5" y="456.0" text-anchor="middle" class="head">Sync worker</text>
-<text x="237.5" y="472.0" text-anchor="middle" class="">push after each local write · pull on events</text>
-<rect class="box cloud" x="430" y="430" width="350" height="60" rx="8"/>
-<text x="605.0" y="456.0" text-anchor="middle" class="head">Sync endpoint</text>
-<text x="605.0" y="472.0" text-anchor="middle" class="">per story, per event, by hash</text>
-<path class="arrow" d="M142,94 L142,330"/>
-<text x="60" y="300" class="small">CLI and hooks write</text>
-<text x="60" y="313" class="small">files directly</text>
+<text x="237.5" y="456" text-anchor="middle" class="head">orch run · worktrees · merge · schedule</text>
+<text x="237.5" y="472" text-anchor="middle">local only, clients of the local API</text>
+<rect class="lane" x="430" y="430" width="350" height="60" rx="8"/>
+<text x="605" y="456" text-anchor="middle" class="small">Nothing executes here</text>
+<text x="605" y="472" text-anchor="middle" class="small">no agents, no merge, no code</text>
+<path class="arrow" d="M142,94 L142,130"/>
 <path class="arrow" d="M237,94 L237,130"/>
 <path class="arrow" d="M332,94 L332,130"/>
-<path class="arrow" d="M300,190 L300,230"/>
-<path class="arrow" d="M300,284 L300,330"/>
-<path class="arrow two" d="M237,390 L237,430"/>
-<path class="arrow" d="M500,94 L500,130"/>
-<path class="arrow" d="M680,94 L680,130"/>
+<path class="arrow" d="M237,190 L237,230"/>
+<path class="arrow" d="M237,290 L237,330"/>
+<path class="arrow" d="M160,430 L160,190"/>
+<path class="arrow" d="M485,94 L485,130"/>
+<path class="arrow" d="M605,94 L605,130"/>
+<path class="arrow" d="M725,94 L725,130"/>
 <path class="arrow" d="M605,190 L605,230"/>
-<path class="arrow" d="M605,284 L605,330"/>
-<path class="arrow two" d="M605,390 L605,430"/>
-<path class="arrow two" d="M375,460 L430,460"/>
-<text x="402" y="452" text-anchor="middle" class="small">https</text>
-<text x="200" y="505" text-anchor="middle" class="small">Writer to the files: the local process holding the story lock</text>
-<text x="605" y="505" text-anchor="middle" class="small">Writer to the database: the hosted service. Runs no agents</text>
+<path class="arrow" d="M605,290 L605,330"/>
+<path class="arrow two" d="M375,260 L430,260"/>
+<text x="402" y="252" text-anchor="middle" class="small">https</text>
+<text x="200" y="520" text-anchor="middle" class="small">Only writer to SQLite: the hub process</text>
+<text x="605" y="520" text-anchor="middle" class="small">Only writer to MongoDB: the hosted service</text>
+<text x="400" y="545" text-anchor="middle" class="small">Linked project: the hub keeps a copy and queues writes; the cloud is the record</text>
 </svg></div>
-    <p><strong>Which process owns writes.</strong> On your machine there is no single writer. The command line, the hook helper (a resident process answering the hooks over a local socket) and the hub each load the core library and write a story's files directly, under a lock on that story's folder, so no command waits for the hub and no hook waits for anything but the disk. In the cloud the hosted service is the only writer to the database and checks the caller's role on every call. It runs the coordination part of the core library only: board, wiki, skills, presence. Everything that executes, the orchestrated turn, worktrees, merge, gate runs, scheduled agent runs, exists only in the downloadable version on a machine with the code.</p>
-    <p class="muted">Text version of the layers, for readers without the picture.</p>
-    <pre class="mermaid">
-flowchart TD
-  UI["Thin peers: Node command line, browser web board, MCP clients in Claude Code, Cursor and Codex"] --> API["Hub: Hono HTTP API, MCP over Streamable HTTP, server-sent events"]
-  API --> SVC["Core library: TypeScript engine, lanes, checks, roles"]
-  SVC --> DATA["Store: per-story files in git; SQLite cache later; MongoDB through the Protobox driver"]
-    </pre>
+    <p class="muted">Text version: clients (command line, web board, MCP agents, hooks) call the HTTP API or MCP; the server core decides and writes the store; locally the store is SQLite, in the cloud MongoDB; execution commands exist only locally and call the local API.</p>
   </section>
 
   <section class="contract">
-    <h3>Local only, open source</h3>
-    <p>Open source is Codeloop Cloud run on your own machine: the same product, the same commands and board, with the features that need a server left out. You install one package and run <code>codeloop init</code> in a project. From then on every command writes files under <code>.codeloop</code>. No server, no account, no network. Linking adds sharing and takes nothing away.</p>
-    <table>
-      <tr><th>Feature</th><th>Open source</th><th>Codeloop Cloud</th></tr>
-      <tr><td>People</td><td>One user, the owner of the machine</td><td>A team, each on their own machine, with roles</td></tr>
-      <tr><td>Agents</td><td>Agents on this machine, seen on this machine</td><td>Agents on every member's machine, seen on one board</td></tr>
-      <tr><td>Runs your agents locally</td><td>Yes: orchestrated turns, worktrees, merge, scheduled runs</td><td>No. Cloud coordinates agents you run</td></tr>
-      <tr><td>Wiki, knowledge base, skills</td><td>In the project's git</td><td>Shared across the team and every agent</td></tr>
-      <tr><td>Board</td><td>Local, in the project's git</td><td>Synced; one record for the team, git export on every machine</td></tr>
-      <tr><td>Roles</td><td>Owner and agent, by process</td><td>Owner, reviewer, builder agent, team member, by sign-in and key</td></tr>
-      <tr><td>MCP link</td><td>The local hub's link, on this machine</td><td>Hosted, one workspace URL reachable from anywhere</td></tr>
-      <tr><td>Public demo</td><td>None</td><td>A read-only public view of projects the owner marks public</td></tr>
-      <tr><td>Hub down or offline</td><td>Everything but the web board keeps working</td><td>Same, and writes queue until the cloud is back</td></tr>
-    </table>
-    <p>One layout for every project. codeloop decides the folder names, a project on the older layout is moved on its first command, and the settings that let a project pick where its files go are removed. A story's folder holds everything about it:</p>
-<pre class="tree">.codeloop/
-  stories/321/
-    state.json       stage, gate, priority, size, feature, awaiting   (replayed from history)
-    history.jsonl    one line per event, add-only: propose, promote, approve, answer, park …
-    research.md  spec.md  plan.md  tasks.md
-    evidence/        verify.md, use-case results
-    mock.html
-  wiki/  lanes/  config.yaml                       shared, in git
-  state/agents/&lt;id&gt;.json                           who is working what, where; not in git
-  state/activity/321.jsonl                        every edit, command and prompt; not in git</pre>
-    <p>Two per-story files, on purpose. The <strong>history</strong> is the board's record: decisions, stage moves, notes, who made each. The <strong>activity stream</strong> is what a coding session did: file paths, shell commands, prompt text. It stays on the machine, outside git, because it holds exactly what the public view must never carry.</p>
-    <p><strong>When the hub is down.</strong> The hub serves the web board and the MCP link, nothing else. Every command and hook still works, because they open the story files themselves. An agent on the MCP link falls back to the command line, which its skill already knows. <code>codeloop open</code> starts the hub again. Hooks never call the hub or the network.</p>
+    <h3>Where the local store lives</h3>
+    <p>The hub keeps each project's record in one SQLite file in the <strong>codeloop home</strong>, the per-user folder <code>~/.codeloop</code> that already holds the hub registry: <code>~/.codeloop/projects/&lt;project id&gt;/codeloop.db</code>. Not inside the repository, for three reasons. Several checkouts and worktrees of one repository must see one board; a file in the repository would give each its own. A database beside tracked files is one <code>git clean</code> away from damage, and folder-sync tools corrupt a live database. And one folder for every project is one place to back up.</p>
+    <p>A repository finds its store through a random <strong>project id</strong> in the tracked <code>.codeloop/project.json</code>, written by <code>codeloop init</code>. The id is not a location setting: codeloop alone decides the path, and the per-project <code>store.home</code>, <code>store.layout</code> and <code>store.move</code> settings go away. A fresh clone has no board until <code>codeloop import</code> reads an export from git or the project is linked to Codeloop Cloud.</p>
+    <p><strong>Story documents live in the store too.</strong> Research, spec, plan, tasks and evidence are documents on the story, written by agents through the <code>documents</code> tool or the API and read back through the same tool and the story brief. That is what "git is not the record" means in practice. The plan's file list, the lease the edit hook enforces, is read from the stored plan. <code>codeloop export</code> writes every story as a folder of markdown under <code>.codeloop/export/</code> for an editor or a commit; whether agents may also write through a mirrored folder is question 1.</p>
   </section>
 
   <section class="contract">
-    <h3>Deployment topology</h3>
-    <table>
-      <tr><th>Environment</th><th>Where each piece runs</th><th>Notes</th></tr>
-      <tr><td>local laptop</td><td>Command line, hook helper, hub on one local port, story files in the repository</td><td>Works with no network and no account</td></tr>
-      <tr><td>Codeloop Cloud</td><td>Hosted service on Protobox: store driver on MongoDB, web API, MCP at the workspace URL, hosted board, sync endpoint</td><td>One Protobox workspace per team; sign-in and keys come from Protobox. Coordinates agents, runs none</td></tr>
-      <tr><td>public demo</td><td>A read-only route of the hosted service for projects the owner marked public, with the public filter applied at read time</td><td>No sign-in, nothing writable</td></tr>
-    </table>
+    <h3>One writer: the command line as a client</h3>
+    <p>Only the server process writes the store. The command line never opens the database for writing; it calls the local API, as the web board already does. Four consequences.</p>
+    <ul>
+      <li><strong>Start on demand.</strong> The first command that finds no running hub starts one in the background, as <code>codeloop open</code> does today: it records pid, port and token in the codeloop home, waits for the health route, then sends its request. The hub stops itself after a long idle period.</li>
+      <li><strong>When it cannot start.</strong> A stale pid is taken over and a taken port replaced by the next free one. A broken build or a crash on boot is reported: the command prints the last lines of the hub log and exits non-zero. It never writes the store itself, because a second writer is the problem this design removes.</li>
+      <li><strong>Hooks are clients.</strong> The guard hooks call the local API; the separate hook helper process folds into the hub. If the hub is down the hook starts it and waits a few seconds; if it still cannot answer, the edit or shell command is refused, the fail-closed behaviour hooks have today. No hook ever waits on the network.</li>
+      <li><strong>Recovery is read-only.</strong> <code>codeloop export</code>, <code>codeloop doctor</code> and a plain <code>sqlite3</code> read the file with the hub down, because readers do not make a second writer. A damaged store is rebuilt by the hub from the last export in git or from Codeloop Cloud.</li>
+    </ul>
+    <p><strong>Offline on a linked project.</strong> The hub holds a full copy and answers reads from it. A write lands in the copy as a <em>provisional</em> event, visible on the board, and is pushed when the cloud is reachable. The cloud orders events by fixed rules: an owner decision beats an agent one, a later owner decision beats an earlier one, and an approval whose fingerprint no longer matches the handed-back work is set aside so the gate asks again. Two contradicting owner decisions at one gate park the story for a person. One local writer, one cloud writer, a queue between them.</p>
   </section>
 
   <section class="contract">
-    <h3>Cloud connected, team</h3>
-    <p>You link a project once: <code>codeloop cloud connect &lt;workspace MCP URL&gt; &lt;owner key&gt;</code>. It writes <code>.codeloop/cloud.json</code>, outside git, and registers the project in the workspace. A teammate who clones the repository runs the same command with their own key.</p>
+    <h3>The MCP tool surface</h3>
+    <p>The MCP is the main interface, so it carries most of what the record can do: read, create, update and delete stories, documents, wiki pages, skills, questions and summaries, as well as the workflow verbs. Sixty separate tools would fill an agent's context before it started. Instead, as Protobox's own MCP does with its <code>knowledge</code> and <code>apps</code> tools, there is one tool per resource with an <code>action</code> argument, an <code>id</code>, a <code>data</code> object for writes and <code>filters</code> for lists. Called with no action, a tool returns a menu of the actions the caller's role allows. A destructive action previews first and runs when called again with <code>confirm</code>. Every action is one API route, and the command line and the web board call those same routes.</p>
     <table>
-      <tr><th>What</th><th>Direction</th><th>When</th></tr>
-      <tr><td>Story state and history events</td><td>Both ways</td><td>Pushed right after each local write lands on disk; pulled by the hub from the cloud's event stream and by every command before it reads</td></tr>
-      <tr><td>Research, spec, plan, tasks, evidence text</td><td>Both ways, as files, matched by content hash</td><td>Same as above</td></tr>
-      <tr><td>Wiki, knowledge pages, skills, lanes, config</td><td>Both ways; lanes and config only from an owner</td><td>On change</td></tr>
-      <tr><td>Agent records</td><td>Machine to cloud; read everywhere</td><td>On every change of state or activity</td></tr>
-      <tr><td>Activity streams</td><td>Never</td><td>They stay on the machine</td></tr>
-      <tr><td>Code</td><td>Never</td><td>Your git remote, as today</td></tr>
+      <tr><th>Tool</th><th>Actions</th><th>Lowest role</th></tr>
+      <tr><td>stories</td><td>list, next_up, get, brief, create (a proposal), update, delete, advance, check, handback, task_done</td><td>Team member reads and creates; builder agent advances, checks, hands back, ticks; owner updates fields by hand or deletes</td></tr>
+      <tr><td>documents</td><td>list, read, write, delete; one of research, spec, plan, tasks, evidence, or a named extra</td><td>Builder agent writes; owner deletes</td></tr>
+      <tr><td>questions</td><td>ask, list, answer</td><td>Builder agent asks; owner answers</td></tr>
+      <tr><td>decisions</td><td>inbox, approve, reject, promote, park, resume</td><td>Reviewer rejects; owner for the rest</td></tr>
+      <tr><td>wiki</td><td>search, inject (pages whose scope matches given files), get, write, delete</td><td>Team member reads; builder agent writes; owner deletes</td></tr>
+      <tr><td>skills</td><td>list, get, write, delete</td><td>Team member reads; builder agent writes; owner deletes</td></tr>
+      <tr><td>summaries</td><td>list, write (stage output, review line, hand-back summary)</td><td>Builder agent; reviewer for the review line</td></tr>
+      <tr><td>agents</td><td>list, get, register, heartbeat, release, update (branch, state)</td><td>Builder agent for its own record; owner for any</td></tr>
     </table>
+    <p>Roles are checked per action on the server, never per tool, so an agent sees the <code>decisions</code> tool and is refused on <code>approve</code> with a message naming the role that could. Structure-specific actions (advance, check, promote) exist only when the project runs lanes; a project using its own pipeline still has every read and write.</p>
+  </section>
 
-    <h4>Which copy is the record</h4>
-    <p><strong>Option 1: git files stay the record, the cloud is a synced mirror.</strong> Linking changes nothing. But two machines hold two records, the mirror has to merge them to show one board, and roles are enforced only inside each machine's process, so nothing stops an altered client from writing an approval.</p>
-    <p><strong>Option 2: for a linked project the cloud is the record; the git files are a complete export codeloop keeps current on every machine.</strong> One place hands out story numbers, orders events, enforces roles and serves the public view. Offline writes are provisional until they arrive, and shared work depends on Protobox being up.</p>
-    <p><strong>Recommended: option 2</strong>, with one rule: the export is complete. <code>codeloop cloud disconnect</code> leaves a project identical to one never linked, and the cloud copy can be rebuilt from any up-to-date checkout.</p>
-
-    <h4>Two machines or two people on one story</h4>
-    <p>Every history event carries the story id, a time, who made it and a random event id; nothing is edited or removed. Merging two copies of a story is the union of their events, sorted by time then event id, and the state file is replayed from the result, so state is never merged by hand.</p>
-    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-label="Two machines and the cloud merging one story's history">
+  <section class="contract">
+    <h3>Data model</h3>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 250" role="img" aria-label="Workspace holds people and projects; a project holds stories; an agent belongs to a person and works one story">
 <defs>
-  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
-  <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
+  <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
 </defs>
-<rect class="box git" x="20" y="30" width="270" height="110" rx="8"/>
-<text x="155.0" y="73.0" text-anchor="middle" class="head">Laptop A</text>
-<text x="155.0" y="89.0" text-anchor="middle" class="">story 321</text>
-<text x="155.0" y="105.0" text-anchor="middle" class="">history: e1 e2 e5 (owner approve)</text>
-<rect class="box git" x="470" y="30" width="270" height="110" rx="8"/>
-<text x="605.0" y="73.0" text-anchor="middle" class="head">Laptop B</text>
-<text x="605.0" y="89.0" text-anchor="middle" class="">story 321</text>
-<text x="605.0" y="105.0" text-anchor="middle" class="">history: e1 e2 e3 e4 (agent note, tick)</text>
-<rect class="box cloud" x="230" y="180" width="300" height="100" rx="8"/>
-<text x="380.0" y="218.0" text-anchor="middle" class="head">Codeloop Cloud, story 321</text>
-<text x="380.0" y="234.0" text-anchor="middle" class="">union: e1 e2 e3 e4 e5</text>
-<text x="380.0" y="250.0" text-anchor="middle" class="">state replayed from the merged history</text>
-<path class="arrow two" d="M200,140 L300,180"/>
-<path class="arrow two" d="M560,140 L460,180"/>
-<text x="200" y="175" class="small">push pending, pull new</text>
-<text x="470" y="175" class="small">push pending, pull new</text>
-<text x="380" y="20" text-anchor="middle" class="small">Events never change or disappear; a decision that no longer fits is answered by a new event</text>
+<rect class="box cloud" x="20" y="20" width="200" height="64" rx="8"/>
+<text x="120" y="46" text-anchor="middle" class="head">Workspace</text>
+<text x="120" y="64" text-anchor="middle" class="small">Protobox workspace; locally, "this machine"</text>
+<rect class="box" x="300" y="20" width="200" height="64" rx="8"/>
+<text x="400" y="46" text-anchor="middle" class="head">Person</text>
+<text x="400" y="64" text-anchor="middle" class="small">account, role from the workspace</text>
+<rect class="box" x="580" y="20" width="200" height="64" rx="8"/>
+<text x="680" y="46" text-anchor="middle" class="head">Agent</text>
+<text x="680" y="64" text-anchor="middle" class="small">kind, person, machine, branch, state</text>
+<rect class="box git" x="20" y="160" width="200" height="64" rx="8"/>
+<text x="120" y="186" text-anchor="middle" class="head">Project</text>
+<text x="120" y="204" text-anchor="middle" class="small">random id, name, key prefix, publish flag</text>
+<rect class="box git" x="300" y="160" width="200" height="64" rx="8"/>
+<text x="400" y="186" text-anchor="middle" class="head">Story</text>
+<text x="400" y="204" text-anchor="middle" class="small">internal id + key, stage, gate, branch</text>
+<rect class="box" x="580" y="160" width="200" height="64" rx="8"/>
+<text x="680" y="186" text-anchor="middle" class="head">Events and documents</text>
+<text x="680" y="204" text-anchor="middle" class="small">add-only history; spec, plan, evidence</text>
+<path class="arrow" d="M220,52 L300,52"/>
+<text x="260" y="44" text-anchor="middle" class="small">members</text>
+<path class="arrow" d="M500,52 L580,52"/>
+<text x="540" y="44" text-anchor="middle" class="small">started by</text>
+<path class="arrow" d="M120,84 L120,160"/>
+<text x="150" y="126" class="small">projects</text>
+<path class="arrow" d="M220,192 L300,192"/>
+<text x="260" y="184" text-anchor="middle" class="small">stories</text>
+<path class="arrow" d="M500,192 L580,192"/>
+<text x="540" y="184" text-anchor="middle" class="small">has</text>
+<path class="arrow" d="M680,84 L680,160"/>
+<text x="700" y="126" class="small">works one story, on a branch</text>
 </svg></div>
-    <p>Most pairs of events do not touch: a note and a task tick both stay. Where two decide the same thing, the rules are fixed: an owner decision beats an agent one; a later owner decision beats an earlier one; an approval whose fingerprint no longer matches the handed-back work is set aside and the gate asks again, as the engine already does. Only two owner decisions that contradict each other at the same gate park the story, with both notes, for a person.</p>
-    <p>Two machines can also propose at the same moment and pick the same number. The cloud hands each linked machine a block of numbers at link time, so numbers never collide and never change (question 2).</p>
-
-    <h4>Offline</h4>
-    <p>Everything local works offline. A write lands in the story files first and is marked pending; the next command, or the hub, pushes it. Today's sync writes the cloud before the local file and blocks on the network; this design reverses the order, and no hook ever waits for the network.</p>
-
-    <h4>Agents through one URL</h4>
-    <p>Protobox gives every workspace one MCP endpoint, <code>&lt;workspace&gt;.protobox.app/mcp</code>. Codeloop Cloud registers its tools there, so an agent adds one URL and one key and sees the same dozen tools the local hub serves: next up, get story, advance, task done, hand back, note, ask, propose, check, brief, and the owner-only approve and answer. MCP clients can send only an <code>Authorization: Bearer</code> header, so the key is the whole identity: its kind decides the caller's role, and no tool argument can raise it. On a linked project an agent may use either link; both end in the same record.</p>
-    <p><strong>What the cloud does not expose.</strong> The hosted API and MCP have no merge, gate-run, orchestrated-run or start-builder action. Those stay commands of the downloadable version, on the machine that has the code and the agent. The cloud records what they did.</p>
-    <p><strong>Checks run where the code is.</strong> Size budget, health and the stage checks run locally, by the command line or the hook, and their results sync as events. Where a check measures is a user preference: the story's branch, main, or the branch the agent is on, because a solo founder may run several agents on one branch while a team uses one worktree per story (question 6).</p>
-  </section>
-
-  <section class="contract">
-    <h3>Agents and people</h3>
-    <p>When several people work from their own machines, the board must answer at a glance: which agent, started by whom, on whose machine, is on which story and branch right now, and is it working, waiting or stalled. Today that answer is spread over a session file per live host session, a lease file per orchestrated turn, a holder computed from the story's events, and an idle check over the activity stream. None of it leaves the machine.</p>
-    <p>The design makes the agent a first-class item in the data model. A <strong>person</strong> is a team member with a role and the machines they sign in from. An <strong>agent</strong> belongs to a person and to one story at a time:</p>
     <table>
-      <tr><th>Agent field</th><th>Holds</th></tr>
-      <tr><td>id</td><td>Random, assigned when the agent starts</td></tr>
-      <tr><td>kind</td><td>Claude Code, Cursor, Codex, CI</td></tr>
-      <tr><td>person</td><td>Who started it; a scheduled or CI run names the person whose key it uses</td></tr>
-      <tr><td>machine</td><td>The machine name it runs on</td></tr>
-      <tr><td>project, story, branch</td><td>What it works on, and the git branch its commits land on</td></tr>
-      <tr><td>started at, last activity</td><td>Times; last activity is updated by hooks and tool calls, never by the doctor's own nudge</td></tr>
-      <tr><td>state</td><td>working, waiting on owner, stalled, done</td></tr>
-      <tr><td>files held</td><td>The plan's file list it holds while working, the lease</td></tr>
+      <tr><th>Entity</th><th>Fields that matter here</th></tr>
+      <tr><td>Workspace</td><td>The Protobox workspace: members with roles, API keys, one MCP URL. The hub has one implicit workspace for the machine's owner.</td></tr>
+      <tr><td>Person</td><td>One account. Role in a workspace: owner, reviewer or team member, mapped from the Protobox role. Keys they minted.</td></tr>
+      <tr><td>Project</td><td>Random id (the one in <code>project.json</code>), name, key prefix, key counter, public switch, the workspace it belongs to.</td></tr>
+      <tr><td>Story</td><td><strong>id</strong>: random, assigned on creation, used by the database, sync and every reference between records. <strong>key</strong>: short and readable, for people and commit trailers. Stage, gate, priority, size, feature, branch, the agents that worked it.</td></tr>
+      <tr><td>Event</td><td>Story id, time, actor, random event id, kind, note. Add-only; state is replayed from events.</td></tr>
+      <tr><td>Document</td><td>Story id, name (research, spec, plan, tasks, evidence), text, content hash, who wrote it.</td></tr>
+      <tr><td>Agent</td><td>id, kind (Claude Code, Cursor, Codex, CI, person), person, machine, project, story, branch, state (working, waiting on owner, stalled, done), files held, started at, last activity.</td></tr>
     </table>
-    <p>A story gains two fields: its branch, and the agents that worked it, current and past, with their person and machine. The board's row for a story reads "Claude Code, started by Ana on her laptop, on branch feat/sync, working, last seen 3 minutes ago", and the needs-you feed lists every agent in the waiting state across the team.</p>
-    <p><strong>What it replaces.</strong> The session file becomes an agent record in state working. The lease file becomes the agent's files-held list; the edit hook refuses another agent's edit to a held file as today, reading the record instead. The computed holder becomes the story's current agent. The stall check sets state to stalled when last activity passes the limit, instead of deriving it on each read. A person working by hand is an agent of kind "person" on their own machine, so one query covers everyone.</p>
-    <p><strong>How it syncs.</strong> An agent record is written by the local agent, through the hooks and the MCP tools, or by the command line that started it. The cloud never starts an agent; it only receives reports. Records live in <code>.codeloop/state/agents/</code> outside git, because they describe a moment on a machine, not the story. On a linked project they sync on every change, so every member sees every machine's agents, and the cloud marks an agent stalled when its machine stops reporting. The story's agents list is part of its history, so it is in git and travels with the story.</p>
+    <p><strong>Story keys.</strong> A key is <code>&lt;prefix&gt;-&lt;number&gt;</code>: one to five letters, a hyphen, one to six digits, so three to twelve characters, unique within a project. The server that holds the record assigns the number, so two machines cannot hand out the same key: the hub for a local project, Codeloop Cloud for a linked one. A story proposed offline on a linked project has an internal id at once and shows a pending key until the cloud assigns one; agents and the sync protocol never needed the key, and a commit trailer may name the internal id instead.</p>
+    <p><strong>Migration of old ids.</strong> Today's ids already have this shape, so <code>c-321</code> becomes the key <code>c-321</code> of a story with a new internal id. Import sets the project prefix to <code>c</code> and the counter past the highest number. Commit trailers, notes and wiki links keep working unchanged.</p>
+    <p><strong>Agents.</strong> The agent entity keeps its version 1 shape. The session file becomes an agent in state working, the lease its files-held list, the computed holder the story's current agent; the stall check sets the state when last activity passes the limit. A person working by hand is an agent of kind person. Agent records sync on every change, so a team sees every machine's agents on one board, and the cloud marks an agent stalled when its machine stops reporting.</p>
   </section>
 
   <section class="contract">
-    <h3>Data stores</h3>
+    <h3>Local and cloud, the same server</h3>
+    <p>Open source is Codeloop Cloud run on your own machine with the features that need a shared server left out. Linking a project adds sharing and takes nothing away. Neither version prescribes a process.</p>
     <table>
-      <tr><th>Store</th><th>Holds</th><th>Notes</th></tr>
-      <tr><td>Story folders in git</td><td>State, history, research, spec, plan, tasks, evidence, mock, per story</td><td>The record locally; the export when linked</td></tr>
-      <tr><td>Agent records, local disk</td><td>One file per agent: kind, person, machine, story, branch, state, files held</td><td>Synced to the cloud when linked; never in git</td></tr>
-      <tr><td>Activity streams, local disk</td><td>Edits, commands, prompts per story</td><td>Never synced, never public</td></tr>
-      <tr><td>Local cache, later</td><td>An index of every story for board-wide views</td><td>SQLite, rebuilt from the folders; safe to delete</td></tr>
-      <tr><td>MongoDB on Protobox</td><td>Collections: projects, stories (state), events (one document each), files (text by hash), pages, lanes, config, members with roles and machines, agents</td><td>One document per event keeps a busy story clear of the document size limit</td></tr>
+      <tr><th>Feature</th><th>Hub, open source</th><th>Codeloop Cloud</th></tr>
+      <tr><td>Visibility and context</td><td>Who works what, where, and the context each agent gets, for one machine</td><td>The same across every member's machine, one board</td></tr>
+      <tr><td>Your process</td><td>Any: BMAD, Spec Kit, custom, or codeloop's lanes and gates, which are optional</td><td>Same; lanes and gates configured once for the team</td></tr>
+      <tr><td>Record</td><td>SQLite in the codeloop home</td><td>MongoDB on Protobox; the hub keeps a copy</td></tr>
+      <tr><td>People</td><td>The owner of the machine, no account needed</td><td>A team with roles from the Protobox workspace</td></tr>
+      <tr><td>Agents</td><td>On this machine, seen here</td><td>On every member's machine, seen on one board</td></tr>
+      <tr><td>Runs your agents</td><td>Yes: orchestrated turns, worktrees, merge, scheduled runs</td><td>No. It coordinates agents you run</td></tr>
+      <tr><td>Wiki, knowledge, skills</td><td>In the store, exported with the board</td><td>Shared across the team and every agent</td></tr>
+      <tr><td>MCP link</td><td>The hub's local URL and token</td><td>The workspace MCP URL, a key per person or agent</td></tr>
+      <tr><td>Git</td><td>Optional export and import</td><td>Same, on every machine</td></tr>
+      <tr><td>Public view</td><td>None</td><td>Per project, when an owner turns it on. Later</td></tr>
     </table>
+    <p><strong>Sync.</strong> Story events, documents (by content hash), wiki pages, skills, lanes, config and agent records flow between a hub and the cloud per item: pushed after each local write, pulled from the cloud's event stream. Lanes and config move only from an owner. Activity streams, the record of which files and commands a coding session touched, stay on the machine. Code never moves.</p>
+    <p><strong>Migrating an existing board.</strong> <code>codeloop import</code> reads today's shared board file and any export folder, creates the stories with new internal ids and their old keys, and says so. From then on the file is unused; the owner may delete it from git. Export is the reverse and complete: <code>codeloop cloud disconnect</code> followed by an export leaves a project that can be imported anywhere, and the cloud copy can be rebuilt from any hub that holds the project.</p>
   </section>
 
   <section class="contract">
-    <h3>Identity, roles and permissions</h3>
-    <p>codeloop already knows three roles: owner, reviewer and agent. Cloud adds team member and public visitor. The founder is an owner; a project can have more than one.</p>
+    <h3>Identity, roles and credentials</h3>
+    <p>Nobody signs up twice. A codeloop sign-up creates a Protobox account and a workspace behind it, and an existing Protobox user signs in with that account. Protobox already provides accounts with verified email, workspaces with members and invitations, roles, and API keys with a kind and a workspace or project scope. What it lacks is a way for a command line to sign in without a password prompt; that is the device flow below, new work on Protobox.</p>
     <table>
-      <tr><th>Role</th><th>Read</th><th>Propose, note</th><th>Advance, tick, hand back, stage output</th><th>Write summaries</th><th>Move by hand</th><th>Reject</th><th>Approve, answer</th><th>Roles, publish</th></tr>
-      <tr><td>Owner</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
-      <tr><td>Reviewer</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="yes">review line</td><td class="no">no</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td></tr>
-      <tr><td>Builder agent</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
-      <tr><td>Team member</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
-      <tr><td>Public visitor</td><td class="yes">filtered</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
+      <tr><th>Flow</th><th>Steps</th></tr>
+      <tr><td>Sign up on the web</td><td>Email or Google at the Codeloop Cloud sign-up page. Protobox creates the account and a workspace marked as a codeloop workspace. The person lands on an empty board with "Connect your agents" open.</td></tr>
+      <tr><td>Link a local hub</td><td><code>codeloop login</code> prints a short code and a URL. The person opens it in a browser where they are signed in, confirms the code, and the command receives a personal token bound to them and the workspace. <code>codeloop link</code> then registers the project in the workspace and starts the first push.</td></tr>
+      <tr><td>Invite a teammate</td><td>From the Protobox workspace, as today. They sign in, see the board with their role, run <code>codeloop login</code> on their machine if they run agents.</td></tr>
+      <tr><td>Local with no account</td><td>Everything on the hub works without ever signing in. The hub's own password protects its web board on the machine.</td></tr>
     </table>
-    <p><strong>How a role is enforced.</strong> Locally the role comes from the process: a person's shell is owner, a process started by <code>codeloop run --agent</code> is agent and cannot say otherwise. On the local hub a signed-in session is owner and the start-up token is agent. In the cloud, Protobox sign-in gives a person an identity, workspace membership gives the role, and each API key is minted for one role. The hosted service checks the role on every API and MCP call, whatever the client claimed; the local check only shapes the message. A refusal is a structured error naming the role that could do it.</p>
-    <p><strong>What the public view filters.</strong> Deny by default: a project is public only when an owner turns it on, and a story, note or page marked private stays out. Of a public project the view serves titles, user stories, stage, gate, size, priority, feature, history events, specs and plans of stories past their spec gate, evidence summaries, and wiki pages marked public. It never serves activity streams (not in the cloud at all), agent records, specs before their gate, evidence files (a screenshot may show a machine), keys, sessions or members. Every text it serves passes a machine-path scan; a matching line is withheld with a marker, so a leak shows up in a test that feeds the view a worst-case story.</p>
+    <table>
+      <tr><th>Protobox role</th><th>Codeloop role</th><th>Can</th></tr>
+      <tr><td>owner, admin</td><td>Owner</td><td>Everything: approve, answer, move by hand, set roles, publish</td></tr>
+      <tr><td>member</td><td>Reviewer</td><td>Read, propose, note, write a review line, reject</td></tr>
+      <tr><td>viewer</td><td>Team member</td><td>Read, propose, note</td></tr>
+      <tr><td>an agent key</td><td>Builder agent</td><td>Read, propose, note, advance, tick, hand back, write stage output and summaries</td></tr>
+    </table>
+    <p>Four Protobox roles map onto three codeloop roles for people; owner and admin both decide, because splitting them has no use on a board. The builder role is never a person's: it comes from an <strong>agent key</strong>, minted on the Connect page, named for the agent and machine, attributed to the person who minted it. The personal token from <code>codeloop login</code> carries the person's own role and is what the command line uses. MCP clients can send only a bearer header, so the key is the whole identity: its kind decides the role, no tool argument can raise it, and the server checks the role on every call. A refusal names the role that could have done it.</p>
   </section>
 
   <section class="contract">
-    <h3>Migration path</h3>
-    <p>Seven steps, each usable on its own and shipped in this order. Sizes use the board's scale (S, M, L) with a rough calendar reading.</p>
-    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" role="img" aria-label="Seven migration steps in order">
+    <h3>Connect your agents</h3>
+    <p>One page in the web board, local and cloud alike, holds everything an agent or a shell needs. It shows the MCP and API as the main interface and the command line as a convenience on top of the API.</p>
+    <div class="frame">
+      <div class="chrome">
+        <div class="topbar"><div class="dots"><span></span><span></span><span></span></div><span class="crumb">Codeloop Cloud · acme · Connect your agents</span></div>
+        <div class="side"><div class="item">Board</div><div class="item">Wiki</div><div class="item">Agents</div><div class="item active">Connect your agents</div><div class="item">Members</div></div>
+        <div class="main">
+          <div class="header"><h3>Connect your agents</h3><span class="badge ok">MCP and API</span></div>
+          <div class="form-row"><label>MCP URL for this workspace</label><input type="text" value="https://&lt;workspace MCP URL&gt;" readonly></div>
+          <div class="form-row"><label>HTTP API</label><input type="text" value="https://&lt;workspace API URL&gt;/v1" readonly></div>
+          <div class="state-tabs"><span class="tab current">Claude Code</span><span class="tab">Cursor</span><span class="tab">Codex</span><span class="tab">Command line</span></div>
+<pre class="tree">claude mcp add --transport http codeloop https://&lt;workspace MCP URL&gt; \
+  --header "Authorization: Bearer &lt;agent key&gt;"</pre>
+          <table>
+            <tr><th>Key</th><th>Kind</th><th>Role</th><th>Last used</th></tr>
+            <tr><td>Claude Code on Ana's laptop</td><td>agent</td><td>Builder agent</td><td>3 minutes ago</td></tr>
+            <tr><td>Ana, command line</td><td>personal</td><td>Owner</td><td>today</td></tr>
+          </table>
+          <div class="actions"><button class="button">Add agent key</button><button class="button quiet">Revoke</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <h4>What each tab shows</h4>
+      <p>Claude Code: the <code>claude mcp add</code> line above. Cursor: a <code>.cursor/mcp.json</code> entry with the URL and an Authorization header. Codex: a <code>[mcp_servers.codeloop]</code> block with the URL and the key read from an environment variable. Command line: <code>npm i -g @protoboxai/codeloop</code>, <code>codeloop login</code>, <code>codeloop link</code>. Every snippet carries the real URL and a freshly minted key, copy-ready. A new key asks for a name and a person and is shown once. The local hub shows the same page with its local URL and token.</p>
+      <p class="api">GET /v1/connect · POST /v1/keys {name, kind} · DELETE /v1/keys/:id</p>
+    </div>
+  </section>
+
+  <section class="contract">
+    <h3>Public publishing, later</h3>
+    <p>An owner chooses per project to publish the board and wiki at a public URL, read-only, through a privacy filter: deny by default, nothing marked private, no agent records, no specs before their gate, no evidence files, no keys or members, and every served text passes a machine-path scan that withholds a matching line with a marker. Activity streams are never in the cloud at all.</p>
+    <p>Docs platforms such as Mintlify already run this shape. Worth borrowing: a per-page public flag that can also be set for a whole group, so publishing is explicit and inspectable; "hidden" kept separate from "private", because a hidden page is still reachable by URL, so concealment is never used as access control; a <code>noindex</code> marker on pages reachable but not meant to be found; a stable public URL per project, custom domain later. Where codeloop differs: Mintlify's pages are public unless protected, codeloop's are private unless an owner publishes, because a board carries unfinished work.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Steps</h3>
+    <p>Six steps, each usable on its own. Sizes use the board's scale (S, M, L) with a rough calendar reading. The order follows dependencies: everything after step 1 needs one writer and a stable story id, so the store moves first; roles and keys need the server to be the only door, so hooks and MCP move next; the cloud is the same server with a second store, so it comes once the server is whole; identity and the Connect page need the cloud to exist; publishing is last because it is read-only on top of all of it.</p>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" role="img" aria-label="Six steps in order">
 <defs>
-  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
-  <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
+  <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
 </defs>
-<rect class="box git" x="10" y="20" width="102" height="70" rx="8"/>
-<text x="61.0" y="51.0" text-anchor="middle" class="">1. Story folders</text>
-<text x="61.0" y="67.0" text-anchor="middle" class="small">one layout</text>
-<path class="arrow" d="M112,55 L123,55"/>
-<rect class="box git" x="123" y="20" width="102" height="70" rx="8"/>
-<text x="174.0" y="51.0" text-anchor="middle" class="">2. Hub MCP</text>
-<text x="174.0" y="67.0" text-anchor="middle" class="small">with roles</text>
-<path class="arrow" d="M225,55 L236,55"/>
-<rect class="box git" x="236" y="20" width="102" height="70" rx="8"/>
-<text x="287.0" y="51.0" text-anchor="middle" class="">3. Priority</text>
-<text x="287.0" y="67.0" text-anchor="middle" class="small">critical flag</text>
-<path class="arrow" d="M338,55 L349,55"/>
-<rect class="box git" x="349" y="20" width="102" height="70" rx="8"/>
-<text x="400.0" y="51.0" text-anchor="middle" class="">4. Local cache</text>
-<text x="400.0" y="67.0" text-anchor="middle" class="small">rebuildable</text>
-<path class="arrow" d="M451,55 L462,55"/>
-<rect class="box cloud" x="462" y="20" width="102" height="70" rx="8"/>
-<text x="513.0" y="51.0" text-anchor="middle" class="">5. Cloud link</text>
-<text x="513.0" y="67.0" text-anchor="middle" class="small">and sync</text>
-<path class="arrow" d="M564,55 L575,55"/>
-<rect class="box cloud" x="575" y="20" width="102" height="70" rx="8"/>
-<text x="626.0" y="51.0" text-anchor="middle" class="">6. Team roles</text>
-<text x="626.0" y="67.0" text-anchor="middle" class="small">sign-in</text>
-<path class="arrow" d="M677,55 L688,55"/>
-<rect class="box pub" x="688" y="20" width="102" height="70" rx="8"/>
-<text x="739.0" y="51.0" text-anchor="middle" class="">7. Public demo</text>
-<text x="739.0" y="67.0" text-anchor="middle" class="small">read-only</text>
+<rect class="box git" x="10" y="20" width="120" height="70" rx="8"/>
+<text x="70" y="51" text-anchor="middle">1. Server store</text>
+<text x="70" y="67" text-anchor="middle" class="small">CLI as client</text>
+<path class="arrow" d="M130,55 L143,55"/>
+<rect class="box git" x="143" y="20" width="120" height="70" rx="8"/>
+<text x="203" y="51" text-anchor="middle">2. Hooks, MCP</text>
+<text x="203" y="67" text-anchor="middle" class="small">through the server</text>
+<path class="arrow" d="M263,55 L276,55"/>
+<rect class="box git" x="276" y="20" width="120" height="70" rx="8"/>
+<text x="336" y="51" text-anchor="middle">3. Agents</text>
+<text x="336" y="67" text-anchor="middle" class="small">entity, branch, priority</text>
+<path class="arrow" d="M396,55 L409,55"/>
+<rect class="box cloud" x="409" y="20" width="120" height="70" rx="8"/>
+<text x="469" y="51" text-anchor="middle">4. Cloud record</text>
+<text x="469" y="67" text-anchor="middle" class="small">link, sync, queue</text>
+<path class="arrow" d="M529,55 L542,55"/>
+<rect class="box cloud" x="542" y="20" width="120" height="70" rx="8"/>
+<text x="602" y="51" text-anchor="middle">5. Identity</text>
+<text x="602" y="67" text-anchor="middle" class="small">login, roles, Connect</text>
+<path class="arrow" d="M662,55 L675,55"/>
+<rect class="box pub" x="675" y="20" width="120" height="70" rx="8"/>
+<text x="735" y="51" text-anchor="middle">6. Publish</text>
+<text x="735" y="67" text-anchor="middle" class="small">per project, filtered</text>
 <text x="400" y="112" text-anchor="middle" class="small">Blue steps need no account or network. Orange steps need Codeloop Cloud. Green is public.</text>
 </svg></div>
     <table>
       <tr><th>Step</th><th>Size</th><th>What you see</th></tr>
-      <tr><td>1. Per-story folders, one layout</td><td>M, about two weeks</td><td>Your commit carries only your story. The shared board file is gone after one automatic move on the first command. The location settings disappear from config.</td></tr>
-      <tr><td>2. Hub MCP with roles</td><td>M, about a week</td><td>One line in your agent's MCP config replaces the command-line skill. Agents get structured results; approve and answer refuse them.</td></tr>
-      <tr><td>3. Priority and critical flag</td><td>S, days</td><td>Stories carry P1 to P4 and a critical mark; next up orders by them. Pausing a running story stays manual until question 5 is answered.</td></tr>
-      <tr><td>4. Local cache</td><td>S, days</td><td>Board pages open fast on a project with hundreds of stories. Deleting the cache file is safe; it is rebuilt from the folders.</td></tr>
-      <tr><td>5. Cloud link and sync</td><td>L, three to four weeks</td><td><code>codeloop cloud connect</code>, then the same board on a second machine and at the hosted URL. Agents can use the workspace MCP URL.</td></tr>
-      <tr><td>6. Team roles</td><td>M, about two weeks</td><td>Invite a teammate from the Protobox workspace; they sign in and see the board with their role. Approve and answer stay yours.</td></tr>
-      <tr><td>7. Public demo</td><td>M, about two weeks</td><td>A public URL shows codeloop's own board and wiki read-only, through the filter.</td></tr>
+      <tr><td>1. The server owns the store; the command line becomes an API client</td><td>L, three to four weeks</td><td>SQLite in the codeloop home, started on demand by the first command. <code>codeloop import</code> moves the shared board file in, keeping every key; <code>codeloop export</code> writes it back out. Stories get internal ids. The location settings disappear. Your commits carry code only.</td></tr>
+      <tr><td>2. Hooks and MCP through the server, with roles</td><td>M, about two weeks</td><td>One line in your agent's MCP config replaces the command-line skill. The eight resource tools replace today's fourteen verbs. Hooks answer from the hub; the separate hook helper is gone. Approve and answer refuse an agent key.</td></tr>
+      <tr><td>3. Agent entity, story branch, priority</td><td>M, about a week</td><td>The board reads "Claude Code, started by Ana on her laptop, on branch feat/sync, working, last seen 3 minutes ago". Stories carry P1 to P4 and a critical mark; next up orders by them.</td></tr>
+      <tr><td>4. Codeloop Cloud as the record</td><td>L, three to four weeks</td><td>The same server on Protobox with the MongoDB store. <code>codeloop link</code>, then the same board on a second machine and at the hosted URL, offline writes queued as provisional. Agents can use the workspace MCP URL.</td></tr>
+      <tr><td>5. One identity and the Connect page</td><td>M, about two weeks</td><td>Sign up once, <code>codeloop login</code> by device code, roles from the workspace, per-agent keys minted and revoked on Connect your agents.</td></tr>
+      <tr><td>6. Public publishing</td><td>M, about two weeks</td><td>A public URL per project an owner switched on, read-only through the filter.</td></tr>
     </table>
   </section>
 
@@ -534,36 +557,34 @@ flowchart TD
     <h3>Tech choices</h3>
     <table>
       <tr><th>Choice</th><th>Alternative considered</th><th>Why</th><th>Cost</th></tr>
-      <tr><td>Per-story files in git as the local record</td><td>A local database as the record</td><td>Git already holds the plan and evidence; a commit carries one story; nothing to install or run</td><td>Board-wide views read many files, hence the cache in step 4</td></tr>
-      <tr><td>History is the record, state is a replay</td><td>Merging state files field by field</td><td>A union of add-only events merges without hand conflicts, on two machines or in the cloud</td><td>Replay time, bounded by the cache</td></tr>
-      <tr><td>Sync per story and per event</td><td>Pushing the whole board file, as today</td><td>Small, mergeable, safe offline, carries who did what</td><td>Replaces the current cloud sync code</td></tr>
-      <tr><td>Protobox store driver, one document per event</td><td>One document per story</td><td>No size ceiling on a long-lived story; appends are cheap</td><td>More documents, an index on story id</td></tr>
-      <tr><td>MCP over HTTP from the hub</td><td>The stdio MCP server alone</td><td>One link for every host; the role comes from the credential</td><td>The stdio server stays as a fallback</td></tr>
+      <tr><td>One server process writes the store</td><td>Every command opens the files under a lock, as today</td><td>One writer means no lock takeover, no shared-file commits, one place to check roles, and the same code path local and hosted</td><td>Commands depend on a running hub; hence start on demand and the read-only recovery path</td></tr>
+      <tr><td>SQLite in the codeloop home</td><td>A database file in the project's <code>.codeloop</code></td><td>Worktrees and clones share one board; git and sync tools cannot damage it; one backup folder</td><td>A fresh clone needs import or a cloud link</td></tr>
+      <tr><td>Random id plus server-assigned key</td><td>Numbers alone, with blocks per machine</td><td>References never depend on a human key; keys stay short and never change; no blocks to hand out</td><td>A key can be pending offline</td></tr>
+      <tr><td>History is the record, state is a replay</td><td>Merging state field by field</td><td>A union of add-only events merges without hand conflicts</td><td>Replay time, bounded by indexes</td></tr>
+      <tr><td>Protobox identity, device flow added</td><td>codeloop's own accounts</td><td>One sign-up, workspaces and keys already exist and are maintained</td><td>The device flow is new work on Protobox</td></tr>
     </table>
   </section>
 
   <section class="contract">
     <h3>Risks and what stays out of scope</h3>
     <ul>
-      <li>A merge-rule bug misplaces a story. The history is add-only and replay is deterministic, so <code>codeloop doctor</code> can replay any story from git and show the difference.</li>
-      <li>Protobox is down. Local work continues and queues; the shared board is stale until it returns. A team that cannot wait reads the git export.</li>
-      <li>Private text reaches the public view. Deny by default, activity streams never leave the machine, the path scan withholds matches, and one test feeds the view a story built to leak.</li>
-      <li>Local and server role checks drift. The server's check is final; the local one only shapes the message.</li>
-      <li>codeloop releases become tied to Protobox deploys. The sync and MCP endpoints are versioned, and the command line refuses a server it does not understand with a clear message.</li>
-      <li>Story-number collisions on two machines until the number blocks ship with step 5.</li>
-      <li>Pressure to make the cloud "do the work". Every execution feature stays in the downloadable version; the cloud's API has no verb for it, so the line holds by construction.</li>
+      <li>The hub will not start on some machine. The command shows the log and exits; doctor and export still read the store. Nothing writes around the server.</li>
+      <li>Protobox is down. A linked project keeps working from the hub's copy with provisional writes; the shared board is stale until it returns.</li>
+      <li>A merge-rule bug misplaces a story. History is add-only and replay deterministic, so any story can be replayed and the difference shown.</li>
+      <li>Private text reaches the public view. Deny by default, activity never leaves the machine, the path scan withholds matches, and one test feeds the view a story built to leak.</li>
+      <li>codeloop releases become tied to Protobox deploys. The API and sync protocol are versioned; the command line refuses a server it does not understand.</li>
+      <li>Pressure to make the cloud do the work. The hosted API has no verb for merge, gate run, orchestrated run or builder start, so the line holds by construction.</li>
     </ul>
-    <p><strong>Out of scope here:</strong> Protobox internals; the web board's visual redesign; running builder agents in the cloud, by design; a hook file for Codex; links between projects; live shared editing of a spec file, which git handles.</p>
+    <p><strong>Out of scope here:</strong> Protobox internals beyond identity; the web board's visual redesign; running agents in the cloud, by design; a hook file for Codex; links between projects; live shared editing of a document.</p>
   </section>
 
   <section class="contract">
     <h3>Open questions</h3>
-    <div class="q"><h4>1. When a project is linked to Codeloop Cloud, which copy is the record?</h4><p>Options: (a) the git files stay the record and the cloud is a synced mirror; (b) the cloud is the record for linked projects and the git files are a complete export codeloop keeps current. Recommendation: (b), with disconnect guaranteed to leave the project as if never linked.</p></div>
-    <div class="q"><h4>2. How do two machines avoid picking the same story number?</h4><p>Options: (a) the cloud hands each linked machine a block of numbers at link time; (b) offline stories get a temporary id and are renumbered when they sync; (c) ids become random strings. Recommendation: (a); numbers never change, so commit trailers and notes stay right.</p></div>
-    <div class="q"><h4>3. How do teammates sign in?</h4><p>Options: (a) Protobox accounts only, roles from the workspace; (b) codeloop's own invite links and passwords. Recommendation: (a); the local hub password stays for a machine with no cloud link.</p></div>
-    <div class="q"><h4>4. How does the public demo stay current?</h4><p>Options: (a) live from the cloud record through the filter, with a per-project switch; (b) a snapshot an owner publishes by hand. Recommendation: (a); a snapshot adds a step that gets forgotten and shows a stale loop.</p></div>
-    <div class="q"><h4>5. When a P1 arrives, what happens to a P2 a builder is working on?</h4><p>Options: (a) park it automatically with a note, after the builder's uncommitted work is handed back; (b) ask the owner first; (c) no pause, the P1 waits for a free slot. Recommendation: (b) now, moving to (a) once hand-back on pause exists.</p></div>
-    <div class="q"><h4>6. Where should checks such as size budget and health measure by default?</h4><p>Options: (a) the story's branch against main; (b) main itself; (c) the branch the agent is on, whatever it is. Recommendation: (c) as the default, since it is right for a founder running several agents on one branch and for a team on one worktree per story; a project can set (a) or (b).</p></div>
+    <div class="q"><h4>1. How do agents write a story's documents: research, spec, plan, evidence?</h4><p>Options: (a) only through the documents tool and the API, with codeloop export for reading in an editor; (b) through a folder the hub mirrors and watches, so an agent can edit markdown as today. Recommendation: (a). A watched folder is a second writer by another name, and stage agents already receive and return text through the brief.</p></div>
+    <div class="q"><h4>2. Should an agent use a key of its own, or its person's token?</h4><p>Options: (a) one agent key per agent host per machine, minted on Connect your agents and attributed to the person; (b) each person's login token, reused by every agent they run. Recommendation: (a). A leaked key is revoked alone, presence shows which agent, and a person's token can never be made to approve by an agent.</p></div>
+    <div class="q"><h4>3. On a linked project with no network, may the hub accept writes?</h4><p>Options: (a) yes, as provisional events the cloud orders and resolves by the fixed rules when they arrive; (b) read-only until the cloud is back. Recommendation: (a). A solo founder on a train keeps working; the provisional mark and the owner-wins rules keep the record honest.</p></div>
+    <div class="q"><h4>4. When a P1 arrives, what happens to a P2 a builder is working on?</h4><p>Options: (a) park it automatically with a note after the builder's uncommitted work is handed back; (b) ask the owner first; (c) no pause, the P1 waits for a free slot. Recommendation: (b) now, moving to (a) once hand-back on pause exists.</p></div>
+    <div class="q"><h4>5. Where should checks such as size budget and health measure by default?</h4><p>Options: (a) the story's branch against main; (b) main itself; (c) the branch the agent is on. Recommendation: (c), right for a founder running several agents on one branch and for a team on one worktree per story; a project can set (a) or (b).</p></div>
   </section>
 
 </div>
