@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { resolveAgent } from '../agent.js';
 import { readCards, stuckReason, writeCards } from '../cards.js';
-import { advanceCard, createCard } from '../engine.js';
+import { advanceCard, approveCard, createCard } from '../engine.js';
+import { reject } from '../services.js';
 import { runDueWithAgent } from '../run.js';
 import { newSpec } from '../spec.js';
 
@@ -194,5 +195,24 @@ describe('a check with no work behind it', () => {
     expect(card.gate).toBe('stuck');
     expect(stuckReason(card)).toBe('the agent ran and changed nothing; a person needs to look');
     expect(card.events.filter(e => e.action === 'agent-start')).toHaveLength(1);
+  });
+});
+
+describe('a stuck story parked and approved back', () => {
+  beforeEach(() => writeFileSync(join(dir, 'out.md'), 'a first draft'));
+
+  it('enters its stage fresh, so its first check after the approval counts one retry instead of parking it stuck again', () => {
+    advanceCard(dir, 'c-1');
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'out.md' });
+    expect(advanceCard(dir, 'c-1').outcome).toBe('stuck');
+    const parked = reject(dir, 'c-1', 'owner', '');
+    expect(parked.card.stage).toBe('proposed');
+    const back = approveCard(dir, 'c-1', 'owner');
+    expect(back.stage).toBe('draft');
+    expect(back.retries.draft ?? 0).toBe(0);
+    const next = advanceCard(dir, 'c-1');
+    expect(next.outcome).toBe('failed');
+    expect(next.card.retries.draft).toBe(1);
+    expect(next.card.gate).toBeUndefined();
   });
 });

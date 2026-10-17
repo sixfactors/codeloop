@@ -986,6 +986,13 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
     const back = before.parked_from && lane.stages.some(s => s.id === before.parked_from) ? before.parked_from : undefined;
     card.stage = back ?? firstStage(lane, card).id;
     delete card.parked_from;
+    // Back on the stage it was parked from, it enters fresh: a stuck story kept at the retry cap
+    // would park stuck again on its first check, under the old reason.
+    if (back) {
+      const fresh = enter(card, back);
+      card.retries = fresh.retries;
+      if (card.failures) card.failures = fresh.failures;
+    }
     card.laneVersion = lane.version;
     card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note), ...(back ? [] : skipEvents(lane, undefined, lane.stages.find(s => s.id === card.stage), card, now))];
     parkIfOutward(card, lane, now);
