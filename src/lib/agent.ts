@@ -281,6 +281,7 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
   const out = openSync(logFile, 'a');
   const started = Date.now();
   let untrack: () => void = () => undefined;
+  let untrackWatchdog: () => void = () => undefined;
   const timeoutMs = agent.timeoutMinutes * 60_000;
   let watchdog: ChildProcess | undefined;
   return new Promise(done => {
@@ -295,6 +296,7 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
           process.kill(-watchdog.pid, 'SIGKILL');
         } catch { /* already gone */ }
       }
+      untrackWatchdog();
       untrack();
       closeSync(out);
       keepTail(logFile);
@@ -315,12 +317,15 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
     });
     // Its own process group, registered: killed with this process, listed by `codeloop ps`.
     untrack = trackChild(projectDir, child.pid, `agent ${agent.name}`, agent.cmd);
-    // The timeout kill runs in a process of its own: a timer here waits while this process sits in a
-    // synchronous check (a doctor tick's spawnSync), and runs labelled 10 minutes lasted 16 to 103.
+    // The timeout kill runs in a process of its own: a timer here does not fire while this process
+    // sits in a synchronous check (a doctor tick's spawnSync), so the agent would outlive its timeout.
+    // It is registered like the agent, so it dies with this process and never fires later at a
+    // process group id the system has handed to something else.
     if (child.pid) {
       watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -- -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
       watchdog.on('error', () => undefined);
       watchdog.unref();
+      untrackWatchdog = trackChild(projectDir, watchdog.pid, `agent ${agent.name} watchdog`, `sleep ${timeoutMs / 1000}; kill the agent's group`);
     }
     const timer = setTimeout(() => {
       timedOut = true;

@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -104,6 +104,21 @@ describe('a check no story work can fix', () => {
     expect(r.outcome).toBe('failed');
     expect(r.output).toBe('2 of 4 tasks open');
     expect(card().events.filter(e => e.action === 'fail')).toHaveLength(1);
+  });
+});
+
+describe('an agent run', () => {
+  it('registers its timeout watchdog beside the agent, and ends it when the agent exits', async () => {
+    write('brief.md', 'Card: c-1\n');
+    const ran = await runAgent(dir, { name: 'fake', cmd: 'sleep 0.3; cat .codeloop/state/procs/*.json > seen.txt', timeoutMinutes: 1, maxRunsPerDay: 50 }, join(dir, 'brief.md'), join(dir, 'agent.log'));
+    expect(ran.exit).toBe(0);
+    const seen = readFileSync(join(dir, 'seen.txt'), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l) as { pid: number; purpose: string });
+    const watchdog = seen.find(r => /watchdog/.test(r.purpose));
+    expect(seen.map(r => r.purpose).sort()).toEqual(['agent fake', 'agent fake watchdog']);
+    expect(readdirSync(join(dir, '.codeloop/state/procs'))).toEqual([]);
+    const alive = () => { try { process.kill(watchdog!.pid, 0); return true; } catch { return false; } };
+    for (let i = 0; i < 20 && alive(); i++) await new Promise(r => setTimeout(r, 50));
+    expect(alive()).toBe(false);
   });
 });
 
