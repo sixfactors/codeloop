@@ -31,10 +31,10 @@ const env = () => ({
   CODELOOP_TEST_SANDBOX: process.env.CODELOOP_TEST_SANDBOX ?? '',
 });
 
-/** `codeloop guard edit` as the CLI runs it: the lazy program, with a non-exit throw ending as node's exit 1. */
-async function cliExitCode(): Promise<number> {
-  Object.assign(process.env, env());
-  const program = (await lazyProgram(['node', 'codeloop', 'guard', 'edit']))!;
+/** `codeloop guard <verb>` as the CLI runs it: the lazy program, with a non-exit throw ending as node's exit 1. */
+async function cliExitCode(argv: string[] = ['guard', 'edit'], vars: Record<string, string> = env(), body = BODY): Promise<number> {
+  Object.assign(process.env, vars);
+  const program = (await lazyProgram(['node', 'codeloop', ...argv]))!;
   const realExit = process.exit;
   let code: number | undefined;
   process.exit = ((c?: number) => {
@@ -42,7 +42,7 @@ async function cliExitCode(): Promise<number> {
     throw new Error(`exit ${code}`);
   }) as typeof process.exit;
   try {
-    await withStdin(BODY, () => program.parseAsync(['node', 'codeloop', 'guard', 'edit']));
+    await withStdin(body, () => program.parseAsync(['node', 'codeloop', ...argv]));
     return code ?? 0;
   } catch {
     return code ?? 1;
@@ -59,5 +59,34 @@ describe('an edit guard that throws', () => {
     expect(reply.slice(reply.indexOf(SEPARATOR))).toContain('edit guard failed');
 
     expect(await cliExitCode()).toBe(2);
+  });
+});
+
+describe('a shell guard', () => {
+  const SHELL = JSON.stringify({ tool_input: { command: 'ls' } });
+  // No card from the run and no session, so the guard reads the repo's active-card file.
+  const shellEnv = () => {
+    for (const k of ['CODELOOP_CARD', 'CLAUDE_CODE_SESSION_ID', 'CURSOR_SESSION_ID']) delete process.env[k];
+    const { CODELOOP_CARD: _card, ...rest } = env();
+    return rest;
+  };
+
+  it('that throws blocks the command with exit 2 on both the daemon and the CLI path', async () => {
+    // A folder where the active-card file belongs: reading it throws EISDIR inside the guard.
+    mkdirSync(join(proj, '.codeloop/state/active-card'), { recursive: true });
+    const reply = await execute({ verb: 'bash', cwd: proj, args: ['--format', 'claude'], env: shellEnv(), body: SHELL });
+    expect(reply, 'the daemon answers itself instead of handing the throw to the CLI').not.toBe('FALLBACK\n');
+    expect(Number(reply.split('\n')[0])).toBe(2);
+    expect(reply.slice(reply.indexOf(SEPARATOR))).toContain('shell guard failed');
+
+    expect(await cliExitCode(['guard', 'bash'], shellEnv(), SHELL)).toBe(2);
+  });
+
+  it('lets a command through in a fresh repo with no cards.json', async () => {
+    rmSync(join(proj, '.codeloop/cards.json'));
+    const reply = await execute({ verb: 'bash', cwd: proj, args: ['--format', 'claude'], env: shellEnv(), body: SHELL });
+    expect(reply.split('\n')[0]).toBe('0');
+
+    expect(await cliExitCode(['guard', 'bash'], shellEnv(), SHELL)).toBe(0);
   });
 });

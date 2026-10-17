@@ -27,6 +27,7 @@ when package.json names a version this file has no heading for.
 - A no-op agent on a stage whose check writes a report file into the repo (junit.xml) is started once, not twice: the start records the work as its own check left it.
 - A story's health delta counts only the critical gotchas scoped to the files its own commits changed, so a gotcha another story adds elsewhere no longer lowers it.
 - The edit guard refuses an edit (exit 2) when its own check throws, on the hook daemon and the CLI alike; before, a throw such as a malformed card in cards.json exited 1 and let the edit through.
+- The shell guard refuses the command (exit 2) when its own check throws, on the hook daemon and the CLI alike; before, a throw exited 1 and let the command run. A repo with no cards.json is not a throw and still lets commands through.
 - A story whose recorded spec folder is missing finds the one folder with its number, uses it, and records it on the card, so the spec page shows what the builder wrote.
 - A story's working time counts its agent runs for as long as they ran and each lone edit as a minute, so a story worked by a headless agent no longer reads working 0m.
 - `verify` on a trivial story over budget says it was parked at a gate only when it was; on a lane with no earlier gate it says the story is re-sized and stays at its stage.

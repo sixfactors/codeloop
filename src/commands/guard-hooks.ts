@@ -127,9 +127,10 @@ guardCommand
     }
   });
 
-/** The refusal printed when the edit guard throws, on the CLI and the daemon path alike. */
-export const editGuardFailed = (e: unknown): string =>
-  chalk.red(`codeloop: the edit guard failed (${e instanceof Error ? e.message : String(e)}), so the edit is refused until it can check`);
+/** The refusal printed when a guard throws, on the CLI and the daemon path alike. */
+export const guardFailed = (verb: 'edit' | 'bash', e: unknown): string =>
+  chalk.red(`codeloop: the ${verb === 'bash' ? 'shell' : 'edit'} guard failed (${e instanceof Error ? e.message : String(e)}), so the ${verb === 'bash' ? 'command' : 'edit'} is refused until it can check`);
+export const editGuardFailed = (e: unknown): string => guardFailed('edit', e);
 
 // Open stories by priority band, then score, then age: what a session with nothing active should pick from.
 async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
@@ -160,7 +161,15 @@ guardCommand
   .command('bash')
   .description("PreToolUse hook for the assistant's shell tool: `codeloop approve`, `reject`, `answer`, `card done|drop` and `--as owner|reviewer` go to the person as a permission prompt; their Allow is the decision")
   .option('--format <format>', 'claude (PreToolUse JSON) or cursor (beforeShellExecution JSON)', 'claude')
-  .action(guardBash);
+  .action(async (opts: { format: string }) => {
+    try {
+      await guardBash(opts);
+    } catch (e) {
+      // Exit 1 lets the command run, so a guard that cannot decide refuses instead, as the edit guard does.
+      console.error(guardFailed('bash', e));
+      process.exit(2);
+    }
+  });
 
 guardCommand
   .command('release')
