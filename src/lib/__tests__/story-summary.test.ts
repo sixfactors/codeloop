@@ -85,6 +85,15 @@ describe('the story summary', () => {
     expect(body.summary.you.text).toMatch(/^Nothing waits on you/);
   });
 
+  it('uc-311-02: only an owner server writes the summary, and who wrote it never comes from the body', async () => {
+    const agent = createApp(dir);
+    expect((await put(agent, '/api/cards/c-1/summary', { needed: 'Forged.', by: 'owner' })).status).toBe(403);
+    expect(readCards(dir).cards[0].summary).toBeUndefined();
+    const owner = createApp(dir, undefined, { owner: true });
+    expect((await put(owner, '/api/cards/c-1/summary', { needed: 'Totals in the last row.', by: 'mallory' })).status).toBe(200);
+    expect(readCards(dir).cards[0].summary?.needed).toMatchObject({ by: 'owner', kind: 'person' });
+  });
+
   it('uc-311-06: an edit and a hand-back landing on the same read both stay', () => {
     const read = readCards(dir);
     writeSummary(dir, 'c-1', { needed: 'The owner wrote this.' }, { by: 'owner', kind: 'person' });

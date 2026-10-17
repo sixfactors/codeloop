@@ -380,10 +380,14 @@ export function createApp(
     return c.json(written);
   }));
 
-  // The summary's needed and done lines. The owner's write is a person's; an agent's never replaces it.
+  // The summary's needed and done lines, as the owner. Who wrote them comes from this process, never
+  // the body: a server started inside an agent run writes as that agent, which never replaces a
+  // person's line. Agents without --owner write theirs through `card summary` or the hand-back.
   app.put(api('/cards/:id/summary'), writing(async c => {
-    const body = await json(c, { needed: undefined as string | undefined, done: undefined as string | undefined, by: undefined as string | undefined });
-    const saved = services.saveSummary(projectDir, c.req.param('id'), { needed: body.needed, done: body.done }, role, role === 'agent' ? body.by : undefined);
+    if (!owner) return readOnly(c, 'edit the summary');
+    const body = await json(c, { needed: undefined as string | undefined, done: undefined as string | undefined });
+    const agentRun = process.env.CODELOOP_AGENT_RUN;
+    const saved = services.saveSummary(projectDir, c.req.param('id'), { needed: body.needed, done: body.done }, agentRun ? 'agent' : 'owner', agentRun || undefined);
     await refreshCards();
     return c.json(saved);
   }));
