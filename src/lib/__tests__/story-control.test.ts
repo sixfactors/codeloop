@@ -57,6 +57,26 @@ describe('place on a lane whose first stage is outward', () => {
   });
 });
 
+describe('start --stage on an outward-first lane that writes specs', () => {
+  it('places past the entry gate although start wrote a spec event first, and refuses once a decision is on record', async () => {
+    const { runCli } = await import('../../__tests__/cli.js');
+    writeFileSync(
+      join(dir, '.codeloop/lanes/post.yaml'),
+      `id: post\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: announce\n    output: "{spec}/announce.md"\n    done: { cmd: "true" }\n    gate: { name: publish, approver: owner, outward: true }\n  - id: build\n    done: { cmd: "true" }\n`,
+    );
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const started = runCli(['start', 'Already drafted', '--lane', 'post', '--stage', 'build'], { cwd: dir, encoding: 'utf-8', env });
+    expect(started.stderr).not.toMatch(/waiting at the publish gate/);
+    const c = readCards(dir).cards.find(x => x.title === 'Already drafted')!;
+    expect(c.events.map(e => e.action)).toContain('spec');
+    expect(c.stage).toBe('build');
+    createCard(dir, { lane: 'post', title: 'Already rejected once', id: 'c-9' });
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(x => (x.id === 'c-9' ? { ...x, events: [...x.events, { at: new Date().toISOString(), actor: 'owner', human: true, action: 'reject', stage: 'announce', note: 'no' }] } : x)));
+    expect(() => placeCard(dir, 'c-9', 'build', 'owner')).toThrow(/waiting at the publish gate/);
+  });
+});
+
 describe('reopen', () => {
   it('returns a done card to the first stage with the gate and failure marks cleared', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });

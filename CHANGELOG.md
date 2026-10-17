@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `codeloop start --stage <stage>` works on an outward-first lane that writes specs: the spec event start records no longer counts as the entry gate having decided something; a place is refused once an agent started, a check failed or ran, or the gate was approved or rejected.
 - An S or trivial story skips the review stage (`when: size >= M`): verify's brief carries the review triage (`fold: review`), and after the owner's local approval verify still parks at the pr gate for the reviewer, so nothing moves on unreviewed. Approvals now record the gate they answered.
 - `codeloop card handback` run from a linked worktree runs the proof in that worktree, where the branch is checked out, instead of in the main tree; `--worktree` still overrides. A failing proof prints its exit code, the cwd, the exact command with the shell that ran it and the first lines of output, and the record keeps the cwd and shell.
 - `codeloop task check <id> --all-done` reads the tasks.md of a story that skipped the spec stage (an S story) when it lists tasks, instead of printing "no tasks" and passing; with no tasks.md, or one with no task lines, it still passes on the skip.

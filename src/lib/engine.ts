@@ -654,10 +654,11 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
   // An approval or a stuck count belongs to the stage it was given at; placing past it would carry it to the new one.
-  // A card made at an outward first stage parks at that stage's entry gate on creation. Until
-  // anything has run, that gate decides nothing yet, so placing the card past it is allowed.
+  // A card made at an outward first stage parks at that stage's entry gate on creation. Until an
+  // agent has started on it or the gate or a check has decided something, that gate decides
+  // nothing yet, so placing the card past it is allowed (start's own spec event included).
   const first = firstStage(lane, before);
-  const onlyEntryGate = before.stage === first.id && !!first.gate?.outward && before.gate === first.gate.name && before.events.every(e => ['create', 'skip', 'park'].includes(e.action));
+  const onlyEntryGate = before.stage === first.id && !!first.gate?.outward && before.gate === first.gate.name && !before.events.some(e => ['agent-start', 'fail', 'approve', 'reject', 'advance'].includes(e.action));
   const waiting = opts.review ? reviewMoveRefusal(lane, before, lane.stages.findIndex(s => s.id === stage)) : onlyEntryGate ? undefined : gateRefusal(before);
   if (waiting) throw new RefusalError(waiting);
   if (stage === SPLIT_BEFORE_STAGE) {
