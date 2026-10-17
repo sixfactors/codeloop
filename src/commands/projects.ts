@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { listProjects, removeProject } from '../lib/hub-registry.js';
+import { listProjects, pruneProjects, removeProject } from '../lib/hub-registry.js';
 
 export const projectsCommand = new Command('projects').description('The hub\'s registry of known projects');
 
@@ -35,4 +35,18 @@ projectsCommand
       console.log(chalk.red(`  No registered project has id "${id}".`));
       process.exit(1);
     }
+  });
+
+projectsCommand
+  .command('prune')
+  .description('Drop registry entries whose folder no longer exists; a dry run unless --write')
+  .option('--write', 'Remove them (default: only list them)', false)
+  .action((opts: { write?: boolean }) => {
+    const gone = pruneProjects({ dryRun: !opts.write });
+    if (gone.length === 0) {
+      console.log(chalk.dim('  Every registered project folder exists; nothing to prune.'));
+      return;
+    }
+    for (const p of gone) console.log(`  ${opts.write ? chalk.green('removed') : chalk.yellow('would remove')} ${chalk.bold(p.id)} ${chalk.dim(p.path)}`);
+    if (!opts.write) console.log(chalk.dim(`  ${gone.length} entr${gone.length === 1 ? 'y' : 'ies'} point at missing folders. \`codeloop projects prune --write\` removes them.`));
   });
