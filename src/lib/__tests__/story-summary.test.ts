@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -64,6 +64,17 @@ describe('the story summary', () => {
     const body = await full(createApp(dir));
     expect(body.summary.mark).toBe('stale');
     expect(body.summary.needed).toMatchObject({ step: 'draft', byKind: 'agent' });
+  });
+
+  it('uc-311-04: a folded checks section shows a failing check on its heading', async () => {
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), readFileSync(join(dir, '.codeloop/lanes/build.yaml'), 'utf-8').replace('  - id: draft\n    done: { cmd: "true" }', '  - id: draft\n    done: { cmd: "echo research.md cites 0 sources >&2; exit 1" }'));
+    advanceCard(dir, 'c-1');
+    const body = await full(createApp(dir));
+    expect(body.journey.check.pass).toBe(false);
+    const { foldHeadings } = await import('../../../workspace/lib/story-folds.js');
+    const folds = foldHeadings(body);
+    expect(folds.checks).toEqual({ count: '1 failing', failing: true });
+    expect(folds.history.failing).toBe(false);
   });
 
   it('uc-311-05: a story nobody summarised opens on lines worked out from the board, marked unwritten', async () => {

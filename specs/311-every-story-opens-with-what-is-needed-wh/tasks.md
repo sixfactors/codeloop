@@ -14,8 +14,8 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 - [x] T003 [US4] [api] The full story response carries the summary, or one worked out from the board's facts and marked unwritten when none exists, in src/lib/services.ts
 - [x] T004 [US5] [api] The response marks a summary written before the story's current step, and takes the waiting-on-you line from the board's holder, never from the text, in src/lib/services.ts
 - [x] T005 [US3] [sdk] A summary write in the SDK and a hook to edit one line from the page, in src/sdk and workspace/lib/queries.ts
-- [ ] T006 [US1] [ui] A story summary card with who and when on each line and an Edit action, above the buttons and the step bar, in workspace/components/shared/story-summary.tsx and workspace/components/shared/card-detail.tsx
-- [ ] T007 [US2] [ui] Fold checks and scores, history, raw output, tasks and commits and details under headings with counts, a failing check shown on its heading, in workspace/components/shared/card-detail.tsx
+- [x] T006 [US1] [ui] A story summary card with who and when on each line and an Edit action, above the buttons and the step bar, in workspace/components/shared/story-summary.tsx and workspace/components/shared/card-detail.tsx
+- [x] T007 [US2] [ui] Fold checks and scores, history, raw output, tasks and commits and details under headings with counts, a failing check shown on its heading, in workspace/components/shared/card-detail.tsx
 - [ ] T008 [US1] [test] One test per failure mode uc-311-01 to uc-311-07 in src/lib/__tests__/story-summary.test.ts and a story page browser test at phone width, each seen failing once with the fix reverted
 
 ## Rubric

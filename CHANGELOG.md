@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The story page opens on the summary card, with who wrote each line and when and an Edit action, then the action buttons and the step bar; checks and scores, history, raw output, tasks and commits and details fold under headings that keep a count, and a failing check shows on its heading. Waiting reads in amber with an hourglass.
 - `codeloop card summary <id> --needed "..." --done "..."` and `card handback --needed/--done` write the story summary; as an agent the write keeps any line a person wrote. The builder brief asks the agent to write or improve it at the end of its turn.
 - The full story response carries a three-line summary: what the story needs, what is done and what you must do. A story nobody summarised gets lines worked out from the board, marked as not yet written by an agent; lines from an earlier step are marked older; what you must do always comes from the board. `PUT /api/cards/<id>/summary` writes the first two lines.
 - The stages and checks docs say to gitignore the report files a check writes inside the repo: a check that writes a new file name each run reads as new work and restarts the agent.

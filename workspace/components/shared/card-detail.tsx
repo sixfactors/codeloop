@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  CalendarDays, ClipboardList, ExternalLink, FileText, Flag, Gauge, Hash, Ruler, Target, User, Waypoints, BookOpen, FolderOpen,
+  CalendarDays, ClipboardList, ExternalLink, FileText, Flag, Gauge, Hash, History, ListChecks, Ruler, SquareCheck, Target, User, Waypoints, BookOpen, FolderOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,11 @@ import { ToneBadge } from '@/components/shared/board-card';
 import { Questions } from '@/components/shared/questions';
 import { Markdown } from '@/components/shared/markdown';
 import { JourneyStepper } from '@/components/shared/journey-stepper';
-import { CurrentStepPanel } from '@/components/shared/current-step-panel';
+import { CheckLine, CurrentStepPanel } from '@/components/shared/current-step-panel';
+import { FoldSection } from '@/components/shared/fold-section';
+import { RubricRows } from '@/components/shared/rubric-rows';
+import { StorySummary } from '@/components/shared/story-summary';
+import { foldHeadings } from '@/lib/story-folds';
 import { TasksAndCommits } from '@/components/shared/tasks-commits';
 import { OrchestrationSection } from '@/components/shared/orchestration-section';
 import { ActivityFeed } from '@/components/shared/activity-feed';
@@ -160,33 +164,52 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
     </AttributeCard>
   );
 
+  const folds = full.data ? foldHeadings(full.data) : undefined;
+  const holder = journey?.holder;
+  const waiting = holder?.kind === 'you';
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
+      {/* The summary, the actions and the step bar stay in view; everything else folds under them with a count (c-311). */}
+      {fullMissing ? null : full.error ? <InlineError title="Story failed to load" error={full.error} onRetry={() => full.refetch()} /> : <StorySummary cardId={card.id} summary={full.data?.summary} waiting={waiting} />}
+      {/* Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
+      <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} compact />
       {journey ? <JourneyStepper journey={journey} /> : !full.data && !full.error ? <Skeleton className="h-12 w-full rounded-lg" /> : null}
-      {/* Above the rail, so on a narrow screen what to do next comes before the story's details.
-          Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
-      <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} />
-      <OrchestrationSection cardId={card.id} />
-      {full.data ? <TasksAndCommits tasks={full.data.tasks ?? []} counts={full.data.journey?.tasks} commits={full.data.commits ?? []} /> : null}
-      <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
-        <div className="flex min-w-0 flex-col gap-4">
-          <Tabs defaultValue="output" key={`tabs-${card.id}`}>
-            <TabsList className="h-auto w-full flex-wrap justify-start">
-              <TabsTrigger value="output" data-testid="tab-output">Output</TabsTrigger>
-              <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
-              <TabsTrigger value="spec">Spec</TabsTrigger>
-            </TabsList>
-            <TabsContent value="output" className="pt-2"><ProducedByStep card={card} full={full} /></TabsContent>
-            <TabsContent value="activity" className="pt-2"><ActivityFeed cardId={card.id} phases={phases} /></TabsContent>
-            <TabsContent value="spec" className="pt-2">
-              {full.data?.spec ? <Markdown>{full.data.spec}</Markdown>
-                : !full.data && !full.error ? <Skeleton className="h-16 w-full" />
-                : full.error && !fullMissing ? <InlineError title="Spec failed to load" error={full.error} onRetry={() => full.refetch()} />
-                : <EmptyState compact icon={FileText} title="No spec yet" description={`The spec phase writes it${card.spec ? ` to ${card.spec}` : ''}.`} />}
-            </TabsContent>
-          </Tabs>
+      {folds && full.data ? (
+        <div className="flex min-w-0 flex-col gap-2" data-testid="story-folds">
+          <FoldSection title="Checks and scores" heading={folds.checks} icon={ListChecks} testId="fold-checks">
+            {journey?.check ? <CheckLine journey={journey} raw={false} /> : <p className="text-sm text-muted-foreground">No check has run in this phase yet.</p>}
+            {full.data.rubric?.rows.length ? <RubricRows rubric={full.data.rubric} /> : null}
+          </FoldSection>
+          <FoldSection title="History" heading={folds.history} icon={History} testId="fold-history">
+            <OrchestrationSection cardId={card.id} />
+            <ActivityFeed cardId={card.id} phases={phases} />
+          </FoldSection>
+          <FoldSection title="Raw output" heading={folds.raw} icon={FileText} testId="fold-raw">
+            {journey?.check?.output.trim() ? <pre className="max-h-64 w-full overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-[11px] whitespace-pre-wrap wrap-anywhere">{journey.check.output.trim()}</pre> : <p className="text-sm text-muted-foreground">The last check printed nothing.</p>}
+          </FoldSection>
+          <FoldSection title="Tasks and commits" heading={folds.tasks} icon={SquareCheck} testId="fold-tasks">
+            <TasksAndCommits tasks={full.data.tasks ?? []} counts={full.data.journey?.tasks} commits={full.data.commits ?? []} />
+          </FoldSection>
+          <FoldSection title="Details" heading={folds.details} icon={ClipboardList} testId="fold-details">
+            <RecordLayout rail={rail} className={stacked ? 'lg:grid-cols-1' : undefined}>
+              <div className="flex min-w-0 flex-col gap-4">
+                <Tabs defaultValue="output" key={`tabs-${card.id}`}>
+                  <TabsList className="h-auto w-full flex-wrap justify-start">
+                    <TabsTrigger value="output" data-testid="tab-output">Output</TabsTrigger>
+                    <TabsTrigger value="spec">Spec</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="output" className="pt-2"><ProducedByStep card={card} full={full} /></TabsContent>
+                  <TabsContent value="spec" className="pt-2">
+                    {full.data.spec ? <Markdown>{full.data.spec}</Markdown>
+                      : <EmptyState compact icon={FileText} title="No spec yet" description={`The spec phase writes it${card.spec ? ` to ${card.spec}` : ''}.`} />}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </RecordLayout>
+          </FoldSection>
         </div>
-      </RecordLayout>
+      ) : !full.data && !full.error ? <Skeleton className="h-40 w-full rounded-xl" /> : null}
     </div>
   );
 }
