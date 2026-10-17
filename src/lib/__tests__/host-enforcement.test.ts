@@ -290,6 +290,33 @@ stages:
     }
   });
 
+  it('asks the same for the `cards` alias, which the CLI accepts for `card`', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: research\n    done: { cmd: "true" }\n  - id: spec\n    done: { cmd: "true" }\n    gate: { name: spec, approver: owner }\n  - id: build\n    done: { cmd: "true" }\n');
+    const now = new Date().toISOString();
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [{ id: 'c-3', title: 'Card c-3', lane: 'build', laneVersion: 1, stage: 'research', retries: {}, evidence: [], events: [], createdAt: now, updatedAt: now }] }));
+    const { guardBash, withStdin } = await import('../../commands/guard-hooks.js');
+    const before = process.env.CODELOOP_PROJECT_DIR;
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    const asks = async (command: string) => {
+      const out: string[] = [];
+      const log = vi.spyOn(console, 'log').mockImplementation((line: unknown) => { out.push(String(line)); });
+      try {
+        await withStdin(JSON.stringify({ tool_input: { command } }), () => guardBash({ format: 'claude' }));
+      } finally {
+        log.mockRestore();
+      }
+      return out.join('\n').includes('"permissionDecision":"ask"');
+    };
+    try {
+      for (const command of ['codeloop card move c-3 build', 'codeloop cards move c-3 build', 'codeloop card done c-3', 'codeloop cards done c-3', 'codeloop cards approve c-3']) {
+        expect(await asks(command), command).toBe(true);
+      }
+    } finally {
+      if (before === undefined) delete process.env.CODELOOP_PROJECT_DIR;
+      else process.env.CODELOOP_PROJECT_DIR = before;
+    }
+  });
+
   it('answers Cursor in its beforeShellExecution format', () => {
     expect(JSON.parse(call('codeloop approve c-5', 'cursor').stdout)).toMatchObject({ permission: 'ask' });
     expect(JSON.parse(call('npm test', 'cursor').stdout)).toEqual({ permission: 'allow' });

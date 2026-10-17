@@ -142,7 +142,7 @@ guardCommand
 
 // Owner actions an assistant must never take in its own shell tool. The hook only fires for the
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
-const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|card\s+(?:done|drop|approve|reject))\b|--as[ =](owner|reviewer)\b/;
+const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|cards?\s+(?:done|drop|approve|reject))\b|--as[ =](owner|reviewer)\b/;
 
 guardCommand
   .command('bash')
@@ -425,7 +425,7 @@ export async function guardSession(): Promise<void> {
 }
 
 /** Behind `guard bash` and the hook daemon. Each `codeloop card move` up to the next shell separator. */
-const CARD_MOVE = /\bcodeloop\s+card\s+move\b[^;&|\n]*/g;
+const CARD_MOVE = /\bcodeloop\s+cards?\s+move\b[^;&|\n]*/g;
 const WORD = /"([^"]*)"|'([^']*)'|(\S+)/g;
 
 /** The id and stage of one `card move`, with options dropped wherever they sit. `--opt value` drops both. */
