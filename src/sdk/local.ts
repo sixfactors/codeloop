@@ -199,7 +199,7 @@ export const createLocalClient = (projectDir: string = projectRoot(), options: L
 
 export { CodeloopClient };
 /** The `## Q<n>` block parser and the per-card limit, for a CLI reading questions from a file. */
-export { MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
+export { interviewQuestions, MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
 /** The directory holding the board: CODELOOP_PROJECT_DIR when a builder runs in a worktree, else the working directory. */
 export { projectRoot } from '../lib/project-root.js';
 export { parseWindow, renderProgress } from '../lib/story-progress.js';

@@ -7,8 +7,15 @@ import { withLock } from './lock.js';
 import { newSpec, resolveSpecDir } from './spec.js';
 
 export const INTERVIEW = 'interview.md';
-/** More than five means the asker has not decided what matters; the owner answers in minutes, not an afternoon. */
+/**
+ * More than five interview questions means the asker has not decided what matters; the owner
+ * answers in minutes, not an afternoon. Review and gap questions (the review pass, a reviewer's
+ * findings) are not the interview and do not count against it.
+ */
 export const MAX_QUESTIONS = 5;
+
+export const QUESTION_KINDS = ['interview', 'review', 'gap'] as const;
+export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
 /** One choice on a question with a real fork: a letter and its text. */
 export interface QuestionOption {
@@ -24,7 +31,13 @@ export interface Question {
   /** An option's letter when there are options, or free text. */
   recommended: string;
   answer: string;
+  /** Absent for an interview question; a `kind:` line in the file otherwise. */
+  kind?: QuestionKind;
 }
+
+/** The question's kind: its `kind:` line, else review for a `Review:` question (the review pass), else interview. */
+export const questionKind = (q: Pick<Question, 'question' | 'kind'>): QuestionKind => q.kind ?? (q.question.startsWith('Review:') ? 'review' : 'interview');
+export const interviewQuestions = <T extends Pick<Question, 'question' | 'kind'>>(qs: T[]): T[] => qs.filter(q => questionKind(q) === 'interview');
 
 const LETTER = /^[A-Z]$/;
 
@@ -76,6 +89,12 @@ export function parseQuestions(text: string): Question[] {
       last.options!.push({ key: option[1], text: option[2].trim() });
       continue;
     }
+    const kind = /^kind:\s*(\S+)\s*$/.exec(line);
+    if (kind && (QUESTION_KINDS as readonly string[]).includes(kind[1])) {
+      inOptions = false;
+      if (kind[1] !== 'interview') last.kind = kind[1] as QuestionKind;
+      continue;
+    }
     const field = /^(recommended|answer):\s*(.*)$/.exec(line);
     if (field) {
       inOptions = false;
@@ -87,7 +106,7 @@ export function parseQuestions(text: string): Question[] {
 
 function block(q: Question): string {
   const options = q.options?.length ? `options:\n${q.options.map(o => `- ${o.key}: ${o.text}`).join('\n')}\n` : '';
-  return `## Q${q.n} ${q.question}\n${options}recommended: ${q.recommended}\nanswer: ${q.answer}\n`;
+  return `## Q${q.n} ${q.question}\n${q.kind && q.kind !== 'interview' ? `kind: ${q.kind}\n` : ''}${options}recommended: ${q.recommended}\nanswer: ${q.answer}\n`;
 }
 
 /** The markdown `parseQuestions` reads back. */
@@ -137,18 +156,22 @@ export const openQuestions = (projectDir: string, card: Card) => readQuestions(p
 
 /**
  * Appends questions to the card's interview.md, numbering on from the last. A proposal has no spec
- * folder yet, so one is made the way `start` makes it. Refused past MAX_QUESTIONS in all.
+ * folder yet, so one is made the way `start` makes it. Refused past MAX_QUESTIONS interview questions.
  */
-export function addQuestions(projectDir: string, ref: string, items: { question: string; recommended?: string; options?: string[] }[], role: Role = 'agent'): { path: string; added: Question[] } {
+export function addQuestions(projectDir: string, ref: string, items: { question: string; recommended?: string; options?: string[]; kind?: QuestionKind }[], role: Role = 'agent'): { path: string; added: Question[] } {
   const card = findCard(readCards(projectDir).cards, ref);
   if (items.length === 0) throw new RefusalError('no questions to add');
   if (items.some(i => !i.question.trim())) throw new RefusalError('a question cannot be empty');
+  const badKind = items.find(i => i.kind !== undefined && !(QUESTION_KINDS as readonly string[]).includes(i.kind));
+  if (badKind) throw new RefusalError(`kind "${badKind.kind}" is not ${QUESTION_KINDS.join(', ')}`);
   const path = interviewPath(projectDir, card) ?? `${onBoardTree(() => newSpec(projectDir, card.id, role)).dir}/${INTERVIEW}`;
   const file = join(projectDir, path);
   return withLock(file, () => {
     const existing = existsSync(file) ? parseQuestions(readFileSync(file, 'utf-8')) : [];
-    if (existing.length + items.length > MAX_QUESTIONS) {
-      throw new RefusalError(`${existing.length + items.length} questions would be on ${card.id}, the limit is ${MAX_QUESTIONS}: ask only what changes the build`);
+    const asking = interviewQuestions(items.map(i => ({ ...i, question: i.question.trim() })));
+    const total = interviewQuestions(existing).length + asking.length;
+    if (asking.length && total > MAX_QUESTIONS) {
+      throw new RefusalError(`${total} interview questions would be on ${card.id}, the limit is ${MAX_QUESTIONS}: ask only what changes the build (a review finding takes \`--kind review\` and does not count)`);
     }
     const last = existing.reduce((m, q) => Math.max(m, q.n), 0);
     const added: Question[] = items.map((i, at) => ({
@@ -157,6 +180,7 @@ export function addQuestions(projectDir: string, ref: string, items: { question:
       ...(i.options?.length ? { options: i.options.map((text, k) => ({ key: String.fromCharCode(65 + k), text: text.trim() })) } : {}),
       recommended: (i.recommended ?? '').trim(),
       answer: '',
+      ...(i.kind && i.kind !== 'interview' ? { kind: i.kind } : {}),
     }));
     const problems = questionProblems(added);
     if (problems.length) throw new RefusalError(problems.join('; '));

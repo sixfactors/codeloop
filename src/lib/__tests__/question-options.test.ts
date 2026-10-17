@@ -134,3 +134,19 @@ describe('answers an agent wrote into interview.md', () => {
     expect(check.status).toBe(0);
   });
 });
+
+describe('the five-question cap', () => {
+  it('counts only interview questions: review and gap questions are recorded past it', async () => {
+    const { runCli } = await import('../../__tests__/cli.js');
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const cli = (...args: string[]) => runCli(args, { cwd: dir, encoding: 'utf-8', env });
+    expect(cli('ask', 'c-001', 'Fifth interview question?', '--recommended', 'yes').status).toBe(0);
+    const review = cli('ask', 'c-001', 'Review: the export skips archived invoices. Fix now?', '--recommended', 'yes');
+    expect(review.stderr).not.toMatch(/limit is 5/);
+    expect(cli('ask', 'c-001', 'The verify stage has no use case for empty lists. What goes there?', '--kind', 'gap').status).toBe(0);
+    expect(cli('ask', 'c-001', 'Sixth interview question?').stderr).toMatch(/6 interview questions would be on c-001, the limit is 5/);
+    const qs = parseQuestions(readFileSync(join(dir, 'specs/001/interview.md'), 'utf-8'));
+    expect(qs).toHaveLength(7);
+    expect(qs[6].kind).toBe('gap');
+  });
+});

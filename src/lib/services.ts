@@ -518,7 +518,7 @@ export function questions(projectDir: string, ref: string): { id: string; questi
   return { id: card.id, questions: readQuestions(projectDir, card) };
 }
 
-export const ask = (projectDir: string, ref: string, items: { question: string; recommended?: string }[], who: Role): { path: string; added: Question[] } => addQuestions(projectDir, ref, items, who);
+export const ask = (projectDir: string, ref: string, items: Parameters<typeof addQuestions>[2], who: Role): { path: string; added: Question[] } => addQuestions(projectDir, ref, items, who);
 
 export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean; option?: string }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
 /** Every open question's recommended answer, accepted in one write. The owner's decision, like any answer. */

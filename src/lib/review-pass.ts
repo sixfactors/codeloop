@@ -262,7 +262,7 @@ function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], 
   if (gaps.length && !asked(projectDir, card, key)) {
     // The files are written either way; a full interview only means the gaps are reported, not asked.
     try {
-      addQuestions(projectDir, card.id, [{ question: question(key, `The review pass wrote ${wrote.length ? wrote.join(', ') : 'these stages'} from the merged work (${shas(plan.commits)}) and could not fill ${gaps.join('; ')}. What should they say?`), recommended: `Nothing more: the merged work (${shas(plan.commits)}) already answers them` }], 'agent');
+      addQuestions(projectDir, card.id, [{ question: question(key, `The review pass wrote ${wrote.length ? wrote.join(', ') : 'these stages'} from the merged work (${shas(plan.commits)}) and could not fill ${gaps.join('; ')}. What should they say?`), recommended: `Nothing more: the merged work (${shas(plan.commits)}) already answers them`, kind: 'gap' }], 'agent');
     } catch (e) {
       if (!(e instanceof RefusalError)) throw e;
       refused = e.message;
@@ -279,7 +279,7 @@ export function applyFix(projectDir: string, plan: Plan, now: Date = clock()): {
   try {
     if (plan.verb === 'ask') {
       if (asked(projectDir, card, plan.ask!.key)) return undefined;
-      addQuestions(projectDir, card.id, [{ question: plan.ask!.question, recommended: plan.ask!.recommended }], 'agent');
+      addQuestions(projectDir, card.id, [{ question: plan.ask!.question, recommended: plan.ask!.recommended, kind: 'review' }], 'agent');
       return { section: 'asked', line: line(plan.note) };
     }
     if (plan.verb === 'close') {

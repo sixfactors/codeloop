@@ -164,7 +164,7 @@ describe('the review pass', () => {
     expect(q.answer).toBe('');
   });
 
-  it('uc-307-04: a full interview still lets the place land, and the report says the gaps were not asked', () => {
+  it('uc-307-04: a full interview still lets the place land, and the gaps are asked past the interview cap', () => {
     commit('c-8', ['src/h.ts']);
     board([card('c-8', { gate: 'stuck', awaiting: 'owner' })]);
     write('specs/c-8/interview.md', [1, 2, 3, 4, 5].map(n => `## Q${n} Question ${n}?\nrecommended: yes\nanswer:\n`).join('\n'));
@@ -172,7 +172,8 @@ describe('the review pass', () => {
     const report = reviewPass(dir, { all: true });
 
     expect(find('c-8').stage).toBe('spec');
-    expect(report.fixed[0].note).toMatch(/could not ask about \d+ gaps: .*limit is 5/);
+    expect(report.fixed[0].note).not.toMatch(/could not ask/);
+    expect(reviewQuestions('c-8')[0]).toMatchObject({ kind: 'gap' });
   });
 
   it('the unattended doctor runs no review pass until doctor.review is on', async () => {

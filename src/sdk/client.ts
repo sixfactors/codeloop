@@ -120,6 +120,8 @@ export interface AskInput {
   recommended?: string;
   /** Two to four choices when the fork is real; lettered A, B, C, D in order. */
   options?: string[];
+  /** interview (the default, five at most), review or gap; only interview questions count against the cap. */
+  kind?: 'interview' | 'review' | 'gap';
 }
 
 export type AnswerInput = { text?: string; accept?: boolean; option?: string };
