@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readActivity } from '../activity.js';
 import { findCard, readCards, type Card } from '../cards.js';
-import { advanceCard, approveCard, createCard } from '../engine.js';
+import { advanceCard, approveCard, createCard, recordEvent } from '../engine.js';
 import { orchBatch, readOrch } from '../orch.js';
 import { formBatch, holdsLease, runningBuilders } from '../orch-isolation.js';
 import { newSpec } from '../spec.js';
@@ -146,6 +146,17 @@ describe('a batch of small stories', () => {
     expect(plan.cards).toEqual(['c-001', 'c-002', 'c-003', 'c-004', 'c-005']);
     expect(plan.left.map(l => l.card)).toEqual(['c-006', 'c-007']);
     expect(formBatch(dir, ['c-008']).left[0].why).toMatch(/size M; only trivial and S/);
+  });
+
+  it("a batch counts against the lane's wip like any start: a full lane batches only trivial stories", () => {
+    project([{ id: 'c-001' }, { id: 'c-002' }, { id: 'c-003', size: 'trivial' }, { id: 'c-004', size: 'M' }]);
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE.replace('retries: 3', 'retries: 3\nwip: 2'));
+    sh(`git add -A && ${GIT} commit -qm wip`);
+    // c-004 is an M story another agent is working on now: it holds one of the two slots.
+    recordEvent(dir, 'c-004', () => ({ action: 'agent-start', agent: 'fake', log: 'x.log' }));
+    const plan = formBatch(dir);
+    expect(plan.cards).toEqual(['c-001', 'c-003']);
+    expect(plan.left.find(l => l.card === 'c-002')?.why).toMatch(/works on 2 cards at a time .*c-004 \(build, agent fake on build\).*1 already joined this batch/);
   });
 
   it('uc-314-06: each batched story is verified and approved on its own', async () => {

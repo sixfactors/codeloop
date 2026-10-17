@@ -12,6 +12,8 @@ import { join } from 'path';
 import { activeSessions, ACTIVE_SESSIONS_DIR, setActiveCard } from './active-card.js';
 import { findCard, inLane, readCards, type Card } from './cards.js';
 import { loadConfig } from './config.js';
+import { laneFullRefusal, slotHolders } from './engine.js';
+import { loadLane } from './lane.js';
 import { isSharedPath, pathInPlan, planFiles } from './plan-scope.js';
 
 export type Isolation = 'tree' | 'worktree' | 'auto';
@@ -118,6 +120,13 @@ export function formBatch(projectDir: string, only?: string[], stage = 'build'):
       const holder = leaseHolder(projectDir, card);
       if (holder) return `${holder.file} is leased by ${holder.card}`;
       if (picked.length >= MAX_BATCH) return `the batch already has ${MAX_BATCH} stories; ${card.id} waits for the next one`;
+      // Every batched story gets an agent run, so a non-trivial one takes a lane slot like any start.
+      const lane = loadLane(projectDir, card.lane);
+      if (lane.wip !== undefined && card.size !== 'trivial') {
+        const holding = slotHolders(projectDir, cards, lane.id).filter(h => h.card.id !== card.id);
+        const joining = picked.filter(p => p.card.lane === lane.id && p.card.size !== 'trivial').length;
+        if (holding.length + joining >= lane.wip) return `${card.id} waits: ${laneFullRefusal(lane, holding)}${joining ? ` (${joining} already joined this batch)` : ''}`;
+      }
       picked.push({ card, files });
       return undefined;
     };
