@@ -18,5 +18,5 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 ## Rubric
 
 <!-- One line per attest row of the spec rubric. -->
-- S3 pass: <each interview answer and the spec.md field that holds it, path:line>
-- S6 pass: <the not_building: line in spec.md, path:line>
+- S3 pass: no interview was held for this S story; the story, size and feature come from the card (`codeloop card show c-310`) at specs/310-every-story-shows-its-real-working-time/spec.md:4, spec.md:6 and spec.md:8; US1 is proven by src/lib/__tests__/working-time.test.ts:20 and US2 by src/lib/__tests__/spec-folder-repair.test.ts:20
+- S6 pass: specs/310-every-story-shows-its-real-working-time/spec.md:26 lists renaming folders on disk, the ambiguous-number case and the idle-gap rule as not built
