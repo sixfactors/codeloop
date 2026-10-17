@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readCards, SUMMARY_MAX, writeSummary } from '../cards.js';
 import { advanceCard, approveCard, createCard } from '../engine.js';
 import { createApp } from '../server.js';
+import { recordHandback } from '../handback.js';
 
 let dir: string;
 
@@ -45,10 +46,11 @@ describe('the story summary', () => {
   it('uc-311-02: an agent write keeps the line a person wrote and fills the other', async () => {
     const owner = createApp(dir, undefined, { owner: true });
     expect((await put(owner, '/api/cards/c-1/summary', { needed: 'Totals in the last row.' })).status).toBe(200);
-    writeSummary(dir, 'c-1', { needed: 'Something else entirely.', done: 'Research is finished.' }, { by: 'claude', kind: 'agent' });
+    // The agent's end-of-turn summary arrives with its hand-back.
+    recordHandback(dir, 'c-1', { branch: 'main', head: 'abc', proof: 'true', summary: { needed: 'Something else entirely.', done: 'Research is finished.' } });
     const { summary } = readCards(dir).cards[0];
     expect(summary?.needed).toMatchObject({ text: 'Totals in the last row.', kind: 'person', by: 'owner', step: 'draft' });
-    expect(summary?.done).toMatchObject({ text: 'Research is finished.', kind: 'agent', by: 'claude' });
+    expect(summary?.done).toMatchObject({ text: 'Research is finished.', kind: 'agent', by: 'agent' });
   });
 
   it('uc-311-03: marks a summary written at an earlier step once the story moved on', async () => {

@@ -13,6 +13,7 @@ You are the builder for {{card}}. An orchestrator started you and will gate your
 - Keep to this stage. Say what is left and what blocked you instead of guessing.
 - When the gate fails, fix forward with a new commit. Nothing is reset or reverted for you.
 - Before handing back, run `codeloop card selfcheck {{card}}`. Fix what it names and run it again until it passes.
+- At the end of your turn, write or improve the story summary: `codeloop card summary {{card}} --needed "<what the story needs>" --done "<what is done>"`, one plain sentence each. Never replace a line the owner wrote; what the owner must do comes from the board.
 - Finish every run, including a failed one, by committing and handing back.
 - Hand back with exactly this line as your last command:
 

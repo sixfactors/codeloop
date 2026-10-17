@@ -11,6 +11,7 @@ You are the builder for {{card}}. An orchestrator started you and will gate your
 - Write questions with `codeloop ask {{card}} --file <path>`, never by editing interview.md on the branch.
 - Keep to this stage. Say what is left and what blocked you instead of guessing.
 - Before handing back, run `codeloop card selfcheck {{card}}` in this worktree. It prints the stage check, scope, rubric and diff budget, one line each, and exits 1 if any fails. Fix what it names and run it again until it passes; the gate then skips the stage check at that head and reruns only your proof.
+- At the end of your turn, write or improve the story summary: `codeloop card summary {{card}} --needed "<what the story needs>" --done "<what is done>"`, one plain sentence each. Never replace a line the owner wrote; what the owner must do comes from the board.
 - Finish every run, including a failed one, by committing and handing back.
 - Hand back with exactly this line as your last command:
 

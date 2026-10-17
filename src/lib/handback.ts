@@ -10,7 +10,7 @@ import { join } from 'path';
 import { appendActivity, readActivity } from './activity.js';
 import { selfcheckAt } from './selfcheck.js';
 import { currentSession } from './active-card.js';
-import { findCard, readCards, RefusalError } from './cards.js';
+import { findCard, readCards, RefusalError, writeSummary } from './cards.js';
 import { recordEvent } from './engine.js';
 
 export const HANDBACKS_DIR = '.codeloop/state/handbacks';
@@ -26,6 +26,8 @@ export interface HandbackInput {
   session?: string;
   /** The git worktree the work is in; the proof is run there. Defaults to the project root. */
   worktree?: string;
+  /** The story summary's needed and done lines; written as the agent's, never over a person's line. */
+  summary?: { needed?: string; done?: string };
 }
 
 export interface HandbackRecord {
@@ -78,6 +80,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
 
   appendActivity(projectDir, card.id, { session: record.session, kind: 'handback', stage: card.stage, branch: record.branch, head: record.head, pass: exit === 0, exit });
   recordEvent(projectDir, card.id, () => ({ action: 'handback', note: `${record.branch}@${record.head.slice(0, 8)} proof exit ${exit}` }));
+  if (input.summary?.needed?.trim() || input.summary?.done?.trim()) writeSummary(projectDir, card.id, input.summary, { by: 'agent', kind: 'agent' });
   return record;
 }
 

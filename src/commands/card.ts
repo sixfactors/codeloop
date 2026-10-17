@@ -126,9 +126,11 @@ cardCommand
   .option('--left <text>', 'What is left to do')
   .option('--blocked <text>', 'What blocked the work')
   .option('--worktree <path>', 'The git worktree the work is in; the proof is run there instead of the project root')
-  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string }) => {
+  .option('--needed <text>', "The story summary's line on what the story needs")
+  .option('--done <text>', "The story summary's line on what is done")
+  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string; needed?: string; done?: string }) => {
     const c = client();
-    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree: opts.worktree });
+    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree: opts.worktree, ...(opts.needed || opts.done ? { summary: { needed: opts.needed, done: opts.done } } : {}) });
     console.log(`proof exit ${rec.proof.exit}; hand-back recorded for ${rec.card} at ${rec.stage} (${rec.branch}@${rec.head.slice(0, 8)})`);
     await c.close();
   }));
@@ -300,6 +302,18 @@ cardCommand
       else console.log(`${item.end.status === 'done' ? chalk.green(item.end.status) : chalk.red(item.end.status)}: ${item.end.outcome}${item.end.note ? ` (${item.end.note})` : ''}`);
       if (item.end.status !== 'done') process.exit(2);
     }
+  }));
+
+cardCommand
+  .command('summary <id>')
+  .description("Write the story summary's needed and done lines; what you must do comes from the board. As an agent it never replaces a line a person wrote")
+  .option('--needed <text>', 'What the story needs, in one plain sentence')
+  .option('--done <text>', 'What is already done, in one plain sentence')
+  .option(...ROLE)
+  .action(guard(async (id: string, opts: { needed?: string; done?: string; as?: string }) => {
+    const { written, kept } = await client().cards.summary(id, { needed: opts.needed, done: opts.done }, { as: opts.as });
+    if (written.length) console.log(`wrote ${written.join(' and ')} on ${id}`);
+    if (kept.length) console.log(chalk.yellow(`kept the ${kept.join(' and ')} line a person wrote; an agent adds to the summary but never replaces a person's line`));
   }));
 
 cardCommand
