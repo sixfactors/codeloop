@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `POST /api/wiki/outline` needs a server started with `--owner` and no longer takes `force`, so the board cannot rewrite hand-edited outline pages; `codeloop wiki init --from-repo --write --force` still can.
 - Tool output written into tracked files (verify evidence, gate records, check notes on a story) shows the home folder as `~` and the temp folder as `<temp dir>`, with terminal colour and cursor codes removed.
 - Security: the stdio MCP server's `answer` tool recorded an owner's answer for any caller, so an agent could answer the owner's questions. `answer` now needs `CODELOOP_ROLE=owner`, `approve` and `reject` need owner or reviewer, and all three refuse inside an agent run. Answering (one question or all) refuses the agent role on every path. A board server started inside `codeloop run --agent` refuses approve, reject, answer, park, place, move, reopen, edit and close even with `--owner`.
 - The board shows each story's priority (its own when set, else its RICE band) and a "bug" chip on its card, and `GET /api/board` returns every column and cell in pick order, bug stories first. Each board story now carries `priority`, `bug` and `createdAt`.

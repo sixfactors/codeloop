@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createApp } from '../server.js';
@@ -25,6 +25,20 @@ describe('story control routes', () => {
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('seeds the wiki outline only for the owner, and never forced from the board', async () => {
+    writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'demo', dependencies: { express: '4' } }));
+    const stack = join(tmpDir, '.codeloop/wiki/reference/stack.md');
+    const refused = await make(false)('/api/wiki/outline', 'POST', {});
+    expect(refused.status).toBe(403);
+    expect(existsSync(stack)).toBe(false);
+
+    const call = make(true);
+    expect((await call('/api/wiki/outline', 'POST', {})).status).toBe(200);
+    writeFileSync(stack, `${readFileSync(stack, 'utf-8')}\nHand-edited.\n`);
+    expect((await call('/api/wiki/outline', 'POST', { force: true })).status).toBe(200);
+    expect(readFileSync(stack, 'utf-8')).toContain('Hand-edited.');
   });
 
   it('reopens a done story to the backlog and edits a title, as the owner', async () => {

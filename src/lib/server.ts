@@ -555,9 +555,11 @@ export function createApp(
   app.get(api('/wiki/lint'), handled(async c => c.json(services.wikiLint(projectDir))));
   // The outline a repo scan would seed (dry run) and the write that seeds it, for the Setup screen.
   app.get(api('/wiki/outline'), handled(async c => c.json(services.wikiOutline(projectDir))));
-  app.post(api('/wiki/outline'), handled(async c => {
-    const body = await c.req.json<{ force?: boolean }>().catch(() => ({}) as { force?: boolean });
-    return c.json(services.writeWikiOutline(projectDir, { force: !!body.force }));
+  // Owner only, and never forced from the board: a forced write rewrites every outline page.
+  app.post(api('/wiki/outline'), writing(async c => {
+    const refused = notOwner(c, 'seed the wiki outline');
+    if (refused) return refused;
+    return c.json(services.writeWikiOutline(projectDir));
   }));
   // The shape with page counts: the home page and sidebar render this, not a client-side grouping of /api/pages.
   app.get(api('/wiki/shape'), handled(async c => c.json({ shape: services.wikiShape(projectDir) })));
