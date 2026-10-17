@@ -9,7 +9,7 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 `codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
 -->
 
-- [ ] T001 [US3] [api] A three-line summary on the story (needed, done, waiting on you), each line with its author, kind (agent or person), step and time, and a write that keeps every line a person wrote, in src/lib/cards.ts
+- [x] T001 [US3] [api] A three-line summary on the story (needed, done, waiting on you), each line with its author, kind (agent or person), step and time, and a write that keeps every line a person wrote, in src/lib/cards.ts
 - [ ] T002 [US3] [api] The agent writes or improves the summary at the end of its turn through the hand-back, and the stage brief footer asks for it, in src/lib/handback.ts and templates/orch
 - [ ] T003 [US4] [api] The full story response carries the summary, or one worked out from the board's facts and marked unwritten when none exists, in src/lib/services.ts
 - [ ] T004 [US5] [api] The response marks a summary written before the story's current step, and takes the waiting-on-you line from the board's holder, never from the text, in src/lib/services.ts

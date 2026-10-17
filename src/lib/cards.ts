@@ -107,8 +107,80 @@ export interface CardExtras {
   branch?: string;
 }
 
+/** One line of a story's summary, with who wrote it, at which step and when. */
+export interface SummaryLine {
+  text: string;
+  by: string;
+  kind: 'person' | 'agent';
+  step: string;
+  at: string;
+}
+
+/**
+ * What the story needs and what is done. "What you must do" is never stored: it is worked out
+ * from the board on every read, so a stale text cannot hide a gate.
+ */
+export interface StorySummary {
+  needed?: SummaryLine;
+  done?: SummaryLine;
+}
+
+export const SUMMARY_LINES = ['needed', 'done'] as const;
+/** Longest summary line kept, so on a phone the three lines and the buttons under them fit one screen. */
+export const SUMMARY_MAX = 200;
+const clip = (text: string) => {
+  const one = text.replace(/\s+/g, ' ').trim();
+  return one.length <= SUMMARY_MAX ? one : `${one.slice(0, one.lastIndexOf(' ', SUMMARY_MAX - 1) > 0 ? one.lastIndexOf(' ', SUMMARY_MAX - 1) : SUMMARY_MAX - 1)}…`;
+};
+export type SummaryKey = (typeof SUMMARY_LINES)[number];
+
+/**
+ * The summary after one write. An agent never replaces a line a person wrote; it fills the lines
+ * that are empty or an agent's. A person replaces any line. `kept` names the lines it left alone.
+ */
+export function mergeSummary(current: StorySummary | undefined, input: Partial<Record<SummaryKey, string>>, author: { by: string; kind: SummaryLine['kind'] }, step: string, at: string): { summary: StorySummary; written: SummaryKey[]; kept: SummaryKey[] } {
+  const summary: StorySummary = { ...current };
+  const written: SummaryKey[] = [];
+  const kept: SummaryKey[] = [];
+  for (const key of SUMMARY_LINES) {
+    const text = input[key]?.trim();
+    if (!text) continue;
+    if (author.kind === 'agent' && summary[key]?.kind === 'person') {
+      kept.push(key);
+      continue;
+    }
+    summary[key] = { text: clip(text), by: author.by, kind: author.kind, step, at };
+    written.push(key);
+  }
+  return { summary, written, kept };
+}
+
+/**
+ * Writes summary lines onto a card. A write made from a stale read is refused by `writeCards`, so
+ * it re-reads and merges again: an owner's edit and an agent's hand-back landing together both stay.
+ */
+export function writeSummary(projectDir: string, ref: string, input: Partial<Record<SummaryKey, string>>, author: { by: string; kind: SummaryLine['kind'] }, opts: { read?: CardFile; now?: Date } = {}): { card: Card; written: SummaryKey[]; kept: SummaryKey[] } {
+  if (!SUMMARY_LINES.some(k => input[k]?.trim())) throw new RefusalError('a summary write needs a needed or done line; what you must do comes from the board');
+  let file = opts.read ?? readCards(projectDir);
+  for (let attempt = 0; ; attempt++) {
+    const before = findCard(file.cards, ref);
+    const at = (opts.now ?? new Date()).toISOString();
+    const { summary, written, kept } = mergeSummary(before.summary, input, author, before.stage, at);
+    const card: Card = { ...before, summary, updatedAt: at };
+    try {
+      writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+      return { card, written, kept };
+    } catch (e) {
+      if (!(e instanceof ConflictError) || attempt >= 4) throw e;
+      file = readCards(projectDir);
+    }
+  }
+}
+
 export interface Card extends StoryFields, CardExtras {
   id: string;
+  /** Needed and done, one line each, written by the agent that last worked it or by a person. */
+  summary?: StorySummary;
   title: string;
   lane: string;
   laneVersion: number;
