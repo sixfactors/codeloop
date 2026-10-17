@@ -1019,7 +1019,8 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   }
 
   const given = stage.gate ? approval(card, stage) : undefined;
-  if (given?.fingerprint && given.fingerprint !== stageFingerprint(projectDir, card, stage)) {
+  const current = stage.gate ? stageFingerprint(projectDir, card, stage) : undefined;
+  if (given?.fingerprint && given.fingerprint !== current) {
     park(card, stage, now, 'the output or the check changed since it was approved');
     writeCards(projectDir, file, replace(file.cards, card));
     return { card, outcome: 'parked', output, started: [], because: {} };
@@ -1038,7 +1039,17 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   // A card that skips a stage this one folds in (review, for an S story) is asked that stage's
   // gate here too, after this stage's own: the approval moves, it is never dropped.
   const folded = foldedStage(lane, stage, card);
-  if (folded?.gate && !approval(card, stage, folded.gate.name)) {
+  // The folded approval covers the same output and check as the stage's own, so a change since
+  // asks its approver again too. The note starts `gate <folded>` so it withdraws only that approval.
+  const foldedGiven = folded?.gate ? approval(card, stage, folded.gate.name) : undefined;
+  if (folded?.gate && foldedGiven?.fingerprint && foldedGiven.fingerprint !== (current ?? stageFingerprint(projectDir, card, stage))) {
+    card.gate = folded.gate.name;
+    card.awaiting = folded.gate.approver;
+    card.events.push(event(now, 'engine', 'park', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, the output or the check changed since it was approved)`));
+    writeCards(projectDir, file, replace(file.cards, card));
+    return { card, outcome: 'parked', output, started: [], because: {} };
+  }
+  if (folded?.gate && !foldedGiven) {
     if (loadEngineConfig(projectDir).gatesMode === 'trusted') {
       card.events.push({ ...event(now, 'engine', 'auto-approve', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, gates.mode trusted)`), gate: folded.gate.name });
     } else {

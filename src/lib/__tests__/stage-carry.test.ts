@@ -160,7 +160,7 @@ describe('a carried turn', () => {
 });
 
 describe('review folded into verify for an S story', () => {
-  const FOLD = 'id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "true" }\n  - id: verify\n    fold: review\n    done: { cmd: "true" }\n    gate: { name: local, approver: owner }\n  - id: review\n    when: "size >= M"\n    skill: review\n    output: notes/review.md\n    done: { cmd: "true" }\n    gate: { name: pr, approver: reviewer }\n  - id: staging\n    done: { cmd: "false" }\n';
+  const FOLD = 'id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "true" }\n  - id: verify\n    fold: review\n    output: notes/verify.md\n    done: { cmd: "true" }\n    gate: { name: local, approver: owner }\n  - id: review\n    when: "size >= M"\n    skill: review\n    output: notes/review.md\n    done: { cmd: "true" }\n    gate: { name: pr, approver: reviewer }\n  - id: staging\n    done: { cmd: "false" }\n';
   const lane = () => {
     mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
     writeFileSync(join(dir, '.codeloop/config.yaml'), 'project:\n  name: demo\n');
@@ -183,6 +183,27 @@ describe('review folded into verify for an S story', () => {
     expect(advanceCard(dir, 'c-001').outcome).toBe('moved');
     expect(card().stage).toBe('staging');
     expect(card().events.find(e => e.action === 'skip')?.stage).toBe('review');
+  });
+
+  it('uc-313-06: an S story whose verify output changes after the reviewer approved asks the reviewer again', () => {
+    lane();
+    createCard(dir, { lane: 'build', title: 'Fix the date on the post', id: 'c-001', fields: { size: 'S' } });
+    advanceCard(dir, 'c-001');
+    mkdirSync(join(dir, 'notes'), { recursive: true });
+    writeFileSync(join(dir, 'notes/verify.md'), 'first run\n');
+    advanceCard(dir, 'c-001');
+    approveCard(dir, 'c-001', 'owner');
+    advanceCard(dir, 'c-001');
+    approveCard(dir, 'c-001', 'reviewer');
+    writeFileSync(join(dir, 'notes/verify.md'), 'reworked after review\n');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('parked');
+    expect([card().gate, card().awaiting]).toEqual(['local', 'owner']);
+    approveCard(dir, 'c-001', 'owner');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('parked');
+    expect([card().stage, card().gate, card().awaiting]).toEqual(['verify', 'pr', 'reviewer']);
+    approveCard(dir, 'c-001', 'reviewer');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('moved');
+    expect(card().stage).toBe('staging');
   });
 
   it('an M story keeps its own review stage and verify asks only its own gate', () => {
