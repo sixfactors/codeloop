@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { newArtifact } from '../artifact.js';
@@ -66,7 +66,8 @@ describe('everything codeloop writes lives under .codeloop', () => {
 describe('a work dir outside the temp folder', () => {
   it('is refused under the test sandbox, so a suite run by a lane check cannot write a fixture into the real tree', () => {
     const saved = process.env.CODELOOP_WORK_DIR;
-    process.env.CODELOOP_WORK_DIR = resolve('.');
+    // A fixed path outside the temp folder: the cwd is inside it when the suite runs from a HEAD export.
+    process.env.CODELOOP_WORK_DIR = homedir();
     try {
       expect(() => specPath(dir, evidenceOf(dir, '001'))).toThrow(/test sandbox: refusing work dir/);
     } finally {
