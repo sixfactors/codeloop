@@ -9,7 +9,7 @@ import { loadConfig } from './config.js';
 import { addQuestions, openQuestions } from './interview.js';
 import { storyState } from './states.js';
 import { progressSince } from './progress.js';
-import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
+import { findCard, inLane, NOTHING_CHANGED, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
@@ -152,10 +152,10 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
 }
 
 const ASKS_FOR_START = new Set(['reject', 'returned', 'agent-start', 'doctor-start', 'unstick']);
-const NOTHING_CHANGED = 'the agent ran and changed nothing; a person needs to look';
 
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
-// `stuck`: the start was refused on unchanged work and the card was parked for a person.
+// `stuck`: the start was refused on unchanged work after a failed check and the card was parked
+// for a person (rules 4 and 6 of the model above workTried in engine.ts).
 async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean; stuck?: boolean }) | null> {
   const card = findCard(readCards(projectDir).cards, id);
   const lane = loadLane(projectDir, card.lane);
@@ -176,12 +176,17 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   const same = head !== undefined && asked?.action === 'agent-start' && asked.head === head && asked.fingerprint === work;
   // A check that already failed after that start, on this head and work, would fail the same way.
   const judged = same && card.events.slice(card.events.indexOf(asked!)).some(e => e.stage === stage.id && e.action === 'fail');
-  if (!redo && !judged && runCheck(projectDir, card, stage)?.passed) return null;
+  let failedNow: string | undefined;
+  if (!redo && !judged) {
+    const check = runCheck(projectDir, card, stage);
+    if (check?.passed) return null;
+    failedNow = check && check.crashed === undefined ? check.output : undefined;
+  }
   if (same) {
-    // A counted failure means the agent's run was judged; nothing new can follow on its own, so the
-    // story waits for a person instead of failing quietly with retries to spare.
-    if (!card.gate && (card.retries[stage.id] ?? 0) > 0) {
-      markStuck(projectDir, id, NOTHING_CHANGED, now);
+    // Nothing new can follow on its own, so the story waits for a person instead of being checked
+    // and refused on every tick.
+    if (!card.gate && (judged || failedNow !== undefined)) {
+      markStuck(projectDir, id, NOTHING_CHANGED, now, failedNow);
       return { ...step, started: false, stuck: true, reason: NOTHING_CHANGED };
     }
     return { ...step, started: false, reason: `nothing changed since agent ${asked!.agent ?? agent.name} last started on ${stage.id} (head ${head!.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
@@ -465,8 +470,8 @@ export function monitorEnabled(projectDir: string): boolean {
 }
 
 /**
- * One pass of the doctor: a failing story with fewer than three fails gets its agent started on
- * its stage again (the same turn `run --agent` takes), and a stuck or stale story untouched for a
+ * One pass of the doctor: a failing story, counted fails or not, gets its agent started on its
+ * stage again (the same turn `run --agent` takes), and a stuck or stale story untouched for a
  * day gets one "park it" question in the inbox. Each action is a line on the story's activity
  * stream. Stories in `skip` were already worked by this run.
  */
@@ -552,8 +557,9 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       }
       continue;
     }
+    // No cap on fails here: the lane's retries park the story stuck first (engine.ts, rule 5).
     const fails = card.retries[card.stage] ?? 0;
-    if (state.health === 'failing' && fails < 3) {
+    if (state.health === 'failing') {
       if (!hasAgents) continue;
       const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
       // An agent a person has to fix first is never restarted by the doctor.

@@ -38,14 +38,15 @@ export const ago = (iso?: string) => {
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
   return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 172_800 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86_400)}d ago`;
 };
-/** The face's live line in owner words. The API's stuck line ("stuck: the check failed three times")
- * reads as "Stuck 17h: the interview check failed 3 times"; anything else is shown as it comes. */
+/** The face's live line in owner words. The API's stuck line ("stuck: <reason>") reads as
+ * "Stuck 17h: <reason>", with the stage named when the reason is the check; anything else is shown as it comes. */
 function liveLine(story: BoardStory): string | undefined {
   const last = story.lastActivity;
   if (!last) return undefined;
-  if (/^stuck: the check failed three times/.test(last.text)) {
+  const stuck = /^stuck: (.+)$/.exec(last.text);
+  if (stuck) {
     const forHow = ago(last.at)?.replace(' ago', '');
-    return `Stuck${forHow ? ` ${forHow}` : ''}: the ${story.stage} check failed 3 times`;
+    return `Stuck${forHow ? ` ${forHow}` : ''}: ${stuck[1].replace(/^the check /, `the ${story.stage} check `)}`;
   }
   return `${last.text}${last.at ? ` · ${ago(last.at)}` : ''}`;
 }

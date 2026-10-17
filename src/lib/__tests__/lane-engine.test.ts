@@ -56,6 +56,7 @@ describe('engine', () => {
     writeLane('market', `retries: 2\nstages:\n  - id: draft\n    done: { cmd: "echo no brief >&2; exit 1" }\n`);
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
 
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
     const first = advanceCard(dir, 'c-1');
     expect(first.outcome).toBe('failed');
     expect(first.card.stage).toBe('draft');
@@ -65,12 +66,13 @@ describe('engine', () => {
     const second = advanceCard(dir, 'c-1');
     expect(second.outcome).toBe('stuck');
     expect(second.card).toMatchObject({ stage: 'draft', gate: 'stuck', awaiting: 'owner' });
-    expect(second.card.events.at(-1)).toMatchObject({ action: 'stuck', note: 'no brief' });
+    expect(second.card.events.at(-1)).toMatchObject({ action: 'stuck', note: 'the check failed 2 times with work tried before each; a person needs to look\nno brief' });
   });
 
-  it('never counts a failure past the lane retries: a rerun of a stuck story that still fails writes nothing', () => {
+  it('never counts a failure past the lane retries: a rerun of a stuck story that still fails is recorded and not counted', () => {
     writeLane('market', `retries: 2\nstages:\n  - id: draft\n    done: { cmd: "echo run $RANDOM >&2; exit 1" }\n`);
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
     advanceCard(dir, 'c-1');
     appendActivity(dir, 'c-1', { kind: 'edit', file: 'brief.md' });
     expect(advanceCard(dir, 'c-1').outcome).toBe('stuck');
@@ -83,7 +85,9 @@ describe('engine', () => {
     const after = readCards(dir).cards[0];
     expect(after.retries.draft).toBe(2);
     expect(after.gate).toBe('stuck');
-    expect(after.events.filter(e => e.action === 'fail')).toHaveLength(fails);
+    // Every failed check writes its fail event; none past the cap is counted.
+    expect(after.events.filter(e => e.action === 'fail')).toHaveLength(fails + 5);
+    expect(after.events.filter(e => e.action === 'fail').slice(fails).every(e => e.counted === false)).toBe(true);
   });
 
   it('treats a check that crashes as check-error: one event with the tail, no retry counted', () => {

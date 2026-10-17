@@ -5,7 +5,7 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { resolveAgent } from '../agent.js';
-import { readCards, writeCards } from '../cards.js';
+import { readCards, stuckReason, writeCards } from '../cards.js';
 import { advanceCard, createCard } from '../engine.js';
 import { runDueWithAgent } from '../run.js';
 import { newSpec } from '../spec.js';
@@ -148,7 +148,7 @@ describe('a check with no work behind it', () => {
     const card = readCards(dir).cards[0];
     expect(card.retries.draft).toBe(1);
     expect(card.gate).toBe('stuck');
-    expect(card.events.filter(e => e.action === 'stuck').at(-1)?.note).toBe('the agent ran and changed nothing; a person needs to look');
+    expect(stuckReason(card)).toBe('the agent ran and changed nothing; a person needs to look');
     expect(card.events.filter(e => e.action === 'agent-start')).toHaveLength(1);
   });
 });

@@ -8,7 +8,7 @@ import { closeSync, existsSync, openSync, readSync, statSync } from 'fs';
 import { join } from 'path';
 import { ACTIVITY_DIR, phaseTime, readActivity, readAllActivity, type ActivityLine } from './activity.js';
 import { activeSessions } from './active-card.js';
-import { DONE, DROPPED, PROPOSED, QUEUED, type Card, type CardEvent } from './cards.js';
+import { DONE, DROPPED, PROPOSED, QUEUED, stuckReason, type Card, type CardEvent } from './cards.js';
 import { readQuestions } from './interview.js';
 import { loadLane, substitute, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
@@ -54,6 +54,8 @@ export interface StoryHolder {
   since?: string;
   /** For `you`: the gate's name, or how many questions are open. */
   gate?: string;
+  /** At gate stuck: why it parked, the retry count or an agent that ran and changed nothing. */
+  stuckReason?: string;
   awaiting?: string;
   openQuestions: number;
   /** The last thing that happened on it, from the activity stream. */
@@ -104,7 +106,7 @@ export function storyLiveLine(projectDir: string, card: Card, health: string | u
   const events = card.events ?? [];
   if (card.gate) {
     const parked = [...events].reverse().find(e => e.action === 'park' || e.action === 'stuck');
-    return { text: card.gate === 'stuck' ? 'stuck: the check failed three times' : `waiting for you at ${card.gate}`, ...(parked ? { at: parked.at } : {}) };
+    return { text: card.gate === 'stuck' ? `stuck: ${stuckReason(card)}` : `waiting for you at ${card.gate}`, ...(parked ? { at: parked.at } : {}) };
   }
   if (health === 'failing') {
     const fail = [...events].reverse().find(e => e.action === 'fail' && e.stage === card.stage);
@@ -261,6 +263,7 @@ export function journeyOf(projectDir: string, card: Card, opts: { now?: number; 
     ...(session ? { agent: session.label ?? session.session, session: session.session, since: session.startedAt } : {}),
     ...(ownRun ? { runId: ownRun.runId, since: session?.startedAt ?? ownRun.startedAt, agent: session?.label ?? `headless run ${ownRun.runId}` } : {}),
     ...(card.gate ? { gate: card.gate, awaiting: card.awaiting } : {}),
+    ...(card.gate === 'stuck' ? { stuckReason: stuckReason(card) } : {}),
     ...(last ? { last: { at: last.at, kind: last.kind, text: activityText(last) } } : {}),
   };
   const tasks = opts.tasks ? { done: opts.tasks.filter(t => t.done).length, total: opts.tasks.length, items: opts.tasks.filter(t => t.id).map(t => ({ id: t.id!, done: t.done, layer: t.layer, text: t.text })) } : undefined;

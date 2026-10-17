@@ -169,7 +169,9 @@ export function buildBrief(projectDir: string, card: Card): string {
     '',
   ];
 
-  const failed = events.filter(e => e.action === 'fail' || e.action === 'stuck').at(-1);
+  // The stuck event's note leads with the reason; the check's own output is on the fail event.
+  const failed = events.filter(e => e.action === 'fail').at(-1);
+  const marked = events.filter(e => e.action === 'fail' || e.action === 'stuck').at(-1)?.action === 'stuck';
   if (stage.notes.length || stage.rejections.length || failed?.note) {
     lines.push('## Feedback on this stage', '');
     for (const note of stage.notes) lines.push(`- Stage note: ${note}`);
@@ -183,7 +185,7 @@ export function buildBrief(projectDir: string, card: Card): string {
       const when = i === stage.feedback.length - 1 ? 'Latest' : 'Earlier';
       lines.push(f.kind === 'rejected' ? `- ${when} rejection: ${f.note}` : `- ${when} return from ${f.from ?? 'the next stage'}: ${f.note}`);
     });
-    if (failed?.note) lines.push('', `The check last failed${failed.action === 'stuck' ? ' and the card was marked stuck' : ''} with:`, '', ...failed.note.split('\n').map(l => `    ${l}`));
+    if (failed?.note) lines.push('', `The check last failed${marked ? ' and the card was marked stuck' : ''} with:`, '', ...failed.note.split('\n').map(l => `    ${l}`));
     lines.push('');
   }
 

@@ -42,7 +42,7 @@ function CheckReport({ report, onDismiss }: { report: AdvanceReport; onDismiss: 
   return (
     <Alert variant={ok ? 'default' : 'destructive'} className="mt-3" data-testid="check-report" data-outcome={outcome}>
       {ok ? <CheckCircle2 /> : <XCircle />}
-      <AlertTitle>{ok ? `Check passed · ${outcome}` : outcome === 'stuck' ? 'Check failed three times · stuck' : 'Check failed'}</AlertTitle>
+      <AlertTitle>{ok ? `Check passed · ${outcome}` : outcome === 'stuck' ? 'Check failed · stuck' : 'Check failed'}</AlertTitle>
       <AlertDescription className="min-w-0">
         {lines.length ? <div className="whitespace-pre-wrap">{lines.join('\n')}</div> : null}
         {report.result.output ? (

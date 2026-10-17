@@ -87,6 +87,11 @@ describe('the doctor tick', () => {
 
   it('leaves a moving stuck story stuck when the check still fails, and a second tick on unchanged work adds nothing', async () => {
     write('specs/001/tasks.md', '- [x] T001 [api] first thing\n- [ ] T002 [ui] second thing\n');
+    // The first tick records its failed check at a whole-millisecond time and file times are finer,
+    // so the work is dated a minute back to land plainly before that failure.
+    const landed = new Date(Date.now() - 60_000);
+    utimesSync(join(dir, 'specs/001/tasks.md'), landed, landed);
+    utimesSync(join(dir, 'specs/001'), landed, landed);
     await doctorTick(dir, new Date());
     expect(readCards(dir).cards[0].gate).toBe('stuck');
     const events = readCards(dir).cards[0].events.length;

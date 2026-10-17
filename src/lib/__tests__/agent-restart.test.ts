@@ -5,8 +5,9 @@ import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { runAgent } from '../agent.js';
-import { readCards } from '../cards.js';
-import { advanceCard, createCard } from '../engine.js';
+import { readCards, stuckReason } from '../cards.js';
+import { advanceCard, approveCard, createCard } from '../engine.js';
+import { journeyOf, storyLiveLine } from '../journey.js';
 import { LEGACY_NOTICE } from '../paths.js';
 import { doctorTick } from '../run.js';
 
@@ -60,7 +61,7 @@ describe('an agent restart', () => {
     expect(checks()).toBe(afterRun);
     expect(second.find(a => a.id === 'c-1')).toMatchObject({ action: 'agent-not-started', note: expect.stringMatching(/the agent ran and changed nothing; a person needs to look/) });
     expect(card().gate).toBe('stuck');
-    expect(card().events.filter(e => e.action === 'stuck').at(-1)?.note).toBe('the agent ran and changed nothing; a person needs to look');
+    expect(stuckReason(card())).toBe('the agent ran and changed nothing; a person needs to look');
     const seen = checks();
     for (let h = 4; h < 8; h++) await doctorTick(dir, later(h));
     expect(checks()).toBe(seen);
@@ -75,6 +76,59 @@ describe('an agent restart', () => {
     git('commit', '-qam', 'a person fixed the setup');
     await doctorTick(dir, later(3));
     expect(starts()).toBe(2);
+  });
+});
+
+describe('a failing story under the retry model', () => {
+  const NOTHING = 'the agent ran and changed nothing; a person needs to look';
+  beforeEach(() => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n');
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+  });
+  // Three failures, each with a person's work line before it: parked stuck at the retry limit, no agent ever started.
+  const stuckOnCount = () => {
+    for (let i = 0; i < 3; i++) {
+      appendActivity(dir, 'c-1', { kind: 'edit', file: 'src/a.ts' });
+      advanceCard(dir, 'c-1');
+    }
+    expect(card()).toMatchObject({ gate: 'stuck', retries: { draft: 3 } });
+  };
+
+  it('gets its first agent from the doctor though no failure counted yet', async () => {
+    expect(advanceCard(dir, 'c-1').outcome).toBe('failed');
+    expect(card().retries.draft ?? 0).toBe(0);
+    await doctorTick(dir, later(2));
+    expect(starts()).toBe(1);
+  });
+
+  it('gets exactly one more start from the doctor after approve on stuck, then parks on unchanged work', async () => {
+    stuckOnCount();
+    approveCard(dir, 'c-1', 'owner');
+    expect(card().gate).toBeUndefined();
+    expect(card().retries.draft).toBe(0);
+    await doctorTick(dir, later(2));
+    expect(starts()).toBe(1);
+    await doctorTick(dir, later(3));
+    expect(starts()).toBe(1);
+    expect(card().gate).toBe('stuck');
+    expect(stuckReason(card())).toBe(NOTHING);
+  });
+
+  it('says on the story which rule parked it', async () => {
+    stuckOnCount();
+    const counted = 'the check failed 3 times with work tried before each; a person needs to look';
+    expect(storyLiveLine(dir, card(), 'stuck')?.text).toBe(`stuck: ${counted}`);
+    expect(journeyOf(dir, card()).holder.stuckReason).toBe(counted);
+    approveCard(dir, 'c-1', 'owner');
+    await doctorTick(dir, later(2));
+    await doctorTick(dir, later(3));
+    expect(storyLiveLine(dir, card(), 'stuck')?.text).toBe(`stuck: ${NOTHING}`);
+    expect(journeyOf(dir, card()).holder.stuckReason).toBe(NOTHING);
   });
 });
 

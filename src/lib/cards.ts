@@ -12,10 +12,12 @@ export interface CardEvent {
   action: string;
   stage?: string;
   note?: string;
-  /** On an approval: what the stage's output and check were when it was given. On agent-start: the stage's work when the agent started. */
+  /** On an approval: what the stage's output and check were when it was given. On agent-start and fail: the stage's work then. */
   fingerprint?: string;
   /** On fail and agent-start: HEAD when the check ran or the agent started. */
   head?: string;
+  /** On fail: the failure counted toward the lane's retries (work was tried before it). */
+  counted?: boolean;
   /** Reserved for an approval recorded by an authenticated store. Local approvals have none. */
   approvalId?: string;
   /** On agent-start and agent-run: the configured agent, its exit code (null when killed), and where its output went. */
@@ -23,6 +25,36 @@ export interface CardEvent {
   exit?: number | null;
   durationMs?: number;
   log?: string;
+}
+
+/** The reason a story parks stuck when its agent would be restarted on unchanged work after a failed check. */
+export const NOTHING_CHANGED = 'the agent ran and changed nothing; a person needs to look';
+
+/** The reason a story parks stuck at its lane's retry limit. */
+export const failedTimes = (n: number) => `the check failed ${n} ${n === 1 ? 'time' : 'times'} with work tried before each; a person needs to look`;
+
+/**
+ * Why a card sits at gate stuck, as one sentence: the first line of its last stuck event's note,
+ * which the engine writes as the reason with the check output below it. A note that holds only
+ * the check output, or an orchestrator's finding, reads as the count when one was kept.
+ */
+export function stuckReason(card: Pick<Card, 'stage' | 'retries' | 'events'>): string {
+  const first = card.events?.filter(e => e.action === 'stuck').at(-1)?.note?.split('\n')[0] ?? '';
+  if (first === NOTHING_CHANGED || /^the check failed \d+ times? /.test(first)) return first;
+  const n = card.retries?.[card.stage] ?? 0;
+  return n > 0 ? failedTimes(n) : first || 'the check failed';
+}
+
+const ENTERS = new Set(['place', 'promote', 'unpark', 'returned', 'move', 'reopen']);
+
+/** Index of the event that brought the card into `stage` last (an advance into it, or a placement, promotion, return or move to it); -1 when it has been there since it was made. */
+export function stageEntryIndex(events: Pick<CardEvent, 'action' | 'stage' | 'note'>[] = [], stage: string): number {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.action === 'advance' && /^to (\S+)/.exec(e.note ?? '')?.[1] === stage) return i;
+    if (ENTERS.has(e.action) && e.stage === stage) return i;
+  }
+  return -1;
 }
 
 /** `trivial` is below S: a one-line fix that skips the ceremony stages (`when: size >= S`). */

@@ -117,7 +117,7 @@ function YouShape({ card, journey, rubric }: { card: CardT; journey: Journey; ru
         <div className="mt-2 flex flex-col gap-2">
           <p className="text-xs text-muted-foreground" data-testid="gate-explain">
             {holder.gate === 'stuck'
-              ? 'The check failed three times. Approve unsticks it: it clears the three fails and keeps the stage, so the next run starts fresh. Reject parks it.'
+              ? `Stuck because ${holder.stuckReason ?? 'the check kept failing'}. Approve unsticks it: it clears the fails, keeps the stage and allows one more agent start. Reject parks it.`
               : `The ${card.stage} gate, approved by the ${holder.awaiting ?? 'owner'}.`}
           </p>
           {rubric?.rows.length ? <RubricRows rubric={rubric} /> : null}

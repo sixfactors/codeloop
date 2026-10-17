@@ -1,4 +1,4 @@
-import { DONE, DROPPED, PROPOSED, QUEUED, type Card } from './cards.js';
+import { DONE, DROPPED, PROPOSED, QUEUED, stageEntryIndex, type Card } from './cards.js';
 
 /**
  * What a person sees for a story: six states instead of every lane's stages. The stage stays as
@@ -14,8 +14,8 @@ export type StateFlag = 'blocked';
 /**
  * How a story in a lane is doing, one value, never two (docs: story-journey devex, section 6):
  * working (someone or something is on it, or a first failed check with recent activity), needs-you
- * (a gate or questions; wins over failing), failing (two or more failed checks and no activity for
- * an hour, or an agent run that ended on a failed check), stuck (three fails, parked by the engine),
+ * (a gate or questions; wins over failing), failing (a failed check, counted or not, and no
+ * activity for an hour, or an agent run that ended on a failed check), stuck (parked by the engine),
  * stale (no event and no activity for two days).
  */
 export const HEALTH = ['working', 'needs-you', 'failing', 'stuck', 'stale'] as const;
@@ -48,7 +48,7 @@ export const STATE_LABELS: Record<DisplayState, string> = {
   shipped: 'Shipped',
 };
 
-type StateInput = Pick<Card, 'stage' | 'gate' | 'retries'> & { release?: string; updatedAt?: string; events?: { action: string; at?: string }[] };
+type StateInput = Pick<Card, 'stage' | 'gate' | 'retries'> & { release?: string; updatedAt?: string; events?: { action: string; at?: string; stage?: string; note?: string }[] };
 
 /** `now` and the time of the story's last activity line; time-based health needs both. */
 export interface HealthContext {
@@ -93,7 +93,9 @@ function inProgressHealth(card: StateInput, ctx: HealthContext): Health {
   const lastTouch = Math.max(lastEvent, ctx.lastActivityAt ?? 0);
   if (now - lastTouch > STALE_MS) return 'stale';
   if (agentEndedOnFail(card.events)) return 'failing';
-  const fails = card.retries?.[card.stage] ?? 0;
+  // Every failed check of the stage since the card entered it, counted toward retries or not: a
+  // failure no work stood behind still leaves the stage failing.
+  const fails = Math.max(card.retries?.[card.stage] ?? 0, (card.events ?? []).slice(stageEntryIndex(card.events, card.stage) + 1).filter(e => e.action === 'fail' && e.stage === card.stage).length);
   const quiet = now - (ctx.lastActivityAt ?? lastEvent) > QUIET_MS;
   if (fails >= 2 && quiet) return 'failing';
   // One failed check is a stage being worked only while someone works it: quiet for an hour with

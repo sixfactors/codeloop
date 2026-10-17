@@ -110,7 +110,7 @@ export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, s
   const last_check = c.stage === PROPOSED
     ? 'not started: a proposal'
     : c.gate === 'stuck'
-    ? `failed: ${c.events.filter(e => e.action === 'stuck').at(-1)?.note?.split('\n').at(-1) ?? ''}`
+    ? `failed: ${c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1)?.note?.split('\n').at(-1) ?? ''}`
     : stage?.gate?.outward ? 'not run yet (public step, approve first)' : 'passed';
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, gate: c.gate!, awaiting: c.awaiting, ...scored,

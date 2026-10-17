@@ -306,6 +306,9 @@ describe('unattended retries on a stage with no output file', () => {
     git('commit', '-q', '-m', 'base');
     createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
     const retries = () => readCards(dir).cards[0].retries.build;
+    // The story's own commit is the work the first failure counts.
+    write('src/a.ts', 'story');
+    git('commit', '-q', '-am', 'story work\n\nCard: c-1');
 
     runDue(dir);
     runDue(dir);

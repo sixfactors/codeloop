@@ -12,7 +12,7 @@ import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { currentSession } from './active-card.js';
-import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
+import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
@@ -346,13 +346,18 @@ export function recordEvent(
   }
 }
 
-/** Parks a card at gate stuck for the owner, with `note` as the reason the inbox shows. A card already at a gate is left as it is. */
-export function markStuck(projectDir: string, id: string, note: string, now: Date = clock()): Card {
+/**
+ * Parks a card at gate stuck for the owner. The stuck note is `reason` on its first line and the
+ * check output below it (`output`, or the stage's last fail), the shape the retry cap writes too.
+ * A card already at a gate is left as it is.
+ */
+export function markStuck(projectDir: string, id: string, reason: string, now: Date = clock(), output?: string): Card {
   for (let attempt = 0; ; attempt++) {
     const file = readCards(projectDir);
     const before = findCard(file.cards, id);
     if (before.gate) return before;
-    const card: Card = { ...before, gate: 'stuck', awaiting: 'owner', events: [...before.events, event(now, 'engine', 'stuck', before.stage, note)], updatedAt: now.toISOString() };
+    const tail = output ?? before.events.filter(e => e.action === 'fail' && e.stage === before.stage).at(-1)?.note;
+    const card: Card = { ...before, gate: 'stuck', awaiting: 'owner', events: [...before.events, event(now, 'engine', 'stuck', before.stage, tail ? `${reason}\n${tail}` : reason)], updatedAt: now.toISOString() };
     try {
       writeCards(projectDir, file, replace(file.cards, card));
       return card;
@@ -694,42 +699,58 @@ export function workFingerprint(projectDir: string, card: Card, stage: Stage, ou
   return createHash('sha1').update(work).digest('hex');
 }
 
-/**
- * Whether anyone tried work on the stage since its last failed check: an agent ran on it, a work
- * line was written, HEAD moved by a commit on this card, or the output changed. A missing output,
- * or one still the template, is no work, so a check before the folder exists, on the template, or
- * in a sweep spends no retry.
- * A stage with no output file is judged by agent runs, work lines and this card's commits only:
- * the working tree also changes under a check that writes files, and that is not work.
+/*
+ * Retries, restarts and stuck: one model, applied here (advanceCard), in run.ts (agentStep,
+ * doctorTick) and in journey.ts (storyLiveLine).
+ * 1. Every failed check writes a fail event, counted or not, at the cap or not.
+ * 2. A failure counts toward lane.retries only when work was tried since the last counted failure
+ *    of the stage (or, for the first, since the card entered the stage): an agent run, a person's
+ *    work line, a commit that is work on this card (commitsWorkOn), or a stage output that differs
+ *    from the last counted failure's and is neither missing nor the bare template. On a stage with
+ *    no output file, tree changes alone never count.
+ * 3. A failing stage is failing for the inbox, the doctor and run whether or not the failure
+ *    counted (states.ts reads fail events, not retries). The doctor and `run --agent` start an agent
+ *    on it within the start limits (wip, gates_per_day, max_runs_per_day, run budget, memory).
+ * 4. No restart while head and work are unchanged since the last agent start. When that refusal
+ *    meets a failed check, the card parks stuck with NOTHING_CHANGED, and the check is not rerun
+ *    until something the check can see changes (rerun-skip.ts).
+ * 5. At lane.retries counted failures the card parks stuck with failedTimes(n) as the reason.
+ * 6. Owner approve on stuck clears the gate and the counts and writes `unstick`, which allows one
+ *    agent start even on unchanged work; the next start on unchanged work is refused again (4).
+ * 7. The stuck event's first note line is the reason; stuckReason reads it for the story page.
  */
-function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; headWork: (from: string, to: string) => boolean; committedSince: (at: number) => boolean }): boolean {
+
+/** The stage's last counted failure since the card entered it, or undefined. A fail event older than the counted flag counts as counted. */
+function lastCountedFail(card: Card, stage: string): CardEvent | undefined {
   const events = card.events ?? [];
-  const lastFail = events.map(e => e.stage === stage.id && e.action === 'fail').lastIndexOf(true);
-  if (opts.workLines || events.slice(lastFail + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
-  if (lastFail < 0) return (stage.output !== undefined && !opts.untouched) || opts.committedSince(stageEnteredAt(card, stage.id));
-  const head = events[lastFail].head;
-  if (opts.head && head && opts.head !== head && opts.headWork(head, opts.head)) return true;
-  return stage.output !== undefined && !opts.untouched && card.failures?.[stage.id] !== opts.fingerprint;
+  return events.slice(stageEntryIndex(events, stage) + 1).filter(e => e.stage === stage && e.action === 'fail' && e.counted !== false).at(-1);
 }
 
-/** When the card came into the stage, as epoch ms: the last move into it, or its creation. */
-function stageEnteredAt(card: Card, stage: string): number {
-  for (const e of [...(card.events ?? [])].reverse()) {
-    if (e.action === 'advance' && /^to (\S+)/.exec(e.note ?? '')?.[1] === stage) return Date.parse(e.at);
-    if (['place', 'promote', 'unpark', 'returned'].includes(e.action) && e.stage === stage) return Date.parse(e.at);
-  }
-  return Date.parse(card.createdAt);
+function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; storyCommits: (since: { from?: string; at: number }) => boolean }): boolean {
+  const events = card.events ?? [];
+  const entry = stageEntryIndex(events, stage.id);
+  const base = lastCountedFail(card, stage.id);
+  const after = base ? events.indexOf(base) : entry;
+  if (opts.workLines || events.slice(after + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
+  const since = base ? Date.parse(base.at) : entry >= 0 ? Date.parse(events[entry].at) : Date.parse(card.createdAt);
+  if (base?.head && opts.head) {
+    if (base.head !== opts.head && opts.storyCommits({ from: base.head, at: since })) return true;
+  } else if (opts.head && opts.storyCommits({ at: since })) return true;
+  if (!stage.output || opts.untouched) return false;
+  return !base || (base.fingerprint ?? card.failures?.[stage.id]) !== opts.fingerprint;
 }
 
 const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
 
 /**
- * Whether a commit between two HEADs is work on this card. Another story's commit in a shared tree
- * moves HEAD too, so only a commit carrying the card's `Card:` or `Feature:` trailer counts, or one
- * with no trailer at all that touches a file in the card's plan.
+ * Whether a commit since `from` (or, for the first failure, since `at`) is work on this card.
+ * Another story's commit in a shared tree moves HEAD too, so only a commit carrying the card's
+ * `Card:` or `Feature:` trailer counts, or one with no trailer at all that touches a file in the
+ * card's plan.
  */
-function commitsWorkOn(projectDir: string, card: Card, from: string, to: string): boolean {
-  const log = spawnSync('git', ['log', '--format=%x01%H%x00%B', `${from}..${to}`], { cwd: projectDir, encoding: 'utf-8' });
+function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; at: number }): boolean {
+  if (!since.from) return storyCommitTimes(projectDir, card.id).some(t => t >= Math.floor(since.at / 1000) * 1000);
+  const log = spawnSync('git', ['log', '--format=%x01%H%x00%B', `${since.from}..HEAD`], { cwd: projectDir, encoding: 'utf-8' });
   if (log.status !== 0) return false;
   const plan = planFiles(projectDir, card);
   for (const rec of log.stdout.split('\u0001')) {
@@ -747,8 +768,7 @@ function commitsWorkOn(projectDir: string, card: Card, from: string, to: string)
 /**
  * `rerunStuck` lets the doctor rerun the check of a story parked stuck, after work landed on it: a
  * pass advances it and the stuck gate goes with it (an `unstick` event is written), a failure
- * leaves it stuck. The gate is cleared only on the working copy, so a failure with the same
- * fingerprint returns without writing anything.
+ * leaves it stuck and is recorded uncounted. The gate is cleared only on the working copy.
  */
 export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean; checkTimeoutMs?: number; force?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
@@ -815,25 +835,38 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       return { card, outcome: 'check-error', output, started: [], because: {} };
     }
     if (!check.passed) {
-      // A story at its retry cap is parked: a further failure is not counted and nothing is written,
-      // so `retries` never passes `lane.retries` however often the check is rerun.
-      if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) return { card: before, outcome: 'stuck', output, started: [], because: {} };
-      // An unattended run retries on a schedule. If the work has not changed since the last failure
-      // there is nothing new to judge, so it must not use up a retry.
       const fingerprint = workFingerprint(projectDir, card, stage, output);
-      if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
-      card.failures = { ...before.failures, [stage.id]: fingerprint };
-      // Only a failure with work behind it counts toward the cap; any other is recorded and costs nothing.
       const head = headCommit(projectDir);
-      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, headWork: (from, to) => commitsWorkOn(projectDir, before, from, to), committedSince: at => storyCommitTimes(projectDir, before.id).some(t => t >= Math.floor(at / 1000) * 1000) });
+      const failed = (counted: boolean): CardEvent => ({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}), fingerprint, counted });
+      // At the retry cap the failure is recorded and never counted, so `retries` never passes
+      // `lane.retries`; a card at the cap that is not parked yet (the lane's retries were lowered) parks.
+      if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) {
+        const kept = draft(before);
+        kept.failures = { ...before.failures, [stage.id]: fingerprint };
+        kept.events.push(failed(false));
+        if (!kept.gate) {
+          kept.gate = 'stuck';
+          kept.awaiting = 'owner';
+          kept.events.push(event(now, 'engine', 'stuck', stage.id, `${failedTimes(kept.retries[stage.id] ?? 0)}\n${output}`));
+        }
+        writeCards(projectDir, file, replace(file.cards, kept));
+        return { card: kept, outcome: 'stuck', output, started: [], because: {} };
+      }
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, storyCommits: since => commitsWorkOn(projectDir, before, since) });
+      card.events.push(failed(counted));
+      // An unattended run on the work the last failure judged, with nothing tried since, has nothing new to say.
+      if (opts.unattended && !counted && before.failures?.[stage.id] === fingerprint) {
+        writeCards(projectDir, file, replace(file.cards, card));
+        return { card, outcome: 'unchanged', output, started: [], because: {} };
+      }
+      card.failures = { ...before.failures, [stage.id]: fingerprint };
       const failures = (card.retries[stage.id] ?? 0) + (counted ? 1 : 0);
       card.retries[stage.id] = failures;
-      card.events.push({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}) });
       const stuck = failures >= lane.retries;
       if (stuck) {
         card.gate = 'stuck';
         card.awaiting = 'owner';
-        card.events.push(event(now, 'engine', 'stuck', stage.id, output));
+        card.events.push(event(now, 'engine', 'stuck', stage.id, `${failedTimes(failures)}\n${output}`));
       }
       writeCards(projectDir, file, replace(file.cards, card));
       return { card, outcome: stuck ? 'stuck' : 'failed', output, started: [], because: {} };
