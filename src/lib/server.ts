@@ -373,6 +373,14 @@ export function createApp(
     return c.json(written);
   }));
 
+  // The summary's needed and done lines. The owner's write is a person's; an agent's never replaces it.
+  app.put(api('/cards/:id/summary'), writing(async c => {
+    const body = await json(c, { needed: undefined as string | undefined, done: undefined as string | undefined, by: undefined as string | undefined });
+    const saved = services.saveSummary(projectDir, c.req.param('id'), { needed: body.needed, done: body.done }, role, role === 'agent' ? body.by : undefined);
+    await refreshCards();
+    return c.json(saved);
+  }));
+
   // Siblings under the same feature, each with `split_from`; the story check runs on every title first.
   app.post(api('/cards/:id/split'), writing(async c => {
     const body = await json(c, { titles: [] as string[] });

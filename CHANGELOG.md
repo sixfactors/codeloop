@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The full story response carries a three-line summary: what the story needs, what is done and what you must do. A story nobody summarised gets lines worked out from the board, marked as not yet written by an agent; lines from an earlier step are marked older; what you must do always comes from the board. `PUT /api/cards/<id>/summary` writes the first two lines.
 - The stages and checks docs say to gitignore the report files a check writes inside the repo: a check that writes a new file name each run reads as new work and restarts the agent.
 - A mock composed as a page of the app (`app/mocks/<folder>/page.tsx`) opens on the board at `/mocks/<folder>/` and under the hub at `/p/<id>/mocks/<folder>/`, and the mocks gallery links to it; HTML mocks are served as before.
 - Rejecting a stuck story with no note says it parked the story and no longer claims a note was recorded.

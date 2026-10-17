@@ -10,7 +10,7 @@ import { homedir } from 'os';
 import { basename, dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
-import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, type Card } from './cards.js';
+import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, writeSummary, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, queueCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
@@ -29,6 +29,7 @@ import { activeSessions } from './active-card.js';
 import { formatMinutes, lastActivityAt, phaseTime, readActivity, readAllActivity, type ActivityEntry } from './activity.js';
 import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
 import { storyCommits, type StoryCommit } from './diff-budget.js';
+import { summaryView, type SummaryView } from './story-summary.js';
 import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
@@ -138,6 +139,8 @@ export interface CardFull {
   /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
   commits: StoryCommit[];
   evidenceFiles: EvidenceFile[];
+  /** What it needs, what is done and what you must do, each with who wrote it and when. */
+  summary: SummaryView;
 }
 
 export interface PageWrite {
@@ -607,6 +610,7 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const display = liveState(projectDir, card, index.openQuestions(card.id).length);
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
+  const journey = journeyOf(projectDir, card, { tasks, health: display?.health });
   return {
     card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display },
     spec,
@@ -615,11 +619,17 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     evidence,
     mock: mock ? mockHref(mock) : null,
     page,
-    journey: journeyOf(projectDir, card, { tasks, health: display?.health }),
+    journey,
     rubric: rubricOf(projectDir, card.id),
     commits: storyCommits(projectDir, card.id).slice(0, 20),
     evidenceFiles: evidenceFiles(projectDir, card),
+    summary: summaryView(card, journey),
   };
+}
+
+/** `card summary`: the needed and done lines; an agent's write never replaces a person's line. */
+export function saveSummary(projectDir: string, ref: string, input: { needed?: string; done?: string }, who: Role, by?: string) {
+  return writeSummary(projectDir, ref, input, { by: by ?? who, kind: who === 'agent' ? 'agent' : 'person' });
 }
 
 function rubricOf(projectDir: string, id: string): CardFull['rubric'] {

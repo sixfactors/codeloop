@@ -11,8 +11,8 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 
 - [x] T001 [US3] [api] A three-line summary on the story (needed, done, waiting on you), each line with its author, kind (agent or person), step and time, and a write that keeps every line a person wrote, in src/lib/cards.ts
 - [ ] T002 [US3] [api] The agent writes or improves the summary at the end of its turn through the hand-back, and the stage brief footer asks for it, in src/lib/handback.ts and templates/orch
-- [ ] T003 [US4] [api] The full story response carries the summary, or one worked out from the board's facts and marked unwritten when none exists, in src/lib/services.ts
-- [ ] T004 [US5] [api] The response marks a summary written before the story's current step, and takes the waiting-on-you line from the board's holder, never from the text, in src/lib/services.ts
+- [x] T003 [US4] [api] The full story response carries the summary, or one worked out from the board's facts and marked unwritten when none exists, in src/lib/services.ts
+- [x] T004 [US5] [api] The response marks a summary written before the story's current step, and takes the waiting-on-you line from the board's holder, never from the text, in src/lib/services.ts
 - [ ] T005 [US3] [sdk] A summary write in the SDK and a hook to edit one line from the page, in src/sdk and workspace/lib/queries.ts
 - [ ] T006 [US1] [ui] A story summary card with who and when on each line and an Edit action, above the buttons and the step bar, in workspace/components/shared/story-summary.tsx and workspace/components/shared/card-detail.tsx
 - [ ] T007 [US2] [ui] Fold checks and scores, history, raw output, tasks and commits and details under headings with counts, a failing check shown on its heading, in workspace/components/shared/card-detail.tsx
