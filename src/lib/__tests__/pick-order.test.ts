@@ -7,6 +7,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createLocalClient } from '../../sdk/local.js';
 import { findCard, readCards } from '../cards.js';
 import { createCard } from '../engine.js';
+import { closeIndex } from '../index/index.js';
+import { createApp } from '../server.js';
 import { createMcpServer } from '../mcp.js';
 import { ORCH_DIR, waitingOrchCards } from '../orch.js';
 import { formBatch } from '../orch-isolation.js';
@@ -43,7 +45,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => {
+  closeIndex(dir);
+  rmSync(dir, { recursive: true, force: true });
+});
 
 // c-004 is RICE P1 with the top score; c-003 is P1 by hand and unscored; c-002 is a P1 feature set
 // to P2 by hand; c-001 is RICE P3.
@@ -74,5 +79,18 @@ describe('pick order', () => {
     await agent.cards.edit('c-005', { bug: false }, { as: 'owner' });
     expect(findCard(readCards(dir).cards, 'c-001').bug).toBeUndefined();
     expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual([...EXPECTED, 'c-005']);
+  });
+
+  it('the board API returns each column already in pick order, with each story\'s priority and bug flag', async () => {
+    await createLocalClient(dir).cards.edit('c-001', { bug: true }, { as: 'agent' });
+    const { app } = createApp(dir);
+    type Story = { id: string; priority?: string; bug?: boolean };
+    const board = (await (await app.request('/api/board?lane=build')).json()) as { columns: { stories: Story[] }[]; phases: { cells: Record<string, Story[]> }[] };
+    const want = ['c-001', ...EXPECTED.filter(id => id !== 'c-001')];
+    const inPhases = board.phases.flatMap(p => Object.values(p.cells).flat());
+    expect(inPhases.map(s => s.id)).toEqual(want);
+    expect(board.columns.flatMap(c => c.stories).map(s => s.id)).toEqual(want);
+    expect(inPhases.find(s => s.id === 'c-001')?.bug).toBe(true);
+    expect(inPhases.find(s => s.id === 'c-003')?.priority).toBe('P1');
   });
 });

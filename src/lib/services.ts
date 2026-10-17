@@ -19,7 +19,7 @@ import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
 import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec } from './flow.js';
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
-import { withChain, type Band, type CardChain } from './features.js';
+import { pickOrder, withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
 import { evaluateRubric, scaffoldRubric, type RubricReport, type RubricResult } from './rubric.js';
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
@@ -829,6 +829,10 @@ export interface BoardStory {
   display: StoryState;
   band?: string;
   score?: number;
+  /** The card's own priority, which outranks its RICE band; absent when it has none. */
+  priority?: string;
+  /** A critical bug, which every column puts first. */
+  bug?: boolean;
   epic?: string;
   feature?: string;
   initiative?: string;
@@ -846,6 +850,7 @@ export interface BoardStory {
   /** Minutes of work and of waiting since `phaseSince`. */
   activeMinutes?: number;
   idleMinutes?: number;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -860,8 +865,9 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; sessio
   const time = since && ctx ? phaseTime(readAllActivity(ctx.projectDir, c.id), since, Date.now()) : undefined;
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
+    ...(c.priority ? { priority: c.priority } : {}), ...(c.bug ? { bug: true } : {}),
     epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
-    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), ...(time ? { activeMinutes: time.activeMinutes, idleMinutes: time.idleMinutes } : {}), updatedAt: c.updatedAt,
+    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), ...(time ? { activeMinutes: time.activeMinutes, idleMinutes: time.idleMinutes } : {}), createdAt: c.createdAt, updatedAt: c.updatedAt,
   };
 };
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
@@ -897,7 +903,8 @@ async function storyRows(index: ProjectIndex, projectDir: string): Promise<Board
     .filter((r): r is BoardStory => Boolean(r));
 }
 
-const byRank = (a: BoardStory, b: BoardStory) => (b.score ?? -1) - (a.score ?? -1) || a.updatedAt.localeCompare(b.updatedAt);
+// The picks' order (features.ts pickOrder), so a column reads in the order work will be taken.
+const byRank = (a: BoardStory, b: BoardStory) => pickOrder(a, b);
 const newestFirst = (a: BoardStory, b: BoardStory) => b.updatedAt.localeCompare(a.updatedAt);
 
 export interface BoardView {

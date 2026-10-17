@@ -13,6 +13,7 @@ import { toast } from '@/lib/toast';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
+import { BandChip, BugChip } from '@/components/shared/band-chip';
 import { BoardCard } from '@/components/shared/board-card';
 import { StoryBadge } from '@/components/shared/state-pill';
 import { faceTimeText } from '@/components/shared/journey-stepper';
@@ -23,7 +24,7 @@ import { PageSkeleton } from '@/components/shared/page-skeleton';
 import { ShapeStarter } from '@/components/shared/shape-starter';
 import { backlogQuery } from '@/lib/board-columns';
 import { useBoard, useCardColumn, useNextAction, useTriage } from '@/hooks/use-api';
-import type { BoardPhase, BoardStory, BoardView, Card as CardT, DisplayState } from '@/lib/types';
+import type { Band, BoardPhase, BoardStory, BoardView, Card as CardT, DisplayState } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
@@ -88,6 +89,9 @@ function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) 
           ? time ? <span data-testid="board-card-time">{time}</span>
           : story.phaseSince ? <span>{inPhase(story.phaseSince)}</span> : null
           : null}
+        {/* The card's own priority outranks its RICE band, as in every pick. */}
+        <BugChip bug={story.bug} />
+        <BandChip band={(story.priority ?? story.band) as Band | undefined} score={story.score} />
         <span className="ml-auto"><StoryBadge display={story.display} /></span>
       </span>
     </div>

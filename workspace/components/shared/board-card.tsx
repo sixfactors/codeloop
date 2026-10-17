@@ -12,11 +12,11 @@ import { HelpCircle, Image as ImageIcon, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { BoardCardMenuItem } from '@/components/shared/board-card-menu';
-import { BandChip } from '@/components/shared/band-chip';
+import { BandChip, BugChip } from '@/components/shared/band-chip';
 import { MetaChip } from '@/components/shared/meta-chip';
 import { ShortIdCell } from '@/components/shared/short-id-cell';
 import { isGateWaiting, isProposed, isShipped } from '@/lib/cards';
-import type { Card as CardT } from '@/lib/types';
+import type { Band, Card as CardT } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export type CardTone = 'waiting' | 'agent' | 'done' | 'stuck' | 'none';
@@ -107,7 +107,8 @@ export function BoardCard({
       <span className={cn('block leading-snug', menuItems.length > 0 && 'pr-6')}>{card.title}</span>
       <span className="mt-1.5 flex items-center gap-1.5">
         <span onClick={(e) => e.stopPropagation()}><ShortIdCell id={card.id} /></span>
-        <BandChip band={card.band} score={card.score} />
+        <BugChip bug={card.bug} />
+        <BandChip band={(card.priority ?? card.band) as Band | undefined} score={card.score} />
         <ToneBadge card={card} className="ml-auto" />
       </span>
       {sizing || card.feature || card.initiative || card.persona || card.openQuestions || card.mock ? (
