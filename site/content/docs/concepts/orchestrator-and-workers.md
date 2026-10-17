@@ -104,7 +104,7 @@ One turn, start to end:
 5. The gate reruns the proof command on HEAD, checks the rubric rows, and judges only the commits carrying the card's trailer. A sentence in the hand-back is never evidence.
 6. Pass: the stage advances. A stage with a gate stops there for the owner, who sees "Waiting for you at verify" with the check sentence. Fail: a fix-forward brief goes to the same worker, counted against the lane's retries; the third fail parks the card stuck.
 7. The orchestrator reports: what the owner would notice, what is broken, the one decision. Then the next card.
-8. At night the doctor runs the review pass first, then reruns failed checks only where something changed, starts the stage agent once on a story whose output was never written, and nudges a worker that went quiet.
+8. At night the doctor reruns failed checks only where something changed, starts the stage agent once on a story whose output was never written, and nudges a worker that went quiet. With `doctor.review: on` in config.yaml it runs the review pass first; it is off by default.
 
 ## The review pass
 
@@ -117,7 +117,7 @@ A story can sit at the wrong stage: its code merged under its id while the board
 | write a stage | The story cannot move, and its own stage file was never written | The file, from the merged work, and the stage's own check decides |
 | ask | Moving would cross a gate, or the story should split or be dropped | One inbox question starting `Review:` with the recommended answer; the story stays where it is |
 
-A written stage is then read back: each section the merged work could not fill becomes part of one inbox question, so a gap reaches the owner instead of being dropped. The pass never marks a stage skipped. Commits that change only `.codeloop/`, `specs/`, `evidence/`, `docs/` or the app's mocks folder are not counted as merged work. The engine holds the bound itself: `placeCard` and `closeCard` refuse a move from the review pass that would pass an unapproved gate, and the event's actor is `orchestrator`.
+A written stage is then read back: each section the merged work could not fill becomes part of one inbox question, so a gap reaches the owner instead of being dropped. The pass never marks a stage skipped. Commits that change only `.codeloop/`, `specs/`, `evidence/`, `shape/`, `docs/`, `CHANGELOG.md`, a `mocks/` folder or the story's spec folder are not counted as merged work; a stuck story's Move it button reads the same rule and targets the same stage. The engine holds the bound itself: `placeCard` and `closeCard` refuse a move from the review pass that would pass an unapproved gate, and the event's actor is `orchestrator`.
 
 `codeloop orch run --review` reads every open story, stopping at `orch.budget` (each fix counts as a turn); `--changed` reads only those changed since the last complete pass, which `.codeloop/state/review-pass.json` records. Either prints the report in three parts, fixed, asked and could not tell, each line naming the story and its evidence.
 
