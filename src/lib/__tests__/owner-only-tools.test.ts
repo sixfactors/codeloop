@@ -77,25 +77,24 @@ describe('owner-only tools and routes', () => {
   });
 });
 
-describe('an assistant shell, outside an agent run', () => {
+describe('an assistant shell', () => {
   beforeEach(() => {
     delete process.env.CODELOOP_AGENT_RUN;
   });
   afterEach(() => {
     delete process.env.CLAUDE_CODE_SESSION_ID;
+    delete process.env.CURSOR_SESSION_ID;
+    delete process.env.CODELOOP_AGENT_RUN;
   });
 
-  it('acts as agent by default, so an owner verb nobody asked for is refused; --as owner and CODELOOP_ROLE=owner still act as the owner', () => {
+  it('acts as the owner, the person typing there; only an agent run defaults to agent', () => {
     process.env.CLAUDE_CODE_SESSION_ID = 'session-1';
+    process.env.CURSOR_SESSION_ID = 'session-2';
+    expect(resolveRole()).toBe('owner');
+    process.env.CODELOOP_AGENT_RUN = 'builder';
     expect(resolveRole()).toBe('agent');
-    expect(() => approveCard(dir, 'c-001', resolveRole())).toThrow(/agent cannot approve it[\s\S]*--as owner/);
+    expect(() => approveCard(dir, 'c-001', resolveRole())).toThrow(/agent cannot approve it/);
     expect(findCard(readCards(dir).cards, 'c-001').gate).toBe('spec');
-    expect(resolveRole('owner')).toBe('owner');
-    process.env.CODELOOP_ROLE = 'owner';
-    expect(resolveRole()).toBe('owner');
-    delete process.env.CLAUDE_CODE_SESSION_ID;
-    delete process.env.CODELOOP_ROLE;
-    expect(resolveRole()).toBe('owner');
   });
 
   it('the shell guard asks before every owner verb, however the CLI is started, and lets the rest through', () => {

@@ -51,22 +51,14 @@ export function loadEngineConfig(projectDir: string): EngineConfig {
   };
 }
 
-/**
- * Variables an assistant host sets in the shells it starts: Claude Code sets CLAUDECODE and
- * CLAUDE_CODE_SESSION_ID, cursor-agent sets CURSOR_AGENT and CURSOR_CONVERSATION_ID;
- * CURSOR_SESSION_ID is kept for Cursor builds that use it.
- */
-export const ASSISTANT_SESSION_VARS = ['CLAUDECODE', 'CLAUDE_CODE_SESSION_ID', 'CURSOR_AGENT', 'CURSOR_CONVERSATION_ID', 'CURSOR_SESSION_ID'];
-
-// With no flag and no CODELOOP_ROLE, a shell an assistant host started acts as agent: the
-// assistant's own tool calls run there, and an owner verb must not pass because nobody asked. A
-// person in that session (a `!` command in Claude Code) passes `--as owner` or sets
-// CODELOOP_ROLE=owner; a terminal of their own is the owner by default. `run --agent` marks the
-// processes it starts (CODELOOP_AGENT_RUN), the MCP server acts as agent, and the `guard bash` hook
-// asks the person before an owner action in the assistant's shell tool.
+// A person and their assistant share one account and one shell, so the environment cannot tell them
+// apart (a `!` command typed in a Claude Code session has no TTY, exactly like the assistant's own
+// tool call). The default is therefore the person. The assistant is kept out where its actions
+// actually pass: `run --agent` marks the processes it starts (CODELOOP_AGENT_RUN), the MCP server
+// acts as agent, and the `guard bash` hook asks the person before an owner action in the
+// assistant's shell tool.
 export function resolveRole(flag?: string): Role {
-  const inAssistant = Boolean(process.env.CODELOOP_AGENT_RUN) || ASSISTANT_SESSION_VARS.some(v => process.env[v]);
-  const role = flag ?? process.env.CODELOOP_ROLE ?? (inAssistant ? 'agent' : 'owner');
+  const role = flag ?? process.env.CODELOOP_ROLE ?? (process.env.CODELOOP_AGENT_RUN ? 'agent' : 'owner');
   if (role !== 'owner' && role !== 'reviewer' && role !== 'agent') {
     throw new RefusalError(`unknown role "${role}" (owner, reviewer or agent)`);
   }
