@@ -271,8 +271,28 @@ export function folderPages(projectDir: string, folder: string): { path: string;
     });
 }
 
+/** INDEX.md split at its `## ` headings: the heading text (or '' for what comes before the first) and the section's lines. */
+function indexSections(text: string): { heading: string; text: string }[] {
+  const out: { heading: string; text: string }[] = [];
+  for (const line of text.split('\n')) {
+    const h = /^## (.+)$/.exec(line);
+    if (h || !out.length) out.push({ heading: h ? h[1].trim() : '', text: '' });
+    out[out.length - 1].text += `${line}\n`;
+  }
+  return out;
+}
+
+const pageRow = (p: { title: string; path: string; freq: number; severity: string; scope: string[] }) => `- [${p.title}](${relative(WIKI_DIR, p.path)}): freq ${p.freq}, ${p.severity}, scope ${p.scope.join(', ') || 'none'}`;
+
+/**
+ * Writes INDEX.md: the Topics table and one section per page kind and per `wiki.sections` folder,
+ * each listing the pages on disk. A `## ` section with any other heading was written by a person
+ * and is kept verbatim, after the generated ones, so a capture never deletes it.
+ */
 function writeIndex(projectDir: string): void {
   const pages = listPages(projectDir);
+  const kindFolders = new Set<string>(Object.values(KINDS));
+  const extra = configSections(projectDir).filter(s => !kindFolders.has(s.folder));
   const lines = [
     '# Wiki',
     '',
@@ -283,17 +303,35 @@ function writeIndex(projectDir: string): void {
     '| Folder | What goes there | Written by |',
     '|---|---|---|',
     ...WIKI_SHAPE.map(t => `| \`${t.folder ? `${t.folder}/` : t.file}\` | ${t.holds} | ${t.writtenBy} |`),
+    ...extra.map(s => `| \`${s.folder}/\` | ${s.holds ?? s.title} | config: wiki.sections |`),
     '',
   ];
+  const generated = new Set(['topics']);
   for (const [kind, folder] of Object.entries(KINDS)) {
-    lines.push(`## ${folder[0].toUpperCase()}${folder.slice(1)}`, '');
+    const heading = `${folder[0].toUpperCase()}${folder.slice(1)}`;
+    generated.add(heading.toLowerCase());
+    lines.push(`## ${heading}`, '');
     const mine = pages.filter(p => p.kind === kind);
     if (mine.length === 0) lines.push('None yet.');
-    for (const p of mine) lines.push(`- [${p.title}](${relative(WIKI_DIR, p.path)}): freq ${p.freq}, ${p.severity}, scope ${p.scope.join(', ') || 'none'}`);
+    for (const p of mine) lines.push(pageRow(p));
     lines.push('');
   }
+  for (const s of extra) {
+    generated.add(s.title.toLowerCase());
+    lines.push(`## ${s.title}`, '');
+    const mine = folderPages(projectDir, s.folder).map(p => {
+      const { data } = parseFrontmatter(readFileSync(join(projectDir, p.path), 'utf-8'));
+      return { title: p.title, path: p.path, freq: Number(data.freq ?? 1), severity: String(data.severity ?? 'warning'), scope: Array.isArray(data.scope) ? data.scope.map(String) : [] };
+    });
+    if (mine.length === 0) lines.push('None yet.');
+    for (const p of mine) lines.push(pageRow(p));
+    lines.push('');
+  }
+  const file = join(projectDir, WIKI_DIR, 'INDEX.md');
+  const kept = existsSync(file) ? indexSections(readFileSync(file, 'utf-8')).filter(s => s.heading && !generated.has(s.heading.toLowerCase())) : [];
+  const handWritten = kept.map(s => s.text.replace(/\n+$/, '\n')).join('\n');
   mkdirSync(join(projectDir, WIKI_DIR), { recursive: true });
-  writeFileSync(join(projectDir, WIKI_DIR, 'INDEX.md'), lines.join('\n'));
+  writeFileSync(file, handWritten ? `${lines.join('\n')}\n${handWritten}` : lines.join('\n'));
 }
 
 /**

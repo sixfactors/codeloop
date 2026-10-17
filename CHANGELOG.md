@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `codeloop wiki capture` keeps any INDEX.md section it did not generate word for word, and lists each `wiki.sections` folder in the Topics table and in its own section built from the pages there. A decision made from research whose options are lettered (`A. ...`) takes its title from the option text instead of the letter, so no `decisions/a.md` page appears.
 - A carried turn that starts at interview and asks questions waits for the answers (outcome questions) instead of running the questions check on them, spending a retry and reporting failed.
 - `codeloop card move` on a queued story counts only stories an agent is working on against the lane's wip, like every other start path; idle stories in the lane no longer refuse it.
 - An S story whose review folds into verify asks the reviewer again when the verify output or check changes after the reviewer approved, as an M story does at its own review stage; before, only the owner's local gate was asked again.

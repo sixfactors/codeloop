@@ -101,7 +101,7 @@ export function enforceRule(kind: Kind, input: { title: string; scope: string[];
 
 // The chosen option's first clause, as a page title: "Add a trivial size. Chosen." -> "Add a trivial size".
 function choiceTitle(option: string): string {
-  const clause = option.replace(/\*\*|`/g, '').replace(/\s*\([^)]*\)/g, '').replace(/^[A-Z]:\s+/, '').split(/(?<=\S)[.;:\u2014](?:\s|$)|\s\u2014\s/)[0].trim();
+  const clause = option.replace(/\*\*|`/g, '').replace(/\s*\([^)]*\)/g, '').replace(/^[A-Z][.:)]\s+/, '').split(/(?<=\S)[.;:\u2014](?:\s|$)|\s\u2014\s/)[0].trim();
   if (clause.length <= 70) return clause;
   return clause.slice(0, 70).replace(/\s+\S*$/, '').replace(/[\s,;:/|-]+$/, '');
 }

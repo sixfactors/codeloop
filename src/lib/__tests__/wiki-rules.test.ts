@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildBrief } from '../agent.js';
 import { readCards } from '../cards.js';
 import { capture, lintWiki, listPages, mergePages } from '../wiki.js';
-import { migrateResearchDecisions, normaliseTitle, wikiLanded } from '../wiki-rules.js';
+import { decisionFromResearch, migrateResearchDecisions, normaliseTitle, wikiLanded } from '../wiki-rules.js';
 
 let dir: string;
 function write(path: string, text: string): void {
@@ -88,6 +88,13 @@ describe('the research mirror migration', () => {
     expect(page.scope).toEqual(['src/export.ts']);
     expect(page.body).toMatch(/## Why/);
     expect(page.body).toMatch(/## Consequences/);
+  });
+});
+
+describe('a decision made from research', () => {
+  it('takes its title from the chosen option, not the option letter', () => {
+    const research = 'verdict: build\nPain: accountants retype totals.\n\n## Options\n\n- A. One CSV per month, written by `src/export.ts`. **Chosen.**\n- B. One XLSX workbook per year.\n';
+    expect(decisionFromResearch(dir, card('c-001', 'Invoices export to CSV'), research)?.input.title).toBe('One CSV per month, written by src/export.ts');
   });
 });
 
