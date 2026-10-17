@@ -78,7 +78,7 @@ export type CardFilter = Partial<Record<CardFilterKey, string[]>> & {
   stuck?: boolean;
   /** Cards parked at a gate this role approves, or with an open question. */
   needsMe?: Role;
-  /** `score`: RICE score descending, unscored last, then oldest first. Unset keeps board order. */
+  /** `score`: pick order (features.ts pickOrder: bug, priority, RICE score, then oldest). Unset keeps board order. */
   sort?: 'score';
 };
 export type ListSort = NonNullable<CardFilter['sort']>;
@@ -125,7 +125,7 @@ export interface InboxQuery {
   band?: string;
   /** Only what this role can act on: gates it approves, open questions. The transport fills the role. */
   needsMe?: Role;
-  /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
+  /** `score` (the default): pick order (features.ts pickOrder), oldest parked first on ties. `age`: oldest parked first. */
   sort?: 'score' | 'age';
   limit?: number;
   cursor?: string;

@@ -673,8 +673,8 @@ export type NextAction =
   | { kind: 'idle'; card?: { id: string; title: string; band: Band } };
 
 /**
- * Checked in order: no stories at all; a gate or question waiting on `role` (the oldest, highest-
- * scored one); an agent run in progress; otherwise the best-band open story, if any.
+ * Checked in order: no stories at all; a gate or question waiting on `role` (the first in pick
+ * order); an agent run in progress; otherwise the first open story in pick order, if any.
  */
 export async function nextAction(index: ProjectIndex, projectDir: string, role: Role): Promise<NextAction> {
   const { total } = await index.cards.list({}, undefined, 1);

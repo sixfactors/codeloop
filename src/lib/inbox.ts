@@ -70,7 +70,7 @@ export interface InboxInput {
   progressAt?: (card: Card) => number | undefined;
   /** The card's band and score from its feature; every card is P4 without one. */
   scoreOf?: (card: Card) => { band: Band; score?: number; feature?: string };
-  /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
+  /** `score` (the default): pick order (features.ts pickOrder), oldest parked first on ties. `age`: oldest parked first. */
   sort?: 'score' | 'age';
   /** A stuck story's explanation; its text becomes the item's last check. */
   explain?: (card: Card) => StuckExplanation | undefined;

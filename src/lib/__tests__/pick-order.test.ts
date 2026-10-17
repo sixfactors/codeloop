@@ -6,7 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createLocalClient } from '../../sdk/local.js';
 import { findCard, readCards } from '../cards.js';
-import { createCard } from '../engine.js';
+import { createCard, promoteQueued, queueCard } from '../engine.js';
 import { closeIndex } from '../index/index.js';
 import { createApp } from '../server.js';
 import { createMcpServer } from '../mcp.js';
@@ -92,5 +92,14 @@ describe('pick order', () => {
     expect(board.columns.flatMap(c => c.stories).map(s => s.id)).toEqual(want);
     expect(inPhases.find(s => s.id === 'c-001')?.bug).toBe(true);
     expect(inPhases.find(s => s.id === 'c-003')?.priority).toBe('P1');
+  });
+
+  it('a freed lane slot goes to the queued P1, not the older queued P2', () => {
+    writeFileSync(join(dir, '.codeloop/lanes/solo.yaml'), 'id: solo\nversion: 1\nwip: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "false" }\n');
+    createCard(dir, { lane: 'solo', title: 'Fix c-010', id: 'c-010', fields: { size: 'S' } });
+    queueCard(dir, { lane: 'solo', title: 'Fix c-011', id: 'c-011', now: new Date(Date.UTC(2026, 1, 1)), fields: { size: 'S', priority: 'P2' } });
+    queueCard(dir, { lane: 'solo', title: 'Fix c-012', id: 'c-012', now: new Date(Date.UTC(2026, 1, 2)), fields: { size: 'S', priority: 'P1' } });
+    // c-010 holds the one slot only while an agent works it; with none, the first promotion fills it.
+    expect(promoteQueued(dir, { lane: 'solo' }).map(c => c.id)[0]).toBe('c-012');
   });
 });

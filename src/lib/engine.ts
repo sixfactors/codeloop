@@ -25,6 +25,7 @@ import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
 // engine.ts drives a stage's domain-specific side effect without owning its parsing.
 import { queueBreakdown } from './shape.js';
+import { rankCards } from './features.js';
 
 export type Role = 'owner' | 'reviewer' | 'agent';
 
@@ -772,7 +773,8 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
   // promotion instead of being computed once against a board that is about to change under it.
   for (let i = 0; i < 1000; i++) {
     const file = readCards(projectDir);
-    const ready = file.cards.find(c => {
+    // In pick order (features.ts pickOrder), so a freed slot goes to the bug or highest priority first.
+    const ready = rankCards(projectDir, file.cards.filter(c => c.stage === QUEUED)).find(c => {
       if (c.stage !== QUEUED) return false;
       if (opts.lane && c.lane !== opts.lane) return false;
       if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
