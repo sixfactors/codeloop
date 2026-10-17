@@ -132,8 +132,30 @@ export const parseFeature = (data: Record<string, unknown>): Feature => FeatureS
 
 export const loadEpic = (file: string): Epic => loadPage(file, 'epic', parseEpic);
 export const loadFeature = (file: string): Feature => loadPage(file, 'feature', parseFeature);
-export const listEpics = (projectDir: string): Epic[] => files(join(projectDir, EPICS_DIR)).map(loadEpic);
-export const listFeatures = (projectDir: string): Feature[] => files(join(projectDir, FEATURES_DIR)).map(loadFeature);
+const warned = new Set<string>();
+
+/**
+ * Every page in the folder that parses. A page that does not is left out with one warning naming
+ * the file: every pick reads these lists, so one bad page would otherwise stop run, next_up and
+ * batch forming for the whole board. Loading that page by itself still refuses.
+ */
+function listPages<T>(projectDir: string, dir: string, load: (file: string) => T): T[] {
+  return files(join(projectDir, dir)).flatMap(file => {
+    try {
+      return [load(file)];
+    } catch (e) {
+      if (!(e instanceof RefusalError)) throw e;
+      if (!warned.has(file)) {
+        warned.add(file);
+        console.error(`codeloop: skipped ${dir}/${basename(file)}, which does not parse (${e.message})`);
+      }
+      return [];
+    }
+  });
+}
+
+export const listEpics = (projectDir: string): Epic[] => listPages(projectDir, EPICS_DIR, loadEpic);
+export const listFeatures = (projectDir: string): Feature[] => listPages(projectDir, FEATURES_DIR, loadFeature);
 
 /** Every card with its chain, band and score, from the feature pages on disk: for reads that have no index. */
 export function withChain<T extends Card>(projectDir: string, cards: T[]): (T & CardChain)[] {
