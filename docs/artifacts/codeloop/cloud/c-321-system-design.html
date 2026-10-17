@@ -230,7 +230,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h1>Codeloop Cloud architecture</h1>
     <p class="meta">c-321 · codeloop · cloud · system design · version 2</p>
     <p class="scope">Codeloop from one laptop to a team on Codeloop Cloud, the shared context and coordination point for agents that run on your own machines: one server holds the record, locally or hosted; MCP, API, web board and command line are its clients; git is an optional export.</p>
-    <p class="status">Status: proposal, version 2, 17 October 2026. Revised after the owner's decisions on the record, the client model, story ids, identity and publishing. Revised again the same day with the owner's answers on story documents, agent sign-in, working without the server, steps, delegated approvals, the MCP shape, reviews and the day-one release. Decision pending on the three open questions at the end.</p>
+    <p class="status">Status: proposal, version 2, 17 October 2026. Revised after the owner's decisions on the record, the client model, story ids, identity and publishing. Revised again the same day with the owner's answers on story documents, agent sign-in, working without the server, steps, delegated approvals, the MCP shape, reviews and the day-one release, then with the roles and the edit guard confirmed. Decision pending on the two open questions at the end.</p>
   </header>
 
   <div class="changestrip">
@@ -244,6 +244,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
       <li>Public publishing is a per-project switch, later. "Which copy is the record" and "story number clashes" are closed and gone from the open questions.</li>
       <li>Four more questions closed: agents write story documents only through the MCP and the API; agents use their person's sign-in, not keys of their own; when the server cannot be reached, writes are refused; steps (lanes) are set per team and, in Cloud, shared per workspace with named agents.</li>
       <li>New: a review is an object on the story, with findings that route to the story's agent and close when a commit fixes them; an owner can approve with conditions in one action; an owner can delegate approvals to a named orchestrator. The steps are re-cut so a day-one release ships the server record, the stories MCP with search, reviews, priority and live presence, with nothing hosted.</li>
+      <li>Confirmed: the roles are Owner, Member and Viewer, with delegation recorded on every approval; on a linked project the edit guard asks the cloud on every edit and blocks with "server not available" when it cannot be reached.</li>
     </ul>
   </div>
 
@@ -361,7 +362,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <ul>
       <li><strong>Start on demand.</strong> The first command that finds no running hub starts one in the background, as <code>codeloop open</code> does today: it records pid, port and token in the codeloop home, waits for the health route, then sends its request. The hub stops itself after a long idle period.</li>
       <li><strong>When it cannot start.</strong> A stale pid is taken over and a taken port replaced by the next free one. A broken build or a crash on boot is reported: the command prints the last lines of the hub log and exits non-zero. It never writes the store itself, because a second writer is the problem this design removes.</li>
-      <li><strong>Hooks are clients.</strong> The guard hooks call the local API; the separate hook helper process folds into the hub. If the hub is down the hook starts it and waits a few seconds; if it still cannot answer, the edit or shell command is refused, the fail-closed behaviour hooks have today. No hook ever waits on the network.</li>
+      <li><strong>Hooks are clients.</strong> The guard hooks call the local API; the separate hook helper process folds into the hub. If the hub is down the hook starts it and waits a few seconds; if it still cannot answer, the edit or shell command is refused, the fail-closed behaviour hooks have today. On a local project no hook waits on the network. On a linked project the edit guard asks the cloud on every edit, because there is no local copy of the record to read the lease from; when the cloud cannot be reached, the edit is blocked with "server not available".</li>
       <li><strong>Recovery is read-only.</strong> <code>codeloop export</code>, <code>codeloop doctor</code> and a plain <code>sqlite3</code> read the file with the hub down, because readers do not make a second writer. A damaged store is rebuilt by the hub from the last export in git or from Codeloop Cloud.</li>
     </ul>
     <p><strong>When the server cannot be reached.</strong> Every client talks to one server: the hub for a local project, the remote server for a linked one. In version 1, when that server does not answer, codeloop says "server not available" and refuses the write. Nothing is queued or written around it. Provisional writes made offline and merged later are an option for a later version.</p>
@@ -603,6 +604,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h3>Risks and what stays out of scope</h3>
     <ul>
       <li>The hub will not start on some machine. The command shows the log and exits; doctor and export still read the store. Nothing writes around the server.</li>
+      <li>Every edit on a linked project waits for a round trip to the cloud. The lease answer is small and read-only, so it can be served fast, but a slow network slows each edit.</li>
       <li>Protobox is down. A linked project refuses writes with "server not available" until it returns. Provisional offline writes are a later option.</li>
       <li>A merge-rule bug misplaces a story. History is add-only and replay deterministic, so any story can be replayed and the difference shown.</li>
       <li>Private text reaches the public view. Deny by default, activity never leaves the machine, the path scan withholds matches, and one test feeds the view a story built to leak.</li>
@@ -617,7 +619,6 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h3>Open questions</h3>
     <div class="q"><h4>1. When a P1 arrives, what happens to a P2 a builder is working on?</h4><p>Options: (a) park it automatically with a note after the builder's uncommitted work is handed back; (b) ask the owner first; (c) no pause, the P1 waits for a free slot. Recommendation: (b) now, moving to (a) once hand-back on pause exists.</p></div>
     <div class="q"><h4>2. Where should checks such as size budget and health measure by default?</h4><p>Options: (a) the story's branch against main; (b) main itself; (c) the branch the agent is on. Recommendation: (c), right for a founder running several agents on one branch and for a team on one worktree per story; a project can set (a) or (b).</p></div>
-    <div class="q"><h4>3. On a linked project, where do the guard hooks read the edit lease?</h4><p>The hooks must answer without waiting on the network, but a linked project keeps no local copy of the record. Options: (a) the hub keeps only the leases of the stories its agents hold, refreshed on each answer from the remote server; (b) the hooks call the remote server and refuse the edit when it does not answer in time. Recommendation: (a). An edit should not stall on a slow network, and a lease is small and changes only when the plan does.</p></div>
   </section>
 
 </div>
