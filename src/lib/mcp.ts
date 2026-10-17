@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { DONE, findCard, inLane, readCards } from './cards.js';
-import { RefusalError, runCheck } from './engine.js';
+import { RefusalError, runCheck, type Role } from './engine.js';
 import { rankCards } from './features.js';
 import { MAX_QUESTIONS } from './interview.js';
 import { loadLane, substitute } from './lane.js';
@@ -13,6 +13,18 @@ import { capture, inject } from './wiki.js';
 // The MCP server is how an assistant calls codeloop as a tool, so it acts as agent unless whoever
 // started it set CODELOOP_ROLE deliberately.
 const mcpRole = () => services.resolveRole(process.env.CODELOOP_ROLE ?? 'agent');
+
+/**
+ * The role for an owner-only tool (the CLI's owner verbs: approve, reject, answer), refused for an
+ * agent the way the CLI refuses them: inside an agent run whatever CODELOOP_ROLE says, and for any
+ * server not started with a person's role. `allowed` is owner, plus reviewer for gate decisions.
+ */
+function personRole(what: string, allowed: Role[]): Role {
+  if (process.env.CODELOOP_AGENT_RUN) throw new RefusalError(`this process was started by \`codeloop run --agent\` and acts as agent; ${what} is the owner's decision`);
+  const role = mcpRole();
+  if (!allowed.includes(role)) throw new RefusalError(`${what} is the owner's decision; this MCP server acts as ${role} (CODELOOP_ROLE=${allowed.join(' or ')} lets a person's server do it)`);
+  return role;
+}
 
 function card(projectDir: string, id: string) {
   const found = findCard(readCards(projectDir).cards, id);
@@ -57,11 +69,11 @@ export function createMcpServer(projectDir: string): McpServer {
     return { outcome: r.result.outcome, stage: r.result.card.stage, gate: r.result.card.gate, awaiting: r.result.card.awaiting, output: r.result.output, started: r.result.started.map(s => s.id) };
   });
   tool('approve', 'Approve the gate a card is waiting at, then advance it once. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string().optional() }, a => {
-    const r = services.approve(projectDir, a.id, mcpRole(), a.note);
+    const r = services.approve(projectDir, a.id, personRole('approving a gate', ['owner', 'reviewer']), a.note);
     return { approved: r.gate, stage: (r.advanced?.card ?? r.card).stage, outcome: r.advanced?.outcome };
   });
   tool('reject', 'Reject the gate with a note. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string() }, a => {
-    const r = services.reject(projectDir, a.id, mcpRole(), a.note);
+    const r = services.reject(projectDir, a.id, personRole('rejecting a gate', ['owner', 'reviewer']), a.note);
     return { id: r.card.id, stage: r.card.stage, gate: r.gate, summary: r.summary };
   });
   tool('task_done', 'Tick a task in the card spec folder.', { ...id, task: z.string().describe('Task id, e.g. T003') }, a => {
@@ -74,8 +86,8 @@ export function createMcpServer(projectDir: string): McpServer {
   tool('brief', "The full stage brief for a card: skill, output, the check that must pass, feedback, wiki pages, rules. Same text `codeloop brief` prints.", id, a => services.brief(projectDir, a.id));
   tool('ask', `Ask the owner up to ${MAX_QUESTIONS} questions about a card; it waits in the inbox until answered.`, { ...id, questions: z.array(z.string()).min(1) }, a =>
     services.ask(projectDir, a.id, a.questions.map(q => ({ question: q })), mcpRole()));
-  tool('answer', 'Answer a question on a card by number, with text or by accepting its recommended answer.', { ...id, n: z.number().int().min(1), text: z.string().optional(), accept: z.boolean().optional() }, a =>
-    services.answer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, mcpRole()));
+  tool('answer', 'Answer a question on a card by number, with text or by accepting its recommended answer. Refused unless the server runs with CODELOOP_ROLE=owner, and always inside an agent run.', { ...id, n: z.number().int().min(1), text: z.string().optional(), accept: z.boolean().optional() }, a =>
+    services.answer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, personRole('answering a question', ['owner'])));
   tool('check', "Runs the current stage's done check without moving the card; pass/fail plus the check's output.", id, a => {
     const found = findCard(readCards(projectDir).cards, a.id);
     const stage = found.stage === DONE ? undefined : loadLane(projectDir, found.lane).stages.find(s => s.id === found.stage);

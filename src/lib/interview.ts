@@ -189,11 +189,18 @@ export function addQuestions(projectDir: string, ref: string, items: { question:
   });
 }
 
+// An answer is recorded as a person's decision, so an agent may write a suggested answer into
+// interview.md but never record one through these calls.
+function refuseAgentAnswer(role: Role, ref: string): void {
+  if (role === 'agent') throw new RefusalError(`answering ${ref}'s questions is the owner's decision; ask them to run \`codeloop answer ${ref} <n>\` or answer on the board`);
+}
+
 /**
  * Writes the owner's answer to question `n`; `accept` takes the recommended one. The answer is a
  * decision a person made, so the card event is marked human whatever role the caller claimed.
  */
 export function writeAnswer(projectDir: string, ref: string, n: number, answer: { text?: string; accept?: boolean; option?: string }, role: Role = 'owner'): Question {
+  refuseAgentAnswer(role, ref);
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
   const file = path && join(projectDir, path);
@@ -227,6 +234,7 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
  * already answered is left alone.
  */
 export function acceptAllAnswers(projectDir: string, ref: string, role: Role = 'owner'): { answered: Question[]; skipped: Question[] } {
+  refuseAgentAnswer(role, ref);
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
   const file = path && join(projectDir, path);

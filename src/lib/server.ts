@@ -143,6 +143,11 @@ export function createApp(
   const pageId = (c: Context) => decodeURIComponent(c.req.path.replace(pagesPrefix, ''));
   const notFound = (c: Context, what: string) => c.json({ error: `${what} not found` }, 404);
   const readOnly = (c: Context, what: string) => c.json({ error: `read-only: this server was started without --owner; signing in would not change that. Restart it to ${what} from the board.` }, 403);
+  // The owner's decisions (approve, reject, answer, park, place, move, close, drop) need an owner
+  // server, and a server started inside `codeloop run --agent` acts as that agent whatever --owner
+  // says: the CLI's owner verbs refuse there, and the board's routes are the same verbs.
+  const notOwner = (c: Context, what: string): Response | undefined =>
+    !owner ? readOnly(c, what) : process.env.CODELOOP_AGENT_RUN ? c.json({ error: `this server was started by \`codeloop run --agent\` and acts as agent; to ${what} is the owner's decision` }, 403) : undefined;
 
   // A read: the engine's refusals are 400, or 404 when they say "not found".
   const handled = (fn: (c: Context) => Promise<Response>) => async (c: Context) => {
@@ -213,7 +218,8 @@ export function createApp(
 
   // Approve and reject go through the same engine as the CLI, as the owner.
   const decide = (run: (id: string, note: string) => services.DecisionReport) => writing(async c => {
-    if (!owner) return readOnly(c, 'approve or reject');
+    const refused = notOwner(c, 'approve or reject');
+    if (refused) return refused;
     const body = await json(c, { note: undefined as string | undefined });
     const decision = run(c.req.param('id'), body.note ?? '');
     await refreshCards();
@@ -222,14 +228,16 @@ export function createApp(
   app.post(api('/cards/:id/approve'), decide((id, note) => services.approve(projectDir, id, 'owner', note || undefined)));
   app.post(api('/cards/:id/reject'), decide((id, note) => services.reject(projectDir, id, 'owner', note)));
   app.post(api('/cards/:id/park'), writing(async c => {
-    if (!owner) return readOnly(c, 'park a card');
+    const refused = notOwner(c, 'park a card');
+    if (refused) return refused;
     const body = await json(c, { note: undefined as string | undefined });
     const parked = services.parkCard(projectDir, c.req.param('id'), 'owner', body.note);
     await refreshCards();
     return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), parked });
   }));
   app.post(api('/cards/:id/place'), writing(async c => {
-    if (!owner) return readOnly(c, 'place a card');
+    const refused = notOwner(c, 'place a card');
+    if (refused) return refused;
     const body = await json(c, { stage: '' });
     const placed = services.placeCard(projectDir, c.req.param('id'), body.stage, 'owner');
     await refreshCards();
@@ -237,13 +245,15 @@ export function createApp(
   }));
   // A stuck story's move button: clears the stuck gate and places it where its shipped work points.
   app.post(api('/cards/:id/move-stuck'), writing(async c => {
-    if (!owner) return readOnly(c, 'move a stuck story');
+    const refused = notOwner(c, 'move a stuck story');
+    if (refused) return refused;
     const moved = services.moveStuck(projectDir, c.req.param('id'), 'owner');
     await refreshCards();
     return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), moved });
   }));
   app.post(api('/cards/:id/close'), writing(async c => {
-    if (!owner) return readOnly(c, 'end a card');
+    const refused = notOwner(c, 'end a card');
+    if (refused) return refused;
     const body = await json(c, { outcome: 'done' as 'done' | 'dropped', note: undefined as string | undefined });
     const closed = services.closeCard(projectDir, c.req.param('id'), 'owner', body.outcome === 'dropped' ? 'dropped' : 'done', body.note);
     await refreshCards();
@@ -254,7 +264,8 @@ export function createApp(
   // the change (a builder holds it, it is not done, the move undoes a gate without a note), so it is a
   // 409 against that state rather than the 400 other writes answer.
   const controlling = (what: string, run: (c: Context, id: string) => Promise<ReturnType<typeof reopenCard>>) => writing(async c => {
-    if (!owner) return readOnly(c, what);
+    const refused = notOwner(c, what);
+    if (refused) return refused;
     try {
       const card = await run(c, c.req.param('id') ?? '');
       await refreshCards();
@@ -298,14 +309,16 @@ export function createApp(
   app.post(api('/cards/:id/rubric/scaffold'), writing(async c => c.json(services.rubricScaffold(projectDir, c.req.param('id')))));
   // Every open question's recommendation at once: the owner's decision, the same standing as an answer.
   app.post(api('/cards/:id/questions/accept-all'), writing(async c => {
-    if (!owner) return readOnly(c, 'answer');
+    const refused = notOwner(c, 'answer');
+    if (refused) return refused;
     const { answered, skipped } = services.acceptAll(projectDir, c.req.param('id'), 'owner');
     await patchQuestions(c.req.param('id'));
     return c.json({ accepted: answered.length, skipped: skipped.map(q => q.n), ...services.questions(projectDir, c.req.param('id')) });
   }));
   // An answer is the owner's decision, so it needs the same standing as an approval.
   app.post(api('/cards/:id/questions/:n/answer'), writing(async c => {
-    if (!owner) return readOnly(c, 'answer');
+    const refused = notOwner(c, 'answer');
+    if (refused) return refused;
     const body = await json(c, {} as { text?: string; accept?: boolean; option?: string });
     services.answer(projectDir, c.req.param('id'), parseInt(c.req.param('n'), 10), { text: body.text, accept: body.accept === true, ...(body.option ? { option: body.option } : {}) }, 'owner');
     await patchQuestions(c.req.param('id'));
