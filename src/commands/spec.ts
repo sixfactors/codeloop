@@ -1,5 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { existsSync } from 'fs';
+import { specPath } from '../lib/project-root.js';
 import { RefusalError, resolveRole, skipsStage } from '../lib/engine.js';
 import { checkSpec, newSpec, readTasks, resolveSpecDir, tickTask } from '../lib/spec.js';
 import { guard } from './guard.js';
@@ -53,19 +55,36 @@ taskCommand
     console.log(`  ${task} done`);
   }));
 
+/** The spec folder of a card that skipped spec, when it holds a tasks.md; undefined otherwise. */
+function tasksDir(ref: string): string | undefined {
+  try {
+    const dir = resolveSpecDir(projectRoot(), ref);
+    return existsSync(specPath(projectRoot(), dir, 'tasks.md')) ? dir : undefined;
+  } catch (e) {
+    if (e instanceof RefusalError) return undefined;
+    throw e;
+  }
+}
+
 taskCommand
   .command('check <nnn>')
   .description('Exit 1 while any task is open')
   .option('--all-done', 'Require every task ticked')
   .action(guard((ref: string, opts: { allDone?: boolean }) => {
     if (!opts.allDone) throw new RefusalError('usage: codeloop task check <nnn> --all-done');
-    // A card that skipped the spec stage has no tasks.md; its diff cap bounds the change instead.
+    // A card that skipped the spec stage usually has no tasks.md, and its diff cap bounds the change
+    // instead; one whose tasks.md lists tasks (an S story with planned tasks) is checked against them.
     const skipped = skipsStage(projectRoot(), ref, 'spec');
-    if (skipped) {
+    const dir = skipped ? tasksDir(ref) : resolveSpecDir(projectRoot(), ref);
+    if (!dir) {
       console.log(`  no tasks: ${skipped}`);
       return;
     }
-    const { tasks } = readTasks(projectRoot(), resolveSpecDir(projectRoot(), ref));
+    const { tasks } = readTasks(projectRoot(), dir);
+    if (skipped && tasks.length === 0) {
+      console.log(`  no tasks: ${skipped}`);
+      return;
+    }
     const open = tasks.filter(t => !t.done);
     open.forEach(t => console.error(`  open: ${t.id} [${t.layer}] ${t.text}`));
     if (open.length || tasks.length === 0) {

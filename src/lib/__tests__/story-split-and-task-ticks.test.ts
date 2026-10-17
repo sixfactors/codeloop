@@ -136,3 +136,26 @@ describe('a queued split sibling', () => {
     expect(readCards(dir).cards.find(c => c.id === sibling.id)!.stage).toBe('build');
   });
 });
+
+describe('task check on a story that skipped spec', () => {
+  it('reads the tasks.md an S story has, ticked or not', () => {
+    write('.codeloop/lanes/build.yaml', `id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - { id: spec, when: "size >= M", done: { cmd: "true" } }\n  - { id: build, done: { cmd: "true" } }\n`);
+    createCard(dir, { lane: 'build', title: 'Small story', id: 'c-1', fields: { size: 'S' } });
+    const cards = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'));
+    expect(cards.cards[0].stage).toBe('build');
+    cards.cards[0].spec = 'specs/001-small';
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify(cards));
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const check = () => runCli(['task', 'check', 'c-1', '--all-done'], { cwd: dir, encoding: 'utf-8', env });
+    write('specs/001-small/tasks.md', '- [x] T001 [api] one\n- [ ] T002 [api] two\n');
+    expect(check().status).toBe(1);
+    write('specs/001-small/tasks.md', '- [x] T001 [api] one\n- [x] T002 [api] two\n');
+    const done = check();
+    expect(done.stdout).toMatch(/all 2 tasks done/);
+    expect(done.status).toBe(0);
+    write('specs/001-small/tasks.md', '# c-1 tasks\n\n## Rubric\n');
+    expect(check().stdout).toMatch(/no tasks: c-1 skips the spec stage/);
+    rmSync(join(dir, 'specs'), { recursive: true });
+    expect(check().stdout).toMatch(/no tasks: c-1 skips the spec stage/);
+  });
+});
