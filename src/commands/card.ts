@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
-import { createLocalClient, projectRoot } from '../sdk/local.js';
+import { createLocalClient, linkedCheckout, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
 
 const client = () => createLocalClient(projectRoot());
@@ -130,8 +130,15 @@ cardCommand
   .option('--done <text>', "The story summary's line on what is done")
   .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string; needed?: string; done?: string }) => {
     const c = client();
-    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree: opts.worktree, ...(opts.needed || opts.done ? { summary: { needed: opts.needed, done: opts.done } } : {}) });
+    // Run from a linked worktree of the project, the proof runs in that checkout, where the
+    // builder's branch is, not in the main tree the board lives in.
+    const worktree = opts.worktree ?? linkedCheckout(projectRoot());
+    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree, ...(opts.needed || opts.done ? { summary: { needed: opts.needed, done: opts.done } } : {}) });
     console.log(`proof exit ${rec.proof.exit}; hand-back recorded for ${rec.card} at ${rec.stage} (${rec.branch}@${rec.head.slice(0, 8)})`);
+    if (rec.proof.exit !== 0) {
+      const head = rec.proof.output.split('\n').slice(0, 12).join('\n').trimEnd();
+      console.error(`proof failed with exit ${rec.proof.exit}\n  cwd: ${rec.proof.cwd ?? '(not recorded)'}\n  command (${rec.proof.shell ?? 'sh'} -c): ${rec.proof.cmd}${head ? `\n  output:\n${head.replace(/^/gm, '    ')}` : ''}`);
+    }
     await c.close();
   }));
 

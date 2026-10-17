@@ -35,7 +35,8 @@ export interface HandbackRecord {
   stage: string;
   branch: string;
   head: string;
-  proof: { cmd: string; exit: number; output: string };
+  /** `cwd` is where the proof ran, `shell` what ran it. */
+  proof: { cmd: string; exit: number; output: string; cwd?: string; shell?: string };
   left: string;
   blocked: string;
   at: string;
@@ -53,7 +54,8 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
   if (!cmd) throw new RefusalError('a hand-back needs a proof command');
   const card = findCard(readCards(projectDir).cards, cardRef);
 
-  const ran = spawnSync(cmd, { shell: true, cwd: input.worktree || projectDir, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const cwd = input.worktree || projectDir;
+  const ran = spawnSync(cmd, { shell: '/bin/sh', cwd, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL);
   // A killed or unspawnable proof has no status; 1 keeps "not 0" meaning "did not pass".
   const exit = ran.status ?? 1;
@@ -66,7 +68,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
     stage: card.stage,
     branch: input.branch,
     head: input.head,
-    proof: { cmd, exit, output },
+    proof: { cmd, exit, output, cwd, shell: '/bin/sh' },
     left: input.left ?? '',
     blocked: input.blocked ?? '',
     at: new Date().toISOString(),

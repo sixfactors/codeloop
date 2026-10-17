@@ -5,6 +5,8 @@ import { join } from 'path';
 import { cardActivity, listHandbacks, recordHandback } from '../services.js';
 import { RefusalError, readCards } from '../cards.js';
 import { createCard } from '../engine.js';
+import { spawnSync } from 'child_process';
+import { runCli } from '../../__tests__/cli.js';
 
 let dir: string;
 beforeEach(() => {
@@ -45,5 +47,33 @@ describe('recordHandback', () => {
     recordHandback(dir, 'c-001', { ...input('true'), head: 'one' });
     recordHandback(dir, 'c-001', { ...input('true'), head: 'two' });
     expect(listHandbacks(dir, 'c-001').map(h => h.head)).toEqual(['two', 'one']);
+  });
+});
+
+describe('codeloop card handback', () => {
+  const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd, encoding: 'utf-8' });
+  const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: '', CODELOOP_PROJECT_DIR: '', CODELOOP_WORK_DIR: '' };
+
+  it('runs the proof in the linked worktree it is called from, where the branch is checked out', () => {
+    git(dir, 'init', '-q');
+    git(dir, 'commit', '-q', '--allow-empty', '-m', 'init');
+    const wt = `${dir}-wt`;
+    git(dir, 'worktree', 'add', '-q', wt);
+    writeFileSync(join(wt, 'only-on-the-branch'), '');
+    try {
+      const run = runCli(['card', 'handback', 'c-001', '--branch', 'b', '--head', 'abc', '--proof', 'test -f only-on-the-branch'], { cwd: wt, encoding: 'utf-8', env });
+      expect(run.stdout).toMatch(/proof exit 0/);
+      expect(listHandbacks(dir, 'c-001')[0].proof.cwd).toBe(realpathSync(wt));
+    } finally {
+      rmSync(wt, { recursive: true, force: true });
+    }
+  });
+
+  it('prints the cwd, the exact command and the output head when the proof fails', () => {
+    const run = runCli(['card', 'handback', 'c-001', '--branch', 'b', '--head', 'abc', '--proof', 'echo first line; exit 4'], { cwd: dir, encoding: 'utf-8', env });
+    expect(run.stderr).toContain('proof failed with exit 4');
+    expect(run.stderr).toContain(`cwd: ${dir}`);
+    expect(run.stderr).toContain('command (/bin/sh -c): echo first line; exit 4');
+    expect(run.stderr).toContain('first line');
   });
 });
