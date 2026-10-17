@@ -142,7 +142,7 @@ export default function MockC311StoryPagePage() {
       <main style={{ display: 'grid', gap: 24, padding: 24 }}>
         <header>
           <h1>Every story opens with what is needed, what is done and what I must do</h1>
-          <p>As a founder, I can open any story and read, above everything else, a short plain-English summary of what it needs, what is already done, and the one thing waiting on me, so that I don't dig through checks, rubric rows and logs to find my part.</p>
+          <p>As a founder, I can open any story and read, above everything else, a short plain-English summary of what it needs, what is already done, and the one thing waiting on me, so that I don&apos;t dig through checks, rubric rows and logs to find my part.</p>
         </header>
         <section data-screen="story-page" style={{ display: 'grid', gap: 16 }}>
           <h2>Story page</h2>
