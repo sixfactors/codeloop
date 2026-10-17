@@ -1,4 +1,3 @@
-import { specsDir } from './paths.js';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import { parse as parseYaml } from 'yaml';
@@ -7,7 +6,7 @@ import { loadConfig } from './config.js';
 import { importCards, RefusalError } from './engine.js';
 import { globMatches } from './glob.js';
 import { parseFrontmatter } from './skills.js';
-import { LAYERS, slugify } from './spec.js';
+import { LAYERS, specFolderFor } from './spec.js';
 
 const SPECKIT_TASK = /^- \[( |x|X)\] (T\d{3})((?: \[[^\]]+\])*) (.+)$/;
 
@@ -48,7 +47,7 @@ export function importSpecKit(projectDir: string, from: string, lane = 'build'):
     lane,
     title: titleOf(dir),
     note: `speckit ${join(from, 'specs', dir)}`,
-    spec: id => `${specsDir(projectDir)}/${id}-${slugify(dir.replace(/^\d{3}-?/, '')) || 'feature'}`,
+    spec: id => specFolderFor(projectDir, id, dir.replace(/^\d{3}-?/, '')),
   })));
 
   const scopes = layerScopes(projectDir);
@@ -123,7 +122,7 @@ export function importBmad(projectDir: string, from: string, lane = 'build'): Im
     title: titleOf(key),
     stage: BMAD_STAGE[state] ?? 'research',
     note: `bmad ${basename(statusFile)} ${key}: ${state}`,
-    spec: id => `${specsDir(projectDir)}/${id}-${slugify(key)}`,
+    spec: id => specFolderFor(projectDir, id, key),
   })));
   stories.forEach(([key], i) => {
     const file = storyFile(key);

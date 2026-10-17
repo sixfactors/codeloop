@@ -8,6 +8,7 @@ import type { Role } from '../engine.js';
 import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
 import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
+import { pickSpecDir } from '../spec.js';
 import type { Lane } from '../lane.js';
 import { storyState, type StoryState } from '../states.js';
 import { CARD_MOCKS_DIR, MOCK_FILE, mockHref } from '../mock.js';
@@ -666,13 +667,10 @@ export class ProjectIndex {
     return { openQuestions, ...(mock ? { mock: mockHref(mock) } : {}), ...(specDir ? { specDir } : {}), hasEvidence, ...(display ? { display } : {}), ...chainOf(card, this.scoredFeatures) };
   }
 
-  /** `resolveSpecDir` over a listing taken once per reload: it re-reads cards.json per call, which 5k cards cannot afford. */
+  /** `resolveSpecDir` over a listing taken once per reload, without the repair write: it re-reads cards.json per call, which 5k cards cannot afford. A folder outside specs/ (a shape folder) is trusted as recorded. */
   private specDirOf(card: { id: string; key?: string; spec?: string }): string | undefined {
-    if (card.spec) return card.spec;
-    const key = cardKey(card);
-    if (this.specFolders.includes(key)) return `${specsDir(this.projectDir)}/${key}`;
-    const found = this.specFolders.filter(d => d.startsWith(`${key}-`));
-    return found.length === 1 ? `${specsDir(this.projectDir)}/${found[0]}` : undefined;
+    const root = specsDir(this.projectDir);
+    return pickSpecDir(card.spec, cardKey(card), root, this.specFolders, d => !d.startsWith(`${root}/`) || this.specFolders.includes(d.slice(root.length + 1))).dir;
   }
 
   private loadSpecFolders(): void {

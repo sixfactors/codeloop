@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A story whose recorded spec folder is missing finds the one folder with its number, uses it, and records it on the card, so the spec page shows what the builder wrote.
 - A story's working time counts its agent runs for as long as they ran and each lone edit as a minute, so a story worked by a headless agent no longer reads working 0m.
 - `verify` on a trivial story over budget says it was parked at a gate only when it was; on a lane with no earlier gate it says the story is re-sized and stays at its stage.
 - The inbox's WIP bar per lane counts only the stories that hold a wip slot, so a trivial story or one parked at a gate no longer fills it; `/api/inbox` returns that count as `perLane[].holding`.
