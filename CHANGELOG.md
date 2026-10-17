@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The shell guard asks about every `card move` in a compound command, not only the first, reads options wherever they sit (`card move --note x <id> <stage>`), and asks rather than allows a move it cannot read against the board.
 - `run --agent` no longer gives a lane's only wip slot to a trivial story: a trivial story starts beside the work holding the slots and never makes an S or M story wait.
 - An agent is restarted on a story only once its work or the head commit changed since its last start; a check that fails only on the legacy-layout notice, or on its own card missing from the board it read, is one check-error and spends no retry; an agent past its timeout is killed on time even while codeloop is busy in a check.
 - A failed check counts toward a story's retries only when work was tried since the last failure: an agent run, a hand-back or session edit, a new head commit, or a changed output. A check on a missing output, on the untouched template, or in a sweep is recorded and spends no retry.

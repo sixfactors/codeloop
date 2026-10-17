@@ -424,31 +424,57 @@ export async function guardSession(): Promise<void> {
   console.log(`\`codeloop card activate ${top[0].id}\` to take the first; \`codeloop inbox\` for what waits on a person.`);
 }
 
-/** Behind `guard bash` and the hook daemon. */
-const CARD_MOVE = /\bcodeloop\s+card\s+move\s+(\S+)\s+(\S+)/;
+/** Behind `guard bash` and the hook daemon. Each `codeloop card move` up to the next shell separator. */
+const CARD_MOVE = /\bcodeloop\s+card\s+move\b[^;&|\n]*/g;
+const WORD = /"([^"]*)"|'([^']*)'|(\S+)/g;
+
+/** The id and stage of one `card move`, with options dropped wherever they sit. `--opt value` drops both. */
+function moveArgs(text: string): { id?: string; stage?: string } {
+  const words = [...text.replace(/^.*?\bmove\b/, '').matchAll(WORD)].map(w => ({ text: w[1] ?? w[2] ?? w[3], quoted: w[3] === undefined }));
+  const positional: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (!w.quoted && w.text.startsWith('-')) {
+      if (!w.text.includes('=') && words[i + 1] && !(words[i + 1].text.startsWith('-') && !words[i + 1].quoted)) i++;
+      continue;
+    }
+    positional.push(w.text);
+  }
+  return { id: positional[0], stage: positional[1] };
+}
 
 /**
  * `card move` that crosses a gate (skips one ahead, undoes one passed, or clears the wait the card is
  * parked at) is the person's decision; a move between stages on one side of every gate is not.
- * Reads the board, so it runs only when the command is a card move.
+ * Every move in a compound command is judged, and one that cannot be read against the board (an
+ * unknown card or stage, an option where the id should be) is asked about rather than let through.
+ * Reads the board, so it runs only when the command holds a card move.
  */
 async function gateCrossingMove(command: string): Promise<string | undefined> {
-  const m = CARD_MOVE.exec(command);
-  if (!m) return undefined;
+  const moves = [...command.matchAll(CARD_MOVE)].map(m => m[0].trim());
+  if (moves.length === 0) return undefined;
+  let lib: { cards: Awaited<ReturnType<typeof cardsLib>>; loadLane: typeof import('../lib/lane.js').loadLane; projectDir: string };
   try {
-    const projectDir = projectRoot();
-    const { findCard, readCards } = await cardsLib();
-    const { loadLane } = await import('../lib/lane.js');
-    const card = findCard(readCards(projectDir).cards, m[1]);
-    const stages = loadLane(projectDir, card.lane).stages;
-    const from = stages.findIndex(st => st.id === card.stage);
-    const to = stages.findIndex(st => st.id === m[2]);
-    if (from < 0 || to < 0) return undefined;
-    const crossed = stages.slice(Math.min(from, to), Math.max(from, to)).some(st => st.gate);
-    return card.gate || crossed ? m[0] : undefined;
+    lib = { cards: await cardsLib(), loadLane: (await import('../lib/lane.js')).loadLane, projectDir: projectRoot() };
   } catch {
-    return undefined;
+    return moves[0];
   }
+  for (const move of moves) {
+    try {
+      const { id, stage } = moveArgs(move);
+      if (!id || !stage) return move;
+      const card = lib.cards.findCard(lib.cards.readCards(lib.projectDir).cards, id);
+      const stages = lib.loadLane(lib.projectDir, card.lane).stages;
+      const from = stages.findIndex(st => st.id === card.stage);
+      const to = stages.findIndex(st => st.id === stage);
+      if (from < 0 || to < 0) return move;
+      const crossed = stages.slice(Math.min(from, to), Math.max(from, to)).some(st => st.gate);
+      if (card.gate || crossed) return move;
+    } catch {
+      return move;
+    }
+  }
+  return undefined;
 }
 
 export async function guardBash(opts: { format: string }): Promise<void> {

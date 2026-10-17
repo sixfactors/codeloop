@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { spawn, spawnSync } from 'child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -246,6 +246,48 @@ stages:
     expect(asks('codeloop card move c-1 research "redo it"')).toBe(true);
     expect(asks('codeloop card move c-3 build')).toBe(true);
     expect(asks('codeloop card move c-2 build "resized by mistake"')).toBe(true);
+  });
+
+  it('asks for every gate-crossing move in a compound command, and for one with an option before the id', async () => {
+    write('.codeloop/lanes/build.yaml', `id: build
+version: 1
+metric: { name: m, source: cards }
+stages:
+  - id: research
+    done: { cmd: "true" }
+  - id: spec
+    done: { cmd: "true" }
+    gate: { name: spec, approver: owner }
+  - id: build
+    done: { cmd: "true" }
+  - id: verify
+    done: { cmd: "true" }
+`);
+    const now = new Date().toISOString();
+    const at = (id: string, stage: string) => ({ id, title: `Card ${id}`, lane: 'build', laneVersion: 1, stage, retries: {}, evidence: [], events: [], createdAt: now, updatedAt: now });
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [at('c-1', 'build'), at('c-3', 'research')] }));
+    // In process, the way the hook daemon calls it: the hook's stdin handed over as text.
+    const { guardBash, withStdin } = await import('../../commands/guard-hooks.js');
+    const before = process.env.CODELOOP_PROJECT_DIR;
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    const asks = async (command: string) => {
+      const out: string[] = [];
+      const log = vi.spyOn(console, 'log').mockImplementation((line: unknown) => { out.push(String(line)); });
+      try {
+        await withStdin(JSON.stringify({ tool_input: { command } }), () => guardBash({ format: 'claude' }));
+      } finally {
+        log.mockRestore();
+      }
+      return out.join('\n').includes('"permissionDecision":"ask"');
+    };
+    try {
+      expect(await asks('codeloop card move c-1 verify')).toBe(false);
+      expect(await asks('codeloop card move c-1 verify && codeloop card move c-3 build')).toBe(true);
+      expect(await asks('codeloop card move --note "redo" c-3 build')).toBe(true);
+    } finally {
+      if (before === undefined) delete process.env.CODELOOP_PROJECT_DIR;
+      else process.env.CODELOOP_PROJECT_DIR = before;
+    }
   });
 
   it('answers Cursor in its beforeShellExecution format', () => {
