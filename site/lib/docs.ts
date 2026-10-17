@@ -37,6 +37,7 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Concepts',
     items: [
+      { title: 'What codeloop is', href: '/docs/concepts/what-codeloop-is' },
       { title: 'Lanes', href: '/docs/concepts/lanes' },
       { title: 'Cards and gates', href: '/docs/concepts/cards-and-gates' },
       { title: 'Stages and checks', href: '/docs/concepts/stages-and-checks' },
