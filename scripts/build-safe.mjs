@@ -2,8 +2,9 @@
 // Compiles src into a temporary dir beside dist, load-tests it and only then swaps it in, so a
 // failed or mid-edit compile never reaches dist. The global CLI is an npm link that runs
 // dist/index.js, so a broken dist breaks codeloop in every project on the machine at once.
-// Exits non-zero and leaves dist untouched when tsc or the load test fails.
-import { existsSync, mkdtempSync, readdirSync, renameSync, rmSync } from 'fs';
+// Exits non-zero and leaves dist untouched when tsc or the load test fails. --allow-type-errors
+// (the test setup) still swaps when tsc reports type errors but its output parses and loads.
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
@@ -23,8 +24,9 @@ const fail = (msg) => {
   process.exit(1);
 };
 
+const allowTypeErrors = process.argv.includes('--allow-type-errors');
 const tsc = spawnSync(process.execPath, [join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc'), '--outDir', out], { cwd: ROOT, stdio: 'inherit' });
-if (tsc.status !== 0) fail(`tsc exited ${tsc.status}`);
+if (tsc.status !== 0 && !allowTypeErrors) fail(`tsc exited ${tsc.status}`);
 if (!existsSync(join(out, 'index.js'))) fail('tsc wrote no index.js');
 
 const jsFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -64,6 +66,17 @@ rmSync(project, { recursive: true, force: true });
 if (list.status !== 0) fail(`card list --json exited ${list.status}\n${list.stderr}`);
 try { JSON.parse(list.stdout); } catch { fail(`card list --json printed no JSON: ${list.stdout.slice(0, 200)}`); }
 
+// Two builds at once (test runs in several sessions) would interleave their renames; mkdir is
+// atomic, so it serialises the swap.
+const lock = join(ROOT, '.dist-build.lock');
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+for (let waited = 0; ; waited += 100) {
+  try { mkdirSync(lock); break; } catch {
+    if (waited > 30_000) rmSync(lock, { recursive: true, force: true });
+    sleep(100);
+  }
+}
+process.on('exit', () => rmSync(lock, { recursive: true, force: true }));
 const old = `${out}-old`;
 if (existsSync(DIST)) {
   for (const name of CARRIED) if (existsSync(join(DIST, name))) renameSync(join(DIST, name), join(out, name));

@@ -16,3 +16,4 @@ workspace/out/
 .next-dev/
 .vitest-monitor-fixture/
 .dist-build-*
+.dist-build.lock
