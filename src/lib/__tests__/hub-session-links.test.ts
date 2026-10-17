@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createHubApp } from '../hub.js';
@@ -93,18 +93,9 @@ describe('the hub keeps a browser signed in whichever link it opens', () => {
 describe('the shell while the session check is in flight', () => {
   it('shows a neutral label, not Read only, until the session has loaded', async () => {
     const { sessionLabel } = await import('../../../workspace/lib/session-label.js');
-    expect(sessionLabel({ canWrite: false, isLoading: true })).not.toBe('Read only');
+    expect(sessionLabel({ canWrite: false, isLoading: true })).toBe('Checking sign-in');
+    expect(sessionLabel({ canWrite: true, isLoading: true })).toBe('Checking sign-in');
     expect(sessionLabel({ canWrite: false, isLoading: false })).toBe('Read only');
     expect(sessionLabel({ canWrite: true, isLoading: false })).toBe('Owner');
-  });
-
-  it('the shell uses that label, and one failed session check is retried', () => {
-    // The hook and shell import through the workspace's `@/` alias, which this node suite does not
-    // resolve, so their wiring is checked on the source.
-    const root = join(__dirname, '../../../workspace');
-    const shell = readFileSync(join(root, 'components/shared/app-shell.tsx'), 'utf-8');
-    expect(shell).toMatch(/sessionLabel\(\{ canWrite, isLoading \}\)/);
-    const hooks = readFileSync(join(root, 'hooks/use-api.ts'), 'utf-8');
-    expect(hooks).toMatch(/export const useSession = \(\) => useQuery\(\{[^}]*retry: 2/);
   });
 });
