@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `codeloop render` and `init` keep a role, rule, skill or orch command file edited by hand since the last render, and say so; `codeloop render --force` replaces it. Each file written whole ends with a `codeloop:rendered` stamp, and a file from an older render that differs from the new text counts as edited.
 - A feature or epic page whose frontmatter does not parse is left out of every pick with one warning naming the file, so `run`, `next_up` and batch forming carry on; before, the one page stopped them all.
 - A story's worktree is stored in cards.json relative to the project (`../repo-wt-c-012`), not as an absolute path. Boards that hold an absolute path still work, and the next `card worktree` rewrites it.
 - `POST /api/wiki/outline` needs a server started with `--owner` and no longer takes `force`, so the board cannot rewrite hand-edited outline pages; `codeloop wiki init --from-repo --write --force` still can.

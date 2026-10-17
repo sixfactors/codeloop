@@ -75,6 +75,23 @@ describe('render', () => {
     for (const f of ['.claude/commands/orch.md', '.cursor/commands/orch.md', '.agents/skills/codeloop-orch/SKILL.md']) expect(before[f]).toMatch(/# \/orch: run this board[\s\S]*codeloop orch run --review --changed/);
     expect(before['.cursor/rules/codeloop.mdc']).toMatch(/alwaysApply: true/);
   });
+
+  it('keeps a hand-edited role file, updates the untouched ones when the lane changes, and replaces both with force', () => {
+    render(dir, ['claude', 'cursor']);
+    const edited = '.claude/agents/codeloop-market-draft.md';
+    const untouched = '.claude/agents/codeloop-market-publish.md';
+    write(edited, `${readFileSync(join(dir, edited), 'utf-8')}\nOur house note.\n`);
+    write('.codeloop/lanes/market.yaml', readFileSync(join(dir, '.codeloop/lanes/market.yaml'), 'utf-8').replace('version: 1', 'version: 2\nretries: 7'));
+
+    const second = render(dir, ['claude', 'cursor']);
+    expect(readFileSync(join(dir, edited), 'utf-8')).toContain('Our house note.');
+    expect(second.kept).toEqual([edited]);
+    expect(second.written).toContain(untouched);
+    expect(readFileSync(join(dir, untouched), 'utf-8')).toContain('Stop after 7 failures');
+
+    expect(render(dir, ['claude', 'cursor'], { force: true }).written).toContain(edited);
+    expect(readFileSync(join(dir, edited), 'utf-8')).not.toContain('Our house note.');
+  });
 });
 
 describe('init --ci', () => {

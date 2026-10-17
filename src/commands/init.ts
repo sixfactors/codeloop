@@ -164,6 +164,7 @@ export const initCommand = new Command('init')
     const roleFiles = rendered.written.filter(f => f.includes('/agents/') || f.includes('/skills/codeloop-') || f.includes('/rules/codeloop-'));
     for (const f of rendered.written.filter(f => !roleFiles.includes(f))) console.log(chalk.green(`  + ${f} (tells the assistant to work through codeloop)`));
     if (roleFiles.length) console.log(chalk.green(`  + ${roleFiles.length} stage role files for the assistant`));
+    for (const f of rendered.kept) console.log(chalk.yellow(`  ~ ${f}: edited by hand, kept (\`codeloop render --force\` replaces it)`));
     const hook = installHooks(projectDir);
     if (hook.installed) console.log(chalk.green(`  + ${relative(projectDir, hook.path) || hook.path}`));
     for (const h of installHostHooks(projectDir)) if (h.installed && h.reason !== 'unchanged') console.log(chalk.green(`  + ${h.name}`));

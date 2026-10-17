@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -97,12 +98,33 @@ function agentsBlock(lanes: Lane[], protocol: string): string {
   return markedBlock(lines.join('\n'));
 }
 
+// Files written whole (role files, rules, skills, orch commands) end with a stamp of what render
+// wrote. A file whose text no longer matches its stamp, or that has none, was edited by hand.
+const STAMP = /\n<!-- codeloop:rendered ([0-9a-f]{12}) -->\n$/;
+const digest = (text: string) => createHash('sha1').update(text).digest('hex').slice(0, 12);
+const stamped = (text: string) => {
+  const body = text.endsWith('\n') ? text : `${text}\n`;
+  return `${body}\n<!-- codeloop:rendered ${digest(body)} -->\n`;
+};
+
+/** True when the file on disk is render's own output, untouched since, so it is safe to replace. */
+function asRendered(current: string, body: string): boolean {
+  const m = STAMP.exec(current);
+  if (m) return digest(current.slice(0, m.index)) === m[1];
+  // A file from before the stamp is replaced only when it already says what render would write.
+  return current.trimEnd() === body.trimEnd();
+}
+
 function readIfExists(file: string): string {
   return existsSync(file) ? readFileSync(file, 'utf-8') : '';
 }
 
-/** Writes only when content differs, so a second run changes nothing. Text outside each file's markers is kept. */
-export function render(projectDir: string, hosts: Host[]): { written: string[]; unchanged: string[] } {
+/**
+ * Writes only when content differs, so a second run changes nothing. Text outside each file's
+ * markers is kept. A file written whole that was edited since the last render is listed in `kept`
+ * and left alone unless `force`.
+ */
+export function render(projectDir: string, hosts: Host[], opts: { force?: boolean } = {}): { written: string[]; unchanged: string[]; kept: string[] } {
   const lanes = loadLanes(projectDir);
   const skills = loadSkillsIndex(projectDir) ?? [];
   const out: Record<string, string> = Object.assign({}, ...hosts.map(h => files(lanes, skills, h)));
@@ -119,11 +141,18 @@ export function render(projectDir: string, hosts: Host[]): { written: string[]; 
   if (existsSync(join(projectDir, '.github'))) out['.github/copilot-instructions.md'] = applyMarkedBlock(readIfExists(join(projectDir, '.github/copilot-instructions.md')), protocolBlock);
   if (forHost('cursor')) out['.cursor/rules/codeloop.mdc'] = `---\ndescription: The standing codeloop protocol, read this before any work in the active card.\nalwaysApply: true\n---\n\n${protocol}\n`;
 
-  const result = { written: [] as string[], unchanged: [] as string[] };
-  for (const [path, text] of Object.entries(out)) {
+  const marked = new Set(['AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md']);
+  const result = { written: [] as string[], unchanged: [] as string[], kept: [] as string[] };
+  for (const [path, body] of Object.entries(out)) {
     const file = join(projectDir, path);
-    if (existsSync(file) && readFileSync(file, 'utf-8') === text) {
+    const text = marked.has(path) ? body : stamped(body);
+    const current = existsSync(file) ? readFileSync(file, 'utf-8') : undefined;
+    if (current === text) {
       result.unchanged.push(path);
+      continue;
+    }
+    if (current !== undefined && !marked.has(path) && !opts.force && !asRendered(current, body)) {
+      result.kept.push(path);
       continue;
     }
     mkdirSync(dirname(file), { recursive: true });

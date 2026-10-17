@@ -17,14 +17,16 @@ export const renderCommand = new Command('render')
   .description('Write each lane stage as an agent, rule or skill for Claude, Cursor and Codex, plus the standing protocol block and, with --hooks, the hooks that enforce it')
   .option('--host <host>', 'claude | cursor | codex | all; by default the hosts init set up (.claude, .cursor, .agents present), or all when none is', 'auto')
   .option('--hooks', 'Also install the Claude Code and Cursor hooks and the pre-commit/pre-push git guards (same as `codeloop init --hooks`)', false)
-  .action(guard((opts: { host: string; hooks?: boolean }) => {
+  .option('--force', 'Replace role, rule and skill files edited by hand since the last render', false)
+  .action(guard((opts: { host: string; hooks?: boolean; force?: boolean }) => {
     if (opts.host !== 'all' && opts.host !== 'auto' && !HOSTS.includes(opts.host as Host)) throw new RefusalError(`unknown host "${opts.host}" (claude, cursor, codex or all)`);
     const markers: Record<Host, string> = { claude: '.claude', cursor: '.cursor', codex: '.agents' };
     const present = HOSTS.filter(h => existsSync(join(projectRoot(), markers[h])));
     const hosts = opts.host === 'all' ? HOSTS : opts.host === 'auto' ? (present.length ? present : HOSTS) : [opts.host as Host];
-    const result = render(projectRoot(), hosts);
+    const result = render(projectRoot(), hosts, { force: opts.force });
     result.written.forEach(f => console.log(chalk.green(`  + ${f}`)));
-    console.log(`  ${result.written.length} written, ${result.unchanged.length} unchanged`);
+    result.kept.forEach(f => console.log(chalk.yellow(`  ~ ${f}: edited by hand since the last render, kept (--force replaces it)`)));
+    console.log(`  ${result.written.length} written, ${result.unchanged.length} unchanged${result.kept.length ? `, ${result.kept.length} kept` : ''}`);
     if (opts.hooks) {
       for (const h of installHostHooks(projectRoot())) {
         console.log(h.installed ? chalk.green(`  + ${h.name}${h.reason === 'unchanged' ? ' (unchanged)' : ''}`) : chalk.yellow(`  ~ ${h.name}: ${h.reason}`));
