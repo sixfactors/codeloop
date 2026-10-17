@@ -21,5 +21,5 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 ## Rubric
 
 <!-- One line per attest row of the spec rubric. -->
-- S3 pass: Q1 in specs/313-a-small-story-runs-its-early-stages-in-o/spec.md:14 and spec.md:34; Q2 in spec.md:17 and spec.md:38; Q3 in spec.md:15; Q4 in spec.md:10 and spec.md:18; mapping at spec.md:27
+- S3 pass: Q1 in specs/313-a-small-story-runs-its-early-stages-in-o/spec.md:14 and spec.md:34; Q2 in spec.md:17 and spec.md:40; Q3 in spec.md:15; Q4 in spec.md:10 and spec.md:18; mapping at spec.md:27
 - S6 pass: specs/313-a-small-story-runs-its-early-stages-in-o/spec.md:34 lists merging stages, carrying past the spec gate, session resume and dropping the reviewer's approval as not built
