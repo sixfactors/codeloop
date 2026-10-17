@@ -230,7 +230,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h1>Codeloop Cloud architecture</h1>
     <p class="meta">c-321 · codeloop · cloud · system design · version 2</p>
     <p class="scope">Codeloop from one laptop to a team on Codeloop Cloud, the shared context and coordination point for agents that run on your own machines: one server holds the record, locally or hosted; MCP, API, web board and command line are its clients; git is an optional export.</p>
-    <p class="status">Status: proposal, version 2, 17 October 2026. Revised after the owner's decisions on the record, the client model, story ids, identity and publishing. Revised again the same day with the owner's answers on story documents, agent sign-in, working without the server, and steps. Decision pending on the three open questions at the end.</p>
+    <p class="status">Status: proposal, version 2, 17 October 2026. Revised after the owner's decisions on the record, the client model, story ids, identity and publishing. Revised again the same day with the owner's answers on story documents, agent sign-in, working without the server, steps, delegated approvals, the MCP shape, reviews and the day-one release. Decision pending on the three open questions at the end.</p>
   </header>
 
   <div class="changestrip">
@@ -243,6 +243,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
       <li>One identity: a codeloop account is a Protobox account. Roles come from the Protobox workspace. Agents use their person's sign-in, set up from a "Connect your agents" page.</li>
       <li>Public publishing is a per-project switch, later. "Which copy is the record" and "story number clashes" are closed and gone from the open questions.</li>
       <li>Four more questions closed: agents write story documents only through the MCP and the API; agents use their person's sign-in, not keys of their own; when the server cannot be reached, writes are refused; steps (lanes) are set per team and, in Cloud, shared per workspace with named agents.</li>
+      <li>New: a review is an object on the story, with findings that route to the story's agent and close when a commit fixes them; an owner can approve with conditions in one action; an owner can delegate approvals to a named orchestrator. The steps are re-cut so a day-one release ships the server record, the stories MCP with search, reviews, priority and live presence, with nothing hosted.</li>
     </ul>
   </div>
 
@@ -351,7 +352,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h3>Where the local store lives</h3>
     <p>The hub keeps each project's record in one SQLite file in the <strong>codeloop home</strong>, the per-user folder <code>~/.codeloop</code> that already holds the hub registry: <code>~/.codeloop/projects/&lt;project id&gt;/codeloop.db</code>. Not inside the repository, for three reasons. Several checkouts and worktrees of one repository must see one board; a file in the repository would give each its own. A database beside tracked files is one <code>git clean</code> away from damage, and folder-sync tools corrupt a live database. And one folder for every project is one place to back up.</p>
     <p>A repository finds its store through a random <strong>project id</strong> in the tracked <code>.codeloop/project.json</code>, written by <code>codeloop init</code>. The id is not a location setting: codeloop alone decides the path, and the per-project <code>store.home</code>, <code>store.layout</code> and <code>store.move</code> settings go away. A fresh clone has no board until <code>codeloop import</code> reads an export from git or the project is linked to Codeloop Cloud.</p>
-    <p><strong>Story documents live in the store too.</strong> Research, spec, plan, tasks and evidence are documents on the story, written by agents through the <code>documents</code> tool or the API and read back through the same tool and the story brief. That is what "git is not the record" means in practice. The plan's file list, the lease the edit hook enforces, is read from the stored plan. <code>codeloop export</code> writes every story as a folder of markdown under <code>.codeloop/export/</code> for an editor or a commit. Agents write documents only through the tool and the API, never through a mirrored folder, because a watched folder would be a second writer.</p>
+    <p><strong>Story documents live in the store too, from step 4.</strong> Until then they stay files in the story's spec folder, as today. Research, spec, plan, tasks and evidence are documents on the story, written by agents through the <code>documents</code> tool or the API and read back through the same tool and the story brief. That is what "git is not the record" means in practice. The plan's file list, the lease the edit hook enforces, is read from the stored plan. <code>codeloop export</code> writes every story as a folder of markdown under <code>.codeloop/export/</code> for an editor or a commit. Agents write documents only through the tool and the API, never through a mirrored folder, because a watched folder would be a second writer.</p>
   </section>
 
   <section class="contract">
@@ -368,19 +369,25 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
 
   <section class="contract">
     <h3>The MCP tool surface</h3>
-    <p>The MCP is the main interface, so it carries most of what the record can do: read, create, update and delete stories, documents, wiki pages, skills, questions and summaries, as well as the workflow verbs. Sixty separate tools would fill an agent's context before it started. Instead, as Protobox's own MCP does with its <code>knowledge</code> and <code>apps</code> tools, there is one tool per resource with an <code>action</code> argument, an <code>id</code>, a <code>data</code> object for writes and <code>filters</code> for lists. Called with no action, a tool returns a menu of the actions the caller's role allows. A destructive action previews first and runs when called again with <code>confirm</code>. Every action is one API route, and the command line and the web board call those same routes.</p>
+    <p>The MCP is the main interface, so it carries most of what the record can do: read, create, update and delete stories, reviews, documents, wiki pages, skills and questions, as well as the workflow verbs. Sixty separate tools would fill an agent's context before it started. Instead, as Protobox's own MCP does with its <code>knowledge</code> and <code>apps</code> tools, there are eight grouped tools, one per resource, each with an <code>action</code> argument, plus one <code>search</code> tool across the record. Every action is one API route, and the command line and the web board call those same routes. The design follows MCP specification version <strong>2026-07-28</strong>.</p>
     <table>
       <tr><th>Tool</th><th>Actions</th><th>Lowest role</th></tr>
-      <tr><td>stories</td><td>list, next_up, get, brief, create (a proposal), update, delete, advance, check, handback, task_done</td><td>Viewer reads and creates; member advances, checks, hands back, ticks; owner updates fields by hand or deletes</td></tr>
-      <tr><td>documents</td><td>list, read, write, delete; one of research, spec, plan, tasks, evidence, or a named extra</td><td>Member writes; owner deletes</td></tr>
+      <tr><td>stories</td><td>list, next_up, get, brief, create (a proposal), update, delete, note, advance, check, handback, task_done</td><td>Viewer reads, creates and notes; member advances, checks, hands back, ticks; owner updates fields by hand or deletes</td></tr>
+      <tr><td>reviews</td><td>write (verdict and findings), list, get, waive_finding</td><td>Member writes and waives; viewer reads</td></tr>
+      <tr><td>decisions</td><td>inbox, approve, approve_with_conditions, reject, promote, park, resume, delegate, revoke</td><td>Member rejects; owner for the rest, or an orchestrator the owner delegated to</td></tr>
       <tr><td>questions</td><td>ask, list, answer</td><td>Member asks; owner answers</td></tr>
-      <tr><td>decisions</td><td>inbox, approve, reject, promote, park, resume</td><td>Member rejects; owner for the rest</td></tr>
-      <tr><td>wiki</td><td>search, inject (pages whose scope matches given files), get, write, delete</td><td>Viewer reads; member writes; owner deletes</td></tr>
+      <tr><td>documents</td><td>list, read, write, delete; one of research, spec, plan, tasks, evidence, or a named extra</td><td>Member writes; owner deletes</td></tr>
+      <tr><td>wiki</td><td>inject (pages whose scope matches given files), get, write, delete</td><td>Viewer reads; member writes; owner deletes</td></tr>
       <tr><td>skills</td><td>list, get, write, delete</td><td>Viewer reads; member writes; owner deletes</td></tr>
-      <tr><td>summaries</td><td>list, write (stage output, review line, hand-back summary)</td><td>Member</td></tr>
       <tr><td>agents</td><td>list, get, register, heartbeat, release, update (branch, state)</td><td>Member for their own agents; owner for any</td></tr>
+      <tr><td>search</td><td>one query across stories, wiki pages, documents and decisions, filtered by kind</td><td>Viewer</td></tr>
     </table>
-    <p>Roles are checked per action on the server, never per tool, so a member's agent sees the <code>decisions</code> tool and is refused on <code>approve</code> with a message naming the role that could. Structure-specific actions (advance, check, promote) exist only when the project runs lanes; a project using its own pipeline still has every read and write.</p>
+    <p>The day-one release ships <code>stories</code> (get, task_done, handback, note), <code>reviews</code>, <code>search</code> and <code>approve_with_conditions</code>; the rest follow with the steps that need them.</p>
+    <p><strong>Typed inputs per action.</strong> Each tool's <code>inputSchema</code> is a JSON Schema 2020-12 <code>oneOf</code> with one branch per action, keyed on <code>action</code>, so an agent sees exactly which fields each action takes and the client can validate before it calls. Each tool has an <code>outputSchema</code>; results carry <code>structuredContent</code> and, as the specification asks for compatibility, the same JSON as text. Called with no action, a tool returns the actions the caller's role allows. A destructive action previews first and runs when called again with <code>confirm</code>. List actions page with the specification's opaque cursor.</p>
+    <p><strong>Clear errors.</strong> The specification separates two kinds. A malformed request or an unknown tool is a JSON-RPC protocol error. Everything an agent can correct, a missing field, a story in the wrong stage, a role that may not act, is a tool result with <code>isError: true</code> and a sentence that says what to do: "approve needs the owner role; ask the owner or use questions.ask". Roles are checked per action on the server, never per tool.</p>
+    <p><strong>Search and discovery.</strong> The specification defines no search method, so search is a tool. It returns its hits as <code>resource_link</code> items, each a <code>codeloop://</code> URI with a title and a one-line excerpt, and the agent reads the ones it wants. The same records are exposed as resources through URI templates, such as <code>codeloop://story/{key}</code>, <code>codeloop://story/{key}/document/{name}</code>, <code>codeloop://wiki/{path}</code> and <code>codeloop://decision/{id}</code>, listed by <code>resources/templates/list</code>, with story keys and wiki paths offered by completion. A client that shows a resource picker can browse the record without any tool call, and a client can subscribe to a story's resource to hear when it changes, which is how live presence reaches a board.</p>
+    <p><strong>What the specification changes for this design.</strong> Version 2026-07-28 has no protocol sessions: every request carries its own credentials and client information. So the tool list may differ by the caller's role, a viewer's list leaves out actions it cannot take, and the server identifies the calling agent from the client information on each request and records it on the Agent entity. Tool annotations are hints a client must treat as untrusted, and they apply to a whole tool, not an action, so only <code>search</code> claims <code>readOnlyHint</code>, any tool with a delete action sets <code>destructiveHint</code>, and the server's role check is what actually protects the record.</p>
+    <p class="muted">Specification read on 17 October 2026, version 2026-07-28: <a href="https://modelcontextprotocol.io/specification/2026-07-28/server/tools">tools</a>, <a href="https://modelcontextprotocol.io/specification/2026-07-28/server/resources">resources</a>, <a href="https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/completion">completion</a>, <a href="https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/pagination">pagination</a>, <a href="https://modelcontextprotocol.io/specification/2026-07-28/changelog">changes since 2025-11-25</a>.</p>
   </section>
 
   <section class="contract">
@@ -426,13 +433,21 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
       <tr><td>Person</td><td>One account. Role in a workspace: owner, member or viewer, mapped from the Protobox role. Their sign-in tokens, one per device, which their agents also use.</td></tr>
       <tr><td>Project</td><td>Random id (the one in <code>project.json</code>), name, key prefix, key counter, public switch, the workspace it belongs to.</td></tr>
       <tr><td>Story</td><td><strong>id</strong>: random, assigned on creation, used by the database, sync and every reference between records. <strong>key</strong>: short and readable, for people and commit trailers. Stage, gate, priority, size, feature, branch, the agents that worked it.</td></tr>
-      <tr><td>Event</td><td>Story id, time, actor, random event id, kind, note. Add-only; state is replayed from events.</td></tr>
+      <tr><td>Event</td><td>Story id, time, actor, on behalf of (set when a delegated orchestrator acts for an owner), random event id, kind, note. Add-only; state is replayed from events.</td></tr>
       <tr><td>Document</td><td>Story id, name (research, spec, plan, tasks, evidence), text, content hash, who wrote it.</td></tr>
+      <tr><td>Review</td><td>Story id, stage, reviewer, verdict, findings.</td></tr>
+      <tr><td>Finding</td><td>id, review, severity, file and line, owner, status (open, fixed, waived), the commit that fixed it.</td></tr>
       <tr><td>Agent</td><td>id, kind (Claude Code, Cursor, Codex, CI, person), person, machine, project, story, branch, state (working, waiting on owner, stalled, done), files held, started at, last activity. Registered and kept current by the agent itself; this record, not the credential, says which agent reported the work.</td></tr>
     </table>
     <p><strong>Story keys.</strong> A key is <code>&lt;prefix&gt;-&lt;number&gt;</code>: one to five letters, a hyphen, one to six digits, so three to twelve characters, unique within a project. The server that holds the record assigns the number, so two machines cannot hand out the same key: the hub for a local project, Codeloop Cloud for a linked one. Every write goes through that server, so a story has its key from the moment it is created.</p>
     <p><strong>Migration of old ids.</strong> Today's ids already have this shape, so <code>c-321</code> becomes the key <code>c-321</code> of a story with a new internal id. Import sets the project prefix to <code>c</code> and the counter past the highest number. Commit trailers, notes and wiki links keep working unchanged.</p>
     <p><strong>Agents.</strong> The agent entity keeps its version 1 shape. The session file becomes an agent in state working, the lease its files-held list, the computed holder the story's current agent; the stall check sets the state when last activity passes the limit. A person working by hand is an agent of kind person. Agent records sync on every change, so a team sees every machine's agents on one board, and the cloud marks an agent stalled when its machine stops reporting.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Reviews and approve with conditions</h3>
+    <p><strong>A review is an object on the story.</strong> A reviewer, a person or an agent, writes a review with a verdict and findings through the <code>reviews</code> tool. Each finding has a severity, a file and line, an owner and a status. Open findings are routed to the story's current agent and appear in its brief. A finding closes when a commit names the finding's id in a trailer and the server sees that commit; a member can also waive one with a note. This replaces the review files kept beside the story and the five-question cap, because findings are counted and closed one by one instead of read from a file.</p>
+    <p><strong>Approve with conditions.</strong> At a gate with open questions, the agent's handed-back work carries a recommended answer for each. One owner action approves the gate and accepts those recommendations as the answers, recorded as the owner's. An owner who disagrees with one answers it first, then approves.</p>
   </section>
 
   <section class="contract">
@@ -472,6 +487,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
       <tr><td>viewer</td><td>Viewer</td><td>Read, propose, note</td></tr>
     </table>
     <p>Four Protobox roles map onto three codeloop roles; owner and admin both decide, because splitting them has no use on a board. A reviewer and the person behind a builder agent are both members. There are no agent keys: an agent connects with its person's sign-in, the token <code>codeloop login</code> gives, sent as the bearer header, and acts with that person's role. The server checks the role on every call, no tool argument can raise it, and a refusal names the role that could have done it. The owner chose this for simplicity over per-agent attribution. The trade-off is that every action traces to the person, not to the agent, and an agent run by an owner can do what the owner can. The Agent entity still records which agent reported the work: an agent registers through the <code>agents</code> tool and reports as it goes, so the board and the history name it.</p>
+    <p><strong>Delegated approvals.</strong> Each person keeps one sign-in. An owner can delegate approvals to a named orchestrator, an agent in the workspace's cast, and revoke that at any time. Every approval it makes is recorded on the event as "approved by &lt;orchestrator&gt; on behalf of &lt;owner&gt;", so the history shows both who decided and who allowed it.</p>
   </section>
 
   <section class="contract">
@@ -512,44 +528,56 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
 
   <section class="contract">
     <h3>Steps</h3>
-    <p>Six steps, each usable on its own. Sizes use the board's scale (S, M, L) with a rough calendar reading. The order follows dependencies: everything after step 1 needs one writer and a stable story id, so the store moves first; roles need the server to be the only door, so hooks and MCP move next; the cloud is the same server with a second store, so it comes once the server is whole; identity and the Connect page need the cloud to exist; publishing is last because it is read-only on top of all of it.</p>
-    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" role="img" aria-label="Six steps in order">
+    <p>Eight steps, each usable on its own. Steps 1 to 3 are the <strong>day-one release</strong>: they replace today's shared board file, give agents the stories MCP and search, and add reviews, approve with conditions, priority and live presence, with nothing hosted. Sizes use the board's scale (S, M, L) with a rough calendar reading. The order follows dependencies and that cut: everything needs one writer and a stable story id, so the record moves first; the MCP and hooks need the server to be the only door; reviews, approve with conditions, priority and presence are what an owner running several agents uses every day, so they ship before anything hosted. Story documents in the store come next, then the cloud as a second store, identity once the cloud exists, the named-agent cast and the constitution on top of identity, and publishing last because it is read-only on top of all of it.</p>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 140" role="img" aria-label="Eight steps in order; steps 1 to 3 are the day-one release">
 <defs>
   <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
 </defs>
-<rect class="box git" x="10" y="20" width="120" height="70" rx="8"/>
-<text x="70" y="51" text-anchor="middle">1. Server store</text>
-<text x="70" y="67" text-anchor="middle" class="small">CLI as client</text>
-<path class="arrow" d="M130,55 L143,55"/>
-<rect class="box git" x="143" y="20" width="120" height="70" rx="8"/>
-<text x="203" y="51" text-anchor="middle">2. Hooks, MCP</text>
-<text x="203" y="67" text-anchor="middle" class="small">through the server</text>
-<path class="arrow" d="M263,55 L276,55"/>
-<rect class="box git" x="276" y="20" width="120" height="70" rx="8"/>
-<text x="336" y="51" text-anchor="middle">3. Agents</text>
-<text x="336" y="67" text-anchor="middle" class="small">entity, branch, priority</text>
-<path class="arrow" d="M396,55 L409,55"/>
-<rect class="box cloud" x="409" y="20" width="120" height="70" rx="8"/>
-<text x="469" y="51" text-anchor="middle">4. Cloud record</text>
-<text x="469" y="67" text-anchor="middle" class="small">link, remote record</text>
-<path class="arrow" d="M529,55 L542,55"/>
-<rect class="box cloud" x="542" y="20" width="120" height="70" rx="8"/>
-<text x="602" y="51" text-anchor="middle">5. Identity</text>
-<text x="602" y="67" text-anchor="middle" class="small">login, roles, Connect</text>
-<path class="arrow" d="M662,55 L675,55"/>
-<rect class="box pub" x="675" y="20" width="120" height="70" rx="8"/>
-<text x="735" y="51" text-anchor="middle">6. Publish</text>
-<text x="735" y="67" text-anchor="middle" class="small">per project, filtered</text>
-<text x="400" y="112" text-anchor="middle" class="small">Blue steps need no account or network. Orange steps need Codeloop Cloud. Green is public.</text>
+<rect class="box git" x="1.5" y="14" width="90" height="62" rx="8"/>
+<text x="46.5" y="41" text-anchor="middle">1. Record</text>
+<text x="46.5" y="58" text-anchor="middle" class="small">store, import</text>
+<path class="arrow" d="M91.5,45 L102.5,45"/>
+<rect class="box git" x="102.5" y="14" width="90" height="62" rx="8"/>
+<text x="147.5" y="41" text-anchor="middle">2. MCP</text>
+<text x="147.5" y="58" text-anchor="middle" class="small">stories, search</text>
+<path class="arrow" d="M192.5,45 L203.5,45"/>
+<rect class="box git" x="203.5" y="14" width="90" height="62" rx="8"/>
+<text x="248.5" y="41" text-anchor="middle">3. Reviews</text>
+<text x="248.5" y="58" text-anchor="middle" class="small">approve, presence</text>
+<path class="arrow" d="M293.5,45 L304.5,45"/>
+<rect class="box git" x="304.5" y="14" width="90" height="62" rx="8"/>
+<text x="349.5" y="41" text-anchor="middle">4. Documents</text>
+<text x="349.5" y="58" text-anchor="middle" class="small">in the store</text>
+<path class="arrow" d="M394.5,45 L405.5,45"/>
+<rect class="box cloud" x="405.5" y="14" width="90" height="62" rx="8"/>
+<text x="450.5" y="41" text-anchor="middle">5. Cloud</text>
+<text x="450.5" y="58" text-anchor="middle" class="small">remote record</text>
+<path class="arrow" d="M495.5,45 L506.5,45"/>
+<rect class="box cloud" x="506.5" y="14" width="90" height="62" rx="8"/>
+<text x="551.5" y="41" text-anchor="middle">6. Identity</text>
+<text x="551.5" y="58" text-anchor="middle" class="small">login, Connect</text>
+<path class="arrow" d="M596.5,45 L607.5,45"/>
+<rect class="box cloud" x="607.5" y="14" width="90" height="62" rx="8"/>
+<text x="652.5" y="41" text-anchor="middle">7. Agents</text>
+<text x="652.5" y="58" text-anchor="middle" class="small">cast, constitution</text>
+<path class="arrow" d="M697.5,45 L708.5,45"/>
+<rect class="box pub" x="708.5" y="14" width="90" height="62" rx="8"/>
+<text x="753.5" y="41" text-anchor="middle">8. Publish</text>
+<text x="753.5" y="58" text-anchor="middle" class="small">filtered, public</text>
+<path class="lane" d="M1.5,88 L293.5,88"/>
+<text x="147.5" y="104" text-anchor="middle" class="small">Day-one release</text>
+<text x="400" y="130" text-anchor="middle" class="small">Blue steps need no account or network. Orange steps need Codeloop Cloud. Green is public.</text>
 </svg></div>
     <table>
       <tr><th>Step</th><th>Size</th><th>What you see</th></tr>
-      <tr><td>1. The server owns the store; the command line becomes an API client</td><td>L, three to four weeks</td><td>SQLite in the codeloop home, started on demand by the first command. <code>codeloop import</code> moves the shared board file in, keeping every key; <code>codeloop export</code> writes it back out. Stories get internal ids. The location settings disappear. Your commits carry code only.</td></tr>
-      <tr><td>2. Hooks and MCP through the server, with roles</td><td>M, about two weeks</td><td>One line in your agent's MCP config replaces the command-line skill. The eight resource tools replace today's fourteen verbs. Hooks answer from the hub; the separate hook helper is gone. Approve and answer need the owner role.</td></tr>
-      <tr><td>3. Agent entity, story branch, priority</td><td>M, about a week</td><td>The board reads "Claude Code, started by Ana on her laptop, on branch feat/sync, working, last seen 3 minutes ago". Stories carry P1 to P4 and a critical mark; next up orders by them.</td></tr>
-      <tr><td>4. Codeloop Cloud as the record</td><td>L, three to four weeks</td><td>The same server on Protobox with the MongoDB store. <code>codeloop link</code>, then the same board on a second machine and at the hosted URL. With the server out of reach, writes are refused with "server not available". Agents can use the workspace MCP URL.</td></tr>
-      <tr><td>5. One identity and the Connect page</td><td>M, about two weeks</td><td>Sign up once, <code>codeloop login</code> by device code, roles from the workspace, agents connected with their person's sign-in from Connect your agents.</td></tr>
-      <tr><td>6. Public publishing</td><td>M, about two weeks</td><td>A public URL per project an owner switched on, read-only through the filter.</td></tr>
+      <tr><td>1. The server owns the record, with import of today's board and wiki</td><td>L, three to four weeks</td><td>SQLite in the codeloop home, started on demand by the first command. <code>codeloop import</code> moves the shared board file and the wiki in, keeping every key; <code>codeloop export</code> writes them back out. Stories get internal ids. The command line becomes an API client. The location settings disappear. Your commits carry code only.</td></tr>
+      <tr><td>2. The stories MCP and search; hooks through the server</td><td>M, about two weeks</td><td>One line in your agent's MCP config replaces the command-line skill. The <code>stories</code> tool covers show, task tick, hand-back and note, the <code>reviews</code> tool findings, and <code>search</code> finds stories, wiki pages, documents and decisions. Hooks answer from the hub; the separate hook helper is gone. Approve and answer need the owner role.</td></tr>
+      <tr><td>3. Reviews, approve with conditions, priority, live presence</td><td>M, about two weeks</td><td>A review with findings on the story, routed to its agent and closed by the fixing commit. One owner action approves a gate with the agent's recommended answers. Stories carry P1 to P4 and a critical mark; next up orders by them. The board reads "Claude Code, started by Ana on her laptop, on branch feat/sync, working, last seen 3 minutes ago".</td></tr>
+      <tr><td>4. Story documents in the store</td><td>M, about two weeks</td><td>Research, spec, plan, tasks and evidence written and read through the <code>documents</code> tool; the edit lease read from the stored plan; export writes them out as markdown.</td></tr>
+      <tr><td>5. Codeloop Cloud as the record</td><td>L, three to four weeks</td><td>The same server on Protobox with the MongoDB store. <code>codeloop link</code>, then the same board on a second machine and at the hosted URL. With the server out of reach, writes are refused with "server not available". Agents can use the workspace MCP URL.</td></tr>
+      <tr><td>6. One identity and the Connect page</td><td>M, about two weeks</td><td>Sign up once, <code>codeloop login</code> by device code, roles from the workspace, agents connected with their person's sign-in from Connect your agents.</td></tr>
+      <tr><td>7. The named-agent cast and the constitution</td><td>M, about two weeks</td><td>Named agents and lanes shared across the workspace; an owner delegates approvals to a named orchestrator and revokes it; the constitution, the project's standing principles, given to every agent.</td></tr>
+      <tr><td>8. Public publishing</td><td>M, about two weeks</td><td>A public URL per project an owner switched on, read-only through the filter.</td></tr>
     </table>
   </section>
 
@@ -575,6 +603,7 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
       <li>codeloop releases become tied to Protobox deploys. The API and sync protocol are versioned; the command line refuses a server it does not understand.</li>
       <li>Pressure to make the cloud do the work. The hosted API has no verb for merge, gate run, orchestrated run or builder start, so the line holds by construction.</li>
     </ul>
+    <p><strong>Later, not version 2: soft locks on files.</strong> An agent would mark the files it is about to change so another agent waits. The design issue to solve then is a stale lock: agents forget to release, so every lock needs an expiry renewed by the agent's heartbeat, and a lock whose agent stopped reporting lapses on its own.</p>
     <p><strong>Out of scope here:</strong> Protobox internals beyond identity; the web board's visual redesign; running agents in the cloud, by design; a hook file for Codex; links between projects; live shared editing of a document.</p>
   </section>
 
