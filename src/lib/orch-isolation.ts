@@ -7,10 +7,10 @@
  * `orch.max_builders` (default 2) caps how many builders run at once across both modes.
  */
 import { spawnSync } from 'child_process';
-import { existsSync, readdirSync, unlinkSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { activeSessions, ACTIVE_SESSIONS_DIR, setActiveCard } from './active-card.js';
-import { findCard, readCards, type Card } from './cards.js';
+import { findCard, inLane, readCards, type Card } from './cards.js';
 import { loadConfig } from './config.js';
 import { isSharedPath, pathInPlan, planFiles } from './plan-scope.js';
 
@@ -38,9 +38,107 @@ export function maxBuilders(projectDir: string): number {
   return typeof v === 'number' && v >= 1 ? Math.floor(v) : 2;
 }
 
-/** Cards whose builder holds a lease now (an orchestrated turn is running for them), other than `except`. */
+/** Where a running batch lists its stories, so its one builder counts once against orch.max_builders. */
+export const BATCH_DIR = '.codeloop/state/orch/batches';
+
+export interface Batch {
+  id: string;
+  cards: string[];
+}
+
+/** The batches whose builder is running now. */
+export function runningBatches(projectDir: string): Batch[] {
+  const dir = join(projectDir, BATCH_DIR);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
+    try {
+      return [JSON.parse(readFileSync(join(dir, f), 'utf-8')) as Batch];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/** Cards whose builder holds a lease now (an orchestrated turn is running for them), other than `except`. A batch's stories share one builder and are named once, by the first. */
 export function runningBuilders(projectDir: string, except?: string): string[] {
-  return activeSessions(projectDir).filter(s => s.session.startsWith(LEASE_PREFIX) && s.card !== except).map(s => s.card);
+  const batches = runningBatches(projectDir);
+  const builder = (card: string) => batches.find(b => b.cards.includes(card))?.cards[0] ?? card;
+  return [...new Set(activeSessions(projectDir).filter(s => s.session.startsWith(LEASE_PREFIX) && s.card !== except).map(s => builder(s.card)))];
+}
+
+/** At most this many stories build in one batch. */
+export const MAX_BATCH = 5;
+const BATCH_SIZES = new Set(['trivial', 'S']);
+const ORCH_RECORDS = '.codeloop/state/orch';
+
+/** The batch a story's last builder turn belonged to, when that turn did not pass: such a story builds alone next. */
+function failedInBatch(projectDir: string, cardId: string): string | undefined {
+  const file = join(projectDir, ORCH_RECORDS, `${cardId}.json`);
+  if (!existsSync(file)) return undefined;
+  try {
+    const turns = (JSON.parse(readFileSync(file, 'utf-8')) as { turns?: { outcome: string; batch?: Batch }[] }).turns ?? [];
+    const last = [...turns].reverse().find(t => t.outcome !== 'waiting-lease' && t.outcome !== 'queued');
+    return last?.batch && last.outcome !== 'merged' ? last.batch.id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const overlap = (projectDir: string, a: string[], b: string[]) => a.find(f => !isSharedPath(projectDir, f) && (pathInPlan(projectDir, b, f) || b.some(g => pathInPlan(projectDir, [f], g))));
+
+export interface BatchPlan {
+  cards: string[];
+  /** Stories that were asked about or ready and did not join, with the reason. */
+  left: { card: string; why: string }[];
+}
+
+/**
+ * The stories one build turn takes together: trivial or S stories at the lane's `build` stage, not
+ * at a gate, whose plans list files, none shared with another story in the batch or leased by a
+ * live story, up to five. Stories from different features may share a batch. The rest wait for
+ * the next one. A story whose last batch turn failed builds alone next.
+ */
+export function formBatch(projectDir: string, only?: string[], stage = 'build'): BatchPlan {
+  const cards = readCards(projectDir).cards;
+  const pool = only ? only.map(ref => findCard(cards, ref)) : cards.filter(c => inLane(c) && c.stage === stage && !c.gate && BATCH_SIZES.has(c.size ?? 'M'));
+  const picked: { card: Card; files: string[] }[] = [];
+  const left: BatchPlan['left'] = [];
+  for (const card of pool) {
+    const why = (): string | undefined => {
+      if (!inLane(card) || card.stage !== stage) return `${card.id} is at ${card.stage}, not ${stage}`;
+      if (card.gate) return `${card.id} waits at the ${card.gate} gate`;
+      if (!BATCH_SIZES.has(card.size ?? 'M')) return `${card.id} is size ${card.size ?? 'M'}; only trivial and S stories build in a batch`;
+      const failed = failedInBatch(projectDir, card.id);
+      if (failed) return `${card.id} failed in batch ${failed}; its next turn builds it alone`;
+      if (holdsLease(projectDir, card.id)) return `${card.id} already has a builder`;
+      const files = planFiles(projectDir, card);
+      if (!files) return `${card.id} has no \`## Files\` in plan.md, so its files cannot be kept apart`;
+      const shared = picked.map(p => ({ id: p.card.id, file: overlap(projectDir, files, p.files) })).find(p => p.file);
+      if (shared) return `${card.id} plans ${shared.file}, which ${shared.id} in this batch also changes; it waits for the next batch`;
+      const holder = leaseHolder(projectDir, card);
+      if (holder) return `${holder.file} is leased by ${holder.card}`;
+      if (picked.length >= MAX_BATCH) return `the batch already has ${MAX_BATCH} stories; ${card.id} waits for the next one`;
+      picked.push({ card, files });
+      return undefined;
+    };
+    const reason = why();
+    if (reason) left.push({ card: card.id, why: reason });
+  }
+  return { cards: picked.map(p => p.card.id), left };
+}
+
+/** Records a running batch and takes one lease per story in it. */
+export function takeBatch(projectDir: string, batch: Batch): void {
+  const file = join(projectDir, BATCH_DIR, `${batch.id}.json`);
+  mkdirSync(join(projectDir, BATCH_DIR), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(batch)}\n`);
+  for (const id of batch.cards) takeLease(projectDir, id);
+}
+
+/** The batch's builder is done: its record goes; each story's lease is dropped by its own settle. */
+export function dropBatch(projectDir: string, id: string): void {
+  const file = join(projectDir, BATCH_DIR, `${id}.json`);
+  if (existsSync(file)) unlinkSync(file);
 }
 
 /** The first live story, other than this one, whose plan leases a file this story's plan names. */
