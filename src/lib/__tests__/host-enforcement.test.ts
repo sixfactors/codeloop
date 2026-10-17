@@ -578,8 +578,10 @@ describe('watch --guard', () => {
 });
 
 describe('MCP tools: brief, ask, answer, check, propose', () => {
-  async function session(calls: { method: string; params?: unknown }[]): Promise<any[]> {
-    const child = spawn(process.execPath, [CLI, 'mcp'], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] });
+  // `env` replaces the role variables the server inherits, so each test says who started it.
+  async function session(calls: { method: string; params?: unknown }[], env: Record<string, string> = {}): Promise<any[]> {
+    const { CODELOOP_ROLE: _role, CODELOOP_AGENT_RUN: _run, ...inherited } = process.env;
+    const child = spawn(process.execPath, [CLI, 'mcp'], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'], env: { ...inherited, ...env } });
     const responses = new Map<number, any>();
     let buffer = '';
     const done = new Promise<void>((resolve, reject) => {
@@ -628,14 +630,25 @@ describe('MCP tools: brief, ask, answer, check, propose', () => {
     expect(result.result.content[0].text).toMatch(/^# Stage brief: c-12 spec/);
   }, 20_000);
 
-  it('ask adds a question and answer resolves it', async () => {
+  it('ask adds a question and answer resolves it on a server started as owner', async () => {
     writeCard('c-13', 'spec', { spec: 'specs/c-13' });
     const [asked, answered] = await session([
       { method: 'tools/call', params: { name: 'ask', arguments: { id: 'c-13', questions: ['Which provider?'] } } },
       { method: 'tools/call', params: { name: 'answer', arguments: { id: 'c-13', n: 1, text: 'Stripe' } } },
-    ]);
+    ], { CODELOOP_ROLE: 'owner' });
     expect(JSON.parse(asked.result.content[0].text).added).toMatchObject([{ n: 1, question: 'Which provider?' }]);
     expect(JSON.parse(answered.result.content[0].text)).toMatchObject({ n: 1, answer: 'Stripe' });
+  }, 20_000);
+
+  it('answer is refused on a server with no role, and inside an agent run even as owner', async () => {
+    writeCard('c-14', 'spec', { spec: 'specs/c-14' });
+    const answer = { method: 'tools/call', params: { name: 'answer', arguments: { id: 'c-14', n: 1, text: 'Stripe' } } };
+    const [, noRole] = await session([{ method: 'tools/call', params: { name: 'ask', arguments: { id: 'c-14', questions: ['Which provider?'] } } }, answer]);
+    expect(noRole.result.isError).toBe(true);
+    expect(noRole.result.content[0].text).toMatch(/owner's decision; this MCP server acts as agent/);
+    const [inRun] = await session([answer], { CODELOOP_ROLE: 'owner', CODELOOP_AGENT_RUN: 'fake' });
+    expect(inRun.result.isError).toBe(true);
+    expect(inRun.result.content[0].text).toMatch(/codeloop run --agent/);
   }, 20_000);
 
   it('propose creates a proposal that does not start work', async () => {
