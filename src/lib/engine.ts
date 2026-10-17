@@ -81,7 +81,7 @@ interface Clock {
   now?: Date;
 }
 
-function event(now: Date, role: Role | 'engine', action: string, stage?: string, note?: string): CardEvent {
+function event(now: Date, role: Role | 'engine' | 'orchestrator', action: string, stage?: string, note?: string): CardEvent {
   return {
     at: now.toISOString(),
     actor: role,
@@ -126,6 +126,25 @@ function approval(card: Card, stage: Stage): CardEvent | undefined {
 }
 
 const approved = (card: Card, stage: Stage) => approval(card, stage) !== undefined;
+
+/**
+ * The orchestrator's review pass may move a story only where no person's decision is skipped: a
+ * story waiting at an approval gate, or any gated stage from `from` up to (not including) `to`
+ * that has no approval, refuses. `stuck` is a retry count, not an approval, so it does not.
+ */
+export function reviewMoveRefusal(lane: Lane, card: Card, to: number): string | undefined {
+  const from = lane.stages.findIndex(s => s.id === card.stage);
+  if (from < 0 || to <= from) return `the review pass moves ${card.id} only forward from ${card.stage}`;
+  if (card.gate && card.gate !== 'stuck') return `${card.id} waits at the ${card.gate} gate; the review pass never moves past a gate`;
+  const gated = lane.stages.slice(from, to).find(s => s.gate && stageApplies(s, card) && !approved(card, s));
+  return gated ? `the ${gated.gate!.name} gate at ${gated.id} lies between; the review pass never moves past a gate` : undefined;
+}
+
+/** What the review pass passes to placeCard or closeCard: the merged commits its move rests on. */
+export interface ReviewMove {
+  commits: string[];
+}
+const reviewNote = (note: string, review: ReviewMove) => `review pass: ${note} (commits ${review.commits.map(s => s.slice(0, 8)).join(', ')})`;
 
 /** True for a public step nobody has approved yet: no work and no check may run for it. */
 export const awaitsApproval = (card: Card, stage: Stage) => !!stage.gate?.outward && !approved(card, stage);
@@ -471,7 +490,8 @@ export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number
  * Ends a card: `done` (its work is finished) or `dropped` (not doing it). Either frees its lane
  * slot; stage, outputs and events are kept. Only the owner or reviewer may end a card.
  */
-export function closeCard(projectDir: string, id: string, role: Role, outcome: 'done' | 'dropped', note?: string, opts: { structural?: boolean } & Clock = {}): Card {
+export function closeCard(projectDir: string, id: string, role: Role, outcome: 'done' | 'dropped', note?: string, opts: { structural?: boolean; review?: ReviewMove } & Clock = {}): Card {
+  if (opts.review) return reviewClose(projectDir, id, note ?? 'merged and verified', opts.review, opts);
   if (!opts.structural && role === 'agent') throw new RefusalError(`ending a card is the owner's decision; ask them to run \`codeloop card ${outcome === 'done' ? 'done' : 'drop'} ${id}\``);
   if (outcome === 'dropped' && !note?.trim()) throw new RefusalError('say why it is dropped: `codeloop card drop <id> "<why>"`');
   const file = readCards(projectDir);
@@ -485,6 +505,21 @@ export function closeCard(projectDir: string, id: string, role: Role, outcome: '
     events: [...before.events, event(now, role, outcome === 'done' ? 'close' : 'drop', before.stage, note?.trim())],
     updatedAt: now.toISOString(),
   };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+// A review-pass close: only `done`, and only when every gated stage left on the lane is approved.
+function reviewClose(projectDir: string, id: string, note: string, review: ReviewMove, opts: Clock): Card {
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  if (!inLane(before)) throw new RefusalError(`card ${before.id} is ${before.stage}, not in a lane`);
+  const lane = loadLane(projectDir, before.lane);
+  const why = reviewMoveRefusal(lane, before, lane.stages.length);
+  if (why) throw new RefusalError(why);
+  const now = opts.now ?? clock();
+  const { gate: _gate, awaiting: _awaiting, ...rest } = before;
+  const card: Card = { ...rest, stage: DONE, events: [...before.events, event(now, 'orchestrator', 'close', before.stage, reviewNote(note, review))], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }
@@ -555,9 +590,10 @@ export function resizeTrivial(projectDir: string, id: string, why: string, opts:
 }
 
 /** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */
-export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean } = {}): Card {
+export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean; review?: ReviewMove } = {}): Card {
   // A split carries its parent's stage over; the decision was the split, which any role may make.
-  if (role === 'agent' && !opts.structural) throw new RefusalError('starting a card past the first stage is the owner\'s decision');
+  // The review pass may place too, bounded by reviewMoveRefusal instead of the gate check below.
+  if (role === 'agent' && !opts.structural && !opts.review) throw new RefusalError('starting a card past the first stage is the owner\'s decision');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const lane = loadLane(projectDir, before.lane);
@@ -567,14 +603,15 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   // anything has run, that gate decides nothing yet, so placing the card past it is allowed.
   const first = firstStage(lane, before);
   const onlyEntryGate = before.stage === first.id && !!first.gate?.outward && before.gate === first.gate.name && before.events.every(e => ['create', 'skip', 'park'].includes(e.action));
-  const waiting = onlyEntryGate ? undefined : gateRefusal(before);
+  const waiting = opts.review ? reviewMoveRefusal(lane, before, lane.stages.findIndex(s => s.id === stage)) : onlyEntryGate ? undefined : gateRefusal(before);
   if (waiting) throw new RefusalError(waiting);
   if (stage === SPLIT_BEFORE_STAGE) {
     const problem = storySizeProblem(projectDir, before);
     if (problem) throw new RefusalError(problem);
   }
   const now = opts.now ?? clock();
-  const card: Card = { ...enter(before, stage), events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  const note = opts.note ?? `started at ${stage}: work already under way`;
+  const card: Card = { ...enter(before, stage), events: [...before.events, opts.review ? event(now, 'orchestrator', 'place', stage, reviewNote(note, opts.review)) : event(now, role, 'place', stage, note)], updatedAt: now.toISOString() };
   parkIfOutward(card, lane, now);
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
