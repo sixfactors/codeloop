@@ -54,7 +54,10 @@ describe('an agent restart', () => {
   it('parks the story stuck once the agent ran and changed nothing, and the doctor stops checking it', async () => {
     await doctorTick(dir, later(2));
     expect(starts()).toBe(1);
+    const afterRun = checks();
     const second = await doctorTick(dir, later(3));
+    // The check already failed on this head and work after the start, so it is not run again.
+    expect(checks()).toBe(afterRun);
     expect(second.find(a => a.id === 'c-1')).toMatchObject({ action: 'agent-not-started', note: expect.stringMatching(/the agent ran and changed nothing; a person needs to look/) });
     expect(card().gate).toBe('stuck');
     expect(card().events.filter(e => e.action === 'stuck').at(-1)?.note).toBe('the agent ran and changed nothing; a person needs to look');
