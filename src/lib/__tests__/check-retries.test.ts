@@ -5,7 +5,7 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { resolveAgent } from '../agent.js';
-import { readCards } from '../cards.js';
+import { readCards, writeCards } from '../cards.js';
 import { advanceCard, createCard } from '../engine.js';
 import { runDueWithAgent } from '../run.js';
 import { newSpec } from '../spec.js';
@@ -66,17 +66,40 @@ describe('a repeated check', () => {
     expect(fails()).toBe(2);
   });
 
-  it('counts a new head commit since the last failure, though the output is the same', () => {
+  it('counts a new head commit on this story since the last failure, though the output is the same', () => {
     git('init', '-q');
     git('add', '-A');
     git('commit', '-q', '-m', 'base');
     advanceCard(dir, 'c-1');
     writeFileSync(join(dir, 'src.ts'), 'work');
     git('add', 'src.ts');
-    git('commit', '-q', '-m', 'work on the story');
+    git('commit', '-q', '-m', 'work on the story', '-m', 'Card: c-1');
     const second = advanceCard(dir, 'c-1');
     expect(second.card.retries.draft).toBe(2);
     expect(second.outcome).toBe('stuck');
+  });
+
+  it("does not count another story's commit in the shared tree, and counts an untrailered one in this story's plan", () => {
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    advanceCard(dir, 'c-1');
+    writeFileSync(join(dir, 'other.ts'), 'theirs');
+    git('add', 'other.ts');
+    git('commit', '-q', '-m', 'another story lands', '-m', 'Card: c-2');
+    const second = advanceCard(dir, 'c-1');
+    expect(second.card.retries.draft).toBe(1);
+    expect(second.outcome).toBe('failed');
+
+    mkdirSync(join(dir, 'specs/c-1'), { recursive: true });
+    writeFileSync(join(dir, 'specs/c-1/plan.md'), '# plan\n\n## Files\n\n- src/mine.ts\n');
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(c => ({ ...c, spec: 'specs/c-1' })));
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/mine.ts'), 'mine');
+    git('add', 'src/mine.ts');
+    git('commit', '-q', '-m', 'work with no trailer');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
   });
 });
 

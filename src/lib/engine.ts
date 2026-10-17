@@ -16,7 +16,7 @@ import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextC
 
 export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
-import { planFiles } from './plan-scope.js';
+import { pathInPlan, planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
 import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
@@ -679,18 +679,42 @@ export function workFingerprint(projectDir: string, card: Card, stage: Stage, ou
 
 /**
  * Whether anyone tried work on the stage since its last failed check: an agent ran on it, a work
- * line was written, HEAD moved, or the output changed. A missing output, or one still the template,
- * is no work, so a check before the folder exists, on the template, or in a sweep spends no retry.
+ * line was written, HEAD moved by a commit on this card, or the output changed. A missing output,
+ * or one still the template, is no work, so a check before the folder exists, on the template, or
+ * in a sweep spends no retry.
  * With no earlier failure and no agent or work line, only an untouched output is no work.
  */
-function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean }): boolean {
+function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; headWork: (from: string, to: string) => boolean }): boolean {
   const events = card.events ?? [];
   const lastFail = events.map(e => e.stage === stage.id && e.action === 'fail').lastIndexOf(true);
   if (opts.workLines || events.slice(lastFail + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
   if (lastFail < 0) return !opts.untouched;
   const head = events[lastFail].head;
-  if (opts.head && head && opts.head !== head) return true;
+  if (opts.head && head && opts.head !== head && opts.headWork(head, opts.head)) return true;
   return !opts.untouched && card.failures?.[stage.id] !== opts.fingerprint;
+}
+
+const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
+
+/**
+ * Whether a commit between two HEADs is work on this card. Another story's commit in a shared tree
+ * moves HEAD too, so only a commit carrying the card's `Card:` or `Feature:` trailer counts, or one
+ * with no trailer at all that touches a file in the card's plan.
+ */
+function commitsWorkOn(projectDir: string, card: Card, from: string, to: string): boolean {
+  const log = spawnSync('git', ['log', '--format=%x01%H%x00%B', `${from}..${to}`], { cwd: projectDir, encoding: 'utf-8' });
+  if (log.status !== 0) return false;
+  const plan = planFiles(projectDir, card);
+  for (const rec of log.stdout.split('\u0001')) {
+    const [sha, body = ''] = rec.split('\u0000');
+    if (!sha?.trim()) continue;
+    const cards = [...body.matchAll(TRAILER)].map(m => m[1]);
+    if (cards.includes(card.id)) return true;
+    if (cards.length || !plan) continue;
+    const files = spawnSync('git', ['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', sha.trim()], { cwd: projectDir, encoding: 'utf-8' });
+    if (files.status === 0 && files.stdout.split('\n').some(f => f && pathInPlan(projectDir, plan, f))) return true;
+  }
+  return false;
 }
 
 /**
@@ -774,7 +798,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       card.failures = { ...before.failures, [stage.id]: fingerprint };
       // Only a failure with work behind it counts toward the cap; any other is recorded and costs nothing.
       const head = headCommit(projectDir);
-      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined });
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, headWork: (from, to) => commitsWorkOn(projectDir, before, from, to) });
       const failures = (card.retries[stage.id] ?? 0) + (counted ? 1 : 0);
       card.retries[stage.id] = failures;
       card.events.push({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}) });
