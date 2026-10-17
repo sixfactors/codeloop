@@ -12,7 +12,7 @@ import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleSta
 import { capture } from '../wiki.js';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 let dir: string;
 
 function write(path: string, text: string): void {

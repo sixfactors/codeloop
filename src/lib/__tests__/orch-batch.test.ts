@@ -15,7 +15,7 @@ import { newSpec } from '../spec.js';
 // scripted agent run for the whole batch: per story it writes the story's file, commits it with
 // that story's trailer and hands back through the real CLI.
 
-const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
+const CLI = join(process.env.CODELOOP_TEST_DIST ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist'), 'index.js');
 const GIT = 'git -c user.email=a@b -c user.name=t';
 
 let root: string;
