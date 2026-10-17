@@ -12,7 +12,7 @@ import { orchRun, orchTurn } from '../orch.js';
 import { doctorTick } from '../run.js';
 import { RUN_LOCK_PATH, withRunLock } from '../run-lock.js';
 
-const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist');
+const DIST = process.env.CODELOOP_TEST_DIST ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist');
 const GIT = 'git -c user.email=a@b -c user.name=t';
 let root: string;
 let dir: string;

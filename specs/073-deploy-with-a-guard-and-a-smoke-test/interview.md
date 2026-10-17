@@ -1,8 +1,8 @@
 ## Q1 Scope: Fly and Vercel integrations, deploy guard, smoke test, GitHub Environment gate. Which first?
-recommended: Fly plus smoke first with chanl-api as the real target and `deploy-guard.sh` ported as-is; Vercel and the GitHub Environment gate are a child card.
+recommended: Fly plus smoke first with a private project as the real target and `deploy-guard.sh` ported as-is; Vercel and the GitHub Environment gate are a child card.
 answer: fly and vercel are one of the several possible systems that people can have - these shouldnt be hardcoded rather see if user can create their own script via claude or map it somehow
 
-## Q2 What is the smoke test: health, one authenticated request and a host assert (the chanl standard), plus a headless DOM check for frontends?
+## Q2 What is the smoke test: health, one authenticated request and a host assert (the private project's standard), plus a headless DOM check for frontends?
 recommended: Health, one authed request, host assert; the headless DOM and zero-console-errors check only when the plugin detects a frontend.
 answer: Health, one authed request, host assert; the headless DOM and zero-console-errors check only when the plugin detects a frontend.
 

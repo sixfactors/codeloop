@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 // Scoped away from the real ~/.codeloop, and off the port range this session was told to leave
 // alone (4040/4096): everything the hub binds to in this file lives in 4300-4399.
 const PORT = 4312;
@@ -43,7 +43,7 @@ describe('codeloop serve joins one hub across projects (CLI, end to end)', () =>
 
     const serveA = run(['serve', '--port', String(PORT)], a);
     expect(serveA.status).toBe(0);
-    const idA = serveA.stdout.match(new RegExp(`http://127\\.0\\.0\\.1:${PORT}/p/([^/\\s]+)/`))?.[1];
+    const idA = serveA.stdout.match(new RegExp(`http://localhost:${PORT}/p/([^/\\s]+)/`))?.[1];
     expect(idA).toBeTruthy();
     expect(serveA.stdout).toContain('joined the hub');
 
@@ -54,7 +54,7 @@ describe('codeloop serve joins one hub across projects (CLI, end to end)', () =>
     // A second project's serve must reuse the SAME hub (same pid, same port), not start another.
     const serveB = run(['serve', '--port', String(PORT)], b);
     expect(serveB.status).toBe(0);
-    const idB = serveB.stdout.match(new RegExp(`http://127\\.0\\.0\\.1:${PORT}/p/([^/\\s]+)/`))?.[1];
+    const idB = serveB.stdout.match(new RegExp(`http://localhost:${PORT}/p/([^/\\s]+)/`))?.[1];
     expect(idB).toBeTruthy();
     expect(idB).not.toBe(idA);
     const hubStateAfter = JSON.parse(readFileSync(join(home, 'state/hub.json'), 'utf-8'));

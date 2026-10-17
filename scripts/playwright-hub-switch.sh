@@ -49,7 +49,7 @@ expect 0 "seed project B" seed "$WORK/b"
 
 cd "$WORK/a" || exit 1
 codeloop serve --port "$PORT" > "$WORK/serve-a.log" 2>&1
-BASE="http://127.0.0.1:$PORT"
+BASE="http://localhost:$PORT"
 expect 0 "hub starts on A's serve" up "$BASE"
 
 cd "$WORK/b" || exit 1

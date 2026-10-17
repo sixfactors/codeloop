@@ -1,7 +1,8 @@
-import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
+import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card } from './cards.js';
 import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
+import { clock } from './clock.js';
 
 export const usesSpec = (lane: Lane) => lane.stages.some(s => `${s.output ?? ''} ${s.done?.cmd ?? ''}`.includes('{spec}') || s.done?.cmd?.includes('codeloop spec check'));
 
@@ -26,6 +27,7 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
   // either; it does get the spec folder a story started directly gets, or its first stage has
   // nowhere to write.
   if (gate === PROPOSAL_GATE) {
+    if (card.stage !== DROPPED && card.bug_reported_by) confirmBug(projectDir, card.id, role);
     if (card.stage !== DROPPED && usesSpec(loadLane(projectDir, card.lane))) newSpec(projectDir, card.id, role);
     return { card: findCard(readCards(projectDir).cards, card.id), gate };
   }
@@ -34,7 +36,27 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
   // the advance after approval carries it. Without this the approval was recorded and the advance
   // then refused, asking for an event that had already arrived.
   const event = !stage?.done?.cmd ? stage?.done?.event : undefined;
-  return { card, gate, advanced: advanceCard(projectDir, card.id, { event }) };
+  try {
+    return { card, gate, advanced: advanceCard(projectDir, card.id, { event }) };
+  } catch (e) {
+    // The approval and the move it allows are one decision: a refused move (the story too big to
+    // enter build) puts the card back at its gate as it was, so it never ends at the stage gateless.
+    if (e instanceof RefusalError) {
+      const file = readCards(projectDir);
+      writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? before : c)));
+      throw new RefusalError(`${before.id} stays at the ${gate} gate, not approved: ${e.message}`);
+    }
+    throw e;
+  }
+}
+
+/** Approving a reported bug's proposal is the owner confirming it: the flag every pick reads is set now. */
+function confirmBug(projectDir: string, id: string, role: Role): void {
+  const file = readCards(projectDir);
+  const { bug_reported_by: by, ...card } = findCard(file.cards, id);
+  const now = clock().toISOString();
+  const confirmed: Card = { ...card, bug: true, events: [...card.events, { at: now, actor: role, human: role !== 'agent', action: 'edit', stage: card.stage, note: `bug: confirmed the report by ${by}` }], updatedAt: now };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === id ? confirmed : c)));
 }
 
 function currentStage(projectDir: string, card: Card): Stage | undefined {

@@ -16,7 +16,7 @@ import * as services from '../services.js';
 import { computeStats } from '../stats.js';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 const TOKEN = 'test-token';
 let dir: string;
 
@@ -321,7 +321,8 @@ describe('API: a stage run', () => {
     const { runId } = await http.cards.run('c-001');
     expect(await http.runs.wait(runId)).toMatchObject({ status: 'failed', exit: 1, outcome: 'failed' });
     expect((await http.runs.get(runId))!.log).toContain('no agent configured');
-    expect(card('c-001').retries.draft).toBe(1);
+    // Nobody wrote the output and no agent ran, so the failure spends no retry.
+    expect(card('c-001').retries.draft ?? 0).toBe(0);
     await expect(http.cards.run('c-001', { agent: 'nope' })).rejects.toThrow(/no agent is configured/);
     expect(await http.runs.get('c-001-draft-9')).toBeUndefined();
 

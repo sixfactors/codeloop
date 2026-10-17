@@ -43,7 +43,7 @@ expect 0 "ask a question with a recommended answer" codeloop ask c-001 "Which ex
 PORT=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")
 codeloop serve --standalone --owner --port "$PORT" > "$WORK/serve.log" 2>&1 &
 SERVE_PID=$!
-BASE="http://127.0.0.1:$PORT"
+BASE="http://localhost:$PORT"
 expect 0 "serve starts" up "$BASE"
 
 got=0

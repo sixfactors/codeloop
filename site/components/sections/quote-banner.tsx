@@ -1,4 +1,4 @@
-// Copied from chanl-site/src/components/sections/quote-banner.tsx. The orange-to-rose gradient is
+// Copied from a private project's src/components/sections/quote-banner.tsx. The orange-to-rose gradient is
 // replaced by this site's primary token so the banner stays inside the Protobox palette.
 export function QuoteBanner({ quote, source }: { quote: string; source: string }) {
   return (

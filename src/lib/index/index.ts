@@ -5,9 +5,11 @@ import MiniSearch from 'minisearch';
 import { ACTIVITY_DIR, lastActivityAt, readActivity, type ActivityEntry } from '../activity.js';
 import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
-import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
-import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
+import { byPickOrder, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
+import { stuckExplanation } from '../stuck-explanation.js';
+import { backlogOf, failingOf, inboxSummary, lastPassAt, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
+import { pickSpecDir } from '../spec.js';
 import type { Lane } from '../lane.js';
 import { storyState, type StoryState } from '../states.js';
 import { CARD_MOCKS_DIR, MOCK_FILE, mockHref } from '../mock.js';
@@ -76,7 +78,7 @@ export type CardFilter = Partial<Record<CardFilterKey, string[]>> & {
   stuck?: boolean;
   /** Cards parked at a gate this role approves, or with an open question. */
   needsMe?: Role;
-  /** `score`: RICE score descending, unscored last, then oldest first. Unset keeps board order. */
+  /** `score`: pick order (features.ts pickOrder: bug, priority, RICE score, then oldest). Unset keeps board order. */
   sort?: 'score';
 };
 export type ListSort = NonNullable<CardFilter['sort']>;
@@ -92,7 +94,7 @@ export interface Paged<T> {
 export type Facets = Record<CardFilterKey, { value: string; count: number }[]>;
 
 /** A card in one of the inbox's lists: the indexed card plus what the inbox says about it. */
-export type InboxCard = IndexedCard & Partial<Pick<NeedsYouItem, 'read' | 'last_check' | 'since' | 'last_event'>> & { first?: string };
+export type InboxCard = IndexedCard & Partial<Pick<NeedsYouItem, 'read' | 'last_check' | 'since' | 'last_event' | 'stuck'>> & { first?: string };
 
 export type IndexedFeature = Feature & Scored;
 export type IndexedEpic = Epic & { score: number };
@@ -123,7 +125,7 @@ export interface InboxQuery {
   band?: string;
   /** Only what this role can act on: gates it approves, open questions. The transport fills the role. */
   needsMe?: Role;
-  /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
+  /** `score` (the default): pick order (features.ts pickOrder), oldest parked first on ties. `age`: oldest parked first. */
   sort?: 'score' | 'age';
   limit?: number;
   cursor?: string;
@@ -303,18 +305,18 @@ export class ProjectIndex {
       const sort = q.sort ?? 'score';
       const key = `${this.versions.cards}|${this.versions.lanes}|${this.versions.features}|${since}|${JSON.stringify(narrow)}|${q.needsMe ?? ''}|${sort}`;
       if (!this.inboxCache || this.inboxCache.key !== key) {
-        const order = <T extends InboxCard>(items: T[]) => (sort === 'score' ? byScoreThenOldest(items) : [...items].sort((a, b) => ((a.since ?? a.updatedAt) < (b.since ?? b.updatedAt) ? -1 : 1)));
+        const order = <T extends InboxCard>(items: T[]) => (sort === 'score' ? byPickOrder(items) : [...items].sort((a, b) => ((a.since ?? a.updatedAt) < (b.since ?? b.updatedAt) ? -1 : 1)));
         const mine = (c: IndexedCard) => !q.needsMe || this.needsRole(c, q.needsMe);
         // Proposals wait in the backlog; only started work at a gate or stuck is waiting on you.
         const needsYou: InboxCard[] = order(
           this.filterCards({ ...narrow, gate: 'waiting' }).filter(mine).filter(c => c.stage !== PROPOSED).map(c => {
-            const { id: _id, title: _t, lane: _l, stage: _s, gate: _g, awaiting: _a, mock: _m, source: _src, ...rest } = needsYouItem(this.withEvents(c), lanes, this.mockByCard.get(c.id), { band: c.band, ...(c.score === undefined ? {} : { score: c.score }), ...(c.feature ? { feature: c.feature } : {}) });
+            const { id: _id, title: _t, lane: _l, stage: _s, gate: _g, awaiting: _a, mock: _m, source: _src, ...rest } = needsYouItem(this.withEvents(c), lanes, this.mockByCard.get(c.id), { band: c.band, ...(c.score === undefined ? {} : { score: c.score }), ...(c.feature ? { feature: c.feature } : {}) }, card => stuckExplanation(this.projectDir, card));
             return { ...c, ...rest };
           }),
         );
         const all = [...this.cardsById.values()].map(c => this.withEvents(c));
         const scoped = Object.keys(narrow).length ? all.filter(c => this.filterCards(narrow).some(n => n.id === c.id)) : all;
-        const failingRows = failingOf(scoped, id => lastActivityAt(this.projectDir, id)).filter(f => mine(this.cardsById.get(f.id)!));
+        const failingRows = failingOf(scoped, id => lastActivityAt(this.projectDir, id), undefined, undefined, card => lastPassAt(this.projectDir, card)).filter(f => mine(this.cardsById.get(f.id)!));
         const failing: InboxCard[] = failingRows.map(f => {
           const c = this.cardsById.get(f.id)!;
           return { ...c, last_check: f.last_check, since: f.since };
@@ -392,10 +394,12 @@ export class ProjectIndex {
   };
 
   initiatives = {
-    /** Each with `score`: the sum of its features' scores. */
+    /** Each with `score`: the sum of its features' scores. Highest score first, unscored last, then by title: the table renders this order as given. */
     list: async (): Promise<IndexedInitiative[]> => {
       await this.ready;
-      return [...this.initiativesById.values()].map(i => this.scoreInitiative(i));
+      return [...this.initiativesById.values()]
+        .map(i => this.scoreInitiative(i))
+        .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || a.title.localeCompare(b.title));
     },
     get: async (id: string): Promise<IndexedInitiative | undefined> => {
       await this.ready;
@@ -666,13 +670,10 @@ export class ProjectIndex {
     return { openQuestions, ...(mock ? { mock: mockHref(mock) } : {}), ...(specDir ? { specDir } : {}), hasEvidence, ...(display ? { display } : {}), ...chainOf(card, this.scoredFeatures) };
   }
 
-  /** `resolveSpecDir` over a listing taken once per reload: it re-reads cards.json per call, which 5k cards cannot afford. */
+  /** `resolveSpecDir` over a listing taken once per reload, without the repair write: it re-reads cards.json per call, which 5k cards cannot afford. A folder outside specs/ (a shape folder) is trusted as recorded. */
   private specDirOf(card: { id: string; key?: string; spec?: string }): string | undefined {
-    if (card.spec) return card.spec;
-    const key = cardKey(card);
-    if (this.specFolders.includes(key)) return `${specsDir(this.projectDir)}/${key}`;
-    const found = this.specFolders.filter(d => d.startsWith(`${key}-`));
-    return found.length === 1 ? `${specsDir(this.projectDir)}/${found[0]}` : undefined;
+    const root = specsDir(this.projectDir);
+    return pickSpecDir(card.spec, cardKey(card), root, this.specFolders, d => !d.startsWith(`${root}/`) || this.specFolders.includes(d.slice(root.length + 1))).dir;
   }
 
   private loadSpecFolders(): void {
@@ -752,7 +753,7 @@ export class ProjectIndex {
     if (filter.questions === 'open') items = items.filter(c => c.openQuestions > 0);
     if (filter.shippedSince !== undefined) items = items.filter(c => c.stage === DONE && c.updatedAt > filter.shippedSince!);
     if (filter.needsMe) items = items.filter(c => this.needsRole(c, filter.needsMe!));
-    if (filter.sort === 'score') items = byScoreThenOldest(items);
+    if (filter.sort === 'score') items = byPickOrder(items);
     return items;
   }
 

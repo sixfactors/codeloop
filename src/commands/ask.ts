@@ -1,18 +1,20 @@
 import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
-import { createLocalClient, MAX_QUESTIONS, parseQuestions, projectRoot } from '../sdk/local.js';
+import { createLocalClient, interviewQuestions, MAX_QUESTIONS, parseQuestions, projectRoot } from '../sdk/local.js';
 import { guard, refuse } from './guard.js';
 
 export const askCommand = new Command('ask')
-  .description(`Ask the owner up to ${MAX_QUESTIONS} questions about a card: \`codeloop ask <card> "<question>" --recommended "<answer>"\`, or --file with \`## Q1\` blocks`)
+  .description(`Ask the owner up to ${MAX_QUESTIONS} interview questions about a card (review and gap questions do not count): \`codeloop ask <card> "<question>" --recommended "<answer>"\`, or --file with \`## Q1\` blocks`)
   .argument('<card>')
   .argument('[question]')
   .option('--recommended <answer>', 'The answer to take when the owner has no better one; with options, its letter')
   .option('--option <text>', 'One choice, when the fork is real; repeat for two to four (lettered A, B, C, D)', (v: string, all: string[] = []) => [...all, v])
   .option('--file <path>', 'A markdown file of `## Q<n> <question>` / `recommended:` blocks')
+  .option('--kind <kind>', 'interview (default), review (a review finding) or gap (a stage the merged work left unfilled)')
   .option('--as <role>', 'owner | reviewer | agent')
-  .action(guard(async (card: string, question: string | undefined, opts: { recommended?: string; option?: string[]; file?: string; as?: string }) => {
-    const items = opts.file ? fromFile(opts.file) : question ? [{ question, recommended: opts.recommended, ...(opts.option?.length ? { options: opts.option } : {}) }] : [];
+  .action(guard(async (card: string, question: string | undefined, opts: { recommended?: string; option?: string[]; file?: string; as?: string; kind?: 'interview' | 'review' | 'gap' }) => {
+    const kind = opts.kind ? { kind: opts.kind } : {};
+    const items = (opts.file ? fromFile(opts.file) : question ? [{ question, recommended: opts.recommended, ...(opts.option?.length ? { options: opts.option } : {}) }] : []).map(i => ({ ...kind, ...i }));
     if (!items.length) throw refuse('say the question, or --file <path> with `## Q1 <question>` blocks');
     const { path, added } = await createLocalClient(projectRoot()).questions.ask(card, items, { as: opts.as });
     for (const q of added) {
@@ -22,12 +24,13 @@ export const askCommand = new Command('ask')
     console.log(`Next: the owner answers with \`codeloop answer ${card} <n> "<text>"\`, \`--option <letter>\` or \`--accept\`, or takes every recommendation with \`codeloop answer ${card} --accept-all\`; the questions are in ${path}.`);
   }));
 
-function fromFile(path: string): { question: string; recommended: string; options?: string[] }[] {
+function fromFile(path: string): { question: string; recommended: string; options?: string[]; kind?: 'interview' | 'review' | 'gap' }[] {
   if (!existsSync(path)) throw refuse(`${path} does not exist`);
   const questions = parseQuestions(readFileSync(path, 'utf-8'));
   if (!questions.length) throw refuse(`${path} has no \`## Q<n> <question>\` blocks`);
-  if (questions.length > MAX_QUESTIONS) throw refuse(`${path} has ${questions.length} questions, the limit is ${MAX_QUESTIONS}: ask only what changes the build`);
-  return questions.map(q => ({ question: q.question, recommended: q.recommended, ...(q.options?.length ? { options: q.options.map(o => o.text) } : {}) }));
+  const interview = interviewQuestions(questions).length;
+  if (interview > MAX_QUESTIONS) throw refuse(`${path} has ${interview} interview questions, the limit is ${MAX_QUESTIONS}: ask only what changes the build`);
+  return questions.map(q => ({ question: q.question, recommended: q.recommended, ...(q.options?.length ? { options: q.options.map(o => o.text) } : {}), ...(q.kind ? { kind: q.kind } : {}) }));
 }
 
 export const answerCommand = new Command('answer')

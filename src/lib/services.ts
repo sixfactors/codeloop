@@ -10,7 +10,7 @@ import { homedir } from 'os';
 import { basename, dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
-import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, type Card } from './cards.js';
+import { bugReporter, DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, writeSummary, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, queueCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
@@ -19,7 +19,7 @@ import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
 import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec } from './flow.js';
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
-import { withChain, type Band, type CardChain } from './features.js';
+import { pickOrder, withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
 import { evaluateRubric, scaffoldRubric, type RubricReport, type RubricResult } from './rubric.js';
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
@@ -29,6 +29,8 @@ import { activeSessions } from './active-card.js';
 import { formatMinutes, lastActivityAt, phaseTime, readActivity, readAllActivity, type ActivityEntry } from './activity.js';
 import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
 import { storyCommits, type StoryCommit } from './diff-budget.js';
+import { summaryView, type SummaryView } from './story-summary.js';
+import { moveStuck as moveStuckLib, stuckExplanation, type StuckExplanation } from './stuck-explanation.js';
 import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
@@ -108,6 +110,8 @@ export interface CardShow {
   evidenceFiles: EvidenceFile[];
   /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
   commits: StoryCommit[];
+  /** On a stuck story: why, and which action moves it, the same as its page and the inbox. */
+  stuck?: StuckExplanation;
   /** Time in the current phase: wall, working and idle minutes; absent when the card has no entry time. */
   phaseTime?: { stage: string; wallMinutes: number; activeMinutes: number; idleMinutes: number; /** "in build 6h 04m, working 1h 12m". */ text: string };
 }
@@ -138,6 +142,8 @@ export interface CardFull {
   /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
   commits: StoryCommit[];
   evidenceFiles: EvidenceFile[];
+  /** What it needs, what is done and what you must do, each with who wrote it and when. */
+  summary: SummaryView & { stuck?: StuckExplanation };
 }
 
 export interface PageWrite {
@@ -169,6 +175,8 @@ export function splitTicket(title: string, ticket?: string): { title: string; ti
 
 /** `codeloop start` / `card new`: the story check runs first, so a technical title is refused. */
 export function newCard(projectDir: string, input: NewCardInput, who?: Role): CardCreated {
+  // Only the owner's flag jumps the queue, so anyone else's critical bug waits at the owner's gate.
+  if (input.bug && (who ?? 'agent') !== 'owner') return newProposal(projectDir, input, who);
   const { title, ticket } = splitTicket(input.title, input.ticket);
   const card = startCard(projectDir, { lane: input.lane, title, id: input.id, role: who ?? 'agent', fields: { ...storyFields(title, input), ...(ticket ? { ticket } : {}) } });
   return { card, hint: nextHint(projectDir, card) };
@@ -177,8 +185,12 @@ export function newCard(projectDir: string, input: NewCardInput, who?: Role): Ca
 /** `card propose`: a `source` names the finding, so the same one is never proposed twice. */
 export function newProposal(projectDir: string, input: ProposalInput, who?: Role): CardProposed {
   const { title, ticket } = splitTicket(input.title, input.ticket);
-  const fields = { ...storyFields(title, input), ...(ticket ? { ticket } : {}) };
+  const { bug, ...story } = storyFields(title, input);
+  // A non-owner's bug is a report: pickOrder ignores it until the owner approves the proposal (approveFlow).
+  const reporter = bug && (who ?? 'agent') !== 'owner' ? bugReporter(who ?? 'agent') : undefined;
+  const fields = { ...story, ...(bug && !reporter ? { bug } : {}), ...(reporter ? { bug_reported_by: reporter } : {}), ...(ticket ? { ticket } : {}) };
   const { card, created } = proposeCard(projectDir, {
+    ...(reporter ? { note: `reported as critical by ${reporter}` } : {}),
     lane: input.lane,
     title,
     id: input.id,
@@ -245,6 +257,12 @@ export function closeCard(projectDir: string, ref: string, who: Role, outcome: '
 
 export function reject(projectDir: string, ref: string, who: Role, note: string): DecisionReport {
   const before = findCard(readCards(projectDir).cards, ref);
+  // A stuck card has no stage to redo: rejecting it parks it in the owner's inbox, where it was.
+  if (before.gate === 'stuck') {
+    const given = note?.trim() || undefined;
+    const { card, hint } = parkCard(projectDir, before.id, who, given);
+    return { card, gate: 'stuck', summary: `${card.id} parked from ${card.parked_from}${given ? '; note recorded' : ''}`, lines: [hint], exitCode: 0 };
+  }
   const card = rejectCard(projectDir, ref, who, note);
   if (card.stage === DROPPED) return { card, gate: 'proposal', summary: `${card.id} dropped; note recorded`, lines: [], exitCode: 0 };
   const returned = card.stage !== before.stage;
@@ -402,7 +420,13 @@ export function showCard(projectDir: string, ref: string): CardShow {
   const entered = lane.stages.some(x => x.id === card.stage) ? enteredAt(card.events ?? [], card.stage, lane.stages[0].id) : undefined;
   const spent = entered ? phaseTime(readAllActivity(projectDir, card.id), entered, Date.now()) : undefined;
   const time = spent ? { stage: card.stage, ...spent, text: `in ${card.stage} ${formatMinutes(spent.wallMinutes)}, working ${formatMinutes(spent.activeMinutes)}` } : undefined;
-  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20), ...(card.gate === 'stuck' ? { stuck: stuckExplanation(projectDir, card) } : {}) };
+}
+
+/** The stuck story's move button: to the step its shipped work shows, stopping before any gate. */
+export function moveStuck(projectDir: string, ref: string, who: Role): { card: Card; hint: string } {
+  const { card } = moveStuckLib(projectDir, ref, who);
+  return { card, hint: nextHint(projectDir, card) };
 }
 
 /**
@@ -500,7 +524,7 @@ export function questions(projectDir: string, ref: string): { id: string; questi
   return { id: card.id, questions: readQuestions(projectDir, card) };
 }
 
-export const ask = (projectDir: string, ref: string, items: { question: string; recommended?: string }[], who: Role): { path: string; added: Question[] } => addQuestions(projectDir, ref, items, who);
+export const ask = (projectDir: string, ref: string, items: Parameters<typeof addQuestions>[2], who: Role): { path: string; added: Question[] } => addQuestions(projectDir, ref, items, who);
 
 export const answer = (projectDir: string, ref: string, n: number, reply: { text?: string; accept?: boolean; option?: string }, who: Role): Question => writeAnswer(projectDir, ref, n, reply, who);
 /** Every open question's recommended answer, accepted in one write. The owner's decision, like any answer. */
@@ -601,6 +625,9 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const display = liveState(projectDir, card, index.openQuestions(card.id).length);
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
+  const journey = journeyOf(projectDir, card, { tasks, health: display?.health });
+  const commits = storyCommits(projectDir, card.id);
+  const stuck = stuckExplanation(projectDir, card, { commits });
   return {
     card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display },
     spec,
@@ -609,11 +636,17 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     evidence,
     mock: mock ? mockHref(mock) : null,
     page,
-    journey: journeyOf(projectDir, card, { tasks, health: display?.health }),
+    journey,
     rubric: rubricOf(projectDir, card.id),
-    commits: storyCommits(projectDir, card.id).slice(0, 20),
+    commits: commits.slice(0, 20),
     evidenceFiles: evidenceFiles(projectDir, card),
+    summary: { ...summaryView(card, journey, stuck), ...(stuck ? { stuck } : {}) },
   };
+}
+
+/** `card summary`: the needed and done lines; an agent's write never replaces a person's line. */
+export function saveSummary(projectDir: string, ref: string, input: { needed?: string; done?: string }, who: Role, by?: string) {
+  return writeSummary(projectDir, ref, input, { by: by ?? who, kind: who === 'agent' ? 'agent' : 'person' });
 }
 
 function rubricOf(projectDir: string, id: string): CardFull['rubric'] {
@@ -646,8 +679,8 @@ export type NextAction =
   | { kind: 'idle'; card?: { id: string; title: string; band: Band } };
 
 /**
- * Checked in order: no stories at all; a gate or question waiting on `role` (the oldest, highest-
- * scored one); an agent run in progress; otherwise the best-band open story, if any.
+ * Checked in order: no stories at all; a gate or question waiting on `role` (the first in pick
+ * order); an agent run in progress; otherwise the first open story in pick order, if any.
  */
 export async function nextAction(index: ProjectIndex, projectDir: string, role: Role): Promise<NextAction> {
   const { total } = await index.cards.list({}, undefined, 1);
@@ -802,6 +835,10 @@ export interface BoardStory {
   display: StoryState;
   band?: string;
   score?: number;
+  /** The card's own priority, which outranks its RICE band; absent when it has none. */
+  priority?: string;
+  /** A critical bug, which every column puts first. */
+  bug?: boolean;
   epic?: string;
   feature?: string;
   initiative?: string;
@@ -819,6 +856,7 @@ export interface BoardStory {
   /** Minutes of work and of waiting since `phaseSince`. */
   activeMinutes?: number;
   idleMinutes?: number;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -833,8 +871,9 @@ const storyRow = (c: IndexedCardRow, agents: Map<string, { agent: string; sessio
   const time = since && ctx ? phaseTime(readAllActivity(ctx.projectDir, c.id), since, Date.now()) : undefined;
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, display: c.display!, band: c.band, score: c.score,
+    ...(c.priority ? { priority: c.priority } : {}), ...(c.bug ? { bug: true } : {}),
     epic: c.epic, feature: c.feature, initiative: c.initiative, openQuestions: c.openQuestions,
-    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), ...(time ? { activeMinutes: time.activeMinutes, idleMinutes: time.idleMinutes } : {}), updatedAt: c.updatedAt,
+    ...held, holder, ...(line ? { lastActivity: line } : {}), ...(since ? { phaseSince: since } : {}), ...(time ? { activeMinutes: time.activeMinutes, idleMinutes: time.idleMinutes } : {}), createdAt: c.createdAt, updatedAt: c.updatedAt,
   };
 };
 type IndexedCardRow = Awaited<ReturnType<ProjectIndex['cards']['list']>>['items'][number];
@@ -870,7 +909,8 @@ async function storyRows(index: ProjectIndex, projectDir: string): Promise<Board
     .filter((r): r is BoardStory => Boolean(r));
 }
 
-const byRank = (a: BoardStory, b: BoardStory) => (b.score ?? -1) - (a.score ?? -1) || a.updatedAt.localeCompare(b.updatedAt);
+// The picks' order (features.ts pickOrder), so a column reads in the order work will be taken.
+const byRank = (a: BoardStory, b: BoardStory) => pickOrder(a, b);
 const newestFirst = (a: BoardStory, b: BoardStory) => b.updatedAt.localeCompare(a.updatedAt);
 
 export interface BoardView {

@@ -51,6 +51,12 @@ export function mainTreeOf(cwd: string): string | undefined {
   return existsSync(join(main, '.codeloop')) ? main : undefined;
 }
 
+/** The top level of the linked worktree `cwd` is in, when that worktree belongs to `projectDir`; else undefined. */
+export function linkedCheckout(projectDir: string, cwd: string = process.cwd()): string | undefined {
+  const main = mainTreeOf(cwd);
+  return main && resolve(main) === resolve(projectDir) ? treeOf(cwd).top : undefined;
+}
+
 export function projectRoot(): string {
   const dir = process.env.CODELOOP_PROJECT_DIR?.trim();
   const root = dir || (mainTreeOf(process.cwd()) ?? process.cwd());

@@ -13,27 +13,31 @@ function refuseWhileOff(projectDir: string): void {
 }
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, loadAgents, resolveAgent, runAgent, type AgentConfig } from './agent.js';
 import { activeSessions, currentSession, type SessionCard } from './active-card.js';
 import { appendActivity } from './activity.js';
-import { DONE, findCard, readCards, RefusalError, safeName, writeCards, type Card } from './cards.js';
+import { DONE, failedTimes, findCard, readCards, RefusalError, safeName, writeCards, type Card } from './cards.js';
 import { clock } from './clock.js';
-import { currentStage, advanceCard, recordEvent, type Outcome } from './engine.js';
+import { currentStage, advanceCard, headCommit, recordEvent, workFingerprint, type Outcome } from './engine.js';
 import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
-import { openQuestions } from './interview.js';
-import { loadLane } from './lane.js';
+import { INTERVIEW, openQuestions } from './interview.js';
+import { carriedStages, loadLane, type Stage } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
+import { scrubOutput } from './scrub.js';
 import { checkEnv } from './shell.js';
 import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
-import { dropLease, holdsLease, isolation, placeTurn, takeLease, treeRange, type Mode } from './orch-isolation.js';
+import { dropBatch, dropLease, formBatch, holdsLease, isolation, maxBuilders, placeTurn, runningBuilders, takeBatch, takeLease, treeRange, type Batch, type BatchPlan, type Mode } from './orch-isolation.js';
+import { planFiles } from './plan-scope.js';
+import { readTasks } from './spec.js';
 import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
 import { LockedError, withRunLock, withRunLockSync } from './run-lock.js';
 import { Budget } from './budget.js';
+import { rankCards } from './features.js';
 
 export const ORCH_DIR = '.codeloop/state/orch';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -65,6 +69,14 @@ export interface OrchTurn {
   mode?: Mode;
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
+  /** A carried turn: every stage the one agent was briefed for, in order (`carry:` in the lane). */
+  carried?: string[];
+  /** The stages a carried turn moved, each through its own check. */
+  moved?: string[];
+  /** Set when this story was built in one agent turn with other small stories. */
+  batch?: Batch;
+  /** The agent's time limit for this turn, when a carry raised it above the preset's. */
+  timeoutMinutes?: number;
   /** Set when the hand-back gated was recorded before the turn started. */
   note?: string;
   log?: string;
@@ -185,22 +197,59 @@ function saveOrch(projectDir: string, record: OrchRecord): void {
 }
 
 /** The brief an orchestrated builder gets: the stage brief, the last gate's findings, then the rules and the hand-back line. */
-export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[], mode: Mode = 'worktree'): string {
+export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[], mode: Mode = 'worktree', carried: Stage[] = []): string {
   const footer = readFileSync(mode === 'tree' ? FOOTER_TREE : FOOTER, 'utf-8')
     .replaceAll('{{card}}', card.id)
     .replaceAll('{{worktree}}', worktree)
     .replaceAll('{{branch}}', branch)
     .replaceAll('{{project}}', projectDir);
   const feedback = findings.length ? ['## Latest gate findings', '', `Latest gate findings: the last turn did not pass the gate.`, '', ...findings.map(f => `- ${f}`), ''].join('\n') : '';
-  return `${buildBrief(projectDir, card).trimEnd()}\n\n${feedback}${feedback ? '\n' : ''}${footer}`;
+  return `${(carried.length > 1 ? carryBrief(projectDir, card, carried) : buildBrief(projectDir, card)).trimEnd()}\n\n${feedback}${feedback ? '\n' : ''}${footer}`;
+}
+
+/**
+ * One brief for a carried turn: what the turn covers and where it must stop, then each stage's own
+ * brief (skill, output and check) in lane order. The engine still runs each stage's check after
+ * the hand-back; the agent only writes the stages.
+ */
+function carryBrief(projectDir: string, card: Card, carried: Stage[]): string {
+  const ids = carried.map(s => s.id);
+  const lines = [
+    `# Carried turn: ${card.id} ${ids.join(', ')}`,
+    '',
+    `This turn carries ${ids.length} stages in one agent run: ${ids.join(' then ')}. Write each stage's output in order, so that each stage's check below passes. Do not run \`codeloop next\` yourself: after your hand-back the engine runs each stage's check in order and records each stage on its own.`,
+    '',
+    'Stop and hand back as soon as one of these happens:',
+    '',
+    '- you have written interview questions for the owner: the stages after them wait for the answers, and the next turn starts from them;',
+    `- a stage's check would not pass and you cannot make it pass;`,
+    `- you reach the end of ${ids.at(-1)}${carried.at(-1)?.gate ? `, where the ${carried.at(-1)!.gate!.name} gate asks the ${carried.at(-1)!.gate!.approver}` : ''}. Write nothing for any stage after it.`,
+    '',
+    'Hand back once, with the line at the end of this brief.',
+    '',
+  ];
+  for (const stage of carried) lines.push(buildBrief(projectDir, { ...card, stage: stage.id }).trimEnd(), '');
+  return lines.join('\n');
+}
+
+/** `orch.carry_max_minutes` (default 120): the most a carried turn's time limit may grow to. */
+export const DEFAULT_CARRY_MAX_MINUTES = 120;
+
+/** A carried turn's time limit: the agent's own limit once per carried stage, capped, and never below one stage's. */
+export function carryTimeoutMinutes(projectDir: string, perStage: number, stages: number): number {
+  const orch = (loadConfig(projectDir) as { orch?: { carry_max_minutes?: unknown } }).orch;
+  const v = orch && typeof orch === 'object' ? orch.carry_max_minutes : undefined;
+  const cap = typeof v === 'number' && v > 0 ? v : DEFAULT_CARRY_MAX_MINUTES;
+  return Math.max(perStage, Math.min(perStage * Math.max(stages, 1), cap));
 }
 
 
 /** The engine's `check-error` event, written once per distinct tail: a crashed check spends no retry. */
 function checkError(projectDir: string, id: string, stage: string, tail: string): void {
+  const note = scrubOutput(tail);
   const last = findCard(readCards(projectDir).cards, id).events.filter(e => e.stage === stage).at(-1);
-  if (last?.action === 'check-error' && last.note === tail) return;
-  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note: tail }));
+  if (last?.action === 'check-error' && last.note === note) return;
+  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note }));
 }
 
 /** A failed turn costs a retry, the same way a failed check does; the lane's last retry parks the story stuck. */
@@ -214,11 +263,16 @@ function countFailure(projectDir: string, id: string, note: string): 'failed' | 
   const now = clock().toISOString();
   const failures = Math.min((card.retries[stage.id] ?? 0) + 1, lane.retries);
   const stuck = failures >= lane.retries;
-  const ev = (action: string) => ({ at: now, actor: 'engine', human: false, action, stage: stage.id, note });
+  const ev = (action: string, text = note) => ({ at: now, actor: 'engine', human: false, action, stage: stage.id, note: text });
+  // The head and work this failure judged, as the engine records them: the next engine check on
+  // the same work then sees nothing tried since and does not count a second retry.
+  const head = headCommit(projectDir);
+  const fingerprint = workFingerprint(projectDir, card, stage);
   const next: Card = {
     ...card,
     retries: { ...card.retries, [stage.id]: failures },
-    events: [...card.events, ev('fail'), ...(stuck ? [ev('stuck')] : [])],
+    failures: { ...card.failures, [stage.id]: fingerprint },
+    events: [...card.events, { ...ev('fail'), ...(head ? { head } : {}), fingerprint, counted: true }, ...(stuck ? [ev('stuck', `${failedTimes(failures)}\n${note}`)] : [])],
     ...(stuck ? { gate: 'stuck', awaiting: 'owner' as const } : {}),
     updatedAt: now,
   };
@@ -244,8 +298,11 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   }
   let mergeFailed = false;
   let crashed = false;
+  let asked = false;
   // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
-  const open = openQuestions(projectDir, card);
+  // A carried turn gates and advances the stages before the questions first (advanceCarried),
+  // unless it starts at the stage that asks them: then nothing comes before them to land.
+  const open = !turn.carried || asksQuestions(projectDir, card, turn.stage) ? openQuestions(projectDir, card) : [];
   if (open.length) {
     turn.note = `waiting for answers: ${open.map(q => `Q${q.n}`).join(', ')} on ${card.id}`;
     turn.outcome = 'questions';
@@ -267,57 +324,66 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
       turn.findings.push(...gate.findings);
       crashed = true;
     } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []), ...(turn.mode === 'tree' ? ['fix forward with a new commit on the branch; nothing was reset or reverted'] : []));
-    else if (turn.mode === 'tree') {
-      // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
-      const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
-      turn.advance = adv.outcome;
-      if (adv.outcome === 'check-error') {
-        crashed = true;
-        turn.findings.push(`stage check crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
-      } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
-        turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-        turn.findings.push(`stage check failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
-      } else {
-        turn.outcome = 'merged';
-        const after = postMerge(projectDir, card.id, turn.stage, hb.head);
+    else {
+      // The landed work gets orch.after_merge even when the turn then stops at questions: the merge stands.
+      // A failure parks the story for its owner; false means the turn is not left waiting on answers.
+      const settle = (sha: string): boolean => {
+        const after = postMerge(projectDir, card.id, turn.stage, sha);
         turn.postMerge = after.steps;
-        if (after.failed) {
-          turn.findings.push(after.failed);
-          turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
-        }
-      }
-    } else {
-      // 6. merge, then the engine's own advance
-      try {
-        const merged = mergeStory(projectDir, card.id);
-        turn.merge = { sha: merged.sha, mode: merged.mode };
-        const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
+        if (!after.failed) return true;
+        turn.findings.push(after.failed);
+        turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
+        return false;
+      };
+      if (turn.mode === 'tree') {
+        // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
+        const adv = advanceCarried(projectDir, card.id, turn);
         turn.advance = adv.outcome;
-        if (adv.outcome === 'check-error') {
+        if (adv.questions) {
+          asked = settle(hb.head);
+        } else if (adv.outcome === 'check-error') {
           crashed = true;
-          turn.findings.push(`stage check crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+          turn.findings.push(`stage check${adv.at}crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
         } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-          turn.findings.push(`stage check failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+          turn.findings.push(`stage check${adv.at}failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
         } else {
           turn.outcome = 'merged';
-          // 6b. after the merge: what a person otherwise runs by hand on the main tree.
-          const after = postMerge(projectDir, card.id, turn.stage, merged.sha);
-          turn.postMerge = after.steps;
-          if (after.failed) {
-            turn.findings.push(after.failed);
-            turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
-          }
+          settle(hb.head);
         }
-      } catch (e) {
-        if (!(e instanceof RefusalError)) throw e;
-        turn.findings.push(e.message);
-        mergeFailed = true;
+      } else {
+        // 6. merge, then the engine's own advance
+        try {
+          const merged = mergeStory(projectDir, card.id);
+          turn.merge = { sha: merged.sha, mode: merged.mode };
+          const adv = advanceCarried(projectDir, card.id, turn);
+          turn.advance = adv.outcome;
+          if (adv.questions) {
+            asked = settle(merged.sha);
+          } else if (adv.outcome === 'check-error') {
+            crashed = true;
+            turn.findings.push(`stage check${adv.at}crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+          } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
+            turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
+            turn.findings.push(`stage check${adv.at}failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+          } else {
+            turn.outcome = 'merged';
+            // 6b. after the merge: what a person otherwise runs by hand on the main tree.
+            settle(merged.sha);
+          }
+        } catch (e) {
+          if (!(e instanceof RefusalError)) throw e;
+          turn.findings.push(e.message);
+          mergeFailed = true;
+        }
       }
     }
   }
 
-  if (!turn.findings.length) turn.outcome = 'merged';
+  if (asked) {
+    turn.outcome = 'questions';
+    turn.note = `waiting for answers: ${openQuestions(projectDir, findCard(readCards(projectDir).cards, card.id)).map(q => `Q${q.n}`).join(', ')} on ${card.id}${turn.moved?.length ? ` after ${turn.moved.join(', ')}` : ''}`;
+  } else if (!turn.findings.length) turn.outcome = 'merged';
   else if (crashed) turn.outcome = 'check-error';
   else if (mergeFailed) turn.outcome = 'merge-failed';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
@@ -327,8 +393,41 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   // The builder has handed back (or never will): its files are free for the next story.
   dropLease(projectDir, card.id);
   // 7. report
-  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
+  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : asked ? turn.note : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}${turn.moved && turn.moved.length > 1 ? `; moved ${turn.moved.join(', ')}` : ''}` });
   return turn;
+}
+
+/**
+ * After the gate (and the merge), the engine's own advance for each stage the turn carried, in
+ * order: each stage moves only through its own check, and the turn ends at the first gate, failed
+ * check, or open question. Every carried stage the agent reached gets its own agent-run event,
+ * pointing at the turn's one log. A turn with no carry advances its one stage.
+ */
+function advanceCarried(projectDir: string, id: string, turn: OrchTurn): { outcome: Outcome; output?: string; at: string; questions?: boolean } {
+  const stages = turn.carried ?? [turn.stage];
+  turn.moved = [];
+  let last: { outcome: Outcome; output?: string } = { outcome: 'moved' };
+  for (const [i, stageId] of stages.entries()) {
+    const card = findCard(readCards(projectDir).cards, id);
+    if (card.stage !== stageId || card.gate) break;
+    if (i > 0) {
+      recordEvent(projectDir, id, () => ({ action: 'agent-run', agent: turn.agent, log: turn.log ?? '', note: `carried in turn ${turn.n} from ${turn.stage}` }));
+      // The questions this turn asked wait for the owner: no stage after them is checked on a guess.
+      if (openQuestions(projectDir, card).length) return { outcome: 'parked', at: ` on ${stageId} `, questions: true };
+    }
+    const adv = advanceCard(projectDir, id, { unattended: true, force: true });
+    last = adv;
+    if (adv.outcome !== 'moved' && adv.outcome !== 'parked' && adv.outcome !== 'done') return { ...adv, at: stages.length > 1 ? ` on ${stageId} ` : ' ' };
+    turn.moved.push(stageId);
+    if (adv.outcome !== 'moved') break;
+  }
+  return { ...last, at: ' ' };
+}
+
+/** True for the stage whose output is the card's interview file: its check is the one that reads the answers. */
+function asksQuestions(projectDir: string, card: Card, stageId: string): boolean {
+  const output = loadLane(projectDir, card.lane).stages.find(s => s.id === stageId)?.output;
+  return !!output && basename(output) === INTERVIEW;
 }
 
 const TAIL_BYTES = 4096;
@@ -457,7 +556,7 @@ async function orchTurnSteps(projectDir: string, cardRef: string, opts: OrchOpti
   recordEvent(projectDir, card.id, (_cards, current) => {
     const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
     log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
-    return { action: 'agent-start', agent: agent.name, log };
+    return { action: 'agent-start', agent: agent.name, log, timeoutMinutes: agent.timeoutMinutes };
   });
   turn.log = log;
   const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: mode === 'tree' ? { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } : { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
@@ -546,7 +645,13 @@ async function placeAndBrief(projectDir: string, cardRef: string, opts: OrchOpti
   // 2. brief
   const brief = join(projectDir, briefPath(card));
   mkdirSync(dirname(brief), { recursive: true });
-  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried, mode);
+  const carry = carriedStages(lane, lane.stages.find(s => s.id === card.stage) ?? lane.stages[0], card);
+  if (carry.length > 1) turn.carried = carry.map(s => s.id);
+  if (agent && carry.length > 1) {
+    turn.timeoutMinutes = carryTimeoutMinutes(projectDir, agent.timeoutMinutes, carry.length);
+    agent = { ...agent, timeoutMinutes: turn.timeoutMinutes };
+  }
+  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried, mode, carry);
   writeFileSync(brief, briefText);
 
   // The brief goes to a session's or the person's outbox; an agent is started by the caller, unlocked.
@@ -658,16 +763,17 @@ export function waitingOrchCards(projectDir: string): string[] {
   const dir = join(projectDir, ORCH_DIR);
   if (!existsSync(dir)) return [];
   const cards = readCards(projectDir).cards;
-  return readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
+  const waiting = readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
     try {
       const rec = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as OrchRecord;
       const last = rec.turns.at(-1);
       const card = cards.find(c => c.id === rec.card);
-      return card && !card.gate && card.stage !== DONE && (last?.outcome === 'waiting-lease' || last?.outcome === 'queued') ? [card.id] : [];
+      return card && !card.gate && card.stage !== DONE && (last?.outcome === 'waiting-lease' || last?.outcome === 'queued') ? [card] : [];
     } catch {
       return [];
     }
   });
+  return rankCards(projectDir, waiting).map(c => c.id);
 }
 
 export function orchStatus(projectDir: string): OrchStatusRow[] {
@@ -784,4 +890,108 @@ export function orchView(projectDir: string, cardRef: string): OrchView {
     return { n: t.n, builder: builderLabel(t), ...(handback ? { handback } : {}), ...(gate ? { gate } : {}) };
   });
   return { record, report: orchReport(projectDir, cardRef), details };
+}
+
+export interface OrchBatchResult {
+  batch?: Batch;
+  /** One turn per batched story, each settled on its own hand-back. */
+  turns: OrchTurn[];
+  left: BatchPlan['left'];
+}
+
+/** The brief one builder gets for a batch: per story its tasks, planned files and commit trailer, then each hand-back line. */
+export function batchBrief(projectDir: string, batch: Batch, branch: string): string {
+  const cards = readCards(projectDir).cards;
+  const lines = [
+    `# Batch ${batch.id}: ${batch.cards.join(', ')}`,
+    '',
+    `You build ${batch.cards.length} small stories in this one turn, in the main tree at ${projectDir} on ${branch}. Each story is judged on its own: its own commits, its own planned files, its own checks and its own hand-back. Keep their work apart:`,
+    '',
+    '- Commit each story\'s work separately, touching only that story\'s planned files, with that story\'s `Card:` trailer. Never put two stories\' work in one commit.',
+    '- Hand back each story with its own line below once its work is committed, including a story you could not finish (say what blocked it).',
+    '- One story failing does not stop the others: finish and hand back the rest.',
+    '- Never run `git push`, `git merge`, `git rebase`, `git reset`, `git revert` or `git stash`, and do not run `codeloop next` or `codeloop approve`.',
+    '',
+  ];
+  for (const id of batch.cards) {
+    const card = findCard(cards, id);
+    const tasks = card.spec ? readTasks(projectDir, card.spec).tasks.filter(t => !t.done) : [];
+    lines.push(
+      `## ${card.id} ${card.title}`,
+      '',
+      `Size ${card.size ?? 'M'}${card.feature ? `, feature ${card.feature}` : ''}. Commit trailer: \`Card: ${card.id}\`.`,
+      '',
+      'Planned files (touch nothing else for this story):',
+      '',
+      ...(planFiles(projectDir, card) ?? []).map(f => `- ${f}`),
+      '',
+      ...(tasks.length ? ['Tasks:', '', ...tasks.map(t => `- ${t.id} ${t.text}`), ''] : []),
+      'Hand-back line:',
+      '',
+      `    codeloop card handback ${card.id} --branch ${branch} --head "$(git rev-parse HEAD)" --proof "<proof command for ${card.id}>" --left "<what is left>" --blocked "<what blocked you, or empty>"`,
+      '',
+    );
+  }
+  return lines.join('\n');
+}
+
+/**
+ * One agent turn that builds up to five small stories at build (orch-isolation formBatch), in the
+ * main tree. Each story keeps its own lease, agent-start and agent-run, turn record, gate, checks
+ * and approvals; only the agent run is shared. A story that fails leaves the batch: its lease is
+ * dropped, the failure is named on it, and its next turn builds it alone, while the others move on.
+ */
+export async function orchBatch(projectDir: string, opts: OrchOptions & { cards?: string[] } = {}): Promise<OrchBatchResult> {
+  refuseWhileOff(projectDir);
+  if (isolation(projectDir) === 'worktree') throw new RefusalError('a batch builds in the main tree; orch.isolation is worktree');
+  const placed = await withRunLock(projectDir, 'orch batch placement', () => {
+    const plan = formBatch(projectDir, opts.cards);
+    if (plan.cards.length === 0) return { plan };
+    const running = runningBuilders(projectDir);
+    if (running.length >= maxBuilders(projectDir)) return { plan: { cards: [], left: [...plan.cards.map(card => ({ card, why: `${running.length} builder(s) already running (${running.join(', ')}); orch.max_builders is ${maxBuilders(projectDir)}` })), ...plan.left] } };
+    const lane = loadLane(projectDir, findCard(readCards(projectDir).cards, plan.cards[0]).lane);
+    const agent = resolveAgent(projectDir, parseBuilder(opts.builder, opts.agent).kind === 'agent' ? opts.agent : undefined, lane.agent);
+    if (isUnavailable(projectDir, agent.name)) throw new AgentRefusal(`agent ${agent.name} is marked unavailable (${agentStatus(projectDir, agent.name).unavailable!.reason}); fix it, then run \`codeloop agent clear ${agent.name}\``, 'unavailable');
+    const batch: Batch = { id: `b-${clock().getTime().toString(36)}`, cards: plan.cards };
+    const branch = currentBranch(projectDir);
+    takeBatch(projectDir, batch);
+    const at = new Date().toISOString();
+    const turns = batch.cards.map(id => {
+      const record = readOrch(projectDir, id);
+      const card = findCard(readCards(projectDir).cards, id);
+      const turn: OrchTurn = { n: record.turns.length + 1, stage: card.stage, startedAt: at, agent: agent.name, builderKind: 'agent', worktree: projectDir, branch, outcome: 'failed', findings: [], mode: 'tree', batch, note: `built in batch ${batch.id}` };
+      return { record, turn };
+    });
+    const brief = join(projectDir, ORCH_DIR, 'batches', `${batch.id}.md`);
+    writeFileSync(brief, batchBrief(projectDir, batch, branch));
+    return { plan, batch, agent: { ...agent, timeoutMinutes: carryTimeoutMinutes(projectDir, agent.timeoutMinutes, batch.cards.length) }, turns, brief };
+  }, opts.lockWaitMs);
+  if (!placed.batch) return { turns: [], left: placed.plan.left };
+  const { batch, agent, turns, brief } = placed as Required<typeof placed>;
+  try {
+    await waitUnderCeiling(projectDir, opts.memory);
+    const log = `${AGENT_RUNS_DIR}/batch-${batch.id}.log`;
+    for (const { record, turn } of turns) {
+      turn.log = log;
+      recordEvent(projectDir, record.card, () => ({ action: 'agent-start', agent: agent.name, log, timeoutMinutes: agent.timeoutMinutes, note: `batch ${batch.id}: ${batch.cards.join(', ')}` }));
+    }
+    const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: projectDir, env: { CODELOOP_BATCH: batch.cards.join(' '), CODELOOP_PROJECT_DIR: projectDir } });
+    const started = Date.parse(turns[0].turn.startedAt);
+    const handedBack = turns.some(({ record }) => listHandbacks(projectDir, record.card).some(h => Date.parse(h.at) >= started));
+    noteAgentRun(projectDir, agent.name, { durationMs: ran.durationMs, handedBack, exit: ran.exit });
+    for (const { record } of turns) recordEvent(projectDir, record.card, () => ({ action: 'agent-run', agent: agent.name, exit: ran.exit, durationMs: ran.durationMs, log, note: `batch ${batch.id}` }));
+    const noHandback = ran.timedOut ? `no hand-back (the batch agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the batch agent exited ${ran.exit})`;
+    const settled = await withRunLock(projectDir, `orch batch ${batch.id} gate`, () => turns.map(({ record, turn }) => {
+      const done = settle(projectDir, record, turn, noHandback);
+      const others = batch.cards.filter(c => c !== record.card);
+      appendActivity(projectDir, record.card, { kind: 'orch-batch', stage: turn.stage, n: turn.n, batch: batch.id, text: `built in batch ${batch.id} with ${others.join(', ') || 'no other story'}; judged on its own commits, checks and approvals` });
+      if (done.outcome !== 'merged') appendActivity(projectDir, record.card, { kind: 'orch-batch', stage: turn.stage, n: turn.n, batch: batch.id, outcome: done.outcome, text: `left batch ${batch.id}: ${done.findings.join('; ') || done.outcome}; its next turn builds it alone` });
+      return done;
+    }), opts.lockWaitMs);
+    return { batch, turns: settled, left: placed.plan.left };
+  } finally {
+    dropBatch(projectDir, batch.id);
+    // Every story's lease goes with its builder, settled or not.
+    for (const id of batch.cards) dropLease(projectDir, id);
+  }
 }

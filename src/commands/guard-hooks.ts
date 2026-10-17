@@ -117,22 +117,34 @@ export const guardCommand = new Command('guard').description('Hooks that enforce
 guardCommand
   .command('edit [path]')
   .description('PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate')
-  .action(guardEdit);
+  .action(async (path?: string) => {
+    try {
+      await guardEdit(path);
+    } catch (e) {
+      // A hook that exits 1 lets the edit through, so a guard that cannot decide refuses instead.
+      console.error(editGuardFailed(e));
+      process.exit(2);
+    }
+  });
 
-// Open stories by priority band, then score, then age: what a session with nothing active should pick from.
-async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
-  const order: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+/** The refusal printed when a guard throws, on the CLI and the daemon path alike. */
+export const guardFailed = (verb: 'edit' | 'bash', e: unknown): string =>
+  chalk.red(`codeloop: the ${verb === 'bash' ? 'shell' : 'edit'} guard failed (${e instanceof Error ? e.message : String(e)}), so the ${verb === 'bash' ? 'command' : 'edit'} is refused until it can check`);
+export const editGuardFailed = (e: unknown): string => guardFailed('edit', e);
+
+// Open stories in pick order (features.ts pickOrder): what a session with nothing active should pick from.
+async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string; bug?: boolean }[]> {
   const { inLane } = await cardsLib();
   const { listCards } = await servicesLib();
+  const { byPickOrder } = await import('../lib/features.js');
   const open = (await listCards(projectDir)).filter(c => inLane(c as unknown as Card) && !c.gate);
-  return open
-    .sort((a, b) => (order[a.band ?? ''] ?? 9) - (order[b.band ?? ''] ?? 9) || (b.score ?? 0) - (a.score ?? 0) || a.createdAt.localeCompare(b.createdAt))
+  return byPickOrder(open)
     .slice(0, limit)
-    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.band }));
+    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.priority ?? c.band, ...(c.bug ? { bug: true } : {}) }));
 }
 
-function candidateLines(list: { id: string; title: string; stage: string; band?: string }[]): string[] {
-  return list.map(c => `  ${c.id}  ${c.band ?? '--'}  ${c.stage.padEnd(9)} ${c.title}`);
+function candidateLines(list: { id: string; title: string; stage: string; band?: string; bug?: boolean }[]): string[] {
+  return list.map(c => `  ${c.id}  ${c.bug ? 'bug ' : ''}${c.band ?? '--'}  ${c.stage.padEnd(9)} ${c.title}`);
 }
 
 guardCommand
@@ -140,15 +152,63 @@ guardCommand
   .description('SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active')
   .action(guardSession);
 
+// How a command line starts the CLI: `codeloop`, an absolute or quoted path to its bin, the built
+// entry (`node dist/index.js`), or npx.
+const CLI = String.raw`(?:\bcodeloop|\bnode\s+['"]?(?:\S*\/)?dist\/index\.js|\bnpx\s+(?:@protoboxai\/)?codeloop)['"]?\s+`;
 // Owner actions an assistant must never take in its own shell tool. The hook only fires for the
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
-const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|card\s+(?:done|drop|approve|reject))\b|--as[ =](owner|reviewer)\b/;
+// `orch run --review` without --dry-run closes and places stories on the owner's behalf. `card move`
+// is judged by gateCrossingMove: only a move across a gate asks.
+const OWNER_ACTION = new RegExp(
+  `${CLI}(approve|reject|answer|cards?\\s+(?:done|drop|approve|reject|place|park|reopen|edit)\\b|start\\b[^;&|\\n]*\\s--stage\\b|lanes?\\s+(?:promote|rollback)\\b|orch\\b(?![^;&|\\n]*--dry-run)[^;&|\\n]*--review)\\b|--as[ =](owner|reviewer)\\b`,
+  'g',
+);
+
+/**
+ * The first owner action in the command, or null. A `card edit` whose only options are `--bug` /
+ * `--no-bug` is left to directBugFlag, which asks only when the edit acts as the owner.
+ */
+export function ownerAction(command: string): RegExpExecArray | null {
+  for (const hit of command.matchAll(OWNER_ACTION)) {
+    if (/\bedit\b/.test(hit[1] ?? '')) {
+      // `--as <role>` says who acts, not what changes, so it does not make the edit more than a bug flag.
+      const options = (command.slice(hit.index).split(/[;&|\n]/)[0].match(/\s--?[\w-]+/g) ?? []).filter(o => !/^\s--as$/.test(o));
+      if (options.length > 0 && options.every(o => /^\s--(?:no-)?bug$/.test(o))) continue;
+    }
+    return hit as RegExpExecArray;
+  }
+  return null;
+}
+// `--bug` / `--no-bug` on `card new|edit` or `start` sets the flag every pick reads first, but only
+// when the command acts as the owner; as an agent or reviewer it is a report the owner confirms, and
+// `card propose --bug` always is, so neither asks.
+const BUG_FLAG = /\bcodeloop\s+(?:cards?\s+(?:new|edit)|start)\b[^;&|\n]*\s--(?:no-)?bug\b/;
+async function directBugFlag(command: string): Promise<RegExpExecArray | null> {
+  const hit = BUG_FLAG.exec(command);
+  if (!hit) return null;
+  // The role the command will act as, read the way the engine reads it; a role it refuses sets nothing.
+  const flag = /--as[ =](\S+)/.exec(command.slice(hit.index).split(/[;&|\n]/)[0])?.[1];
+  const { resolveRole } = await import('../lib/engine.js');
+  try {
+    return resolveRole(flag) === 'owner' ? hit : null;
+  } catch {
+    return null;
+  }
+}
 
 guardCommand
   .command('bash')
   .description("PreToolUse hook for the assistant's shell tool: `codeloop approve`, `reject`, `answer`, `card done|drop` and `--as owner|reviewer` go to the person as a permission prompt; their Allow is the decision")
   .option('--format <format>', 'claude (PreToolUse JSON) or cursor (beforeShellExecution JSON)', 'claude')
-  .action(guardBash);
+  .action(async (opts: { format: string }) => {
+    try {
+      await guardBash(opts);
+    } catch (e) {
+      // Exit 1 lets the command run, so a guard that cannot decide refuses instead, as the edit guard does.
+      console.error(guardFailed('bash', e));
+      process.exit(2);
+    }
+  });
 
 guardCommand
   .command('release')
@@ -424,31 +484,57 @@ export async function guardSession(): Promise<void> {
   console.log(`\`codeloop card activate ${top[0].id}\` to take the first; \`codeloop inbox\` for what waits on a person.`);
 }
 
-/** Behind `guard bash` and the hook daemon. */
-const CARD_MOVE = /\bcodeloop\s+card\s+move\s+(\S+)\s+(\S+)/;
+/** Behind `guard bash` and the hook daemon. Each `codeloop card move` up to the next shell separator. */
+const CARD_MOVE = new RegExp(`${CLI}cards?\\s+move\\b[^;&|\\n]*`, 'g');
+const WORD = /"([^"]*)"|'([^']*)'|(\S+)/g;
+
+/** The id and stage of one `card move`, with options dropped wherever they sit. `--opt value` drops both. */
+function moveArgs(text: string): { id?: string; stage?: string } {
+  const words = [...text.replace(/^.*?\bmove\b/, '').matchAll(WORD)].map(w => ({ text: w[1] ?? w[2] ?? w[3], quoted: w[3] === undefined }));
+  const positional: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (!w.quoted && w.text.startsWith('-')) {
+      if (!w.text.includes('=') && words[i + 1] && !(words[i + 1].text.startsWith('-') && !words[i + 1].quoted)) i++;
+      continue;
+    }
+    positional.push(w.text);
+  }
+  return { id: positional[0], stage: positional[1] };
+}
 
 /**
  * `card move` that crosses a gate (skips one ahead, undoes one passed, or clears the wait the card is
  * parked at) is the person's decision; a move between stages on one side of every gate is not.
- * Reads the board, so it runs only when the command is a card move.
+ * Every move in a compound command is judged, and one that cannot be read against the board (an
+ * unknown card or stage, an option where the id should be) is asked about rather than let through.
+ * Reads the board, so it runs only when the command holds a card move.
  */
 async function gateCrossingMove(command: string): Promise<string | undefined> {
-  const m = CARD_MOVE.exec(command);
-  if (!m) return undefined;
+  const moves = [...command.matchAll(CARD_MOVE)].map(m => m[0].trim());
+  if (moves.length === 0) return undefined;
+  let lib: { cards: Awaited<ReturnType<typeof cardsLib>>; loadLane: typeof import('../lib/lane.js').loadLane; projectDir: string };
   try {
-    const projectDir = projectRoot();
-    const { findCard, readCards } = await cardsLib();
-    const { loadLane } = await import('../lib/lane.js');
-    const card = findCard(readCards(projectDir).cards, m[1]);
-    const stages = loadLane(projectDir, card.lane).stages;
-    const from = stages.findIndex(st => st.id === card.stage);
-    const to = stages.findIndex(st => st.id === m[2]);
-    if (from < 0 || to < 0) return undefined;
-    const crossed = stages.slice(Math.min(from, to), Math.max(from, to)).some(st => st.gate);
-    return card.gate || crossed ? m[0] : undefined;
+    lib = { cards: await cardsLib(), loadLane: (await import('../lib/lane.js')).loadLane, projectDir: projectRoot() };
   } catch {
-    return undefined;
+    return moves[0];
   }
+  for (const move of moves) {
+    try {
+      const { id, stage } = moveArgs(move);
+      if (!id || !stage) return move;
+      const card = lib.cards.findCard(lib.cards.readCards(lib.projectDir).cards, id);
+      const stages = lib.loadLane(lib.projectDir, card.lane).stages;
+      const from = stages.findIndex(st => st.id === card.stage);
+      const to = stages.findIndex(st => st.id === stage);
+      if (from < 0 || to < 0) return move;
+      const crossed = stages.slice(Math.min(from, to), Math.max(from, to)).some(st => st.gate);
+      if (card.gate || crossed) return move;
+    } catch {
+      return move;
+    }
+  }
+  return undefined;
 }
 
 export async function guardBash(opts: { format: string }): Promise<void> {
@@ -456,7 +542,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
   const moved = await gateCrossingMove(command);
-  const hit = moved ? [moved] : OWNER_ACTION.exec(command);
+  const hit = moved ? [moved] : ownerAction(command) ?? (await directBugFlag(command));
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.
@@ -504,8 +590,9 @@ export async function guardPrompt(): Promise<void> {
   const activeId = getActiveCard(projectDir, session);
   if (!activeId) {
     // A repo with open stories and none active: the board's priority order decides what a session
-    // works on, not the chat. Exit 2 blocks the prompt and shows the list. A repo with no stories
-    // yet is left alone so the first session can start one.
+    // works on, not the chat. The default (nudge) lets the prompt through with that list as context;
+    // `guard.prompt: block` exits 2, which blocks the prompt. A repo with no stories yet is left
+    // alone so the first session can start one.
     const top = await candidates(projectDir, 3);
     if (top.length === 0) {
       console.log('codeloop: no active card, `codeloop start "<title>"` or `codeloop card activate <id>` first');

@@ -1,5 +1,5 @@
 # Card id to feature slug. `codeloop card migrate-features` reads this and writes `feature:` and the
-# feature's initiative onto each card. Source: chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md.
+# feature's initiative onto each card. Source: owner design notes: core vs plugins.
 c-057: right-sized-cards
 c-058: right-sized-cards
 c-059: value-ranked-board

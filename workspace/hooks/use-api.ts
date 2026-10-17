@@ -189,8 +189,8 @@ export const useArtifacts = () => useQuery({ queryKey: QK.artifacts, queryFn: ap
 export const useStats = () => useQuery({ queryKey: QK.stats, queryFn: api.stats, retry: false });
 export const useConfig = (enabled = true) => useQuery({ queryKey: QK.config, queryFn: api.config, retry: false, enabled });
 
-/** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. */
-export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: false, staleTime: 5_000, refetchInterval: 15_000 });
+/** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. Retried, so one dropped check does not show a signed-in owner as read-only. */
+export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: 2, staleTime: 5_000, refetchInterval: 15_000 });
 
 /** Why a write control is disabled; the same text for every one of them, so a reader learns it once. */
 export const SIGN_IN_REASON = 'Sign in to answer and approve.';
@@ -288,6 +288,24 @@ export function usePark() {
 
 export const useBrief = (id: string, enabled: boolean) =>
   useQuery({ queryKey: [...QK.show(id), 'brief'], queryFn: () => api.brief(id), enabled: Boolean(id) && enabled, retry: false });
+
+/** The stuck story's move button. */
+export function useMoveStuck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.moveStuck(id),
+    onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
+/** Edit one line of the story summary from the page; the story refetches with the new line and its author. */
+export function useSaveSummary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, needed, done }: { id: string; needed?: string; done?: string }) => api.saveSummary(id, { needed, done }),
+    onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
 
 export function useDecide() {
   const qc = useQueryClient();

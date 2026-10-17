@@ -40,6 +40,11 @@ export interface HubOptions {
   idleMs?: number;
   /** Overrides how often the idle sweep runs (default one minute), for tests. */
   sweepMs?: number;
+  /**
+   * The port the hub listens on, carried in the session cookie's name. Browsers ignore the port
+   * when matching cookies, so without it any other hub on localhost replaces this one's session.
+   */
+  port?: number;
 }
 
 export interface HubApp {
@@ -58,7 +63,10 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   const app = new Hono();
   const token = opts.token ?? randomBytes(24).toString('hex');
   const idleMs = opts.idleMs ?? IDLE_CLOSE_MS;
-  const SESSION_COOKIE = 'codeloop_hub_session';
+  // The unported name is still read, so a browser signed in before the port joined the name stays
+  // signed in; its value must still verify against this hub's own secret.
+  const LEGACY_SESSION_COOKIE = 'codeloop_hub_session';
+  const SESSION_COOKIE = opts.port ? `${LEGACY_SESSION_COOKIE}_${opts.port}` : LEGACY_SESSION_COOKIE;
   const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
   const sessionSecret = opts.sessionSecret ?? randomBytes(32).toString('hex');
   // Stateless `<expiry ms>.<hmac>` cookie: nothing in memory, so a restart that keeps the secret keeps the session.
@@ -76,8 +84,7 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   };
   const sameToken = (given: string | undefined) => !!given && given.length === token.length && timingSafeEqual(Buffer.from(given), Buffer.from(token));
   const signedIn = (c: Context) => {
-    const sid = getCookie(c, SESSION_COOKIE);
-    return validSession(sid);
+    return validSession(getCookie(c, SESSION_COOKIE)) || validSession(getCookie(c, LEGACY_SESSION_COOKIE));
   };
   const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
   const sameHost = (origin: string, host: string) => {
@@ -229,6 +236,7 @@ export function createHubApp(opts: HubOptions = {}): HubApp {
   });
   app.post('/api/hub/session/logout', c => {
     deleteCookie(c, SESSION_COOKIE, { path: '/' });
+    if (SESSION_COOKIE !== LEGACY_SESSION_COOKIE) deleteCookie(c, LEGACY_SESSION_COOKIE, { path: '/' });
     return c.json({ ok: true });
   });
 

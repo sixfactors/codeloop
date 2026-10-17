@@ -28,6 +28,7 @@ erDiagram
 | Card | `.codeloop/cards.json` | `laneVersion` | A card finishes on the lane version it started on; `lane promote` bumps the version without moving cards |
 | Card | `.codeloop/cards.json` | `gate`, `awaiting` | Set together when parked; `gate: stuck` means retries ran out and the owner must unstick |
 | Card | `.codeloop/cards.json` | `retries`, `failures` | Per-stage failure count and the fingerprint of the work at the last failure |
+| Card | `.codeloop/cards.json` | `summary` | What the story needs and what is done, one line each with who wrote it, person or agent, the step and the time; an agent write never replaces a person's line, and "what you must do" is worked out from the board on each read (c-311) |
 | Card | `.codeloop/cards.json` | `stage` | `done`, `proposed`, `dropped` and `queued` are not lane stages and hold no wip slot (`inLane` in `src/lib/cards.ts`) |
 | CardEvent | `card.events` | `fingerprint` | On an approval: hash of the output and check, so a later change re-parks the card |
 | CardEvent | `card.events` | `agent`, `exit`, `log` | `agent-start` and `agent-run` pairs; `max_runs_per_day` is counted from these |
@@ -35,6 +36,7 @@ erDiagram
 | Stage | lane file | `done.cmd`, `gate` | The check whose exit code decides, and who must approve (owner or reviewer) |
 | Feature | `.codeloop/wiki/features/` | `rice` | Reach, impact and confidence 1 to 10 and effort in weeks; the inbox orders by this score |
 | Question | `specs/` per card | `recommended`, `answer` | The interview stage is done when every question has an answer |
+| ReviewPass | `.codeloop/state/review-pass.json` | `at` | The orchestrator's review pass reads only stories changed since `at`; it moves only when a pass completes (c-307) |
 
 ## Sharp edges
 

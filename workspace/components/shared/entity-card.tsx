@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/shared/entity-card.tsx. Changes: the platform-coloured
+// Copied from a private project's components/shared/entity-card.tsx. Changes: the platform-coloured
 // AppAvatar is replaced by a plain icon medallion (no platform prop); the dropdown menu takes an
 // optional list of extra items so a card's secondary actions live in the menu, not on the body;
 // DropdownMenuTrigger uses base-ui's `render`. Padding is the card token (16px).

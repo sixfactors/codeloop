@@ -9,22 +9,24 @@ import { loadConfig } from './config.js';
 import { addQuestions, openQuestions } from './interview.js';
 import { storyState } from './states.js';
 import { progressSince } from './progress.js';
-import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
+import { CHECK_CRASHED, findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, laneFullRefusal, loadEngineConfig, slotHolders, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
+import { reviewPass } from './review-pass.js';
 import { startOrch, waitingOrchCards } from './orch.js';
 import { placeTurn } from './orch-isolation.js';
 import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
 import { Budget } from './budget.js';
 import { stageScaffold } from './stage-scaffold.js';
 import { LockedError, withRunLock } from './run-lock.js';
+import { rankCards } from './features.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
@@ -127,20 +129,26 @@ function active(projectDir: string, filter: RunFilter = {}): Card[] {
   const { cards } = readCards(projectDir);
   if (filter.lane && !loadLanes(projectDir).some(l => l.id === filter.lane)) throw new RefusalError(`lane "${filter.lane}" not found`);
   const only = filter.card ? findCard(cards, filter.card).id : undefined;
-  return cards.filter(c => inLane(c) && !c.gate && (!filter.lane || c.lane === filter.lane) && (!only || c.id === only));
+  return rankCards(projectDir, cards.filter(c => inLane(c) && !c.gate && (!filter.lane || c.lane === filter.lane) && (!only || c.id === only)));
 }
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 // An agent-start with no agent-run after it, younger than the timeout: another run is in the middle of this stage.
 function running(card: Card, agent: AgentConfig, now: Date): boolean {
   const last = card.events.filter(e => e.stage === card.stage && (e.action === 'agent-start' || e.action === 'agent-run')).at(-1);
-  return last?.action === 'agent-start' && now.getTime() - new Date(last.at).getTime() < agent.timeoutMinutes * 60_000 + 60_000;
+  // A carried or batched turn records its own, longer limit on the agent-start.
+  const minutes = typeof last?.timeoutMinutes === 'number' && last.timeoutMinutes > 0 ? last.timeoutMinutes : agent.timeoutMinutes;
+  return last?.action === 'agent-start' && now.getTime() - new Date(last.at).getTime() < minutes * 60_000 + 60_000;
 }
 
 /** Why no agent may start for this card now, from the board as given. `planned` counts starts a dry run has already listed. */
-function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0): string | undefined {
-  const ahead = cards.filter(c => c.lane === lane.id && workable(c)).findIndex(c => c.id === card.id);
-  if (lane.wip !== undefined && ahead >= lane.wip) return `lane ${lane.id} works on ${plural(lane.wip, 'card', 'cards')} at a time (wip); this one waits its turn`;
+function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0, plannedInLane = 0): string | undefined {
+  // Only stories an agent is working on hold a slot (engine.slotHolders); a trivial card never
+  // needs one. A dry run counts the starts it already listed in this lane as working.
+  if (lane.wip !== undefined && card.size !== 'trivial') {
+    const holding = slotHolders(projectDir, cards, lane.id, now).filter(h => h.card.id !== card.id);
+    if (holding.length + plannedInLane >= lane.wip) return `${laneFullRefusal(lane, holding)} (wip); this one waits its turn`;
+  }
   const { gatesPerDay } = loadEngineConfig(projectDir);
   const parked = waitingOnOwner(cards);
   if (gatesPerDay !== undefined && parked >= gatesPerDay) return `${plural(parked, 'card is', 'cards are')} waiting on you (capacity.gates_per_day is ${gatesPerDay}); clear the inbox first`;
@@ -150,8 +158,13 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
   return undefined;
 }
 
+// A move or reopen into the stage is the owner asking for the stage to be worked again.
+const ASKS_FOR_START = new Set(['reject', 'returned', 'agent-start', 'doctor-start', 'unstick', 'move', 'reopen']);
+
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
-async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean }) | null> {
+// `stuck`: the start was refused on unchanged work after a failed check and the card was parked
+// for a person (rules 4 and 6 of the model above workTried in engine.ts).
+async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean; stuck?: boolean }) | null> {
   const card = findCard(readCards(projectDir).cards, id);
   const lane = loadLane(projectDir, card.lane);
   const stage: Stage | undefined = lane.stages.find(s => s.id === card.stage);
@@ -161,8 +174,44 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   if (running(card, agent, now)) return { ...step, started: false, busy: true, reason: `agent ${agent.name} is still running on ${stage.id} from an earlier run` };
   // A rejection, or a return from the next stage's entry gate, asks for the work to be done again,
   // so the agent is started with the note even though the check still passes. Once per note.
-  const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'returned' || e.action === 'agent-start')).at(-1);
-  if (asked?.action !== 'reject' && asked?.action !== 'returned' && runCheck(projectDir, card, stage)?.passed) return null;
+  // A doctor-start or an owner's unstick asks for one more start on unchanged work.
+  // Only asks since the card entered the stage: an agent start from an earlier visit says nothing
+  // about this one. The entry event itself is kept, as a move, reopen or return is an ask.
+  const entry = stageEntryIndex(card.events, stage.id);
+  const asked = card.events.slice(Math.max(entry, 0)).filter(e => e.stage === stage.id && ASKS_FOR_START.has(e.action)).at(-1);
+  const redo = asked?.action === 'reject' || asked?.action === 'returned';
+  // A start on the head commit and stage work of the last one repeats that run; orch runs stop on
+  // the same rule in breaker(). Outside git there is no head to compare.
+  const head = headCommit(projectDir);
+  const work = head ? workFingerprint(projectDir, card, stage) : undefined;
+  const same = head !== undefined && asked?.action === 'agent-start' && asked.head === head && asked.fingerprint === work;
+  // A check that already failed after that start, on this head and work, would fail the same way.
+  const judged = same && card.events.slice(card.events.indexOf(asked!)).some(e => e.stage === stage.id && e.action === 'fail');
+  let failedNow: string | undefined;
+  let crashedNow: string | undefined;
+  if (!redo && !judged) {
+    const check = runCheck(projectDir, card, stage);
+    if (check?.passed) return null;
+    failedNow = check && check.crashed === undefined ? check.output : undefined;
+    crashedNow = check?.crashed;
+  }
+  // The start records the work as the check left it: a report file the check creates on its first
+  // run would otherwise read as new work on the next tick and start the agent again.
+  const startWork = head && !redo && !judged ? workFingerprint(projectDir, card, stage) : work;
+  if (same) {
+    // Nothing new can follow on its own, so the story waits for a person instead of being checked
+    // and refused on every tick.
+    if (!card.gate && (judged || failedNow !== undefined)) {
+      markStuck(projectDir, id, NOTHING_CHANGED, now, failedNow);
+      return { ...step, started: false, stuck: true, reason: NOTHING_CHANGED };
+    }
+    // A check that crashes again on the same work would crash in the advance too, twice a tick.
+    if (!card.gate && crashedNow !== undefined) {
+      markStuck(projectDir, id, CHECK_CRASHED, now, crashedNow);
+      return { ...step, started: false, stuck: true, reason: CHECK_CRASHED };
+    }
+    return { ...step, started: false, reason: `nothing changed since agent ${asked!.agent ?? agent.name} last started on ${stage.id} (head ${head!.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
+  }
 
   const spent = budget?.stop(`${id}:${stage.id}`);
   if (spent) return { ...step, started: false, reason: spent };
@@ -174,7 +223,7 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
       if (reason) throw new RefusalError(reason);
       const n = current.events.filter(e => e.action === 'agent-start' && e.stage === stage.id).length + 1;
       log = logFile ?? `${AGENT_RUNS_DIR}/${id}-${safeName(stage.id, 'stage id')}-${n}.log`;
-      return { action: 'agent-start', agent: agent.name, log };
+      return { action: 'agent-start', agent: agent.name, log, ...(head ? { head, fingerprint: startWork } : {}) };
     }, now);
   } catch (e) {
     if (!(e instanceof RefusalError)) throw e;
@@ -244,11 +293,16 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
   try {
     const step = agent ? await agentStep(projectDir, id, agent, now, logFile, budget) : null;
     if (step) {
-      const { busy, ...entry } = step;
+      const { busy, stuck, ...entry } = step;
       turn.agent = entry;
       if (busy) {
         turn.busy = true;
         turn.advanced = { id, outcome: 'refused', note: entry.reason };
+        return turn;
+      }
+      if (stuck) {
+        turn.outcome = 'stuck';
+        turn.advanced = { id, outcome: 'stuck', note: entry.reason };
         return turn;
       }
     }
@@ -321,6 +375,7 @@ async function runDueLocked(projectDir: string, wanted: AgentWanted, now: Date, 
 export function planRun(projectDir: string, wanted: AgentWanted | null, now: Date = clock(), filter: RunFilter = {}): string[] {
   const { cards } = readCards(projectDir);
   let planned = 0;
+  const plannedIn: Record<string, number> = {};
   return active(projectDir, filter).map(card => {
     const lane = loadLane(projectDir, card.lane);
     const stage = lane.stages.find(s => s.id === card.stage);
@@ -330,9 +385,10 @@ export function planRun(projectDir: string, wanted: AgentWanted | null, now: Dat
       ? `${stage.id} is a public step that has not been approved`
       : running(card, agent, now)
         ? `agent ${agent.name} is still running on ${stage.id} from an earlier run`
-        : limit(projectDir, cards, card, lane, agent, now, planned);
+        : limit(projectDir, cards, card, lane, agent, now, planned, plannedIn[lane.id] ?? 0);
     if (reason) return `${card.id}: would not start agent ${agent.name} on ${stage.id}: ${reason}`;
     planned++;
+    if (card.size !== 'trivial') plannedIn[lane.id] = (plannedIn[lane.id] ?? 0) + 1;
     return `${card.id}: would start agent ${agent.name} on ${stage.id} unless its check already passes: ${agent.cmd.replaceAll('{brief}', shellQuote(join(projectDir, briefPath(card))))}`;
   });
 }
@@ -416,7 +472,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check' | 'orch-retry';
+  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check' | 'orch-retry' | 'review';
   note: string;
 }
 
@@ -430,6 +486,13 @@ export function scaffoldStartCap(projectDir: string): number {
   return typeof cap === 'number' && cap >= 0 ? Math.floor(cap) : 0;
 }
 
+/** `doctor.review: on` in config.yaml lets the unattended doctor run the review pass; off by default so a project opts in after a supervised `orch run --review --dry-run`. */
+export function doctorReviewEnabled(projectDir: string): boolean {
+  const doctor = (loadConfig(projectDir) as { doctor?: { review?: unknown } }).doctor;
+  const v = doctor && typeof doctor === 'object' ? doctor.review : undefined;
+  return v === true || v === 'on';
+}
+
 /** On unless `.codeloop/config.yaml` sets `monitor: off`. */
 export function monitorEnabled(projectDir: string): boolean {
   const value = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
@@ -437,8 +500,8 @@ export function monitorEnabled(projectDir: string): boolean {
 }
 
 /**
- * One pass of the doctor: a failing story with fewer than three fails gets its agent started on
- * its stage again (the same turn `run --agent` takes), and a stuck or stale story untouched for a
+ * One pass of the doctor: a failing story, counted fails or not, gets its agent started on its
+ * stage again (the same turn `run --agent` takes), and a stuck or stale story untouched for a
  * day gets one "park it" question in the inbox. Each action is a line on the story's activity
  * stream. Stories in `skip` were already worked by this run.
  */
@@ -454,6 +517,10 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     opts.onAction?.(a);
   };
   const checkMs = opts.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
+  // The review pass first, on the stories changed since the last one, so what follows sees the
+  // board it repaired. It keeps its own budget: its fixes are not agent turns.
+  const review = doctorReviewEnabled(projectDir) ? reviewPass(projectDir, { now, dryRun: dry, skip: opts.skip }) : { fixed: [], asked: [], unclear: [] };
+  for (const l of [...review.fixed, ...review.asked, ...review.unclear]) log({ id: l.id, action: 'review', note: `review pass ${l.verb}: ${l.note} (evidence: ${l.evidence})` });
   // A builder holding a card with a quiet stream gets one request for a hand-back per stall.
   for (const b of stalledBuilders(projectDir, now.getTime())) {
     if (builderIdle(projectDir, b.card, now.getTime()).nudged) continue;
@@ -524,8 +591,9 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
       }
       continue;
     }
+    // No cap on fails here: the lane's retries park the story stuck first (engine.ts, rule 5).
     const fails = card.retries[card.stage] ?? 0;
-    if (state.health === 'failing' && fails < 3) {
+    if (state.health === 'failing') {
       if (!hasAgents) continue;
       const agent = resolveAgent(projectDir, opts.agent, loadLane(projectDir, card.lane).agent);
       // An agent a person has to fix first is never restarted by the doctor.

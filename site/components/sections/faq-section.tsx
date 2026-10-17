@@ -1,6 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 
-// Copied from chanl-site/src/components/sections/faq-section.tsx. The Radix Accordion is a native
+// Copied from a private project's src/components/sections/faq-section.tsx. The Radix Accordion is a native
 // details/summary list; next-intl, the FAQ schema and the tracked CTA are dropped.
 // Answers are from docs/concepts/cloud-and-hosting, cards-and-gates, hosts and compare.
 const FAQS = [

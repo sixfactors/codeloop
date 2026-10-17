@@ -5,3 +5,4 @@
 export { ApiError, CodeloopClient, isWaiting, type AnswerInput, type AskInput, type CardWithEvents, type Transport } from './client.js';
 export { cardsSearch, createHttpClient, httpTransport, type HttpOptions } from './http.js';
 export * from './types.js';
+export { stageEntryIndex } from '../lib/stage-entry.js';

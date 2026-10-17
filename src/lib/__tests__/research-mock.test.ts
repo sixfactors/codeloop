@@ -32,7 +32,7 @@ const TEMPLATE = readFileSync(resolve('templates/mock/template.html'), 'utf-8');
 const entry = process.argv[1];
 
 beforeEach(() => {
-  process.argv[1] = resolve('dist/index.js');
+  process.argv[1] = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
   dir = mkdtempSync(join(tmpdir(), 'codeloop-research-'));
   // The stages' own checks are what these tests drive; the rubric step has its own suite (rubric.test.ts).
   write('.codeloop/lanes/build.yaml', readFileSync(resolve('templates/lanes/build.yaml'), 'utf-8').replaceAll(' && codeloop check rubric {id}', ''));

@@ -1,9 +1,10 @@
-import { evidenceOf, usecasesOf } from './paths.js';
+import { evidenceOf, LEGACY_NOTICE, usecasesOf } from './paths.js';
 import { specPath, workDir } from './project-root.js';
 import { spawnSync } from 'child_process';
+import { scrubOutput } from './scrub.js';
 import { checkEnv } from './shell.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
 import { decisionFromResearch } from './wiki-rules.js';
@@ -11,18 +12,21 @@ import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
-import { currentSession } from './active-card.js';
-import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
+import { activeSessions, currentSession } from './active-card.js';
+import { builderIdle, stallMinutes } from './stall.js';
+import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, enter, findCard, gateRefusal, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
-import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
-import { planFiles } from './plan-scope.js';
+import { firstStage, foldedStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
+import { pathInPlan, planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
+import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
 // engine.ts drives a stage's domain-specific side effect without owning its parsing.
 import { queueBreakdown } from './shape.js';
+import { rankCards } from './features.js';
 
 export type Role = 'owner' | 'reviewer' | 'agent';
 
@@ -47,13 +51,22 @@ export function loadEngineConfig(projectDir: string): EngineConfig {
   };
 }
 
-// A person and their assistant share one account and one shell, so the environment cannot tell them
-// apart (a `!` command typed in a Claude Code session has no TTY, exactly like the assistant's own
-// tool call). The default is therefore the person. The assistant is kept out where its actions
-// actually pass: `run --agent` marks the processes it starts (CODELOOP_AGENT_RUN), the MCP server
-// acts as agent, and the `guard bash` hook refuses owner actions in the assistant's shell tool.
+/**
+ * Variables an assistant host sets in the shells it starts: Claude Code sets CLAUDECODE and
+ * CLAUDE_CODE_SESSION_ID, cursor-agent sets CURSOR_AGENT and CURSOR_CONVERSATION_ID;
+ * CURSOR_SESSION_ID is kept for Cursor builds that use it.
+ */
+export const ASSISTANT_SESSION_VARS = ['CLAUDECODE', 'CLAUDE_CODE_SESSION_ID', 'CURSOR_AGENT', 'CURSOR_CONVERSATION_ID', 'CURSOR_SESSION_ID'];
+
+// With no flag and no CODELOOP_ROLE, a shell an assistant host started acts as agent: the
+// assistant's own tool calls run there, and an owner verb must not pass because nobody asked. A
+// person in that session (a `!` command in Claude Code) passes `--as owner` or sets
+// CODELOOP_ROLE=owner; a terminal of their own is the owner by default. `run --agent` marks the
+// processes it starts (CODELOOP_AGENT_RUN), the MCP server acts as agent, and the `guard bash` hook
+// asks the person before an owner action in the assistant's shell tool.
 export function resolveRole(flag?: string): Role {
-  const role = flag ?? process.env.CODELOOP_ROLE ?? (process.env.CODELOOP_AGENT_RUN ? 'agent' : 'owner');
+  const inAssistant = Boolean(process.env.CODELOOP_AGENT_RUN) || ASSISTANT_SESSION_VARS.some(v => process.env[v]);
+  const role = flag ?? process.env.CODELOOP_ROLE ?? (inAssistant ? 'agent' : 'owner');
   if (role !== 'owner' && role !== 'reviewer' && role !== 'agent') {
     throw new RefusalError(`unknown role "${role}" (owner, reviewer or agent)`);
   }
@@ -80,7 +93,7 @@ interface Clock {
   now?: Date;
 }
 
-function event(now: Date, role: Role | 'engine', action: string, stage?: string, note?: string): CardEvent {
+function event(now: Date, role: Role | 'engine' | 'orchestrator', action: string, stage?: string, note?: string): CardEvent {
   return {
     at: now.toISOString(),
     actor: role,
@@ -92,18 +105,17 @@ function event(now: Date, role: Role | 'engine', action: string, stage?: string,
 }
 
 /**
- * HEAD, the list of changed files, the tracked changes themselves, and size and mtime of untracked
- * files. `.codeloop/` is left out: the engine writes there on every attempt. null outside a git repo.
+ * HEAD, the changed tracked files and their changes, and the names of untracked files. An untracked
+ * file counts by name only: a new file is new work, while a check rewriting its report or log in
+ * the repo on every run keeps the same names. `.codeloop/` is left out, as the engine writes there
+ * on every attempt. null outside a git repo.
  */
 function treeState(projectDir: string): string | null {
   const git = (args: string[]) => spawnSync('git', [...args, '--', '.', ':(exclude).codeloop'], { cwd: projectDir, encoding: 'utf-8' });
-  const status = git(['status', '--porcelain']);
+  const status = git(['status', '--porcelain', '--untracked-files=no']);
   if (status.status !== 0) return null;
-  const untracked = git(['ls-files', '--others', '--exclude-standard']).stdout.split('\n').filter(Boolean).map(f => {
-    const s = statSync(join(projectDir, f), { throwIfNoEntry: false });
-    return `${f} ${s?.size} ${s?.mtimeMs}`;
-  });
   const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectDir, encoding: 'utf-8' }).stdout;
+  const untracked = git(['ls-files', '--others', '--exclude-standard']).stdout.split('\n').filter(Boolean).sort();
   return [head, status.stdout, git(['diff', 'HEAD']).stdout, ...untracked].join('\n');
 }
 
@@ -120,12 +132,64 @@ export function currentStage(lane: Lane, card: Card): Stage {
 const DECISIONS = ['approve', 'auto-approve', 'reject', 'park'];
 
 // The latest gate event for the stage decides: a park or a rejection after an approval withdraws it.
-function approval(card: Card, stage: Stage): CardEvent | undefined {
-  const last = card.events.filter(e => e.stage === stage.id && DECISIONS.includes(e.action)).at(-1);
+// A stage that also asks a folded gate keeps the two apart: an approval or a park for one gate
+// says nothing about the other, and a rejection withdraws both.
+function approval(card: Card, stage: Stage, gate: string | undefined = stage.gate?.name): CardEvent | undefined {
+  const concerns = (e: CardEvent) => {
+    if (!gate || e.action === 'reject') return true;
+    if (e.action === 'park') return !e.note?.startsWith('gate ') || e.note.startsWith(`gate ${gate} `) || e.note === `gate ${gate}`;
+    return (e.gate ?? stage.gate?.name) === gate;
+  };
+  const last = card.events.filter(e => e.stage === stage.id && DECISIONS.includes(e.action) && concerns(e)).at(-1);
   return last && (last.action === 'approve' || last.action === 'auto-approve') ? last : undefined;
 }
 
 const approved = (card: Card, stage: Stage) => approval(card, stage) !== undefined;
+
+/**
+ * The orchestrator's review pass may move a story only where no person's decision is skipped: a
+ * story waiting at an approval gate, or any gated stage from `from` up to (not including) `to`
+ * that has no approval, refuses. `stuck` is a retry count, not an approval, so it does not.
+ */
+export function reviewMoveRefusal(lane: Lane, card: Card, to: number): string | undefined {
+  const from = lane.stages.findIndex(s => s.id === card.stage);
+  if (from < 0 || to <= from) return `the review pass moves ${card.id} only forward from ${card.stage}`;
+  if (card.gate && card.gate !== 'stuck') return `${card.id} waits at the ${card.gate} gate; the review pass never moves past a gate`;
+  const gated = lane.stages.slice(from, to).find(s => s.gate && stageApplies(s, card) && !approved(card, s));
+  if (gated) return `the ${gated.gate!.name} gate at ${gated.id} lies between; the review pass never moves past a gate`;
+  const folding = lane.stages.slice(from, to).find(s => { const f = foldedStage(lane, s, card); return f?.gate && stageApplies(s, card) && !approval(card, s, f.gate.name); });
+  return folding ? `the ${foldedStage(lane, folding, card)!.gate!.name} gate folded into ${folding.id} lies between; the review pass never moves past a gate` : undefined;
+}
+
+const CHECK_OUTCOMES = new Set(['advance', 'unstick', 'park', 'fail', 'stuck', 'check-error']);
+const passes = (e: CardEvent) => e.action === 'advance' || e.action === 'unstick' || (e.action === 'park' && /after the check passed/.test(e.note ?? ''));
+
+/** The latest check outcome recorded at `stage` after event `since` was a pass. */
+function checkPassed(card: Card, stage: string, since: number): boolean {
+  const last = card.events.filter((e, i) => i > since && e.stage === stage && CHECK_OUTCOMES.has(e.action) && (e.action !== 'park' || passes(e))).at(-1);
+  return !!last && passes(last);
+}
+
+/**
+ * The review pass may close a story only when nothing is left to prove: every gate left approved,
+ * the current stage's check passed since the story entered it, and every later stage passed. An
+ * outward gate is approved on entry, before its stage runs, so an approval alone says nothing
+ * about whether the deploy or check behind it ever worked.
+ */
+export function reviewCloseRefusal(lane: Lane, card: Card): string | undefined {
+  const why = reviewMoveRefusal(lane, card, lane.stages.length);
+  if (why) return why;
+  if (!checkPassed(card, card.stage, stageEntryIndex(card.events, card.stage))) return `${card.id}'s check at ${card.stage} has not passed since it got there; the review pass closes only what passed`;
+  const from = lane.stages.findIndex(s => s.id === card.stage);
+  const left = lane.stages.slice(from + 1).find(s => stageApplies(s, card) && !checkPassed(card, s.id, -1));
+  return left ? `${left.id} comes after ${card.stage} and never passed; the review pass closes only what passed` : undefined;
+}
+
+/** What the review pass passes to placeCard or closeCard: the merged commits its move rests on. */
+export interface ReviewMove {
+  commits: string[];
+}
+const reviewNote = (note: string, review: ReviewMove) => `review pass: ${note} (commits ${review.commits.map(s => s.slice(0, 8)).join(', ')})`;
 
 /** True for a public step nobody has approved yet: no work and no check may run for it. */
 export const awaitsApproval = (card: Card, stage: Stage) => !!stage.gate?.outward && !approved(card, stage);
@@ -162,11 +226,29 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   // `ref` without `work`: a tree-mode story's commit range on the main tree's branch.
   const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : ref ? { ...checkEnv(), CODELOOP_STORY_REF: ref } : checkEnv();
   const run = spawnSync(substitute(stage.done.cmd, card, { shell: true, projectDir }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: timeoutMs, env, killSignal: 'SIGKILL' });
-  const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
+  const raw = `${run.stdout ?? ''}${run.stderr ?? ''}`;
+  // The legacy-layout notice is printed by every codeloop command the check runs; it says nothing about the story.
+  const text = raw.split('\n').filter(l => l.trimEnd() !== LEGACY_NOTICE).join('\n');
+  // The output becomes an event note in cards.json, which is tracked.
+  const output = scrubOutput(tail(text));
   // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
   if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
   const passed = run.status === 0;
-  return { passed, output, ...(checkCrashed(run.status, `${run.stdout ?? ''}${run.stderr ?? ''}`) ? { crashed: output } : {}) };
+  if (checkCrashed(run.status, raw)) return { passed, output, crashed: output };
+  const fault = passed ? undefined : toolFault(card, raw, text, work && scrubOutput(work));
+  return { passed, output, ...(fault ? { crashed: fault } : {}) };
+}
+
+/**
+ * A failure no story work can fix, said in one line: the check printed nothing but the
+ * legacy-layout notice, or could not find its own card on the board it read (a worktree's
+ * cards.json that does not hold the story).
+ */
+function toolFault(card: Card, raw: string, text: string, work?: string): string | undefined {
+  if (!text.trim() && raw.includes(LEGACY_NOTICE)) return 'the check printed only the legacy-layout notice; `codeloop store move --layout dotfolder` ends it';
+  const missing = [...text.matchAll(/^card "([^"]+)" not found\s*$/gm)].some(m => m[1] === card.id);
+  if (missing) return `card ${card.id} is not on the board where the check ran${work ? ` (${work})` : ''}; no story work changes that`;
+  return undefined;
 }
 
 /**
@@ -328,6 +410,27 @@ export function recordEvent(
 }
 
 /**
+ * Parks a card at gate stuck for the owner. The stuck note is `reason` on its first line and the
+ * check output below it (`output`, or the stage's last fail), the shape the retry cap writes too.
+ * A card already at a gate is left as it is.
+ */
+export function markStuck(projectDir: string, id: string, reason: string, now: Date = clock(), output?: string): Card {
+  for (let attempt = 0; ; attempt++) {
+    const file = readCards(projectDir);
+    const before = findCard(file.cards, id);
+    if (before.gate) return before;
+    const tail = output ?? before.events.filter(e => e.action === 'fail' && e.stage === before.stage).at(-1)?.note;
+    const card: Card = { ...before, gate: 'stuck', awaiting: 'owner', events: [...before.events, event(now, 'engine', 'stuck', before.stage, tail ? `${reason}\n${tail}` : reason)], updatedAt: now.toISOString() };
+    try {
+      writeCards(projectDir, file, replace(file.cards, card));
+      return card;
+    } catch (e) {
+      if (!(e instanceof ConflictError) || attempt >= 5) throw e;
+    }
+  }
+}
+
+/**
  * Cards for work that already exists elsewhere (Spec Kit, BMAD). They are an inventory, so the
  * wip limit does not apply and each lands at the stage its source status maps to.
  */
@@ -362,7 +465,7 @@ export const waitingOnOwner = (cards: Card[]) => cards.filter(c => c.gate && c.s
  */
 export function proposeCard(
   projectDir: string,
-  input: { lane: string; title: string; id?: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine'; fields?: CardFields } & Clock,
+  input: { lane: string; title: string; id?: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine'; note?: string; fields?: CardFields } & Clock,
 ): { card: Card; created: boolean } {
   const lane = loadLane(projectDir, input.lane);
   if (lane.stages.length === 0) throw new RefusalError(`lane ${lane.id} has no stages`);
@@ -389,7 +492,7 @@ export function proposeCard(
       awaiting: 'owner',
       retries: {},
       evidence: [],
-      events: [event(now, input.role ?? 'agent', 'propose', PROPOSED, input.source)],
+      events: [event(now, input.role ?? 'agent', 'propose', PROPOSED, input.note ?? input.source)],
       createdAt: at,
       updatedAt: at,
     };
@@ -403,37 +506,90 @@ export function proposeCard(
   }
 }
 
-/**
- * Refuses when `adding` more cards would put the lane over its wip, naming the cards that hold the
- * slots and the commands that free one, so the refusal is a way forward rather than a dead end.
- */
-/** In the lane and not waiting on a person: the stories a lane's wip counts. */
+/** In the lane and not waiting on a person: the stories a lane's wip can count. */
 export const workable = (c: Card) => inLane(c) && !c.gate;
 
 /**
- * Holds one of the lane's wip slots. A trivial story does not: it skips research and spec and runs
- * in one sitting, so making it wait behind M stories turns a small ask into a refusal.
+ * Can hold one of the lane's wip slots. A trivial story cannot: it skips research and spec and runs
+ * in one sitting, so making it wait behind M stories turns a small ask into a refusal. Whether it
+ * holds one now depends on an agent working on it (`slotHolders`).
  */
 export const holdsSlot = (c: Card) => workable(c) && c.size !== 'trivial';
 
-export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string): void {
-  if (lane.wip === undefined || size === 'trivial') return;
-  // Only stories an agent can work hold a slot: one waiting at a gate or stuck is waiting on the
-  // person, and that queue has its own cap (capacity.gates_per_day).
-  const holding = cards.filter(c => c.lane === lane.id && holdsSlot(c) && !freeing.includes(c.id));
-  if (holding.length + adding <= lane.wip) return;
-  const list = holding.map(c => `${c.id} (${c.stage}${c.gate ? `, ${c.gate}` : ''}) ${c.title}`).join('; ');
-  throw new RefusalError(
+const DEFAULT_AGENT_TIMEOUT_MINUTES = 20;
+
+function agentTimeoutMs(projectDir: string, agent: string | undefined, turnMinutes?: number): number {
+  if (typeof turnMinutes === 'number' && turnMinutes > 0) return turnMinutes * 60_000 + 60_000;
+  const agents = (loadConfig(projectDir) as { agents?: Record<string, unknown> }).agents;
+  const preset = agent && agents && typeof agents[agent] === 'object' ? (agents[agent] as { timeout_minutes?: unknown }) : undefined;
+  const minutes = Number(preset?.timeout_minutes ?? DEFAULT_AGENT_TIMEOUT_MINUTES);
+  return (Number.isFinite(minutes) && minutes > 0 ? minutes : DEFAULT_AGENT_TIMEOUT_MINUTES) * 60_000 + 60_000;
+}
+
+/**
+ * Why an agent is working on the story now, or undefined. Either an agent run is in flight on its
+ * current stage (an agent-start with no agent-run after it, younger than that agent's timeout), or
+ * a builder session holds the story and wrote to its activity within `monitor.stall_minutes`.
+ * A story with neither is waiting, whatever stage it is on.
+ */
+export function workingOn(projectDir: string, card: Card, now: Date = clock()): string | undefined {
+  const last = card.events.filter(e => e.stage === card.stage && (e.action === 'agent-start' || e.action === 'agent-run')).at(-1);
+  if (last?.action === 'agent-start' && now.getTime() - Date.parse(last.at) < agentTimeoutMs(projectDir, last.agent, last.timeoutMinutes)) return `agent ${last.agent ?? 'run'} on ${card.stage}`;
+  const session = activeSessions(projectDir).find(s => s.card === card.id);
+  if (!session) return undefined;
+  const idle = builderIdle(projectDir, card.id, now.getTime());
+  // A batch takes its leases under the placement lock and writes the agent-starts after it drops,
+  // so a lease with no activity yet holds the slot while it is younger than stall_minutes.
+  if (idle.lastAt === undefined) {
+    const age = now.getTime() - Date.parse(session.startedAt);
+    return session.session.startsWith('orch-') && age < stallMinutes(projectDir) * 60_000 ? `lease taken ${Math.floor(age / 60_000)} min ago` : undefined;
+  }
+  if (idle.stalled) return undefined;
+  return `${session.session.startsWith('orch-') ? 'an orchestrated builder' : `session ${session.label ?? session.session}`} active ${idle.idleMinutes} min ago`;
+}
+
+/**
+ * The stories holding one of the lane's wip slots now: they can hold one (`holdsSlot`) and an agent
+ * is working on them (`workingOn`). Stories parked at the owner's gates, waiting for answers, for a
+ * lease or for their next turn hold none.
+ */
+export function slotHolders(projectDir: string, cards: Card[], laneId: string, now: Date = clock()): { card: Card; why: string }[] {
+  return cards.flatMap(c => {
+    if (c.lane !== laneId || !holdsSlot(c)) return [];
+    const why = workingOn(projectDir, c, now);
+    return why ? [{ card: c, why }] : [];
+  });
+}
+
+/** The refusal every start path gives on a full lane, naming the stories that hold the slots and why. */
+export function laneFullRefusal(lane: { id: string; wip?: number }, holding: { card: Card; why: string }[], adding = 1): string {
+  const list = holding.map(h => `${h.card.id} (${h.card.stage}, ${h.why}) ${h.card.title}`).join('; ');
+  return (
     `lane ${lane.id} works on ${lane.wip} card${lane.wip === 1 ? '' : 's'} at a time${adding > 1 ? `, this needs ${adding} slots,` : ''} and ${holding.length} ${holding.length === 1 ? 'holds a slot' : 'hold the slots'}: ${list || 'none'}. ` +
-      `Free one with \`codeloop card done <id>\` or \`codeloop card drop <id> "<why>"\`, or raise \`wip\` in .codeloop/lanes/${lane.id}.yaml.`,
+    `A slot frees when that agent hands back or goes quiet, or with \`codeloop card done <id>\` or \`codeloop card drop <id> "<why>"\`; or raise \`wip\` in .codeloop/lanes/${lane.id}.yaml.`
   );
+}
+
+/**
+ * Refuses when `adding` more cards would put the lane over its wip. With `projectDir`, only stories
+ * an agent is working on count (`slotHolders`). Without it every story in the lane and not at a gate
+ * counts; only the split path still calls it that way.
+ */
+export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string, projectDir?: string): void {
+  if (lane.wip === undefined || size === 'trivial') return;
+  const holding = projectDir
+    ? slotHolders(projectDir, cards, lane.id).filter(h => !freeing.includes(h.card.id))
+    : cards.filter(c => c.lane === lane.id && holdsSlot(c) && !freeing.includes(c.id)).map(card => ({ card, why: 'in the lane' }));
+  if (holding.length + adding <= lane.wip) return;
+  throw new RefusalError(laneFullRefusal(lane, holding, adding));
 }
 
 /**
  * Ends a card: `done` (its work is finished) or `dropped` (not doing it). Either frees its lane
  * slot; stage, outputs and events are kept. Only the owner or reviewer may end a card.
  */
-export function closeCard(projectDir: string, id: string, role: Role, outcome: 'done' | 'dropped', note?: string, opts: { structural?: boolean } & Clock = {}): Card {
+export function closeCard(projectDir: string, id: string, role: Role, outcome: 'done' | 'dropped', note?: string, opts: { structural?: boolean; review?: ReviewMove } & Clock = {}): Card {
+  if (opts.review) return reviewClose(projectDir, id, note ?? 'merged and verified', opts.review, opts);
   if (!opts.structural && role === 'agent') throw new RefusalError(`ending a card is the owner's decision; ask them to run \`codeloop card ${outcome === 'done' ? 'done' : 'drop'} ${id}\``);
   if (outcome === 'dropped' && !note?.trim()) throw new RefusalError('say why it is dropped: `codeloop card drop <id> "<why>"`');
   const file = readCards(projectDir);
@@ -447,6 +603,21 @@ export function closeCard(projectDir: string, id: string, role: Role, outcome: '
     events: [...before.events, event(now, role, outcome === 'done' ? 'close' : 'drop', before.stage, note?.trim())],
     updatedAt: now.toISOString(),
   };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+// A review-pass close: only `done`, and only when every gated stage left on the lane is approved.
+function reviewClose(projectDir: string, id: string, note: string, review: ReviewMove, opts: Clock): Card {
+  const file = readCards(projectDir);
+  const before = findCard(file.cards, id);
+  if (!inLane(before)) throw new RefusalError(`card ${before.id} is ${before.stage}, not in a lane`);
+  const lane = loadLane(projectDir, before.lane);
+  const why = reviewCloseRefusal(lane, before);
+  if (why) throw new RefusalError(why);
+  const now = opts.now ?? clock();
+  const { gate: _gate, awaiting: _awaiting, ...rest } = before;
+  const card: Card = { ...rest, stage: DONE, events: [...before.events, event(now, 'orchestrator', 'close', before.stage, reviewNote(note, review))], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }
@@ -517,19 +688,32 @@ export function resizeTrivial(projectDir: string, id: string, why: string, opts:
 }
 
 /** Puts a just-created card at a later stage of its lane, for work already under way: the owner's call. */
-export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean } = {}): Card {
+export function placeCard(projectDir: string, id: string, stage: string, role: Role, opts: Clock & { note?: string; structural?: boolean; review?: ReviewMove } = {}): Card {
   // A split carries its parent's stage over; the decision was the split, which any role may make.
-  if (role === 'agent' && !opts.structural) throw new RefusalError('starting a card past the first stage is the owner\'s decision');
+  // The review pass may place too, bounded by reviewMoveRefusal instead of the gate check below.
+  if (role === 'agent' && !opts.structural && !opts.review) throw new RefusalError('starting a card past the first stage is the owner\'s decision');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
+  // An approval or a stuck count belongs to the stage it was given at; placing past it would carry it to the new one.
+  // A card made at an outward first stage parks at that stage's entry gate on creation. Until an
+  // agent has started on it or the gate or a check has decided something, that gate decides
+  // nothing yet, so placing the card past it is allowed (start's own spec event included).
+  const first = firstStage(lane, before);
+  const onlyEntryGate = before.stage === first.id && !!first.gate?.outward && before.gate === first.gate.name && !before.events.some(e => ['agent-start', 'fail', 'approve', 'reject', 'advance'].includes(e.action));
+  const waiting = opts.review ? reviewMoveRefusal(lane, before, lane.stages.findIndex(s => s.id === stage)) : onlyEntryGate ? undefined : gateRefusal(before);
+  if (waiting) throw new RefusalError(waiting);
   if (stage === SPLIT_BEFORE_STAGE) {
     const problem = storySizeProblem(projectDir, before);
     if (problem) throw new RefusalError(problem);
   }
+  // The review pass settles a story already being worked; every other placement is a start.
+  if (!opts.review) assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
   const now = opts.now ?? clock();
-  const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  const note = opts.note ?? `started at ${stage}: work already under way`;
+  const card: Card = { ...enter(before, stage), events: [...before.events, opts.review ? event(now, 'orchestrator', 'place', stage, reviewNote(note, opts.review)) : event(now, role, 'place', stage, note)], updatedAt: now.toISOString() };
+  parkIfOutward(card, lane, now);
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }
@@ -546,7 +730,7 @@ export function createCard(
   if (config.gatesPerDay !== undefined && parked >= config.gatesPerDay) {
     throw new RefusalError(`${parked} ${parked === 1 ? 'card is' : 'cards are'} waiting on you (capacity.gates_per_day is ${config.gatesPerDay}); clear the inbox before starting new work`);
   }
-  assertRoomInLane(file.cards, lane, 1, [], input.fields?.size);
+  assertRoomInLane(file.cards, lane, 1, [], input.fields?.size, projectDir);
 
   const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note, input.fields);
   writeCards(projectDir, file, [...file.cards, card]);
@@ -600,13 +784,13 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
   // promotion instead of being computed once against a board that is about to change under it.
   for (let i = 0; i < 1000; i++) {
     const file = readCards(projectDir);
-    const ready = file.cards.find(c => {
+    // In pick order (features.ts pickOrder), so a freed slot goes to the bug or highest priority first.
+    const ready = rankCards(projectDir, file.cards.filter(c => c.stage === QUEUED)).find(c => {
       if (c.stage !== QUEUED) return false;
       if (opts.lane && c.lane !== opts.lane) return false;
       if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
       const lane = loadLane(projectDir, c.lane);
-      const active = file.cards.filter(x => x.lane === c.lane && holdsSlot(x)).length;
-      return lane.wip === undefined || c.size === 'trivial' || active < lane.wip;
+      return lane.wip === undefined || c.size === 'trivial' || slotHolders(projectDir, file.cards, c.lane, now).length < lane.wip;
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
@@ -625,22 +809,127 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
   return promoted;
 }
 
-/** True when the card's activity has no line other than a check since its last check line (or has no check line). */
-function quietSinceLastCheck(projectDir: string, id: string): boolean {
+// Activity lines that are someone working on the story: a session's edits, commands, prompts and
+// commits (the guard hooks), an edit from the app, a hand-back, a merge. Engine, doctor and orch
+// lines, a lane upgrade or a sweep are not.
+const WORK_LINES = new Set(['edit', 'story-edit', 'cmd', 'prompt', 'commit', 'handback', 'merge']);
+
+/** True when a work line sits on the card's activity after its last check line (or there is no check line). */
+function workSinceLastCheck(projectDir: string, id: string): boolean {
   const items: ActivityEntry[] = [];
   for (let page = readActivity(projectDir, id, { limit: 1000 }); ; page = readActivity(projectDir, id, { after: page.next, limit: 1000 })) {
     items.push(...page.items);
     if (!page.next) break;
   }
   const lastCheck = items.map(i => i.kind).lastIndexOf('check');
-  return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check' || i.kind === 'check-skipped');
+  // A session's own `codeloop next` or `card check` writes a cmd line just before the check it runs.
+  return items.slice(lastCheck + 1).some(i => WORK_LINES.has(i.kind) && !(i.kind === 'cmd' && /^(npx )?codeloop\b/.test(String(i.text ?? ''))));
+}
+
+/** HEAD of the project's git repo, or undefined outside one. */
+export function headCommit(projectDir: string): string | undefined {
+  const run = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectDir, encoding: 'utf-8' });
+  return run.status === 0 ? run.stdout.trim() || undefined : undefined;
+}
+
+/**
+ * What the stage's work is now, as a hash: the output file, or for a stage with none the working
+ * tree. The check's own output is no guide (test runners print timings); outside a git repo there
+ * is no tree to read, and `outside` stands in.
+ */
+export function workFingerprint(projectDir: string, card: Card, stage: Stage, outside = 'no tree'): string {
+  const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
+  const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? outside;
+  return createHash('sha1').update(work).digest('hex');
+}
+
+/*
+ * Retries, restarts and stuck: one model, applied here (advanceCard), in run.ts (agentStep,
+ * doctorTick) and in journey.ts (storyLiveLine).
+ * 1. Every failed check writes a fail event, counted or not, at the cap or not.
+ * 2. A failure counts toward lane.retries only when work was tried since the last counted failure
+ *    of the stage (or, for the first, since the card entered the stage): an agent run, a person's
+ *    work line, a commit that is work on this card (commitsWorkOn), or a stage output that differs
+ *    from the last counted failure's and is neither missing nor the bare template. On a stage with
+ *    no output file, tree changes alone never count.
+ * 3. A failing stage is failing for the inbox, the doctor and run whether or not the failure
+ *    counted (states.ts reads fail events, not retries). The doctor and `run --agent` start an agent
+ *    on it within the start limits (wip, gates_per_day, max_runs_per_day, run budget, memory).
+ * 4. No restart while head and work are unchanged since the last agent start. When that refusal
+ *    meets a failed check, the card parks stuck with NOTHING_CHANGED (a crashed check: CHECK_CRASHED),
+ *    and the check is not rerun until something the check can see changes (rerun-skip.ts).
+ * 5. At lane.retries counted failures the card parks stuck with failedTimes(n) as the reason.
+ * 6. Owner approve on stuck clears the gate and the counts and writes `unstick`, which allows one
+ *    agent start even on unchanged work; the next start on unchanged work is refused again (4).
+ * 7. The stuck event's first note line is the reason; stuckReason reads it for the story page.
+ */
+
+/** The stage's last counted failure since the card entered it, or undefined. A fail event older than the counted flag counts as counted. */
+function lastCountedFail(card: Card, stage: string): CardEvent | undefined {
+  const events = card.events ?? [];
+  return events.slice(stageEntryIndex(events, stage) + 1).filter(e => e.stage === stage && e.action === 'fail' && e.counted !== false).at(-1);
+}
+
+function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; storyCommits: (since: { from?: string; at: number }) => boolean }): boolean {
+  const events = card.events ?? [];
+  const entry = stageEntryIndex(events, stage.id);
+  const base = lastCountedFail(card, stage.id);
+  const after = base ? events.indexOf(base) : entry;
+  // An agent-run with no exit and no duration is a start that was refused before the agent ran.
+  if (opts.workLines || events.slice(after + 1).some(e => e.stage === stage.id && e.action === 'agent-run' && !(e.exit === null && e.durationMs === 0))) return true;
+  const since = base ? Date.parse(base.at) : entry >= 0 ? Date.parse(events[entry].at) : Date.parse(card.createdAt);
+  if (base?.head && opts.head) {
+    if (base.head !== opts.head && opts.storyCommits({ from: base.head, at: since })) return true;
+  } else if (opts.head && opts.storyCommits({ at: since })) return true;
+  if (!stage.output || opts.untouched) return false;
+  if (!base) return true;
+  // A base that kept no fingerprint says nothing about what the work was, so a changed output cannot be shown.
+  const judged = base.fingerprint ?? card.failures?.[stage.id];
+  return judged !== undefined && judged !== opts.fingerprint;
+}
+
+const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
+
+/**
+ * Whether a commit since `from` is work on this card. A commit naming the card in a `Card:` or
+ * `Feature:` trailer is; otherwise one touching a file in the card's plan is, whatever other
+ * trailers it carries; for a card with no plan, a commit with no trailers is when it touches a file
+ * that one of the card's own trailered commits touched, so a chore on main is nobody's retry; when
+ * it has no trailered commits either, one is when it changes the stage output or a file in the
+ * card's spec folder, so a person's untrailered work on the story still counts. With
+ * no `from` (the first failure: no head was kept when the card entered the stage) commits since `at`
+ * are read and only the first two rules apply, as there is no head move to judge. A `from` the log
+ * cannot reach (the branch was rewritten) falls back to `at`.
+ */
+function commitsWorkOn(projectDir: string, card: Card, stage: Stage, since: { from?: string; at: number }): boolean {
+  const log = (range: string[]) => spawnSync('git', ['log', '--name-only', '--format=%x01%H%x00%B%x00', ...range], { cwd: projectDir, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
+  const byTime = [`--since=@${Math.floor(since.at / 1000)}`, 'HEAD'];
+  let run = log(since.from ? [`${since.from}..HEAD`] : byTime);
+  if (run.status !== 0 && since.from) run = log(byTime);
+  if (run.status !== 0) return false;
+  const plan = planFiles(projectDir, card);
+  const records = (stdout: string) => stdout.split('\u0001').flatMap(rec => {
+    const [sha, body = '', files = ''] = rec.split('\u0000');
+    return sha?.trim() ? [{ cards: [...body.matchAll(TRAILER)].map(m => m[1]), files: files.split('\n').map(f => f.trim()).filter(Boolean) }] : [];
+  });
+  let owned: Set<string> | undefined;
+  // Files the card's own trailered commits touched, over all history; read once, only when needed.
+  const ownFiles = () => (owned ??= new Set(records(log([`--grep=^(Card|Feature):[[:space:]]*${card.id}[[:space:]]*$`, '-E', 'HEAD']).stdout).filter(r => r.cards.includes(card.id)).flatMap(r => r.files)));
+  // The story's own files when it has neither a plan nor a trailered commit: the stage output and the spec folder.
+  const storyFiles = () => [...(stage.output ? [relative(workDir(projectDir), specPath(projectDir, substitute(stage.output, card, { projectDir })))] : []), ...(card.spec ? [card.spec] : [])];
+  for (const { cards, files } of records(run.stdout)) {
+    if (cards.includes(card.id)) return true;
+    if (plan) {
+      if (files.some(f => pathInPlan(projectDir, plan, f))) return true;
+    } else if (since.from && !cards.length && files.some(f => (ownFiles().size ? ownFiles().has(f) : pathInPlan(projectDir, storyFiles(), f)))) return true;
+  }
+  return false;
 }
 
 /**
  * `rerunStuck` lets the doctor rerun the check of a story parked stuck, after work landed on it: a
  * pass advances it and the stuck gate goes with it (an `unstick` event is written), a failure
- * leaves it stuck. The gate is cleared only on the working copy, so a failure with the same
- * fingerprint returns without writing anything.
+ * leaves it stuck and is recorded uncounted. The gate is cleared only on the working copy.
  */
 export function advanceCard(projectDir: string, ref: string, opts: { event?: string; unattended?: boolean; rerunStuck?: boolean; checkTimeoutMs?: number; force?: boolean } & Clock = {}): AdvanceResult {
   let file = readCards(projectDir);
@@ -676,7 +965,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
 
   // Read before this run's own check line is appended: only work by someone since the last check
   // makes the next failure a fresh attempt.
-  const quiet = quietSinceLastCheck(projectDir, id);
+  const workLines = workSinceLastCheck(projectDir, id);
   const check = runCheck(projectDir, card, stage, undefined, undefined, opts.checkTimeoutMs);
   const output = check?.output ?? '';
   if (check) appendActivity(projectDir, id, { session: currentSession(), kind: 'check', stage: stage.id, pass: check.passed, output });
@@ -707,28 +996,38 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       return { card, outcome: 'check-error', output, started: [], because: {} };
     }
     if (!check.passed) {
-      // A story at its retry cap is parked: a further failure is not counted and nothing is written,
-      // so `retries` never passes `lane.retries` however often the check is rerun.
-      if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) return { card: before, outcome: 'stuck', output, started: [], because: {} };
-      // An unattended run retries on a schedule. If the work has not changed since the last failure
-      // there is nothing new to judge, so it must not use up a retry.
-      // The check's own output is no guide (test runners print timings), so a stage with no output
-      // file is judged by the working tree instead.
-      const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
-      const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? output;
-      const fingerprint = createHash('sha1').update(work).digest('hex');
-      if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
+      const fingerprint = workFingerprint(projectDir, card, stage, output);
+      const head = headCommit(projectDir);
+      const failed = (counted: boolean): CardEvent => ({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}), fingerprint, counted });
+      // At the retry cap the failure is recorded and never counted, so `retries` never passes
+      // `lane.retries`; a card at the cap that is not parked yet (the lane's retries were lowered) parks.
+      if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) {
+        const kept = draft(before);
+        kept.failures = { ...before.failures, [stage.id]: fingerprint };
+        kept.events.push(failed(false));
+        if (!kept.gate) {
+          kept.gate = 'stuck';
+          kept.awaiting = 'owner';
+          kept.events.push(event(now, 'engine', 'stuck', stage.id, `${failedTimes(kept.retries[stage.id] ?? 0)}\n${output}`));
+        }
+        writeCards(projectDir, file, replace(file.cards, kept));
+        return { card: kept, outcome: 'stuck', output, started: [], because: {} };
+      }
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, storyCommits: since => commitsWorkOn(projectDir, before, stage, since) });
+      card.events.push(failed(counted));
+      // An unattended run on the work the last failure judged, with nothing tried since, has nothing new to say.
+      if (opts.unattended && !counted && before.failures?.[stage.id] === fingerprint) {
+        writeCards(projectDir, file, replace(file.cards, card));
+        return { card, outcome: 'unchanged', output, started: [], because: {} };
+      }
       card.failures = { ...before.failures, [stage.id]: fingerprint };
-      // The same failure with no activity since the last check is a repeated button press, not a new attempt.
-      const repeat = quiet && before.failures?.[stage.id] === fingerprint;
-      const failures = (card.retries[stage.id] ?? 0) + (repeat ? 0 : 1);
+      const failures = (card.retries[stage.id] ?? 0) + (counted ? 1 : 0);
       card.retries[stage.id] = failures;
-      card.events.push(event(now, 'engine', 'fail', stage.id, output));
       const stuck = failures >= lane.retries;
       if (stuck) {
         card.gate = 'stuck';
         card.awaiting = 'owner';
-        card.events.push(event(now, 'engine', 'stuck', stage.id, output));
+        card.events.push(event(now, 'engine', 'stuck', stage.id, `${failedTimes(failures)}\n${output}`));
       }
       writeCards(projectDir, file, replace(file.cards, card));
       return { card, outcome: stuck ? 'stuck' : 'failed', output, started: [], because: {} };
@@ -740,7 +1039,8 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
   }
 
   const given = stage.gate ? approval(card, stage) : undefined;
-  if (given?.fingerprint && given.fingerprint !== stageFingerprint(projectDir, card, stage)) {
+  const current = stage.gate ? stageFingerprint(projectDir, card, stage) : undefined;
+  if (given?.fingerprint && given.fingerprint !== current) {
     park(card, stage, now, 'the output or the check changed since it was approved');
     writeCards(projectDir, file, replace(file.cards, card));
     return { card, outcome: 'parked', output, started: [], because: {} };
@@ -751,6 +1051,31 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       card.events.push(event(now, 'engine', 'auto-approve', stage.id, `gate ${stage.gate.name} (gates.mode trusted)`));
     } else {
       park(card, stage, now, 'after the check passed');
+      writeCards(projectDir, file, replace(file.cards, card));
+      return { card, outcome: 'parked', output, started: [], because: {} };
+    }
+  }
+
+  // A card that skips a stage this one folds in (review, for an S story) is asked that stage's
+  // gate here too, after this stage's own: the approval moves, it is never dropped.
+  const folded = foldedStage(lane, stage, card);
+  // The folded approval covers the same output and check as the stage's own, so a change since
+  // asks its approver again too. The note starts `gate <folded>` so it withdraws only that approval.
+  const foldedGiven = folded?.gate ? approval(card, stage, folded.gate.name) : undefined;
+  if (folded?.gate && foldedGiven?.fingerprint && foldedGiven.fingerprint !== (current ?? stageFingerprint(projectDir, card, stage))) {
+    card.gate = folded.gate.name;
+    card.awaiting = folded.gate.approver;
+    card.events.push(event(now, 'engine', 'park', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, the output or the check changed since it was approved)`));
+    writeCards(projectDir, file, replace(file.cards, card));
+    return { card, outcome: 'parked', output, started: [], because: {} };
+  }
+  if (folded?.gate && !foldedGiven) {
+    if (loadEngineConfig(projectDir).gatesMode === 'trusted') {
+      card.events.push({ ...event(now, 'engine', 'auto-approve', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, gates.mode trusted)`), gate: folded.gate.name });
+    } else {
+      card.gate = folded.gate.name;
+      card.awaiting = folded.gate.approver;
+      card.events.push(event(now, 'engine', 'park', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, after the check passed)`));
       writeCards(projectDir, file, replace(file.cards, card));
       return { card, outcome: 'parked', output, started: [], because: {} };
     }
@@ -822,6 +1147,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   const file = readCards(projectDir);
   const before = findCard(file.cards, ref);
   const id = before.id;
+  if (!before.gate && before.stage === QUEUED) throw new RefusalError(`card ${id} is queued in Up next, not at a gate; \`codeloop card move ${id} <stage>\` starts it`);
   if (!before.gate) throw new RefusalError(`card ${id} is not waiting at a gate`);
   if (role !== before.awaiting) throw new RefusalError(`gate "${before.gate}" needs ${before.awaiting}; ${role} cannot approve it${role === 'agent' ? `. If you are the ${before.awaiting}, run it yourself in a terminal (or with \`--as ${before.awaiting}\`), or approve it on the board` : ''}`);
 
@@ -829,11 +1155,20 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   const { gate, awaiting: _awaiting, ...rest } = before;
   const card: Card = { ...rest, retries: { ...before.retries }, updatedAt: now.toISOString() };
   if (before.stage === PROPOSED) {
-    // Not subject to wip: the owner chose this card. A run still works a lane `wip` cards at a time.
+    // The lane's wip applies here as on every other start: approving a proposal into a lane whose
+    // slots are all being worked on would start one more story than the lane allows.
     const lane = loadLane(projectDir, before.lane);
+    assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
     const back = before.parked_from && lane.stages.some(s => s.id === before.parked_from) ? before.parked_from : undefined;
     card.stage = back ?? firstStage(lane, card).id;
     delete card.parked_from;
+    // Back on the stage it was parked from, it enters fresh: a stuck story kept at the retry cap
+    // would park stuck again on its first check, under the old reason.
+    if (back) {
+      const fresh = enter(card, back);
+      card.retries = fresh.retries;
+      if (card.failures) card.failures = fresh.failures;
+    }
     card.laneVersion = lane.version;
     card.events = [...before.events, event(now, role, back ? 'unpark' : 'promote', card.stage, opts.note), ...(back ? [] : skipEvents(lane, undefined, lane.stages.find(s => s.id === card.stage), card, now))];
     parkIfOutward(card, lane, now);
@@ -843,7 +1178,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   } else {
     const stage = loadLane(projectDir, before.lane).stages.find(s => s.id === before.stage);
     const fingerprint = stage ? stageFingerprint(projectDir, before, stage) : undefined;
-    card.events = [...before.events, { ...event(now, role, 'approve', card.stage, opts.note ?? `gate ${gate}`), ...(fingerprint ? { fingerprint } : {}) }];
+    card.events = [...before.events, { ...event(now, role, 'approve', card.stage, opts.note ?? `gate ${gate}`), ...(gate ? { gate } : {}), ...(fingerprint ? { fingerprint } : {}) }];
   }
   writeCards(projectDir, file, replace(file.cards, card));
   return card;

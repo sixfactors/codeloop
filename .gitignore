@@ -15,3 +15,6 @@ workspace/out/
 .serena/
 .next-dev/
 .vitest-monitor-fixture/
+.dist-build-*
+.dist-build.lock
+.test-dist/

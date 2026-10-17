@@ -6,7 +6,7 @@ import { readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { closeIndex } from '../index/index.js';
 import { createHubApp, type HubApp } from '../hub.js';
-import { registerProject } from '../hub-registry.js';
+import { pruneProjects, readRegistry, registerProject } from '../hub-registry.js';
 
 let home: string;
 let a: string;
@@ -169,5 +169,16 @@ describe('the hub\'s own write gate', () => {
     const cookie = login.headers.get('set-cookie')!.split(';')[0];
     const res = await hub.app.request(`/api/p/${idA}/cards/c-001/approve`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: '{}' });
     expect(res.status).toBe(200);
+  });
+});
+
+describe('projects prune', () => {
+  it('lists the entries whose folder is gone and changes nothing, then removes only those with dryRun off', () => {
+    rmSync(b, { recursive: true, force: true });
+    expect(pruneProjects({ dryRun: true }).map(p => p.id)).toEqual([idB]);
+    expect(readRegistry().map(p => p.id)).toEqual([idA, idB]);
+    expect(pruneProjects({ dryRun: false }).map(p => p.id)).toEqual([idB]);
+    expect(readRegistry().map(p => p.id)).toEqual([idA]);
+    expect(pruneProjects({ dryRun: false })).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/data-table-faceted-filter.tsx. Change: the TanStack `column`
+// Copied from a private project's components/data-table-faceted-filter.tsx. Change: the TanStack `column`
 // prop is replaced by a plain `value` / `onChange` pair (the workspace has no react-table); the
 // staged-selection behaviour, trigger badges, search heuristic and Clear / Apply footer are the
 // same. Radix icons are replaced by lucide; Popover/Checkbox are base-ui.

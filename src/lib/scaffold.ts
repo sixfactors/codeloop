@@ -4,6 +4,7 @@ import { basename, join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { parse as parseYaml } from 'yaml';
 import type { ProjectDetection } from './detect.js';
+import { codeloopPaths } from './host-hooks.js';
 import { seedWiki } from './wiki.js';
 
 const { copySync, ensureDirSync, existsSync, readdirSync, readFileSync, writeFileSync } = fse;
@@ -253,10 +254,12 @@ function commandOnPath(name: string): boolean {
   return spawnSync('which', [name]).status === 0;
 }
 
+// Every brief goes on stdin: briefs reach tens of KB, and as one argv word a long one exceeds
+// the system's argument limit. `codex exec -` and `cursor-agent -p` read the prompt from stdin.
 function agentCmd(tool: ToolId, onPath: boolean): string {
   if (tool === 'claude') return 'claude -p --permission-mode acceptEdits < {brief}';
-  if (tool === 'codex') return onPath ? 'codex exec --full-auto "$(cat {brief})"' : 'codex exec "$(cat {brief})"';
-  return 'cursor-agent -p "$(cat {brief})"';
+  if (tool === 'codex') return onPath ? 'codex exec --full-auto - < {brief}' : 'codex exec - < {brief}';
+  return 'cursor-agent -p < {brief}';
 }
 
 /**
@@ -269,7 +272,8 @@ function agentCmd(tool: ToolId, onPath: boolean): string {
  */
 /**
  * The MCP server entry each host reads, so the agent's tools (brief, ask, answer, check, propose,
- * next_up) are there without hand-editing. A file that already names a `codeloop` server is kept.
+ * next_up) are there without hand-editing. A file that already names a `codeloop` server is kept,
+ * unless it is the bare entry an earlier init wrote.
  */
 export function applyMcpConfig(projectDir: string, tools: ToolId[]): string[] {
   const targets: Record<string, string> = { claude: '.mcp.json', cursor: '.cursor/mcp.json' };
@@ -287,8 +291,12 @@ export function applyMcpConfig(projectDir: string, tools: ToolId[]): string[] {
       }
     }
     current.mcpServers ??= {};
-    if (current.mcpServers.codeloop) continue;
-    current.mcpServers.codeloop = { command: 'codeloop', args: ['mcp'] };
+    // A bare `codeloop` entry from an earlier init is upgraded; any other entry is the person's own.
+    const bare = JSON.stringify(current.mcpServers.codeloop) === JSON.stringify({ command: 'codeloop', args: ['mcp'] });
+    if (current.mcpServers.codeloop && !bare) continue;
+    // Absolute paths: a GUI host starts the server with a bare PATH, where `codeloop` is not found.
+    const { node, bin } = codeloopPaths();
+    current.mcpServers.codeloop = { command: join(bin, 'codeloop'), args: ['mcp'], env: { CODELOOP_NODE: node } };
     ensureDirSync(dirname(path));
     writeFileSync(path, `${JSON.stringify(current, null, 2)}\n`);
     written.push(rel);

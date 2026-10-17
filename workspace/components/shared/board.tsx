@@ -13,6 +13,7 @@ import { toast } from '@/lib/toast';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
+import { BandChip, BugChip } from '@/components/shared/band-chip';
 import { BoardCard } from '@/components/shared/board-card';
 import { StoryBadge } from '@/components/shared/state-pill';
 import { faceTimeText } from '@/components/shared/journey-stepper';
@@ -23,7 +24,7 @@ import { PageSkeleton } from '@/components/shared/page-skeleton';
 import { ShapeStarter } from '@/components/shared/shape-starter';
 import { backlogQuery } from '@/lib/board-columns';
 import { useBoard, useCardColumn, useNextAction, useTriage } from '@/hooks/use-api';
-import type { BoardPhase, BoardStory, BoardView, Card as CardT, DisplayState } from '@/lib/types';
+import type { Band, BoardPhase, BoardStory, BoardView, Card as CardT, DisplayState } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CardDrawer = dynamic(() => import('@/components/shared/card-drawer').then((m) => m.CardDrawer), { ssr: false });
@@ -38,14 +39,15 @@ export const ago = (iso?: string) => {
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
   return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 172_800 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86_400)}d ago`;
 };
-/** The face's live line in owner words. The API's stuck line ("stuck: the check failed three times")
- * reads as "Stuck 17h: the interview check failed 3 times"; anything else is shown as it comes. */
+/** The face's live line in owner words. The API's stuck line ("stuck: <reason>") reads as
+ * "Stuck 17h: <reason>", with the stage named when the reason is the check; anything else is shown as it comes. */
 function liveLine(story: BoardStory): string | undefined {
   const last = story.lastActivity;
   if (!last) return undefined;
-  if (/^stuck: the check failed three times/.test(last.text)) {
+  const stuck = /^stuck: (.+)$/.exec(last.text);
+  if (stuck) {
     const forHow = ago(last.at)?.replace(' ago', '');
-    return `Stuck${forHow ? ` ${forHow}` : ''}: the ${story.stage} check failed 3 times`;
+    return `Stuck${forHow ? ` ${forHow}` : ''}: ${stuck[1].replace(/^the check /, `the ${story.stage} check `)}`;
   }
   return `${last.text}${last.at ? ` · ${ago(last.at)}` : ''}`;
 }
@@ -87,6 +89,9 @@ function PhaseCard({ story, onOpen }: { story: BoardStory; onOpen: (id: string) 
           ? time ? <span data-testid="board-card-time">{time}</span>
           : story.phaseSince ? <span>{inPhase(story.phaseSince)}</span> : null
           : null}
+        {/* The card's own priority outranks its RICE band, as in every pick. */}
+        <BugChip bug={story.bug} />
+        <BandChip band={(story.priority ?? story.band) as Band | undefined} score={story.score} />
         <span className="ml-auto"><StoryBadge display={story.display} /></span>
       </span>
     </div>

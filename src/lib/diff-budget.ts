@@ -24,9 +24,13 @@ export const DEFAULT_BUDGET: Record<Size, Budget> = {
 // well-documented small story look large.
 const EXCLUDED = [/^evidence\//, /^specs\//, /^\.codeloop\//, /^CHANGELOG\.md$/];
 
-// A page or write-up under docs/ is read, not reviewed line by line, and one page runs to hundreds of
-// lines; it counts as a file against the budget but adds no lines, so a doc-sized story stays trivial.
-const PROSE = /^docs\/.+\.(md|mdx|html)$/;
+// A Markdown page under docs/ is read, not reviewed line by line, and one page runs to hundreds of
+// lines, so it counts as a file and at one tenth of its lines: a one-page story stays trivial, and a
+// 10,000-line page still breaks the trivial budget. An .html or .mdx page can carry scripts or JSX
+// that are reviewed like code, so it counts in full.
+const PROSE = /^docs\/.+\.md$/;
+const PROSE_SHARE = 10;
+const PROSE_NOTE = ' (Markdown pages under docs/ count at one tenth of their lines)';
 
 function git(cwd: string, args: string[]): string {
   const run = spawnSync('git', args, { cwd, encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024 });
@@ -93,13 +97,30 @@ function scan(projectDir: string, cardId: string, all: boolean, ref?: string): S
 /** When each commit carrying the card's trailer landed, without the branch and trunk lookups storyCommits adds. */
 export const storyCommitTimes = (projectDir: string, cardId: string): number[] => scan(projectDir, cardId, true).map(c => c.at);
 
+const configuredTrunk = (projectDir: string) => (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
+
+/**
+ * The configured trunk against the checkout: `missing` when no local branch has its name, and
+ * `behind` the commits HEAD has that the trunk does not. Undefined outside a git repo.
+ */
+export function trunkState(projectDir: string): { trunk: string; missing: boolean; behind: number } | undefined {
+  const graph = commitGraph(projectDir);
+  if (!graph) return undefined;
+  const trunk = configuredTrunk(projectDir);
+  if (!graph.tips.has(trunk)) return { trunk, missing: true, behind: 0 };
+  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk));
+  const onHead = reachableFrom(graph, 'head', graph.head);
+  let behind = 0;
+  for (let i = 0; i < onHead.length; i++) if (onHead[i] === 1 && onTrunk[i] !== 1) behind++;
+  return { trunk, missing: false, behind };
+}
+
 export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
   const graph = commitGraph(projectDir);
   if (!graph) return [];
-  const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
-  const trunk = graph.tips.has(configured) ? configured : 'HEAD';
-  const trunkTip = trunk === 'HEAD' ? graph.head : graph.tips.get(trunk);
-  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, trunkTip);
+  const trunk = configuredTrunk(projectDir);
+  // A trunk with no branch merges nothing: reading HEAD in its place would count whatever is checked out as merged.
+  const onTrunk = graph.tips.has(trunk) ? reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk)) : new Uint8Array(graph.index.size);
   const branches = [...graph.tips].filter(([name]) => name !== trunk).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   return (graph.byCard.get(cardId) ?? []).map(c => {
     const i = graph.index.get(c.sha)!;
@@ -134,6 +155,11 @@ function numstatOf(projectDir: string, wanted: string[], sha: string): [string, 
   return numstats.get(key(sha)) ?? [];
 }
 
+/** The paths each commit touched, with no exclusions, read in one batched git call. */
+export function commitFiles(projectDir: string, shas: string[]): Map<string, string[]> {
+  return new Map(shas.map(sha => [sha, numstatOf(projectDir, shas, sha).map(([path]) => path)]));
+}
+
 /** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
 export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): { files: Map<string, number>; commits: number } {
   const shas = scan(projectDir, cardId, Boolean(opts.branches), opts.ref).map(c => c.sha);
@@ -149,8 +175,14 @@ export function storyFiles(projectDir: string, cardId: string, opts: { branches?
 
 /** Files and added+deleted lines across the commits reachable from HEAD (or, with `branches`, from any branch) that carry a `Card:` or `Feature:` trailer for this card. */
 export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): StoryDiff {
+  const { files, lines, commits } = measure(projectDir, cardId, opts);
+  return { files, lines, commits };
+}
+
+function measure(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string }): StoryDiff & { prose: boolean } {
   const { files, commits } = storyFiles(projectDir, cardId, opts);
-  return { files: files.size, lines: [...files].reduce((a, [path, n]) => a + (PROSE.test(path) ? 0 : n), 0), commits };
+  const counted = [...files].map(([path, n]) => (PROSE.test(path) ? Math.ceil(n / PROSE_SHARE) : n));
+  return { files: files.size, lines: counted.reduce((a, n) => a + n, 0), commits, prose: [...files.keys()].some(path => PROSE.test(path)) };
 }
 
 /** The budget for a size: defaults, overridden per size by `diff_budget:` in config. `budget: off` returns undefined. */
@@ -169,13 +201,14 @@ const n = (v: number) => v.toLocaleString('en-US');
 
 export function checkBudget(projectDir: string, cardId: string, size: Size | undefined, opts: { ref?: string } = {}): BudgetVerdict {
   const used = size ?? 'M';
-  const diff = storyDiff(projectDir, cardId, opts);
+  const { prose, ...diff } = measure(projectDir, cardId, opts);
   const limit = budgetFor(projectDir, used);
   if (!limit) return { ...diff, size: used, limit: 'off', pass: true, message: 'budget off' };
   const pass = diff.files <= limit.files && diff.lines <= limit.lines;
+  const note = prose ? PROSE_NOTE : '';
   const message = pass
-    ? `diff ${n(diff.files)} files / ${n(diff.lines)} lines is within the ${used} budget (${limit.files} files / ${n(limit.lines)} lines)`
-    : `diff ${n(diff.files)} files / ${n(diff.lines)} lines exceeds the ${used} budget (${limit.files} files / ${n(limit.lines)} lines); split the story`;
+    ? `diff ${n(diff.files)} files / ${n(diff.lines)} lines${note} is within the ${used} budget (${limit.files} files / ${n(limit.lines)} lines)`
+    : `diff ${n(diff.files)} files / ${n(diff.lines)} lines${note} exceeds the ${used} budget (${limit.files} files / ${n(limit.lines)} lines); split the story`;
   return { ...diff, size: used, limit, pass, message };
 }
 

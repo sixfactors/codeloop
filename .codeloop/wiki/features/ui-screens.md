@@ -5,9 +5,9 @@ epic: ui-rebuild
 status: active
 release: next
 rice:
-  reach: 10
-  impact: 10
-  confidence: 9
+  reach: 3
+  impact: 5
+  confidence: 6
   effort: 2
 ---
 

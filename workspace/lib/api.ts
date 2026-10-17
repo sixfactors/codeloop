@@ -190,6 +190,8 @@ export const api = {
   /** Starts one orchestrated turn; `builder` is agent, agent:<name>, session:<x> or person. Returns before it ends. */
   orchRun: async (id: string, opts: { builder: string; wait?: number | false }) => (await client()).orch.run(id, opts),
   park: async (id: string, note?: string) => (await client()).cards.park(id, note),
+  /** A stuck story to the step its shipped work shows, stopping before any gate. */
+  moveStuck: async (id: string) => (await client()).cards.moveStuck(id),
   /** A done or dropped story back to its lane's first stage, or to the backlog with `to: 'backlog'`. */
   reopen: async (id: string, opts: { to?: string; note?: string } = {}) => (await client()).cards.reopen(id, opts),
   move: async (id: string, stage: string, note?: string) => (await client()).cards.move(id, stage, note),
@@ -212,6 +214,8 @@ export const api = {
   /** The current stage's output file: its path, and its text or null before it is written. */
   cardOutput: async (id: string): Promise<CardOutput> => (await client()).cards.output(id),
   saveCardOutput: async (id: string, text: string): Promise<CardOutput> => (await client()).cards.writeOutput(id, text),
+  /** The summary's needed and done lines, written as the board's role. */
+  saveSummary: async (id: string, input: { needed?: string; done?: string }) => (await client()).cards.summary(id, input),
   /** Sibling stories under the same feature, each `split_from` this card. */
   splitCard: async (id: string, titles: string[]): Promise<SplitResult> => (await client()).cards.split(id, titles),
   setupStatus: async (): Promise<SetupStatus> => (await client()).setup.status(),

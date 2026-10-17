@@ -44,19 +44,6 @@ function toInboxQuery(f: SearchAndFilterValue): Omit<InboxQuery, 'shippedSince'>
   return q;
 }
 
-const waitedSince = (c: InboxCard) => c.since ?? c.first ?? c.updatedAt ?? '';
-
-/**
- * Score descending, then the longest wait first; the server's order already, re-applied to the
- * rows on the page. Exported for the hub home, which groups gates the same way across every
- * project, not just this one.
- */
-export function rank(cards: InboxCard[]): InboxCard[] {
-  return cards.map((c, i) => [c, i] as const)
-    .sort(([a, ai], [b, bi]) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || waitedSince(a).localeCompare(waitedSince(b)) || ai - bi)
-    .map(([c]) => c);
-}
-
 export type Group = { band: Band | 'none'; label: string; cards: InboxCard[] };
 export function groupByBand(cards: InboxCard[]): Group[] {
   const groups: Group[] = [...BANDS.map((b) => ({ band: b, label: BAND_LABEL[b], cards: [] as InboxCard[] })), { band: 'none', label: 'Unranked', cards: [] }];
@@ -93,7 +80,8 @@ export function InboxView() {
   }, [facets]);
 
   const gates = data?.needsYou;
-  const ranked = useMemo(() => rank(gates?.cards ?? []), [gates?.cards]);
+  // The API returns gates in pick order (bug, priority, score, age); rows render in that order.
+  const ranked = useMemo(() => gates?.cards ?? [], [gates?.cards]);
   const shown = all ? ranked : ranked.slice(0, TOP);
   const groups = useMemo(() => groupByBand(shown), [shown]);
   const hidden = (gates?.total ?? 0) - shown.length;
@@ -230,7 +218,6 @@ export function InboxView() {
           <AttributeCard title="Numbers per lane" icon={Waypoints} testId="inbox-lanes" className="lg:col-span-2">
             {data.perLane.length ? data.perLane.map((l) => {
               const lane = lanes.data.find((x) => x.id === l.lane);
-              const inFlight = l.active + l.parked;
               return (
                 <FieldRow
                   key={l.lane}
@@ -244,7 +231,7 @@ export function InboxView() {
                       {typeof l.first_pass_rate === 'number' ? <MetaChip label="First pass" value={`${Math.round(l.first_pass_rate * 100)}%`} /> : null}
                     </span>
                   }
-                  adornment={lane?.wip ? <UsageBar label="WIP" current={inFlight} limit={lane.wip} size="sm" showLabel={false} className="w-16" /> : undefined}
+                  adornment={lane?.wip ? <UsageBar label="WIP" current={l.holding} limit={lane.wip} size="sm" showLabel={false} className="w-16" /> : undefined}
                 />
               );
             }) : <EmptyState compact icon={Waypoints} title="No lanes yet" description="Lane numbers appear once stories exist." />}

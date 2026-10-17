@@ -26,7 +26,7 @@ const kindOf = (command: string): CodeloopProcess['kind'] => (/hookd/.test(comma
 export function isCodeloopCommand(command: string): boolean {
   const [first = '', ...rest] = command.split(' ');
   if (!/(^|\/)(node|nodejs|codeloop|codeloop-hook)$/.test(first)) return false;
-  return [first, ...rest].some(t => /\/bin\/codeloop(-hook)?$/.test(t) || (/codeloop/.test(t) && /\/dist\/(index|hookd-main)\.js$/.test(t)));
+  return [first, ...rest].some(t => /\/bin\/codeloop(-hook)?$/.test(t) || (/codeloop/.test(t) && /\/[.\w-]*dist\/(index|hookd-main)\.js$/.test(t)));
 }
 
 /** Every running process that is the codeloop CLI or its daemon, with resident size in MB. */

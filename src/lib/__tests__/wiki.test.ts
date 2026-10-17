@@ -112,6 +112,22 @@ describe('wiki', () => {
     expect(existsSync(join(dir, '.codeloop/wiki/reference/legacy/glossary.md'))).toBe(false);
   });
 
+  it('capture keeps index sections it did not generate and builds the wiki.sections ones from their pages', () => {
+    write('.codeloop/config.yaml', 'wiki:\n  sections:\n    - folder: rulebook\n      title: Rulebook\n      holds: Review rules by lane\n    - folder: product\n      title: Product\n');
+    write('.codeloop/wiki/rulebook/git.md', '---\ntitle: Git and shared tree rules\nscope: ["**"]\nfreq: 1\nseverity: critical\n---\n\nCommit by path.\n');
+    const owners = '## Notes from the owner\n\nRead the rulebook before any review.\n\n- keep this line\n';
+    write('.codeloop/wiki/INDEX.md', `# Wiki\n\n## Topics\n\nold table\n\n## Gotchas\n\nNone yet.\n\n${owners}\n## Rulebook\n\n- a stale hand row\n`);
+    capture(dir, gotcha);
+    const index = readFileSync(join(dir, WIKI_DIR, 'INDEX.md'), 'utf-8');
+    expect(index).toContain(owners);
+    expect(index).toContain('| `rulebook/` | Review rules by lane | config: wiki.sections |');
+    expect(index).toMatch(/## Rulebook\n\n- \[Git and shared tree rules\]\(rulebook\/git\.md\): freq 1, critical, scope \*\*\n/);
+    expect(index).not.toContain('a stale hand row');
+    expect(index).toMatch(/## Product\n\nNone yet\./);
+    expect(index.match(/^## Rulebook$/gm)).toHaveLength(1);
+    expect(index).toContain('- [Rename is not atomic across devices](gotchas/rename-is-not-atomic-across-devices.md)');
+  });
+
   it('wikiShape hides storage folders and empty sections, and shows numbers once it has a page', () => {
     capture(dir, gotcha); // gotchas/: non-empty, should show
     write('.codeloop/wiki/cards/CL-1.md', '---\ntitle: CL-1\n---\n\nStory page.\n'); // a hidden storage folder

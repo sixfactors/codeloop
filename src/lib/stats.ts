@@ -22,6 +22,34 @@ export interface Stats {
   rework: number | null;
   stuck_rate: number | null;
   first_pass_rate_by_gate: Record<string, number>;
+  /** Per story: agent starts before its first gate parked it, and at its build stage or later. */
+  agent_starts: AgentStarts[];
+  /** The mean of each over the stories that have one, by size. */
+  agent_starts_by_size: Record<string, { to_first_gate: number | null; from_build: number | null }>;
+}
+
+export interface AgentStarts {
+  card: string;
+  size: string;
+  /** Starts from creation until the first gate parked the story (the spec gate for M); null when no gate has parked it yet. */
+  to_first_gate: number | null;
+  /** Starts on the lane's build stage and every stage after it; null for a story that has not reached build. */
+  from_build: number | null;
+}
+
+/** How many agent starts a story took to its first gate, and from build onward. */
+export function agentStarts(card: Card, lane: Lane | undefined): AgentStarts {
+  const starts = card.events.filter(e => e.action === 'agent-start');
+  const firstPark = card.events.find(e => e.action === 'park' && e.stage !== PROPOSED && e.note?.startsWith('gate '));
+  const ids = lane?.stages.map(s => s.id) ?? [];
+  const build = ids.indexOf('build');
+  const reached = build >= 0 && (card.stage === DONE || ids.indexOf(card.stage) >= build);
+  return {
+    card: card.id,
+    size: card.size ?? 'M',
+    to_first_gate: firstPark ? starts.filter(e => ms(e.at) <= ms(firstPark.at)).length : null,
+    from_build: reached ? starts.filter(e => e.stage !== undefined && ids.indexOf(e.stage) >= build).length : null,
+  };
 }
 
 const HOUR = 3_600_000;
@@ -69,6 +97,7 @@ export function computeStats(cards: Card[], lanes: Lane[]): Stats {
   const judged = (e: { stage?: string }) => e.stage !== PROPOSED;
   const events = cards.flatMap(c => c.events);
   const done = cards.filter(c => c.stage === DONE);
+  const starts = cards.filter(c => c.stage !== PROPOSED && c.stage !== 'dropped').map(c => agentStarts(c, lanes.find(l => l.id === c.lane)));
 
   // First pass at a gate: the first human decision at that stage was an approval.
   const gates: Record<string, { first: number; total: number }> = {};
@@ -96,5 +125,11 @@ export function computeStats(cards: Card[], lanes: Lane[]): Stats {
     rework: ratio(events.filter(e => e.action === 'reject' && judged(e)).length, events.filter(e => e.action === 'approve').length),
     stuck_rate: ratio(cards.filter(c => c.events.some(e => e.action === 'stuck')).length, cards.length),
     first_pass_rate_by_gate: Object.fromEntries(Object.entries(gates).map(([k, g]) => [k, g.first / g.total])),
+    agent_starts: starts,
+    agent_starts_by_size: Object.fromEntries([...new Set(starts.map(a => a.size))].map(size => {
+      const mine = starts.filter(a => a.size === size);
+      const avg = (key: 'to_first_gate' | 'from_build') => mean(mine.flatMap(a => (a[key] === null ? [] : [a[key]!])));
+      return [size, { to_first_gate: avg('to_first_gate'), from_build: avg('from_build') }];
+    })),
   };
 }

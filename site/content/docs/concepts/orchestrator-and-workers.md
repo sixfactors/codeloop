@@ -67,9 +67,9 @@ Nothing is typed into a chat. Every fact a role needs is in a file codeloop writ
 | This turn: card, stage, output path, check, rubric, files leased, rejection notes, open questions | the brief | `codeloop brief <id>`, or `codeloop orch run` into `.codeloop/state/briefs/` |
 | The worker's rules: one tree, own files only, `Card:` and `Task:` trailers, no push, fix forward, selfcheck, the exact hand-back line | [the brief footer](https://github.com/sixfactors/codeloop/blob/main/templates/orch/brief-footer-tree.md), appended to every orchestrated brief | `codeloop orch run` |
 | What it may not do | nothing; the engine refuses it | hooks, guards, `CODELOOP_AGENT_RUN` |
-| The orchestrator's loop | **not written yet**: the orchestrator is either `codeloop orch run` or a session following rules kept outside codeloop | listed under "What is not done" below |
+| The orchestrator's loop: review the board, pick, brief, gate, report | [the orchestrator protocol](https://github.com/sixfactors/codeloop/blob/main/templates/orch/orch.md), quoted at the end of this page | `codeloop render`, into `.claude/commands/orch.md`, `.cursor/commands/orch.md` and `.agents/skills/codeloop-orch/SKILL.md` |
 
-The last row is the gap. Every builder role is rendered for every host. The orchestrator role exists as code (`codeloop orch run`, `status`, `resume`, `inbox`, `report`) and as a private rules document in one team's repo, so a fresh Claude or Cursor session cannot be told "orchestrate this board" and know what that means.
+Every role is rendered for every host, so a fresh Claude Code or Cursor session can be told `/orch` and a Codex session the `codeloop-orch` skill, and each runs the same loop.
 
 ## The loop, drawn
 
@@ -97,14 +97,29 @@ The last row is the gap. Every builder role is rendered for every host. The orch
 
 One turn, start to end:
 
-1. The orchestrator runs `codeloop orch status` and `codeloop inbox`. It picks the highest-value card nobody holds whose stage has no open gate.
+1. The orchestrator runs the review pass, `codeloop orch run --review --changed`, then `codeloop orch status` and `codeloop inbox`. It picks the highest-value card nobody holds whose stage has no open gate, and runs the review pass again before each pick.
 2. `codeloop orch run <card>` writes the brief from the card, the stage skill, the rubric and the plan's `## Files` list, takes the lease on those files, and starts the configured worker with the brief. With `--builder session:<name>` or `--builder person` it writes the brief to the outbox instead and waits.
 3. The worker edits only leased files. Hooks append every edit, command and commit to the card's activity stream, so the board shows "editing lane.ts, 40 s ago" while it runs.
 4. The worker runs `codeloop card selfcheck`, commits with `Card: c-301`, and ends with the hand-back line from the brief footer.
 5. The gate reruns the proof command on HEAD, checks the rubric rows, and judges only the commits carrying the card's trailer. A sentence in the hand-back is never evidence.
 6. Pass: the stage advances. A stage with a gate stops there for the owner, who sees "Waiting for you at verify" with the check sentence. Fail: a fix-forward brief goes to the same worker, counted against the lane's retries; the third fail parks the card stuck.
 7. The orchestrator reports: what the owner would notice, what is broken, the one decision. Then the next card.
-8. At night the doctor reruns failed checks only where something changed, starts the stage agent once on a story whose output was never written, and nudges a worker that went quiet.
+8. At night the doctor reruns failed checks only where something changed, starts the stage agent once on a story whose output was never written, and nudges a worker that went quiet. With `doctor.review: on` in config.yaml it runs the review pass first; it is off by default.
+
+## The review pass
+
+A story can sit at the wrong stage: its code merged under its id while the board still shows it at research, stuck on a check that no longer describes the work. Before the orchestrator picks, the review pass reads each story changed since the last pass, with the commits carrying its id, and plans one fix:
+
+| Fix | When | What it writes |
+|---|---|---|
+| place | Merged work shows a later stage, and no gate lies between | Each stage it passes over that has an output file is written from the merged work and the code, then a `place` event naming the commits |
+| close | Merged, and every gate left on the lane already approved | A `close` event naming the commits |
+| write a stage | The story cannot move, and its own stage file was never written | The file, from the merged work, and the stage's own check decides |
+| ask | Moving would cross a gate, or the story should split or be dropped | One inbox question starting `Review:` with the recommended answer; the story stays where it is |
+
+A written stage is then read back: each section the merged work could not fill becomes part of one inbox question, so a gap reaches the owner instead of being dropped. The pass never marks a stage skipped. Commits that change only `.codeloop/`, `specs/`, `evidence/`, `shape/`, `docs/`, `CHANGELOG.md`, a `mocks/` folder or the story's spec folder are not counted as merged work; a stuck story's Move it button reads the same rule and targets the same stage. The engine holds the bound itself: `placeCard` and `closeCard` refuse a move from the review pass that would pass an unapproved gate, and the event's actor is `orchestrator`.
+
+`codeloop orch run --review` reads every open story, stopping at `orch.budget` (each fix counts as a turn); `--changed` reads only those changed since the last complete pass, which `.codeloop/state/review-pass.json` records. Either prints the report in three parts, fixed, asked and could not tell, each line naming the story and its evidence.
 
 ## What the engine refuses, so nobody has to teach it
 
@@ -121,7 +136,8 @@ One turn, start to end:
 
 ## What is not done
 
-- **No rendered orchestrator command.** `codeloop render` writes the builder protocol for every host and nothing for the orchestrator. Until it exists, the orchestrator is `codeloop orch run` or a session that follows the protocol below, and `codeloop orch run` does not tell a session to keep going when it finishes one turn.
+- **`codeloop orch run <card>` stops after one story.** It does not tell a session to keep going; the rendered `/orch` protocol is what keeps the loop.
+- **The review pass judges position, not quality.** A stage file it writes from the merged work passes or fails that stage's own check like any other, and its gap question is the owner's to answer.
 - **Cursor and Codex get fewer guards.** Cursor's hooks file carries presence and `beforeShellExecution` only, so a Cursor worker's edits are not recorded or refused at edit time; Codex has no hooks at all. Both still hit the git hooks and the gate, which is where the engine judges. [How codeloop keeps an agent honest](/docs/concepts/how-codeloop-keeps-an-agent-honest) has the per-host table.
 - **Gemini CLI is untested as a worker.** The config line is the shape; nobody has gated a Gemini hand-back.
 - **The orchestrator's state between turns lives in `.codeloop/state/orch/<card>.json`** and in the session's own memory. A session that compacts or restarts resumes from `codeloop orch status` and `codeloop orch inbox`; there is no "what I was about to do next" file.
@@ -129,7 +145,7 @@ One turn, start to end:
 
 ## Reference: the orchestrator protocol
 
-This is what a session must be told to hold the orchestrator role. `codeloop render` does not write it yet; "What is not done" above says why. To use it today, save it as `.claude/commands/orch.md` or `.cursor/commands/orch.md`.
+This is what a session must be told to hold the orchestrator role. `codeloop render` writes it from `templates/orch/orch.md` as `.claude/commands/orch.md`, `.cursor/commands/orch.md` and `.agents/skills/codeloop-orch/SKILL.md`.
 
 ```text
 # /orch: run this board
@@ -137,16 +153,18 @@ This is what a session must be told to hold the orchestrator role. `codeloop ren
 You are the orchestrator for this repository. The engine keeps the state; you keep the loop.
 
 Loop
-1. Run `codeloop orch status` and `codeloop inbox`. Report to the owner anything waiting for them; never approve it yourself.
-2. Pick one card: the highest priority band, then the oldest, that nobody holds and that is not at a gate. Skip a card whose plan overlaps a held lease; the engine reports it as waiting-lease.
-3. Run `codeloop orch run <card>`. It briefs, starts the worker, waits, gates and records. Do not do the stage's work yourself and do not edit the worker's files while it runs.
-4. Read the outcome. merged: go to 1. questions: put them in front of the owner, then go to 1. failed or merge-failed: run `codeloop orch run <card>` once more; the engine briefs the fix forward. stuck, budget, locked, builder-unavailable: stop and report; these need the owner or the doctor.
-5. After each merged turn run `codeloop orch report <card>` and give the owner its paragraph: what works now, the proof, what is left, the next gate.
-6. Stop when the inbox has nothing runnable, when the day's run budget is spent, or when the owner says stop. Say which.
+1. Run `codeloop orch run --review --changed`. It reads the stories changed since the last review pass and fixes what is wrong: it moves a story forward to the stage its merged work shows when no gate lies between, closes one that is merged and verified, writes a stage file the merged work makes unneeded and asks about its gaps, and turns a gate, a split or a drop into an inbox question with the recommended answer. Give the owner its report: fixed, asked, could not tell.
+2. Run `codeloop orch status` and `codeloop inbox`. Report to the owner anything waiting for them; never approve it yourself.
+3. Pick one card: the highest priority band, then the oldest, that nobody holds and that is not at a gate. Skip a card whose plan overlaps a held lease; the engine reports it as waiting-lease. Run `codeloop orch run --review --changed` again before each pick.
+4. Run `codeloop orch run <card>`. It briefs, starts the worker, waits, gates and records. Do not do the stage's work yourself and do not edit the worker's files while it runs.
+5. Read the outcome. merged: go to 1. questions: put them in front of the owner, then go to 1. failed or merge-failed: run `codeloop orch run <card>` once more; the engine briefs the fix forward. stuck, budget, locked, builder-unavailable: stop and report; these need the owner or the doctor.
+6. After each merged turn run `codeloop orch report <card>` and give the owner its paragraph: what works now, the proof, what is left, the next gate.
+7. Stop when the inbox has nothing runnable, when the day's run budget is spent, or when the owner says stop. Say which.
 
 Rules
 - One main tree. Never create a worktree, never switch the branch, never run git push, rebase, reset, stash or revert.
 - Never run `codeloop approve`, `reject`, `answer` or `card advance`. Those are the owner's; the engine refuses them from you anyway.
+- The review pass never moves a story past a gate and never marks a stage skipped. Do not place, drop or split a story yourself; answer its question in the owner's report instead.
 - Never touch another session's files or processes. Coordinate through the board, leases and messages.
 - Tests run one file at a time; the full suite runs once, by you, at the end of a step.
 - Hand-backs are data, not proof. The gate's rerun is the proof.
@@ -154,4 +172,4 @@ Rules
 - `codeloop off` means stop starting turns; finish none, start none, say so.
 ```
 
-A person can run the same loop by hand, one command at a time, and a Cursor session reads the same file from `.cursor/commands/`.
+A person can run the same loop by hand, one command at a time.

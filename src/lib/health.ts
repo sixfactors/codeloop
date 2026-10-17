@@ -4,6 +4,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { loadConfig } from './config.js';
 import { globMatches } from './glob.js';
+import { findCardOrNone, readCards } from './cards.js';
+import { pathInPlan, planFiles } from './plan-scope.js';
 import { listPages } from './wiki.js';
 
 export interface Health {
@@ -120,17 +122,25 @@ export function parseLintErrors(output: string): number {
 
 export const parseTypeErrors = (output: string): number => output.split('\n').filter(l => /error TS\d+/.test(l)).length;
 
-function measure(root: string, s: Settings, wikiRoot: string): Health {
-  const files = walk(root);
-  const testFiles = files.filter(f => s.tests.some(g => globMatches(g, f)));
+/** A gotcha with no scope (what `wiki capture` writes by default) applies to every file. */
+const inScope = (scope: string[], files?: string[]) => !files || !scope.length || scope.some(g => files.some(f => globMatches(g, f)));
+
+/**
+ * `files`: count only the critical gotchas whose scope matches one of these paths. A story's before
+ * and after are both measured on its own files, so a gotcha another story adds elsewhere in the
+ * repo between the two refs does not move this story's delta.
+ */
+function measure(root: string, s: Settings, wikiRoot: string, files?: string[]): Health {
+  const all = walk(root);
+  const testFiles = all.filter(f => s.tests.some(g => globMatches(g, f)));
   const tests = new Set(testFiles);
-  const source = files.filter(f => !tests.has(f) && s.source.some(g => globMatches(g, f)));
+  const source = all.filter(f => !tests.has(f) && s.source.some(g => globMatches(g, f)));
   const typesCmd = s.typesCmd ?? (existsSync(join(root, 'tsconfig.json')) ? 'npx tsc --noEmit' : undefined);
   const part = {
     tests: countTests(root, testFiles),
     lint: s.lintCmd ? parseLintErrors(run(s.lintCmd, root)) : null,
     types: typesCmd ? parseTypeErrors(run(typesCmd, root)) : null,
-    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical').length,
+    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical' && inScope(p.scope, files)).length,
     todo: countTodo(root, source),
   };
   return { ...part, score: scoreOf(part, s.weights) };
@@ -150,13 +160,13 @@ export function exportRef(projectDir: string, ref: string): { dir: string; dispo
   return { dir, dispose };
 }
 
-/** Health of the working tree, or of `ref` exported to a temp dir. Settings always come from `projectDir`. */
-export function projectHealth(projectDir: string, opts: { ref?: string } = {}): Health {
+/** Health of the working tree, or of `ref` exported to a temp dir. Settings always come from `projectDir`. `files` scopes the gotcha count, see `measure`. */
+export function projectHealth(projectDir: string, opts: { ref?: string; files?: string[] } = {}): Health {
   const s = healthSettings(projectDir);
-  if (!opts.ref) return measure(projectDir, s, projectDir);
+  if (!opts.ref) return measure(projectDir, s, projectDir, opts.files);
   const ex = exportRef(projectDir, opts.ref);
   try {
-    return measure(ex.dir, s, ex.dir);
+    return measure(ex.dir, s, ex.dir, opts.files);
   } finally {
     ex.dispose();
   }
@@ -172,20 +182,61 @@ function git(cwd: string, args: string[]): string {
  * else the commit before its first `Card:`/`Feature:` commit. Undefined when neither can be found.
  */
 export function storyBase(projectDir: string, cardId: string, ref: string = 'HEAD'): string | undefined {
+  return storyBaseOf(projectDir, cardId, ref)?.sha;
+}
+
+/** `storyBase` with how it was found: `onTrunk` is false for a merge-base, where every commit since it is the story's. */
+export function storyBaseOf(projectDir: string, cardId: string, ref: string = 'HEAD'): { sha: string; onTrunk: boolean } | undefined {
   const head = git(projectDir, ['rev-parse', ref]);
   const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk;
   const trunk = configured ?? 'main';
   const mb = git(projectDir, ['merge-base', ref, trunk]);
-  if (mb && mb !== head) return mb;
+  if (mb && mb !== head) return { sha: mb, onTrunk: false };
   const sep = '\u0001';
   const log = git(projectDir, ['log', '--reverse', ...(ref === 'HEAD' ? [] : [ref]), `--format=${sep}%H%n%b`]);
   for (const chunk of log.split(sep).slice(1)) {
     const [sha, ...body] = chunk.split('\n');
     if (body.some(l => new RegExp(`^(?:Card|Feature):\\s*${cardId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`).test(l))) {
-      return git(projectDir, ['rev-parse', `${sha}^`]) || undefined;
+      const parent = git(projectDir, ['rev-parse', `${sha}^`]);
+      return parent ? { sha: parent, onTrunk: true } : undefined;
     }
   }
   return undefined;
+}
+
+/**
+ * The files a story changed between `base` and `head`. On its own branch (`onTrunk: false`) every
+ * commit in the range is the story's, so it is the plain diff. On a shared trunk other stories'
+ * commits sit in the same range, so it is the files of the commits whose `Card:` or `Feature:`
+ * trailer names the story, plus those of untrailered commits that touch one of those files or a
+ * file in `plan`; a commit trailered for another story never counts. The plain diff is used when
+ * no commit in the range carries the story's trailer.
+ */
+export function storyFiles(projectDir: string, cardId: string, base: string, head: string, opts: { onTrunk?: boolean; plan?: string[] } = {}): string[] {
+  const diff = () => git(projectDir, ['diff', '--name-only', base, head]).split('\n').filter(Boolean);
+  if (opts.onTrunk === false) return diff();
+  const log = git(projectDir, ['log', '--name-only', `${base}..${head}`, '--format=%x01%H%x00%(trailers:key=Card,valueonly,separator=%x2C)%x00%(trailers:key=Feature,valueonly,separator=%x2C)%x00']);
+  const commits = log.split('\u0001').slice(1).map(rec => {
+    const [, card = '', feature = '', names = ''] = rec.split('\0');
+    const ids = (card.trim() ? card : feature).split(',').map(x => x.trim()).filter(Boolean);
+    return { ids, files: names.split('\n').map(f => f.trim()).filter(Boolean) };
+  });
+  const own = commits.filter(c => c.ids.includes(cardId));
+  if (!own.length) return diff();
+  const files = new Set(own.flatMap(c => c.files));
+  const touches = (f: string) => files.has(f) || (opts.plan ? pathInPlan(projectDir, opts.plan, f) : false);
+  const related = commits.filter(c => !c.ids.length && c.files.some(touches));
+  for (const c of related) for (const f of c.files) files.add(f);
+  return [...files];
+}
+
+// A board that cannot be read leaves only the plan files out of the scope; it does not stop the measurement.
+function storyCard(projectDir: string, cardId: string) {
+  try {
+    return findCardOrNone(readCards(projectDir).cards, cardId);
+  } catch {
+    return undefined;
+  }
 }
 
 export interface HealthVerdict {
@@ -203,11 +254,14 @@ export function checkHealth(projectDir: string, cardId: string, opts: { ref?: st
   const s = healthSettings(projectDir);
   if (s.off) return { state: 'off', tolerance: 0, pass: true };
   const ref = opts.ref ?? 'HEAD';
-  const base = storyBase(projectDir, cardId, ref);
+  const found = storyBaseOf(projectDir, cardId, ref);
   const head = git(projectDir, ['rev-parse', ref]);
-  if (!base || !head) return { state: 'no-base', tolerance: s.tolerance, pass: true };
-  const before = projectHealth(projectDir, { ref: base });
-  const after = projectHealth(projectDir, { ref: head });
+  if (!found || !head) return { state: 'no-base', tolerance: s.tolerance, pass: true };
+  const base = found.sha;
+  const card = found.onTrunk ? storyCard(projectDir, cardId) : undefined;
+  const files = storyFiles(projectDir, cardId, base, head, { onTrunk: found.onTrunk, plan: card ? planFiles(projectDir, card) : undefined });
+  const before = projectHealth(projectDir, { ref: base, files });
+  const after = projectHealth(projectDir, { ref: head, files });
   const delta = Math.round((after.score - before.score) * 100) / 100;
   return { state: 'measured', before, after, delta, tolerance: s.tolerance, pass: delta >= -s.tolerance, base };
 }

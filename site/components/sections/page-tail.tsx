@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CopyInstall } from '@/components/copy-install';
 
-// The closer, in the place chanl-site's page-tail.tsx holds. Its blog and newsletter strips do
+// The closer, in the place a private project's page-tail.tsx holds. Its blog and newsletter strips do
 // not apply here; this is the install line and the two links.
 export function PageTail() {
   return (

@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: system-design 1 -->
+<!-- codeloop artifact lineage: c-320 <- base -->
+<!-- codeloop-artifact
+id: c-320
+kind: system-design
+title: Every board read and write goes through the storage layer
+scope: [Claude Code, Cursor, Codex, cron, owner]
+components: [codeloop CLI, guard hooks, hookd, hub, run --agent, orch turn, review pass, cards.json, story files]
+environments: [project checkout, user store, hub process]
+-->
+<title>c-320 Every board read and write goes through the storage layer</title>
+<style>
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+.wrap { overflow-x: auto; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; background: var(--surface-2); padding: 0 var(--space-1); border-radius: var(--space-1); overflow-wrap: anywhere; }
+.shell p, .shell li { max-width: 72ch; }
+.y { color: var(--ok); font-weight: 600; } .n { color: var(--danger); font-weight: 600; } .w { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Every board read and write goes through the storage layer</h1>
+    <p class="meta">c-320 · codeloop · storage · system design</p>
+    <p class="scope">How codeloop runs on one laptop today: every process, every file it writes, which files git keeps, and where each board storage option would sit.</p>
+  </header>
+
+  <section class="changestrip">
+    <h2>The problem</h2>
+    <p>Moving ops-ai's board out of its repository put one project's data in two places. The board and its run state now live in <code>~/.codeloop/projects/ops-ai</code> on one laptop, while the specs, evidence and wiki the board points at stay in git. Git has no copy of ops-ai's board after version 957 (the live board is at 969), so a lost laptop loses every board change since the move. Nothing else should move until this picture is agreed.</p>
+    <h2>Broken or surprising today</h2>
+    <ul>
+      <li>ops-ai's hourly <code>run --agent</code> has failed every hour since 15 October. Its crontab line is 1,153 characters; cron cuts a command at 1,000, inside a quoted path, so the shell reports an unmatched quote and the run never starts.</li>
+      <li>The hook daemon is unused: <code>codeloop-hook</code> is not on PATH (the global link provides only <code>codeloop</code>), and ops-ai's hooks call <code>codeloop guard</code> directly, one node process per edit, shell command and prompt.</li>
+      <li>The global <code>codeloop</code> links straight to <code>dist/index.js</code>, so the <code>bin/codeloop</code> memory ceiling is never applied, the hub included.</li>
+      <li>codeloop's own repository has no Claude Code, Cursor or git hooks installed. Its board is tracked but last committed on 15 October; 280 board events have been written since.</li>
+      <li>ops-ai's story data is in three places: the board in <code>~/.codeloop</code>, specs and evidence under <code>.codeloop/</code>, and a tracked <code>evidence/027/</code> and <code>specs/README.md</code> at the root.</li>
+      <li>The hub registry lists 14 projects; 6 point at deleted temporary folders.</li>
+    </ul>
+  </section>
+
+  <section class="contract">
+    <h3>Context</h3>
+    <p>Codeloop has no long-lived engine. Each command, hook and scheduled run is a short node process that reads the project's files, decides, writes and exits. Only the hub, and the hook daemon when it is used, stay up.</p>
+    <div class="wrap"><table>
+      <tr><th>Actor / external system</th><th>Relationship</th></tr>
+      <tr><td>Claude Code</td><td>Calls <code>codeloop guard</code> on SessionStart, before every Edit, Write, MultiEdit and Bash, on every prompt, on Stop and SessionEnd. Exit 2 refuses the edit.</td></tr>
+      <tr><td>Cursor</td><td>Calls the guard before shell commands and on session and subagent events.</td></tr>
+      <tr><td>Codex</td><td>Recognised from its environment when it runs a command; no hook file ships for it.</td></tr>
+      <tr><td>cron</td><td>Runs <code>codeloop run --agent</code> hourly from a line <code>guard session</code> installs when agents are configured. Starts agents with <code>agents.&lt;name&gt;.cmd</code>, for ops-ai <code>claude -p --permission-mode acceptEdits &lt; {brief}</code>.</td></tr>
+      <tr><td>owner</td><td>Approves and rejects gates on the hub's board or in the CLI. An agent's shell command that approves, rejects or crosses a gate is put to the person by the bash guard.</td></tr>
+    </table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Software layers</h3>
+    <pre class="mermaid">
+flowchart TD
+  HOST["Agent hosts: Claude Code, Cursor, Codex"] --> HOOK["Guard hooks: codeloop guard, Node, one process per call"]
+  HOOK -.-> HOOKD["hookd: Node, unix socket, idle exit after 10 min, unused"]
+  OWNER["Owner browser"] --> HUB["Hub: Hono API + Next.js workspace, Node, port 4050"]
+  CRON["cron, hourly"] --> RUN["run --agent and doctor: Node"]
+  RUN --> ORCH["orch turn: Node, lease, brief, gate, merge"]
+  ORCH --> AGENT["Builder: claude -p, killed at timeout_minutes"]
+  HOOK --> ENGINE["Engine: src/lib, TypeScript"]
+  HUB --> ENGINE
+  RUN --> ENGINE
+  ORCH --> ENGINE
+  ENGINE --> BOARD["cards.json: one JSON file, lock + version + rename"]
+  ENGINE --> STATE["state folder: JSON and JSONL files"]
+  AGENT --> STORY["Story files: Markdown in git"]
+    </pre>
+    <div class="wrap"><table>
+      <tr><th>Piece</th><th>Started by</th><th>Writes</th><th>Lives</th></tr>
+      <tr><td>codeloop CLI</td><td>A person, an agent's shell, a hook, cron</td><td>cards.json and the files of whatever it does</td><td>One command</td></tr>
+      <tr><td>guard hooks</td><td>Agent hosts and git (commit-msg, pre-commit, post-commit, pre-push)</td><td><code>state/activity/&lt;card&gt;.jsonl</code>; the session hook can install the crontab line</td><td>One tool call</td></tr>
+      <tr><td>hookd</td><td><code>bin/codeloop-hook</code> when no socket exists</td><td>Same as the hooks; <code>~/.codeloop/state/hookd.sock</code></td><td>Until 10 idle minutes or a new build; edit and bash fail closed</td></tr>
+      <tr><td>hub</td><td><code>codeloop hub</code>, or forked by <code>serve</code> and <code>open</code> (code default port 4040)</td><td><code>~/.codeloop/state/hub.json</code>, <code>hub-secrets.json</code>; board writes through the same write as the CLI</td><td>Until stopped; each project context closes after 30 idle minutes. <code>serve --standalone</code> runs one project on its own port.</td></tr>
+      <tr><td>run --agent</td><td>cron or a person</td><td>cards.json, <code>state/run.log</code>, briefs, agent-run logs, last-run.json</td><td>One tick</td></tr>
+      <tr><td>orch turn</td><td>A person, or the doctor's retry</td><td>A lease, the brief, <code>state/handbacks</code>, <code>state/gates</code>, <code>state/orch/&lt;card&gt;.json</code>, cards.json</td><td>Repo lock held for the board steps (others wait up to 10 minutes), released while the builder works; builder killed at 15 minutes in ops-ai (20 by default), at most 2 at once; hand-back proof killed at 10 minutes</td></tr>
+      <tr><td>review pass</td><td><code>orch run --review</code>, or the doctor with <code>doctor.review: on</code> (off in both projects)</td><td>One fix per story: place, close, write the stage, or ask; cards.json</td><td>One pass</td></tr>
+    </table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Deployment topology</h3>
+    <p><code>store.layout</code> picks folder names (<code>dotfolder</code> under <code>.codeloop/</code>, or the legacy <code>root</code> layout that codeloop's own repo still uses). <code>store.home</code> picks the disk: <code>repo</code>, the default, or <code>user</code>, which turns each path named in <code>store.move</code> (all of them when the list is absent) into a link into <code>~/.codeloop/projects/&lt;id&gt;/</code>. <code>store move</code> copies, rewrites <code>store.home</code>, and leaves the original for the person to delete; commands refuse while a real copy sits where a link belongs.</p>
+    <div class="wrap"><table>
+      <tr><th>Environment</th><th>Where each piece runs</th><th>Notes</th></tr>
+      <tr><td>project checkout</td><td>Hooks, CLI commands, turns and builders run in the one checkout; a worktree resolves to its main tree, so all checkouts share one store</td><td>ops-ai builds every story in one tree: no worktrees, at most two builders, each committing only its own paths</td></tr>
+      <tr><td>user store</td><td><code>~/.codeloop/projects/ops-ai/.codeloop/</code> holds ops-ai's cards.json and state, reached through links in the repo</td><td>On one disk, outside git; a hand-made backup copy beside it already differs from the live board</td></tr>
+      <tr><td>hub process</td><td>One process on 127.0.0.1:4050 for every project in <code>~/.codeloop/projects.json</code></td><td>Serves <code>/p/&lt;id&gt;/</code> pages and <code>/api/p/&lt;id&gt;/*</code>; each request resolves one project by its id</td></tr>
+    </table></div>
+    <pre class="mermaid">
+flowchart LR
+  subgraph repo["ops-ai repository, in git"]
+    CFG["config.yaml, lanes, wiki"]
+    SPEC[".codeloop/specs and evidence"]
+    LINK["cards.json and state: links, ignored"]
+  end
+  subgraph home["~/.codeloop on this laptop"]
+    REG["projects.json"]
+    HUBS["state/hub.json, hub-secrets.json"]
+    STORE["projects/ops-ai: cards.json, state"]
+  end
+  subgraph cl["codeloop repository, in git"]
+    CLB["cards.json tracked"]
+    CLS["specs, evidence at the root"]
+  end
+  LINK --> STORE
+  HUBP["hub, port 4050"] --> REG
+  HUBP --> STORE
+  HUBP --> CLB
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Network view</h3>
+    <p>Everything is on loopback. The hub listens on 127.0.0.1:4050; on loopback the browser is the owner by default. Agents and the SDK send <code>x-codeloop-token</code>, a token kept in <code>~/.codeloop/state/hub.json</code> with owner-only permissions. Hooks reach hookd over a unix socket with mode 0600. The only outbound call codeloop makes for the board is the hosted board push, which runs only when <code>.codeloop/cloud.json</code> exists; neither project has one.</p>
+    <pre class="mermaid">
+flowchart LR
+  B["Browser"] -->|http, 127.0.0.1:4050, session cookie| HUB["Hub"]
+  A["Agent or SDK"] -->|http, x-codeloop-token| HUB
+  H["Hook client"] -.->|unix socket, mode 0600| D["hookd"]
+  HUB -->|file reads and writes| F["Project files"]
+  E["Engine write"] -.->|https, only with cloud.json| C["Hosted board page"]
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Data stores</h3>
+    <p>The board is one JSON file holding every story with its full event list and one version counter. A story's own files are Markdown in its spec folder.</p>
+    <pre class="mermaid">
+erDiagram
+  BOARD ||--o{ CARD : holds
+  CARD ||--o{ EVENT : records
+  CARD ||--|| SPEC_FOLDER : keyed_by_number
+  CARD ||--o{ ACTIVITY_LINE : streams
+  CARD ||--o| LEASE : holds_while_building
+  SPEC_FOLDER ||--o{ EVIDENCE : proves
+  BOARD {
+    int version
+  }
+  CARD {
+    string id
+    string lane
+    string stage
+    string gate
+  }
+  EVENT {
+    string at
+    string action
+    string actor
+  }
+    </pre>
+    <div class="wrap"><table>
+      <tr><th>File</th><th>codeloop repo</th><th>ops-ai</th><th>Who writes it</th></tr>
+      <tr><td><code>.codeloop/cards.json</code></td><td>Repo, <span class="w">tracked, rarely committed</span></td><td><code>~/.codeloop</code>, <span class="n">not in git</span></td><td>Every engine step, the hub, task ticks, post-commit, turns, the doctor</td></tr>
+      <tr><td><code>state/activity/&lt;card&gt;.jsonl</code></td><td><span class="n">Ignored</span></td><td><code>~/.codeloop</code></td><td>Hooks; each board write copies its gate events here</td></tr>
+      <tr><td><code>state/active/</code></td><td><span class="n">Ignored</span></td><td><code>~/.codeloop</code></td><td><code>&lt;session&gt;.json</code> per live session; <code>orch-&lt;card&gt;.json</code> is a builder's lease</td></tr>
+      <tr><td><code>state/</code> other</td><td><span class="n">Ignored</span></td><td><code>~/.codeloop</code></td><td>briefs, agent-runs, handbacks, gates, orch, run.lock, run.log, serve.json, off.json</td></tr>
+      <tr><td>config.yaml, lanes, wiki, design-system</td><td><span class="y">Tracked</span></td><td><span class="y">Tracked</span></td><td>A person, init, store move, lane promote, agents</td></tr>
+      <tr><td>Spec folder (research, interview, spec, plan, tasks, data-model, mock)</td><td><code>specs/</code>, <span class="w">tracked, many new files untracked</span></td><td><code>.codeloop/specs/</code>, <span class="y">tracked</span></td><td>Stage agents; tasks.md also by ticks</td></tr>
+      <tr><td>Evidence</td><td><code>evidence/</code>, <span class="y">tracked</span></td><td><code>.codeloop/evidence/</code>, <span class="y">tracked</span></td><td>verify, the gate</td></tr>
+      <tr><td><code>~/.codeloop/projects.json</code>, <code>state/hub.json</code>, <code>hub-secrets.json</code></td><td colspan="2">Per laptop, <span class="n">not in git</span></td><td>serve, hub</td></tr>
+    </table></div>
+    <h4>One story's life</h4>
+    <div class="wrap"><table>
+      <tr><th>Step</th><th>File written</th><th>ops-ai: in git?</th></tr>
+      <tr><td>1. Promote</td><td>cards.json</td><td class="n">No</td></tr>
+      <tr><td>2. Activate</td><td><code>state/active/&lt;session&gt;.json</code></td><td class="n">No</td></tr>
+      <tr><td>3. Stage brief</td><td><code>state/briefs/&lt;card&gt;-&lt;stage&gt;.md</code></td><td class="n">No</td></tr>
+      <tr><td>4. Spec stages</td><td>Spec folder; cards.json advance or fail</td><td><span class="y">Spec yes</span>, <span class="n">board no</span></td></tr>
+      <tr><td>5. Edit, gated by the hook (no active story, outside the plan's Files list, or leased by another session: refused)</td><td><code>state/activity/&lt;card&gt;.jsonl</code></td><td class="n">No</td></tr>
+      <tr><td>6. Tick a task</td><td>tasks.md; cards.json task event</td><td><span class="y">tasks.md yes</span>, <span class="n">board no</span></td></tr>
+      <tr><td>7. Commit with <code>Card:</code>; post-commit records it and ticks <code>Task:</code> trailers</td><td>The commit, then activity, tasks.md and cards.json again after it</td><td>Commit yes; the tick lands uncommitted</td></tr>
+      <tr><td>8. Hand-back (codeloop runs the proof itself)</td><td><code>state/handbacks/</code>; cards.json</td><td class="n">No</td></tr>
+      <tr><td>9. Gate reruns the checks</td><td><code>state/gates/</code>; evidence; cards.json</td><td><span class="y">Evidence yes</span>, <span class="n">board no</span></td></tr>
+      <tr><td>10. Approve</td><td>cards.json approve event with a fingerprint</td><td class="n">No</td></tr>
+      <tr><td>11. Merge (worktree turns only)</td><td>Merge commit; <code>state/orch/&lt;card&gt;.json</code></td><td>Merge yes, record no</td></tr>
+      <tr><td>12. Done</td><td>cards.json</td><td class="n">No</td></tr>
+    </table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Tech choices</h3>
+    <p>How concurrent writers are kept safe today. Every board write takes <code>cards.json.lock</code>, created so only one process can hold it, with its pid inside; a waiter gives up after 30 seconds and a lock whose pid is dead or older than 5 minutes is taken over. Under the lock the writer re-reads the file and refuses if the version moved; callers retry up to five times. The new board goes to a temporary file renamed over the old one. <code>state/run.lock</code> lets one turn, scheduled run or store move change the board at a time. Leases stop two sessions editing one story's plan files. None of this controls which commit carries which story's board changes.</p>
+    <div class="wrap"><table>
+      <tr><th>Choice</th><th>Alternative considered</th><th>Why</th><th>Cost</th></tr>
+      <tr><td>Tracked cards.json (codeloop today)</td><td>store.home user</td><td>Board history travels with the code</td><td>Every story's events ride in whichever commit stages the file; post-commit re-dirties it at once; worktree merges conflict on it. History survives a lost laptop only up to the last commit that included it.</td></tr>
+      <tr><td>store.home user, everything moved</td><td>Tracked file</td><td>No board or story files in any commit</td><td>Board, specs and evidence all leave git; none survive a lost laptop.</td></tr>
+      <tr><td>store.home user, move [cards, state] (ops-ai today)</td><td>Everything moved</td><td>Specs and evidence stay in git</td><td>One project's data in two places; board history after a lost laptop is only the last in-git snapshot (957 of 969).</td></tr>
+      <tr><td>Gitignore cards.json in the repo</td><td>store.home user</td><td>One folder, no links</td><td>No board history in git at all; needs no code.</td></tr>
+      <tr><td>Local database plus a history file per story in git</td><td>One shared file</td><td>Each commit carries only its own story's history; the database is rebuilt from git</td><td>Not built. A storage driver interface exists (file and in-memory drivers), and the per-story activity files exist but are ignored.</td></tr>
+      <tr><td>Hosted Protobox board</td><td>Local file only</td><td>One board the team shares, kept on a server</td><td>Partly built: every board write pushes to the hosted page when <code>.codeloop/cloud.json</code> exists; neither project has one. 60 requests a minute.</td></tr>
+    </table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Risks</h3>
+    <ul>
+      <li>ops-ai's board is on one disk with no git copy after version 957. Mitigation: commit a snapshot, or pick an option above that keeps history off the laptop.</li>
+      <li>Eight of the twelve story steps rewrite the whole board file, and the post-commit hook writes it again right after each commit, so a tracked board is never clean and any plain commit sweeps other stories' events.</li>
+      <li>Sessions in one tree share one git index; a plain <code>git commit</code> takes another session's staged files. ops-ai's board-move commit swept a stale dependency list this way and had to be undone. Committing by path is a working rule, not enforced by codeloop.</li>
+      <li>In user mode the code writes every story's files to the main tree even when <code>store.move</code> left specs in the repo, which only matters for a project that builds in worktrees.</li>
+      <li>The hourly unattended run in ops-ai does not run at all until its crontab line is shorter than 1,000 characters.</li>
+    </ul>
+  </section>
+</div>
+<script>
+  try {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
+  } catch (e) {}
+</script>
+</body>
+</html>

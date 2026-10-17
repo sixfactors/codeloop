@@ -1,5 +1,5 @@
-// Copied from chanl-admin components/page-layout.tsx. Dropped: the bulk-selection context (no
-// bulk actions here) and the chanl Icon wrapper (lucide icons render directly). Breadcrumbs use the
+// Copied from a private project's components/page-layout.tsx. Dropped: the bulk-selection context (no
+// bulk actions here) and the private project's Icon wrapper (lucide icons render directly). Breadcrumbs use the
 // ui/breadcrumb primitive the app already ships instead of hand-written links. Same anatomy:
 // breadcrumbs · 56px icon tile (back link when backHref) · title · description · badges · actions
 // · tabs · content. Padding is the screen-margin token (20px → px-5) at every width.

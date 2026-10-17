@@ -53,8 +53,11 @@ describe('render', () => {
     const first = render(dir, ['claude', 'cursor', 'codex']);
     expect(first.written.sort()).toEqual([
       '.agents/skills/codeloop-market/SKILL.md',
+      '.agents/skills/codeloop-orch/SKILL.md',
       '.claude/agents/codeloop-market-draft.md',
       '.claude/agents/codeloop-market-publish.md',
+      '.claude/commands/orch.md',
+      '.cursor/commands/orch.md',
       '.cursor/rules/codeloop-market.mdc',
       '.cursor/rules/codeloop.mdc',
       '.github/copilot-instructions.md',
@@ -68,7 +71,26 @@ describe('render', () => {
     expect(before['AGENTS.md']).toMatch(/^# Agents\n\nHouse rules stay here\.\n\n<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['CLAUDE.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*codeloop guard session[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['.github/copilot-instructions.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
+    // The orchestrator protocol, with the review pass first, as each host takes a command.
+    for (const f of ['.claude/commands/orch.md', '.cursor/commands/orch.md', '.agents/skills/codeloop-orch/SKILL.md']) expect(before[f]).toMatch(/# \/orch: run this board[\s\S]*codeloop orch run --review --changed/);
     expect(before['.cursor/rules/codeloop.mdc']).toMatch(/alwaysApply: true/);
+  });
+
+  it('keeps a hand-edited role file, updates the untouched ones when the lane changes, and replaces both with force', () => {
+    render(dir, ['claude', 'cursor']);
+    const edited = '.claude/agents/codeloop-market-draft.md';
+    const untouched = '.claude/agents/codeloop-market-publish.md';
+    write(edited, `${readFileSync(join(dir, edited), 'utf-8')}\nOur house note.\n`);
+    write('.codeloop/lanes/market.yaml', readFileSync(join(dir, '.codeloop/lanes/market.yaml'), 'utf-8').replace('version: 1', 'version: 2\nretries: 7'));
+
+    const second = render(dir, ['claude', 'cursor']);
+    expect(readFileSync(join(dir, edited), 'utf-8')).toContain('Our house note.');
+    expect(second.kept).toEqual([edited]);
+    expect(second.written).toContain(untouched);
+    expect(readFileSync(join(dir, untouched), 'utf-8')).toContain('Stop after 7 failures');
+
+    expect(render(dir, ['claude', 'cursor'], { force: true }).written).toContain(edited);
+    expect(readFileSync(join(dir, edited), 'utf-8')).not.toContain('Our house note.');
   });
 });
 
@@ -97,7 +119,7 @@ describe('board server', () => {
 describe('mcp server', () => {
   async function session(calls: { method: string; params?: unknown }[], env: NodeJS.ProcessEnv = {}): Promise<any[]> {
     const { CODELOOP_ROLE: _role, ...clean } = process.env;
-    const child = spawn(process.execPath, [join(ROOT, 'dist/index.js'), 'mcp'], { cwd: dir, env: { ...clean, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(process.env.CODELOOP_TEST_DIST ?? join(ROOT, 'dist'), 'index.js'), 'mcp'], { cwd: dir, env: { ...clean, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
     const responses = new Map<number, any>();
     let buffer = '';
     const done = new Promise<void>((resolve, reject) => {

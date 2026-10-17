@@ -24,7 +24,8 @@ const num = (v: number | undefined) => (v === undefined ? '—' : String(v));
 export function InitiativesTable() {
   const router = useRouter();
   const list = useInitiativeList();
-  const rows = useMemo(() => [...(list.data ?? [])].sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || a.title.localeCompare(b.title)), [list.data]);
+  // In the API's order (score, then title); the page never re-sorts what the server ranked.
+  const rows = useMemo(() => list.data ?? [], [list.data]);
   const trees = useInitiativeTrees(rows.map((b) => b.id));
   const countsOf = (i: number) => {
     const t: InitiativeTree | undefined = trees[i]?.data;

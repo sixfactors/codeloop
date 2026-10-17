@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { activeSessions, currentSession } from './active-card.js';
-import { DONE, DROPPED, PROPOSAL_GATE, PROPOSED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
+import { bugReporter, DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, QUEUED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
 import { assertRoomInLane, type Role } from './engine.js';
 import { loadLane, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
@@ -47,14 +47,6 @@ const event = (now: Date, role: Role, action: string, stage: string | undefined,
   ...(note ? { note } : {}),
 });
 
-/** A card on `stage` with a clean slate there: no gate, no retries, no failure fingerprint. */
-function enter(card: Card, stage: string): Card {
-  const { gate: _gate, awaiting: _awaiting, parked_from: _from, ...rest } = card;
-  const { [stage]: _retries, ...retries } = card.retries ?? {};
-  const { [stage]: _failure, ...failures } = card.failures ?? {};
-  return { ...rest, stage, retries, ...(card.failures ? { failures } : {}) };
-}
-
 /**
  * Brings a done or dropped card back. The default target is the lane's first stage; `backlog` parks
  * it as a proposal so it waits for approval and holds no lane slot.
@@ -63,7 +55,7 @@ export function reopenCard(projectDir: string, id: string, role: Role, opts: Opt
   ownerOnly(role, 'reopening a card');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
-  if (before.stage !== DONE && before.stage !== DROPPED) throw new RefusalError(`${before.id} is at ${before.stage}, not done or dropped; use \`codeloop card move\``);
+  if (before.stage !== DONE && before.stage !== DROPPED) throw new RefusalError(`${before.id} is at ${before.stage}, not done or dropped; \`codeloop card move ${before.id} <stage>\` moves it`);
   assertNotHeld(projectDir, before);
   const lane = loadLane(projectDir, before.lane);
   const now = opts.now ?? clock();
@@ -74,7 +66,7 @@ export function reopenCard(projectDir: string, id: string, role: Role, opts: Opt
     card = { ...rest, stage: PROPOSED, gate: PROPOSAL_GATE, awaiting: 'owner' };
   } else {
     stageIndex(lane, to);
-    assertRoomInLane(file.cards, lane, 1, [], before.size);
+    assertRoomInLane(file.cards, lane, 1, [], before.size, projectDir);
     card = enter(before, to);
   }
   card = { ...card, events: [...before.events, event(now, role, 'reopen', card.stage, opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)], updatedAt: now.toISOString() };
@@ -90,19 +82,43 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   ownerOnly(role, 'moving a card between stages');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
-  if (!inLane(before)) throw new RefusalError(`${before.id} is ${before.stage}; \`codeloop card reopen\` brings it back first`);
+  // A queued card (a split sibling, a planned story) waits in Up next outside the lane; moving it
+  // starts it at the named stage, as a promotion would once its lane had room.
+  if (before.stage === QUEUED) {
+    assertNotHeld(projectDir, before);
+    return startQueued(projectDir, file, before, stage, role, opts);
+  }
+  if (!inLane(before)) throw new RefusalError(`${before.id} is ${before.stage}; \`codeloop card reopen ${before.id}\` brings it back first`);
   assertNotHeld(projectDir, before);
   const lane = loadLane(projectDir, before.lane);
   const from = stageIndex(lane, before.stage);
   const target = stageIndex(lane, stage);
-  // Moving to the stage it is at clears a wait it is parked at (a park the person decided was wrong).
-  if (target === from && !before.gate) throw new RefusalError(`${before.id} is already at ${stage}`);
+  // Any move drops the gate a card waits at with no approval on record, so the wait is cleared only
+  // by approve (or reject), which the engine records as the owner's decision.
+  const waiting = gateRefusal(before);
+  if (waiting) throw new RefusalError(waiting);
+  if (target === from) throw new RefusalError(`${before.id} is already at ${stage}`);
   const passed = target < from ? lane.stages.slice(target, from).filter(s => s.gate).map(s => s.gate!.name) : [];
   if (passed.length && !opts.note?.trim()) throw new RefusalError(`moving ${before.id} back to ${stage} undoes the ${passed.join(' and ')} gate: say why in the note`);
   const now = opts.now ?? clock();
   const card: Card = {
     ...enter(before, stage),
     events: [...before.events, event(now, role, 'move', stage, opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)],
+    updatedAt: now.toISOString(),
+  };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+function startQueued(projectDir: string, file: ReturnType<typeof readCards>, before: Card, stage: string, role: Role, opts: Opts): Card {
+  const lane = loadLane(projectDir, before.lane);
+  stageIndex(lane, stage);
+  assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
+  const now = opts.now ?? clock();
+  const card: Card = {
+    ...enter(before, stage),
+    laneVersion: lane.version,
+    events: [...before.events, event(now, role, 'move', stage, opts.note ? `from ${QUEUED}: ${opts.note}` : `from ${QUEUED}`)],
     updatedAt: now.toISOString(),
   };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
@@ -116,13 +132,19 @@ export interface CardEdit {
   priority?: string;
   feature?: string;
   size?: string;
+  /** true flags a critical bug, false clears it. Only the owner's flag counts; an agent's true is recorded as a report. */
+  bug?: boolean;
 }
 
 const STORY = /^As an? (.+?), I can (.+?), so that (.+?)\.?$/s;
 
 /** Edits a story's fields; the story line in spec.md follows when the story changes. */
 export function editCard(projectDir: string, id: string, role: Role, edit: CardEdit, opts: Opts = {}): Card {
-  ownerOnly(role, 'editing a card');
+  // An agent that finds a critical bug may report it; the flag every pick reads, and every other field, is the owner's.
+  const onlyBug = edit.bug !== undefined && Object.entries(edit).every(([k, v]) => k === 'bug' || v === undefined);
+  if (!onlyBug) ownerOnly(role, 'editing a card');
+  if (edit.bug === false && role !== 'owner') throw new RefusalError("clearing the critical-bug flag is the owner's decision");
+  const reporter = edit.bug && role !== 'owner' ? bugReporter(role) : undefined;
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const changes: Partial<Card> = {};
@@ -161,9 +183,13 @@ export function editCard(projectDir: string, id: string, role: Role, edit: CardE
     changes.size = size as Size;
     names.push('size');
   }
-  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature or --size');
+  if (edit.bug !== undefined) names.push(reporter ? `reported as critical by ${reporter}` : edit.bug ? 'bug' : 'no bug');
+  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature, --size or --bug');
   const now = opts.now ?? clock();
-  const card: Card = { ...before, ...changes, events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
+  // The owner's decision either way settles any report; a report leaves the flag as it was.
+  const { bug: _bug, bug_reported_by: _by, ...unflagged } = before;
+  const base: Card = reporter ? { ...before, bug_reported_by: reporter } : edit.bug === undefined ? before : { ...unflagged, ...(edit.bug ? { bug: true } : {}) };
+  const card: Card = { ...base, ...changes, events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   // After the board write, so a refused or conflicting edit leaves the spec alone.
   if (storyLine) writeStoryLine(projectDir, card, storyLine);

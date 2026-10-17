@@ -9,7 +9,7 @@
     {
       "layer": "cli",
       "pass": true,
-      "output": "PASS  seed project A\nPASS  seed project B\nPASS  hub starts on A's serve\nPASS  resolve project ids from the registry (a, b)\nPASS  project A board loads with c-001, from the hub\nPASS  Accept is disabled before signing in\nPASS  sign in once, at the hub\nPASS  accept A's question\nPASS  screenshot A, answered\nPASS  switch to project B (no second sign-in): B's board loads with its own c-001\nPASS  B's question is still open: Accept is enabled but unanswered, proving A's accept never touched B\nPASS  screenshot B, still open\nPASS  A is still answered after visiting B (no cross-project bleed either direction)\nPASS  screenshots saved in /var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/tmp.T5p8s8fPrw/shots\n\nPLAYWRIGHT HUB SWITCH PASS: 14 passed, 0 failed\n\nexit 0"
+      "output": "PASS  seed project A\nPASS  seed project B\nPASS  hub starts on A's serve\nPASS  resolve project ids from the registry (a, b)\nPASS  project A board loads with c-001, from the hub\nPASS  Accept is disabled before signing in\nPASS  sign in once, at the hub\nPASS  accept A's question\nPASS  screenshot A, answered\nPASS  switch to project B (no second sign-in): B's board loads with its own c-001\nPASS  B's question is still open: Accept is enabled but unanswered, proving A's accept never touched B\nPASS  screenshot B, still open\nPASS  A is still answered after visiting B (no cross-project bleed either direction)\nPASS  screenshots saved in <temp dir>/tmp.T5p8s8fPrw/shots\n\nPLAYWRIGHT HUB SWITCH PASS: 14 passed, 0 failed\n\nexit 0"
     }
   ]
 }

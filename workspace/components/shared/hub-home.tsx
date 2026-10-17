@@ -24,7 +24,7 @@ import { FieldRow } from '@/components/shared/field-row';
 import { MetaChip } from '@/components/shared/meta-chip';
 import { BAND_LABEL, BandChip } from '@/components/shared/band-chip';
 import { ToneBadge } from '@/components/shared/board-card';
-import { groupByBand, rank } from '@/components/shared/inbox-view';
+import { groupByBand } from '@/components/shared/inbox-view';
 import { api, type HubGateItem, type HubNeedsYou, type HubQuestionItem, type ListedProject } from '@/lib/api';
 
 /** Per project, in one "Needs you" card: the same caps inbox-view itself uses for a single
@@ -130,12 +130,12 @@ function ProjectGrid({ projects }: { projects: ListedProject[] }) {
 }
 
 /** One project's rail card in the "Needs you" list: every gate grouped by band exactly as a
- * project's own inbox groups them (components/shared/inbox-view.tsx — same `rank`/`groupByBand`,
+ * project's own inbox groups them (components/shared/inbox-view.tsx — the server's pick order, same `groupByBand`,
  * P1 first, no gate type filtered out), each row linking into that project's real card page — a
  * full navigation, so the Answer/Approve controls there are the real ones, not a copy built for
  * the hub (a hub-wide CardDrawer can't scope its writes to the right project; see app-shell.tsx). */
 function ProjectNeedsCard({ group }: { group: ProjectNeeds }) {
-  const ranked = rank(group.gates);
+  const ranked = group.gates;
   const shown = ranked.slice(0, GATES_SHOWN);
   const bands = groupByBand(shown);
   const hiddenGates = ranked.length - shown.length;

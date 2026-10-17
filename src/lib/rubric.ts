@@ -4,7 +4,7 @@ import { specPath } from './project-root.js';
 import { dirname, isAbsolute, join } from 'path';
 import { fileURLToPath } from 'url';
 import { cardKey, findCard, readCards, type Card } from './cards.js';
-import { readQuestions } from './interview.js';
+import { interviewQuestions, readQuestions } from './interview.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
 import { loadLane, loadSkillsIndex, skipReason, stageApplies, substitute, type Stage } from './lane.js';
 import { checkMock, specScreenRefs, specScreens } from './mock.js';
@@ -110,7 +110,7 @@ const CHECKS: Record<string, (c: Ctx) => string[]> = {
   },
   R4: c => checkResearch(c.projectDir, c.card.id, 3).errors,
   I1: c => {
-    const qs = readQuestions(c.projectDir, c.card);
+    const qs = interviewQuestions(readQuestions(c.projectDir, c.card));
     const problems = qs.length < 3 || qs.length > 5 ? [`${qs.length} question(s); ask three to five`] : [];
     return [...problems, ...qs.filter(q => !q.recommended).map(q => `Q${q.n} has no recommended answer`)];
   },

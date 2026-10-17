@@ -7,7 +7,7 @@ size: L
 metric: time_to_answer_what_needs_me
 done_when: the five stories below are each live
 
-The design lives in the wiki and the board spec (chanl-platform docs/plans/codeloop/2026-10-11-board-plan-shipped.md); this card holds only the story, its split and its decisions.
+The design lives in the wiki and the board spec (owner design notes: board plan shipped); this card holds only the story, its split and its decisions.
 
 acceptance:
 - US1 Given stories in several stages, when I open the board, then I see one row of stage columns (Up next to Live) with a Needs you row on top, the same for every build-type workflow.

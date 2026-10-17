@@ -1,9 +1,12 @@
+import { execFileSync } from 'child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolveAgent } from '../agent.js';
 import { readCards } from '../cards.js';
-import { doctorTick } from '../run.js';
+import { createCard } from '../engine.js';
+import { doctorTick, runDueWithAgent } from '../run.js';
 
 let dir: string;
 function write(path: string, text: string, old = false): void {
@@ -57,5 +60,26 @@ describe('the doctor on a stuck story whose stage output was never written', () 
     config(5);
     await doctorTick(dir, new Date());
     expect(starts('c-2')).toEqual([]);
+  });
+});
+
+describe('a story whose agent left the stage output missing', () => {
+  it('reaches stuck through the engine, then gets the one scaffold start', async () => {
+    const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe' });
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    output: out.md\n    done: { cmd: "test -f out.md" }\n');
+    write('.codeloop/config.yaml', 'doctor:\n  scaffold_starts: 1\nagents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 10\n');
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [] }));
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-3' });
+    await runDueWithAgent(dir, resolveAgent(dir));
+    const later = (h: number) => new Date(Date.now() + h * 3_600_000);
+    await doctorTick(dir, later(2));
+    expect(readCards(dir).cards[0].gate).toBe('stuck');
+    expect(starts('c-3')).toEqual(['agent-start']);
+    const tick = await doctorTick(dir, later(3));
+    expect(tick.find(a => a.id === 'c-3')).toMatchObject({ action: 'agent-started', note: expect.stringMatching(/\(scaffold, 1 of 1\): out\.md is missing$/) });
+    expect(starts('c-3')).toEqual(['agent-start', 'doctor-start', 'agent-start']);
   });
 });

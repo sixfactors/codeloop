@@ -143,11 +143,36 @@ export function readAllActivity(projectDir: string, card: string): ActivityEntry
   return lines;
 }
 
-/** Milliseconds of work between `from` and `to`: the gaps between consecutive work lines in the window that are within ten minutes, summed. */
-export function activeMs(lines: { at: string; kind: string }[], from: number, to: number): number {
+/** A lone work line counts as this much: one edit is a minute of someone working, not zero. */
+const MIN_BURST_MS = 60 * 1000;
+
+/**
+ * Milliseconds of work between `from` and `to`. Person work is bursts of work lines no more than ten
+ * minutes apart, each at least a minute long; a headless run is its `agent-run` line, written when
+ * the run ended, reaching back `durationMs`. The spans are merged before summing because the run's
+ * own hooks write edit lines inside it.
+ */
+export function activeMs(lines: { at: string; kind: string; durationMs?: unknown }[], from: number, to: number): number {
+  const spans: [number, number][] = [];
   const times = lines.filter(l => WORK_KINDS.has(l.kind)).map(l => Date.parse(l.at)).filter(t => t >= from && t <= to).sort((a, b) => a - b);
+  for (let i = 0; i < times.length; ) {
+    let j = i;
+    while (j + 1 < times.length && times[j + 1] - times[j] <= BURST_GAP_MS) j++;
+    spans.push([times[i], Math.max(times[j], times[i] + MIN_BURST_MS)]);
+    i = j + 1;
+  }
+  for (const l of lines) {
+    if (l.kind !== 'agent-run' || typeof l.durationMs !== 'number' || l.durationMs <= 0) continue;
+    const end = Date.parse(l.at);
+    spans.push([end - l.durationMs, end]);
+  }
   let total = 0;
-  for (let i = 1; i < times.length; i++) if (times[i] - times[i - 1] <= BURST_GAP_MS) total += times[i] - times[i - 1];
+  let reach = from;
+  for (const [s, e] of spans.map(([s, e]) => [Math.max(s, from), Math.min(e, to)] as [number, number]).filter(([s, e]) => e > s).sort((a, b) => a[0] - b[0])) {
+    const start = Math.max(s, reach);
+    if (e > start) total += e - start;
+    reach = Math.max(reach, e);
+  }
   return total;
 }
 

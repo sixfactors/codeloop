@@ -6,5 +6,13 @@
 [ "$CODELOOP_GUARD" = "off" ] && exit 0
 [ -d .codeloop ] || exit 0
 [ -s .codeloop/state/active-card ] || exit 0
-command -v codeloop >/dev/null 2>&1 || exit 0
-codeloop guard diff --staged
+# Install writes absolute paths here: GUI git clients start hooks with a bare PATH.
+CODELOOP_NODE=${CODELOOP_NODE:-node}
+codeloop=codeloop
+export CODELOOP_NODE
+[ -x "$codeloop" ] || codeloop=$(command -v codeloop) || codeloop=
+if [ -z "$codeloop" ]; then
+  echo "codeloop pre-commit: a card is active but codeloop is not installed where this hook looks, so the plan check cannot run. Run \`codeloop render --hooks\` again, or commit with CODELOOP_GUARD=off." >&2
+  exit 1
+fi
+"$codeloop" guard diff --staged

@@ -93,11 +93,11 @@ recommended: Dogfood on a real one-line fix in codeloop. Given a card sized triv
 answer:
 
 ## Q4 Riskiest assumption: the agent calls an M card trivial to dodge the spec gate. Diff cap, founder confirm, or trust?
-recommended: Hard cap: trivial = at most 3 files and 50 changed lines, enforced by `check diff` at verify; over the cap the card is re-sized to S and parked at the spec gate.
+recommended: Hard cap: trivial = at most 3 files and 50 changed lines, enforced by `check diff` at verify; over the cap the card is re-sized to M and parked at the spec gate.
 answer:
 
 ## Q5 Sizes: add `trivial` below S, or keep the story standard's S/M/L and let S skip?
-recommended: Add `trivial` as a fourth size (one row in the story standard); stages carry `when: size >= S` in build.yaml.
+recommended: Add `trivial` as a fourth size (one row in the story standard); stages carry `when: size >= M` in build.yaml.
 answer:
 ```
 

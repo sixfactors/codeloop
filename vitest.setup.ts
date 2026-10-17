@@ -12,3 +12,6 @@ process.env.CODELOOP_TEST_SANDBOX = '1';
 // A suite started by a lane check (`npm test` in a stage's done.cmd) inherits the story's own
 // variables; they name the real tree, so the fixtures must not see them.
 for (const key of ['CODELOOP_WORK_DIR', 'CODELOOP_PROJECT_DIR', 'CODELOOP_STORY_REF', 'CODELOOP_CARD']) delete process.env[key];
+// A suite run from an assistant's shell inherits the host's session variables, which make the
+// default role agent (engine.ts resolveRole); the suite must not depend on which host runs it.
+for (const key of ['CLAUDECODE', 'CLAUDE_CODE_SESSION_ID', 'CURSOR_AGENT', 'CURSOR_CONVERSATION_ID', 'CURSOR_SESSION_ID']) delete process.env[key];

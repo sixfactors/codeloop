@@ -71,6 +71,8 @@ export interface StoryFlags {
   /** Weeks; replaces the feature's effort in this card's RICE score. */
   effort?: string | number;
   metric?: string;
+  /** Flags the story as a critical bug, which every pick takes first; from anyone but the owner it is a report (services.newProposal). */
+  bug?: boolean;
   force?: boolean;
 }
 
@@ -104,6 +106,7 @@ export function storyFields(title: string, flags: StoryFlags): StoryFields {
     if (!Number.isFinite(effort) || effort <= 0) throw new RefusalError(`effort "${flags.effort}" is not a number of weeks`);
     fields.effort = effort;
   }
+  if (flags.bug) fields.bug = true;
   if (problems.length) throw new RefusalError(`${problems.join('; ')} (--force overrides)`);
   return fields;
 }

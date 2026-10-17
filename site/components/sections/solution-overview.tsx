@@ -1,6 +1,6 @@
 import Image from 'next/image';
 
-// Copied from chanl-site/src/components/sections/solution-overview.tsx: the bordered gap-px grid
+// Copied from a private project's src/components/sections/solution-overview.tsx: the bordered gap-px grid
 // of pillar cards. Three pillars become the four commands of the loop, each with its screen.
 // Every command is real; the docs home shows the same four.
 const STEPS = [

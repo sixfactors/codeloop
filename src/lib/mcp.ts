@@ -2,7 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { DONE, findCard, inLane, readCards } from './cards.js';
-import { RefusalError, runCheck } from './engine.js';
+import { RefusalError, runCheck, type Role } from './engine.js';
+import { rankCards } from './features.js';
 import { MAX_QUESTIONS } from './interview.js';
 import { loadLane, substitute } from './lane.js';
 import * as services from './services.js';
@@ -12,6 +13,19 @@ import { capture, inject } from './wiki.js';
 // The MCP server is how an assistant calls codeloop as a tool, so it acts as agent unless whoever
 // started it set CODELOOP_ROLE deliberately.
 const mcpRole = () => services.resolveRole(process.env.CODELOOP_ROLE ?? 'agent');
+
+/**
+ * The role for an owner-only tool (the CLI's owner verbs: approve, reject, answer), refused for an
+ * agent the way the CLI refuses them: always inside an agent run, whatever CODELOOP_ROLE says, and
+ * for a role not in `allowed`. Approve and reject leave the role to the engine, which refuses any
+ * role but the one the gate awaits.
+ */
+function personRole(what: string, allowed?: Role[]): Role {
+  if (process.env.CODELOOP_AGENT_RUN) throw new RefusalError(`this process was started by \`codeloop run --agent\` and acts as agent; ${what} is the owner's decision`);
+  const role = mcpRole();
+  if (allowed && !allowed.includes(role)) throw new RefusalError(`${what} is the owner's decision; this MCP server acts as ${role} (CODELOOP_ROLE=${allowed.join(' or ')} lets a person's server do it)`);
+  return role;
+}
 
 function card(projectDir: string, id: string) {
   const found = findCard(readCards(projectDir).cards, id);
@@ -29,7 +43,7 @@ function card(projectDir: string, id: string) {
 }
 
 /** Same services as the CLI and the SDK local transport. The role comes from CODELOOP_ROLE in the server's environment, never from a tool argument. */
-export async function serveMcp(projectDir: string): Promise<void> {
+export function createMcpServer(projectDir: string): McpServer {
   const server = new McpServer({ name: 'codeloop', version: '0.2.0' });
   const id = { id: z.string().describe('Card id, e.g. c-001') };
 
@@ -48,19 +62,19 @@ export async function serveMcp(projectDir: string): Promise<void> {
     }) as never);
 
   tool('inbox', 'Gates waiting on a person, failing checks, backlog count, what shipped, and numbers per lane.', {}, () => services.inboxReport(projectDir));
-  tool('next_up', 'Cards an agent can work now: unfinished and not waiting at a gate, oldest first.', {}, () =>
-    readCards(projectDir).cards.filter(c => inLane(c) && !c.gate).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(c => card(projectDir, c.id)));
+  tool('next_up', 'Cards an agent can work now: unfinished and not waiting at a gate, critical bugs first, then by priority, RICE score and age.', {}, () =>
+    rankCards(projectDir, readCards(projectDir).cards.filter(c => inLane(c) && !c.gate)).map(c => card(projectDir, c.id)));
   tool('get_card', 'A card with its current stage brief: skill, output path, done check, notes, earlier rejections.', id, a => card(projectDir, a.id));
   tool('advance', "Run the current stage's done check and move the card if it passes.", id, a => {
     const r = services.advance(projectDir, a.id);
     return { outcome: r.result.outcome, stage: r.result.card.stage, gate: r.result.card.gate, awaiting: r.result.card.awaiting, output: r.result.output, started: r.result.started.map(s => s.id) };
   });
   tool('approve', 'Approve the gate a card is waiting at, then advance it once. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string().optional() }, a => {
-    const r = services.approve(projectDir, a.id, mcpRole(), a.note);
+    const r = services.approve(projectDir, a.id, personRole('approving a gate'), a.note);
     return { approved: r.gate, stage: (r.advanced?.card ?? r.card).stage, outcome: r.advanced?.outcome };
   });
   tool('reject', 'Reject the gate with a note. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string() }, a => {
-    const r = services.reject(projectDir, a.id, mcpRole(), a.note);
+    const r = services.reject(projectDir, a.id, personRole('rejecting a gate'), a.note);
     return { id: r.card.id, stage: r.card.stage, gate: r.gate, summary: r.summary };
   });
   tool('task_done', 'Tick a task in the card spec folder.', { ...id, task: z.string().describe('Task id, e.g. T003') }, a => {
@@ -73,8 +87,8 @@ export async function serveMcp(projectDir: string): Promise<void> {
   tool('brief', "The full stage brief for a card: skill, output, the check that must pass, feedback, wiki pages, rules. Same text `codeloop brief` prints.", id, a => services.brief(projectDir, a.id));
   tool('ask', `Ask the owner up to ${MAX_QUESTIONS} questions about a card; it waits in the inbox until answered.`, { ...id, questions: z.array(z.string()).min(1) }, a =>
     services.ask(projectDir, a.id, a.questions.map(q => ({ question: q })), mcpRole()));
-  tool('answer', 'Answer a question on a card by number, with text or by accepting its recommended answer.', { ...id, n: z.number().int().min(1), text: z.string().optional(), accept: z.boolean().optional() }, a =>
-    services.answer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, mcpRole()));
+  tool('answer', 'Answer a question on a card by number, with text or by accepting its recommended answer. Refused unless the server runs with CODELOOP_ROLE=owner, and always inside an agent run.', { ...id, n: z.number().int().min(1), text: z.string().optional(), accept: z.boolean().optional() }, a =>
+    services.answer(projectDir, a.id, a.n, { text: a.text, accept: a.accept }, personRole('answering a question', ['owner'])));
   tool('check', "Runs the current stage's done check without moving the card; pass/fail plus the check's output.", id, a => {
     const found = findCard(readCards(projectDir).cards, a.id);
     const stage = found.stage === DONE ? undefined : loadLane(projectDir, found.lane).stages.find(s => s.id === found.stage);
@@ -83,10 +97,14 @@ export async function serveMcp(projectDir: string): Promise<void> {
     return result ?? { passed: null, output: `stage ${stage.id} waits for event "${stage.done?.event}", not a command` };
   });
   // newProposal is the same path as `codeloop card propose` / the SDK: story title checks apply.
-  tool('propose', 'Propose a card in the inbox; it waits for the owner to promote it, and nothing starts it.', { lane: z.string(), title: z.string(), description: z.string().optional(), source: z.string().optional() }, a => {
-    const { card: proposed, created } = services.newProposal(projectDir, { lane: a.lane, title: a.title, description: a.description, source: a.source }, mcpRole());
+  tool('propose', 'Propose a card in the inbox; it waits for the owner to promote it, and nothing starts it.', { lane: z.string(), title: z.string(), description: z.string().optional(), source: z.string().optional(), bug: z.boolean().optional().describe('Report it as a critical bug; the owner confirms it when promoting the card, and only then does every pick take it first') }, a => {
+    const { card: proposed, created } = services.newProposal(projectDir, { lane: a.lane, title: a.title, description: a.description, source: a.source, bug: a.bug }, mcpRole());
     return { id: proposed.id, lane: proposed.lane, created };
   });
 
-  await server.connect(new StdioServerTransport());
+  return server;
+}
+
+export async function serveMcp(projectDir: string): Promise<void> {
+  await createMcpServer(projectDir).connect(new StdioServerTransport());
 }

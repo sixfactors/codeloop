@@ -7,13 +7,13 @@ recommended: `spines:` in plugin.yaml: `*.schema.ts -> docs/architecture/DATABAS
 answer: 
 
 ## Q3 Acceptance: what proves it?
-recommended: Given a diff adding a field to `agent.schema.ts` without touching DATABASE.md, when the build done-check runs, then it fails naming schema and spine; the same diff with the ERD row passes. Proven on a real chanl-api card.
+recommended: Given a diff adding a field to `agent.schema.ts` without touching DATABASE.md, when the build done-check runs, then it fails naming schema and spine; the same diff with the ERD row passes. Proven on a real private project card.
 answer: 
 
 ## Q4 Riskiest assumption: a whitespace edit to the ERD satisfies the check.
 recommended: The spine diff must mention the changed symbol (field or route name); otherwise fail.
 answer: 
 
-## Q5 Which repo first: codeloop (no NestJS) or chanl-api?
-recommended: chanl-api, on its next backend card; codeloop only hosts the plugin.
+## Q5 Which repo first: codeloop (no NestJS) or a private project?
+recommended: a private project, on its next backend card; codeloop only hosts the plugin.
 answer: 

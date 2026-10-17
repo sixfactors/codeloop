@@ -12,7 +12,7 @@ import { runGate } from '../gate.js';
 import { ensureStoryWorktree, mergeStory } from '../worktree.js';
 import { checkResearch } from '../research.js';
 
-const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
+const CLI = join(process.env.CODELOOP_TEST_DIST ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist'), 'index.js');
 const GIT = 'git -c user.email=a@b -c user.name=t';
 const SPEC = 'specs/001-founders-read-the-post';
 const STUB = '# Research\n\nverdict: \n';

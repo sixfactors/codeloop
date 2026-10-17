@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { cardActivity, ensureStoryWorktree, mergeStory, recordHandback, removeStoryWorktree, runGate } from '../services.js';
-import { RefusalError, readCards } from '../cards.js';
+import { RefusalError, readCards, writeCards } from '../cards.js';
 import { createCard } from '../engine.js';
 
 let root: string;
@@ -40,12 +40,17 @@ describe('ensureStoryWorktree', () => {
     expect(first.branch).toBe('feat/build-founders-can-read-the-launch-post');
     expect(sh('git rev-parse --abbrev-ref HEAD', first.path)).toBe(first.branch);
     const card = readCards(dir).cards[0];
-    expect(card.worktree).toBe(first.path);
+    // cards.json is tracked: the path is stored relative, so it names no machine.
+    expect(card.worktree).toBe('../demo-wt-c-001');
     expect(card.branch).toBe(first.branch);
     expect(cardActivity(dir, 'c-001').lines.some(l => l.kind === 'worktree')).toBe(true);
 
+    // A board written with the absolute path still finds the worktree, and stores it relative again.
+    const board = readCards(dir);
+    writeCards(dir, board, board.cards.map(c => ({ ...c, worktree: first.path })));
     const second = ensureStoryWorktree(dir, 'c-001');
     expect(second).toMatchObject({ created: false, path: first.path, branch: first.branch });
+    expect(readCards(dir).cards[0].worktree).toBe('../demo-wt-c-001');
   });
 });
 

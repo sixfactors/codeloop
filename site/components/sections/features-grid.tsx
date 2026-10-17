@@ -1,6 +1,6 @@
 import { BookOpen, GitBranch, Inbox, Kanban, Layers, type LucideIcon, Plug } from 'lucide-react';
 
-// Copied from chanl-site/src/components/sections/features-grid.tsx and feature-cards.tsx: the
+// Copied from a private project's src/components/sections/features-grid.tsx and feature-cards.tsx: the
 // badge, title, description and large faded icon per card. Filter tabs, links, analytics and the
 // Card primitive are dropped; six fixed cards instead of a catalog.
 interface Feature {

@@ -1,4 +1,4 @@
-// Copied from chanl-site/src/components/sections/reality-today.tsx. Strings inlined, next-intl
+// Copied from a private project's src/components/sections/reality-today.tsx. Strings inlined, next-intl
 // dropped, the Card primitive replaced by a div with the same classes.
 const PROBLEMS = [
   { title: 'Tests skipped', scenario: 'The tests were not run. Nothing in the loop required them to be.' },

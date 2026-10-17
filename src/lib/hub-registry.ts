@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { basename, dirname, join, resolve } from 'path';
+import { withLock } from './lock.js';
 
 export interface RegisteredProject {
   id: string;
@@ -79,4 +80,18 @@ export function removeProject(id: string): boolean {
   if (next.length === projects.length) return false;
   writeRegistry(next);
   return true;
+}
+
+/**
+ * `codeloop projects prune`: the entries whose folder is gone, removed unless `dryRun`. The registry
+ * is shared by every project on the machine, so the read, the check and the write hold its lock.
+ */
+export function pruneProjects(opts: { dryRun: boolean }): RegisteredProject[] {
+  mkdirSync(codeloopHome(), { recursive: true });
+  return withLock(registryPath(), () => {
+    const projects = readRegistry();
+    const gone = projects.filter(p => !existsSync(p.path));
+    if (!opts.dryRun && gone.length) writeRegistry(projects.filter(p => existsSync(p.path)));
+    return gone;
+  });
 }

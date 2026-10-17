@@ -13,6 +13,7 @@ import { findCard, readCards, RefusalError } from './cards.js';
 import { currentStage, recordEvent, runCheck } from './engine.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadLane } from './lane.js';
+import { scrubOutput } from './scrub.js';
 
 export const GATES_DIR = '.codeloop/state/gates';
 const PROOF_TIMEOUT_MS = 10 * 60 * 1000;
@@ -113,12 +114,14 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
   }
 
   const verdict: GateRecord['verdict'] = findings.length ? 'fail' : 'pass';
+  // Scrubbed only here: the claim check above reads paths from the raw output.
+  for (let i = 0; i < findings.length; i++) findings[i] = scrubOutput(findings[i]);
   const record: GateRecord = {
     card: card.id,
     stage: card.stage,
     handback: { branch: hb.branch, head: hb.head, at: hb.at },
-    proof,
-    check: { pass: checked ? checked.passed : null, output: checked?.output ?? '' },
+    proof: { ...proof, output: scrubOutput(proof.output) },
+    check: { pass: checked ? checked.passed : null, output: scrubOutput(checked?.output ?? '') },
     claim,
     verdict,
     findings,

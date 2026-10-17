@@ -10,8 +10,8 @@
 - source: src/lib/lane.ts:15 — `Stage` has no `phase` field; the board can only group by lane and stage id today
 - source: .codeloop/lanes/build.yaml — codeloop's own build lane is an older version (research, spec, build, verify, review, staging, live) than the shipped template ops-ai has (adds interview and mock): lanes drift after upgrades (story c-090)
 - source: src/lib/engine.ts — `workable`, `parkCard`, `closeCard`, `assertRoomInLane` (built today) give Up next its limit and the park action
-- source: docs/plans/codeloop/2026-10-11-board-plan-shipped.md (chanl-platform) — the agreed design: columns, rows, Up next, Plan, Shipped, parent links, Jira fields
-- source: docs/plans/codeloop/2026-10-11-jira-features.md (chanl-platform) — query bar, links, bulk change, releases taken from Jira
+- source: owner design notes: board plan shipped — the agreed design: columns, rows, Up next, Plan, Shipped, parent links, Jira fields
+- source: owner design notes: jira features — query bar, links, bulk change, releases taken from Jira
 - source: git tags in this repo: only v0.4.0 exists, so Shipped groups most stories under "not yet released"
 
 ## What does not exist yet

@@ -8,7 +8,7 @@ import { promisify } from 'util';
 import { readCards } from '../cards.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CARDS = pathToFileURL(join(HERE, '../../../dist/lib/cards.js')).href;
+const CARDS = pathToFileURL(join(process.env.CODELOOP_TEST_DIST ?? join(HERE, '../../../dist'), 'lib/cards.js')).href;
 const run = promisify(execFile);
 let dir: string;
 

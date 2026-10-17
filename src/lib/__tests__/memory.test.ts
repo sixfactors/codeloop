@@ -100,7 +100,7 @@ describe('process detection', () => {
     const { spawn } = await import('child_process');
     const { codeloopProcesses, isCodeloopCommand } = await import('../memory.js');
     const sock = join(root, 'ps.sock');
-    const child = spawn(process.execPath, ['--max-old-space-size=64', resolve('dist/hookd-main.js'), '1'], { cwd: root, env: { ...process.env, CODELOOP_HOOKD_SOCK: sock }, stdio: 'ignore' });
+    const child = spawn(process.execPath, ['--max-old-space-size=64', resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'hookd-main.js'), '1'], { cwd: root, env: { ...process.env, CODELOOP_HOOKD_SOCK: sock }, stdio: 'ignore' });
     try {
       for (let i = 0; i < 100 && !existsSync(sock); i++) await new Promise(r => setTimeout(r, 50));
       expect(codeloopProcesses().map(p => p.pid)).toContain(child.pid);

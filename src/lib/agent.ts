@@ -2,14 +2,14 @@ import { startAgent } from './agent-ledger.js';
 import { clock } from './clock.js';
 import { trackChild } from './procs.js';
 import { specPath } from './project-root.js';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'fs';
 import { dirname, isAbsolute, join } from 'path';
 import { RefusalError, safeName, type Card } from './cards.js';
 import { listCompetitors } from './competitors.js';
 import { loadConfig } from './config.js';
 import { stageBrief } from './flow.js';
-import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX, substitute } from './lane.js';
+import { foldedStage, loadLane, loadSkillsIndex, shellQuote, skipReason, SKILLS_INDEX, substitute } from './lane.js';
 import { checkEnv } from './shell.js';
 import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
@@ -169,7 +169,9 @@ export function buildBrief(projectDir: string, card: Card): string {
     '',
   ];
 
-  const failed = events.filter(e => e.action === 'fail' || e.action === 'stuck').at(-1);
+  // The stuck event's note leads with the reason; the check's own output is on the fail event.
+  const failed = events.filter(e => e.action === 'fail').at(-1);
+  const marked = events.filter(e => e.action === 'fail' || e.action === 'stuck').at(-1)?.action === 'stuck';
   if (stage.notes.length || stage.rejections.length || failed?.note) {
     lines.push('## Feedback on this stage', '');
     for (const note of stage.notes) lines.push(`- Stage note: ${note}`);
@@ -183,7 +185,7 @@ export function buildBrief(projectDir: string, card: Card): string {
       const when = i === stage.feedback.length - 1 ? 'Latest' : 'Earlier';
       lines.push(f.kind === 'rejected' ? `- ${when} rejection: ${f.note}` : `- ${when} return from ${f.from ?? 'the next stage'}: ${f.note}`);
     });
-    if (failed?.note) lines.push('', `The check last failed${failed.action === 'stuck' ? ' and the card was marked stuck' : ''} with:`, '', ...failed.note.split('\n').map(l => `    ${l}`));
+    if (failed?.note) lines.push('', `The check last failed${marked ? ' and the card was marked stuck' : ''} with:`, '', ...failed.note.split('\n').map(l => `    ${l}`));
     lines.push('');
   }
 
@@ -196,6 +198,20 @@ export function buildBrief(projectDir: string, card: Card): string {
 
   const laneStage = lane.stages.find(s => s.id === card.stage);
   if (laneStage) lines.push(...rubricBrief(projectDir, card, laneStage));
+
+  // A stage that folds in one this card skips (review, for an S story) does that stage's work too,
+  // and the folded stage's gate is asked after this one's.
+  const folded = laneStage ? foldedStage(lane, laneStage, card) : undefined;
+  if (folded) {
+    lines.push(`## Folded in: ${folded.id}`, '', `This story skips the ${folded.id} stage (${skipReason(folded, card)}), so its work is done in this turn.${folded.output ? ` Write ${substitute(folded.output, card, { projectDir })} as that stage would.` : ''}${folded.gate ? ` After this stage's own approval, the ${folded.gate.name} gate still asks the ${folded.gate.approver} before the story moves on.` : ''}`, '');
+    if (folded.done?.cmd) lines.push(`The ${folded.id} stage's check, for reference:`, '', `    ${substitute(folded.done.cmd, card, { projectDir })}`, '');
+    for (const note of folded.notes ?? []) lines.push(`- ${folded.id} note: ${note}`);
+    if (folded.notes?.length) lines.push('');
+    if (folded.skill) {
+      const body = skillBody(projectDir, folded.skill);
+      lines.push(`## Skill: ${folded.skill}`, '', body ? substitute(body, card, { projectDir }) : `The skill's text is not in ${SKILLS_INDEX}; use the /${folded.skill} skill if your tool has it.`, '');
+    }
+  }
 
   if (stage.skill) {
     for (const file of skillStateFiles(projectDir, stage.skill)) {
@@ -281,17 +297,30 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
   const out = openSync(logFile, 'a');
   const started = Date.now();
   let untrack: () => void = () => undefined;
+  let untrackWatchdog: () => void = () => undefined;
+  const timeoutMs = agent.timeoutMinutes * 60_000;
+  let watchdog: ChildProcess | undefined;
   return new Promise(done => {
     let timedOut = false;
     let finished = false;
-    const finish = (exit: number | null) => {
+    const finish = (exit: number | null, signal?: NodeJS.Signals | null) => {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
+      if (watchdog?.pid) {
+        try {
+          process.kill(-watchdog.pid, 'SIGKILL');
+        } catch { /* already gone */ }
+      }
+      untrackWatchdog();
       untrack();
       closeSync(out);
       keepTail(logFile);
-      done({ exit, timedOut, durationMs: Date.now() - started });
+      const elapsed = Date.now() - started;
+      // Killed by the watchdog, which this process's timer may not have seen fire yet.
+      if (signal === 'SIGKILL' && elapsed >= timeoutMs) timedOut = true;
+      // The watchdog killed it at the timeout; a later `exit` only means this process was busy.
+      done({ exit, timedOut, durationMs: timedOut ? Math.min(elapsed, timeoutMs) : elapsed });
     };
     // The command's output goes straight to the file: a pipe held open by a child the agent left
     // behind would keep this process waiting after the agent itself has gone.
@@ -304,6 +333,18 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
     });
     // Its own process group, registered: killed with this process, listed by `codeloop ps`.
     untrack = trackChild(projectDir, child.pid, `agent ${agent.name}`, agent.cmd);
+    // The timeout kill runs in a process of its own: a timer here does not fire while this process
+    // sits in a synchronous check (a doctor tick's spawnSync), so the agent would outlive its timeout.
+    // It is registered like the agent, so it dies with this process and never fires later at a
+    // process group id the system has handed to something else.
+    // No `--` before the group id: dash, /bin/sh on Debian and Ubuntu, reads it as a pid and fails
+    // with "Illegal number", so the group lived on to this process's own timer.
+    if (child.pid) {
+      watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
+      watchdog.on('error', () => undefined);
+      watchdog.unref();
+      untrackWatchdog = trackChild(projectDir, watchdog.pid, `agent ${agent.name} watchdog`, `sleep ${timeoutMs / 1000}; kill the agent's group`);
+    }
     const timer = setTimeout(() => {
       timedOut = true;
       // `detached` made the shell a process group leader, so this reaches the agent and its children.
@@ -312,11 +353,11 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
       } catch {
         child.kill('SIGKILL');
       }
-    }, agent.timeoutMinutes * 60_000);
+    }, timeoutMs);
     child.on('error', e => {
       writeFileSync(logFile, `could not start: ${e.message}\n`, { flag: 'a' });
       finish(null);
     });
-    child.on('exit', code => finish(code));
+    child.on('exit', (code, signal) => finish(code, signal));
   });
 }

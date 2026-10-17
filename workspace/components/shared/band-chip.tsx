@@ -23,5 +23,15 @@ export function BandChip({ band, score, className }: { band?: Band | null; score
   );
 }
 
+/** A critical bug, which every pick and every board column takes first. */
+export function BugChip({ bug, className }: { bug?: boolean | null; className?: string }) {
+  if (!bug) return null;
+  return (
+    <Badge variant="destructive" className={cn('shrink-0 rounded-full px-1.5', className)} title="Critical bug: picked before any other story" data-testid="bug-chip">
+      bug
+    </Badge>
+  );
+}
+
 /** A score as the tables print it: one decimal, or an em-dash before the API ranks the row. */
 export const fmtScore = (score?: number | null) => (score === undefined || score === null ? '—' : Number.isInteger(score) ? String(score) : score.toFixed(1));

@@ -10,7 +10,7 @@ import { join } from 'path';
 import { appendActivity, readActivity } from './activity.js';
 import { selfcheckAt } from './selfcheck.js';
 import { currentSession } from './active-card.js';
-import { findCard, readCards, RefusalError } from './cards.js';
+import { findCard, readCards, RefusalError, writeSummary } from './cards.js';
 import { recordEvent } from './engine.js';
 
 export const HANDBACKS_DIR = '.codeloop/state/handbacks';
@@ -26,6 +26,8 @@ export interface HandbackInput {
   session?: string;
   /** The git worktree the work is in; the proof is run there. Defaults to the project root. */
   worktree?: string;
+  /** The story summary's needed and done lines; written as the agent's, never over a person's line. */
+  summary?: { needed?: string; done?: string };
 }
 
 export interface HandbackRecord {
@@ -33,7 +35,8 @@ export interface HandbackRecord {
   stage: string;
   branch: string;
   head: string;
-  proof: { cmd: string; exit: number; output: string };
+  /** `cwd` is where the proof ran, `shell` what ran it. */
+  proof: { cmd: string; exit: number; output: string; cwd?: string; shell?: string };
   left: string;
   blocked: string;
   at: string;
@@ -51,7 +54,8 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
   if (!cmd) throw new RefusalError('a hand-back needs a proof command');
   const card = findCard(readCards(projectDir).cards, cardRef);
 
-  const ran = spawnSync(cmd, { shell: true, cwd: input.worktree || projectDir, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const cwd = input.worktree || projectDir;
+  const ran = spawnSync(cmd, { shell: '/bin/sh', cwd, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
   const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL);
   // A killed or unspawnable proof has no status; 1 keeps "not 0" meaning "did not pass".
   const exit = ran.status ?? 1;
@@ -64,7 +68,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
     stage: card.stage,
     branch: input.branch,
     head: input.head,
-    proof: { cmd, exit, output },
+    proof: { cmd, exit, output, cwd, shell: '/bin/sh' },
     left: input.left ?? '',
     blocked: input.blocked ?? '',
     at: new Date().toISOString(),
@@ -78,6 +82,7 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
 
   appendActivity(projectDir, card.id, { session: record.session, kind: 'handback', stage: card.stage, branch: record.branch, head: record.head, pass: exit === 0, exit });
   recordEvent(projectDir, card.id, () => ({ action: 'handback', note: `${record.branch}@${record.head.slice(0, 8)} proof exit ${exit}` }));
+  if (input.summary?.needed?.trim() || input.summary?.done?.trim()) writeSummary(projectDir, card.id, input.summary, { by: 'agent', kind: 'agent' });
   return record;
 }
 

@@ -14,6 +14,6 @@ answer:
 recommended: The plugin's `detect` fires only when the diff touches a controller or route file; otherwise it is silent.
 answer: 
 
-## Q5 Which SDK repos: chanl-admin's platform-sdk, the public chanl-sdk, or both?
+## Q5 Which SDK repos: a private project's platform-sdk, the public SDK, or both?
 recommended: Both, listed under `repos:` in config; the public SDK is the one that must not fall behind.
 answer: 

@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ensureMonitorSchedule } from '../schedule.js';
+import { ensureMonitorSchedule, scheduleScriptPath } from '../schedule.js';
 
 let fake: string;
 let table: string;
@@ -33,7 +33,8 @@ afterEach(() => {
 describe('the monitor keeps itself running', () => {
   it('installs one hourly run --agent when agents are configured and none is scheduled, and only once', () => {
     expect(ensureMonitorSchedule(project, { crontab: fake, hasAgents: true, monitorOn: true })).toMatch(/installed an hourly/);
-    expect(readFileSync(table, 'utf-8')).toMatch(/^0 \* \* \* \* .* run --agent .*/m);
+    expect(readFileSync(table, 'utf-8')).toMatch(/^0 \* \* \* \* '[^']+\.sh' # codeloop:/m);
+    expect(readFileSync(scheduleScriptPath(project), 'utf-8')).toMatch(/ run --agent >> /);
     expect(ensureMonitorSchedule(project, { crontab: fake, hasAgents: true, monitorOn: true })).toBeUndefined();
     expect(readFileSync(table, 'utf-8').trim().split('\n')).toHaveLength(1);
   });

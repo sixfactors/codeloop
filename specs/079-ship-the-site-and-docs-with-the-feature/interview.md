@@ -7,7 +7,7 @@ recommended: A commit with the trailer in the docs or site repo, found by reconc
 answer: 
 
 ## Q3 Acceptance: what proves it?
-recommended: Given a card with `site: pricing page`, when `next` at pr, then it fails until a trailer commit exists in chanl-site; with `site: none: internal` it passes and the gate note shows the reason.
+recommended: Given a card with `site: pricing page`, when `next` at pr, then it fails until a trailer commit exists in a private project; with `site: none: internal` it passes and the gate note shows the reason.
 answer: 
 
 ## Q4 Riskiest assumption: every card says `none` and the check is theatre.

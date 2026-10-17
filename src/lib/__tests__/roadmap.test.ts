@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -8,6 +8,7 @@ import { closeIndex } from '../index/index.js';
 import { migrateFeatures } from '../migrate-features.js';
 import { createApp } from '../server.js';
 import { buildInbox } from '../inbox.js';
+import { rankCards } from '../features.js';
 import { createLocalClient } from '../../sdk/local.js';
 
 let dir: string;
@@ -83,6 +84,24 @@ describe('feature scores and bands', () => {
     expect(body.facets.epic).toEqual([{ value: 'engine', count: 2 }]);
     expect(ids((await get('/api/cards?band=P4')).body.cards)).toEqual(['c-2']);
     expect(ids((await get('/api/cards?epic=engine')).body.cards)).toEqual(['c-1', 'c-3']);
+  });
+});
+
+describe('a feature page that does not parse', () => {
+  it('is skipped with one warning naming the file, and the picks still rank the rest', () => {
+    writeFileSync(join(dir, '.codeloop/wiki/features/broken.md'), '---\ntitle: Broken\ninitiative: speed\nrice: { reach: lots }\n---\nBad rice.\n');
+    createCard(dir, { lane: 'build', title: 'Slow one', id: 'c-1', fields: { feature: 'slow' } });
+    createCard(dir, { lane: 'build', title: 'Fast one', id: 'c-2', fields: { feature: 'fast' } });
+    createCard(dir, { lane: 'build', title: 'Broken one', id: 'c-3', fields: { feature: 'broken' } });
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(ids(rankCards(dir, readCards(dir).cards))).toEqual(['c-2', 'c-1', 'c-3']);
+      rankCards(dir, readCards(dir).cards);
+      const lines = warn.mock.calls.map(c => String(c[0])).filter(l => l.includes('broken.md'));
+      expect(lines).toEqual([expect.stringContaining('skipped .codeloop/wiki/features/broken.md')]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

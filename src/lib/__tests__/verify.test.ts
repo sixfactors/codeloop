@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execFileSync } from 'child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { createServer } from 'http';
 import type { AddressInfo } from 'net';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readCards, type Card } from '../cards.js';
@@ -118,6 +118,19 @@ describe('verify', () => {
     expect(card.events.at(-1)).toMatchObject({ action: 'verify', stage: 'verify' });
   });
 
+  it('writes evidence with no home folder, temp folder or terminal codes in the output', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "printf \'\\\\033[31m%s\\\\033[0m %s\\\\n\' \\"$HOME/x\\" \\"$(pwd -P)\\"" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+
+    await verify(dir, '001');
+
+    const text = readFileSync(join(dir, 'evidence/001/uc-1.json'), 'utf-8');
+    expect(text).not.toContain(homedir());
+    expect(text).not.toContain(realpathSync(tmpdir()));
+    expect(text).not.toContain('\\u001b');
+    expect(JSON.parse(text).layers[0].output).toMatch(/^~\/x <temp dir>\/codeloop-verify-/);
+  });
+
   it('fails an api use case whose status differs from the expected one', async () => {
     const server = createServer((req, res) => res.writeHead(req.url === '/locked' ? 403 : 200).end()).listen(0);
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -176,6 +189,29 @@ describe('verify checks the diff budget', () => {
     expect(result.exitCode).toBe(1);
     expect(result.problem).toBe('diff 2 files / 2 lines exceeds the M budget (1 files / 1,200 lines); split the story');
     expect(readFileSync(join(dir, 'evidence/001/verify.md'), 'utf-8')).toMatch(/budget: 2 files, 2 lines, limit 1 files \/ 1200 lines \(M\), fail/);
+  });
+});
+
+describe('a trivial story over budget on a lane with no earlier gate', () => {
+  it('is re-sized and stays at its stage, and the problem does not claim it was parked', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "true" }\n  - id: verify\n    done: { cmd: "true" }\n');
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    for (const f of ['a', 'b', 'c', 'd']) write(`${f}.txt`, 'x');
+    git('add', 'a.txt', 'b.txt', 'c.txt', 'd.txt');
+    git('commit', '-q', '-m', 'feat: four files', '-m', 'Card: c-1');
+
+    const result = await verify(dir, 'c-1');
+
+    expect(result.exitCode).toBe(1);
+    expect(result.problem).toMatch(/c-1 is re-sized to S; no stage before build has a gate, so it stays at build$/);
+    expect(result.problem).not.toMatch(/parked/);
+    expect(readCards(dir).cards[0]).toMatchObject({ size: 'S', stage: 'build' });
+    expect(readCards(dir).cards[0].gate).toBeUndefined();
   });
 });
 
@@ -271,6 +307,11 @@ describe('stats', () => {
       rework: 0.5,
       stuck_rate: 0.5,
       first_pass_rate_by_gate: { 'market/copy': 0.5 },
+      agent_starts: [
+        { card: 'c-1', size: 'M', to_first_gate: null, from_build: null },
+        { card: 'c-2', size: 'M', to_first_gate: null, from_build: null },
+      ],
+      agent_starts_by_size: { M: { to_first_gate: null, from_build: null } },
     });
   });
 });

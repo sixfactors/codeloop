@@ -3,8 +3,9 @@ import chalk from 'chalk';
 import { briefPath, resolveAgent } from '../lib/agent.js';
 import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { loadLane } from '../lib/lane.js';
-import { orchInbox, orchReport, orchResume, orchRun, orchStatus, parseBuilder, type OrchTurn } from '../lib/orch.js';
+import { orchBatch, orchInbox, orchReport, orchResume, orchRun, orchStatus, parseBuilder, type OrchTurn } from '../lib/orch.js';
 import { projectRoot } from '../lib/project-root.js';
+import { reportLines, reviewPass } from '../lib/review-pass.js';
 import { guard } from './guard.js';
 
 const turnLine = (t: OrchTurn) =>
@@ -15,16 +16,27 @@ export const orchCommand = new Command('orch').description("Run a story's curren
 // `run` is the default subcommand, so `orch <card>` still works while status, report, resume and
 // inbox win over the card argument; a card id is never one of those words.
 orchCommand
-  .command('run <card>', { isDefault: true })
-  .description("Run a story's current stage through a builder (agent, live session or person)")
+  .command('run [card]', { isDefault: true })
+  .description("Run a story's current stage through a builder (agent, live session or person); with --review and no card, review the board instead")
+  .option('--review', 'Review every open story and fix what is wrong (place, close, write a stage, or ask), stopping at the run budget; prints fixed, asked and could-not-tell')
+  .option('--changed', 'With --review: only the stories changed since the last review pass, as before each pick')
   .option('--until <gate>', 'Keep going stage by stage until this gate or stage (any gate stops the run)')
   .option('--agent <name>', 'The agent to use (an entry under agents: in config.yaml)')
   .option('--builder <kind>', 'Who builds: agent[:name] (default), session:<id-or-label-prefix> for a live session, or person')
   .option('--wait <minutes>', 'Minutes to wait for a session or person to hand back (default orch.wait_minutes, 120)')
   .option('--no-wait', 'Write the brief and return at once with outcome briefed; finish with `codeloop orch resume <card>`')
   .option('--dry-run', 'Print the steps a turn would take and the brief path; start nothing')
-  .action(guard(async (id: string, opts: { until?: string; agent?: string; dryRun?: boolean; builder?: string; wait?: string | boolean }) => {
+  .action(guard(async (id: string | undefined, opts: { until?: string; agent?: string; dryRun?: boolean; builder?: string; wait?: string | boolean; review?: boolean; changed?: boolean }) => {
     const projectDir = projectRoot();
+    if (opts.review) {
+      if (id) throw new RefusalError('--review reads the whole board; drop the card id, or run `codeloop orch run <card>` without --review');
+      // The pass closes and places stories, which the engine lets `review` do past the agent refusal,
+      // so a process started by `run --agent` may only preview it.
+      if (!opts.dryRun && process.env.CODELOOP_AGENT_RUN) throw new RefusalError('this process was started by `codeloop run --agent` and acts as agent; `orch run --review` closes and places stories, which is the owner\'s. Use --dry-run to preview it');
+      reportLines(reviewPass(projectDir, { all: !opts.changed, dryRun: opts.dryRun })).forEach(l => console.log(`  ${l}`));
+      return;
+    }
+    if (!id) throw new RefusalError('name a story: `codeloop orch run <card>`, or review the board with `codeloop orch run --review`');
     if (opts.dryRun) {
       const card = findCard(readCards(projectDir).cards, id);
       const spec = parseBuilder(opts.builder, opts.agent);
@@ -72,6 +84,18 @@ orchCommand
   .description('Finish a briefed turn: gate, merge and advance once its hand-back exists')
   .action(guard(async (id: string) => {
     console.log(turnLine(orchResume(projectRoot(), id)));
+  }));
+
+orchCommand
+  .command('batch [cards...]')
+  .description('Build up to five trivial or S stories at build in one agent turn, each judged on its own; with no cards, the ready ones that plan different files')
+  .option('--agent <name>', 'Agent preset under agents: in .codeloop/config.yaml')
+  .action(guard(async (cards: string[], opts: { agent?: string }) => {
+    const result = await orchBatch(projectRoot(), { ...(cards.length ? { cards } : {}), ...(opts.agent ? { agent: opts.agent } : {}) });
+    if (result.batch) console.log(`  batch ${result.batch.id}: ${result.batch.cards.join(', ')}`);
+    result.turns.forEach((t, i) => console.log(`  ${result.batch!.cards[i]}${turnLine(t)}`));
+    for (const l of result.left) console.log(chalk.dim(`  waits: ${l.why}`));
+    if (!result.batch) console.log('  no batch started');
   }));
 
 orchCommand

@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { setActiveCard } from '../active-card.js';
 import { DONE, readCards, writeCards } from '../cards.js';
-import { closeCard, createCard, placeCard, RefusalError } from '../engine.js';
+import { closeCard, createCard, placeCard, queueCard, RefusalError } from '../engine.js';
 import { editCard, moveCard, reopenCard } from '../story-control.js';
 
 let dir: string;
@@ -21,6 +21,61 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 const card = (id: string) => readCards(dir).cards.find(c => c.id === id)!;
+
+describe('place', () => {
+  it('is refused at a gate and lands the card with a clean slate at its new stage', () => {
+    createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
+    const set = (extra: object) => { const file = readCards(dir); writeCards(dir, file, file.cards.map(c => ({ ...c, ...extra }))); };
+    set({ gate: 'stuck', awaiting: 'owner' });
+    expect(() => placeCard(dir, 'c-1', 'build', 'owner')).toThrow('c-1 is stuck at draft; `codeloop approve c-1` retries it, `codeloop reject c-1 "<why>"` parks it');
+    set({ gate: 'spec', awaiting: 'owner' });
+    expect(() => placeCard(dir, 'c-1', 'build', 'owner')).toThrow('c-1 is waiting at the spec gate at draft; `codeloop approve c-1` or `codeloop reject c-1 "<why>"` decides it');
+    expect(card('c-1')).toMatchObject({ stage: 'draft', gate: 'spec' });
+    const { gate: _g, awaiting: _a, ...clean } = card('c-1');
+    writeCards(dir, readCards(dir), [{ ...clean, retries: { build: 2 }, failures: { build: 'old' } }]);
+    placeCard(dir, 'c-1', 'build', 'owner');
+    expect(card('c-1').stage).toBe('build');
+    expect(card('c-1').retries.build).toBeUndefined();
+    expect(card('c-1').failures?.build).toBeUndefined();
+  });
+});
+
+describe('place on a lane whose first stage is outward', () => {
+  it('places a just-created card past the entry gate it parked at, and parks it again at an outward target', () => {
+    writeFileSync(
+      join(dir, '.codeloop/lanes/post.yaml'),
+      `id: post\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: announce\n    done: { cmd: "true" }\n    gate: { name: publish, approver: owner, outward: true }\n  - id: build\n    done: { cmd: "true" }\n  - id: release\n    done: { cmd: "true" }\n    gate: { name: prod, approver: owner, outward: true }\n`,
+    );
+    createCard(dir, { lane: 'post', title: 'Already drafted', id: 'c-1' });
+    expect(card('c-1')).toMatchObject({ stage: 'announce', gate: 'publish' });
+    placeCard(dir, 'c-1', 'build', 'owner');
+    expect(card('c-1').stage).toBe('build');
+    expect(card('c-1').gate).toBeUndefined();
+    createCard(dir, { lane: 'post', title: 'Ready to release', id: 'c-2' });
+    placeCard(dir, 'c-2', 'release', 'owner');
+    expect(card('c-2')).toMatchObject({ stage: 'release', gate: 'prod', awaiting: 'owner' });
+  });
+});
+
+describe('start --stage on an outward-first lane that writes specs', () => {
+  it('places past the entry gate although start wrote a spec event first, and refuses once a decision is on record', async () => {
+    const { runCli } = await import('../../__tests__/cli.js');
+    writeFileSync(
+      join(dir, '.codeloop/lanes/post.yaml'),
+      `id: post\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: announce\n    output: "{spec}/announce.md"\n    done: { cmd: "true" }\n    gate: { name: publish, approver: owner, outward: true }\n  - id: build\n    done: { cmd: "true" }\n`,
+    );
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const started = runCli(['start', 'Already drafted', '--lane', 'post', '--stage', 'build'], { cwd: dir, encoding: 'utf-8', env });
+    expect(started.stderr).not.toMatch(/waiting at the publish gate/);
+    const c = readCards(dir).cards.find(x => x.title === 'Already drafted')!;
+    expect(c.events.map(e => e.action)).toContain('spec');
+    expect(c.stage).toBe('build');
+    createCard(dir, { lane: 'post', title: 'Already rejected once', id: 'c-9' });
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(x => (x.id === 'c-9' ? { ...x, events: [...x.events, { at: new Date().toISOString(), actor: 'owner', human: true, action: 'reject', stage: 'announce', note: 'no' }] } : x)));
+    expect(() => placeCard(dir, 'c-9', 'build', 'owner')).toThrow(/waiting at the publish gate/);
+  });
+});
 
 describe('reopen', () => {
   it('returns a done card to the first stage with the gate and failure marks cleared', () => {
@@ -88,17 +143,29 @@ describe('move', () => {
   });
 });
 
+describe('move of a queued story', () => {
+  it('starts it while the lane holds only idle stories, since only worked-on stories count against wip', () => {
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), `id: build\nversion: 1\nwip: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: draft\n    done: { cmd: "true" }\n  - id: build\n    done: { cmd: "true" }\n`);
+    createCard(dir, { lane: 'build', title: 'I see my todos', id: 'c-1' });
+    queueCard(dir, { lane: 'build', title: 'I export my todos', id: 'c-2' });
+    expect(moveCard(dir, 'c-2', 'build', 'owner').stage).toBe('build');
+  });
+});
+
 describe('the session that holds the card', () => {
-  it('moves its own card on, and the move clears a gate the card was waiting at', () => {
+  it('moves its own card on, and is refused a forward move while the card waits at a gate', () => {
     const saved = process.env.CLAUDE_CODE_SESSION_ID;
     process.env.CLAUDE_CODE_SESSION_ID = 'me';
     try {
       createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
-      const file = readCards(dir);
-      writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
       setActiveCard(dir, 'c-1', 'me');
       moveCard(dir, 'c-1', 'build', 'owner', { note: 'resized by mistake' });
-      expect([card('c-1').stage, card('c-1').gate, card('c-1').awaiting]).toEqual(['build', undefined, undefined]);
+      expect(card('c-1').stage).toBe('build');
+      const file = readCards(dir);
+      writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
+      const events = card('c-1').events.length;
+      expect(() => moveCard(dir, 'c-1', 'ship', 'owner', { note: 'skip it' })).toThrow(/waiting at the spec gate .*approve c-1/);
+      expect([card('c-1').stage, card('c-1').gate, card('c-1').events.length]).toEqual(['build', 'spec', events]);
     } finally {
       if (saved === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
       else process.env.CLAUDE_CODE_SESSION_ID = saved;
@@ -107,14 +174,15 @@ describe('the session that holds the card', () => {
 });
 
 describe('move to the stage it is at', () => {
-  it('clears a gate wait, and is refused when there is none', () => {
+  it('is refused, and a card waiting at a gate keeps waiting for approve or reject', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
     placeCard(dir, 'c-1', 'build', 'owner');
     expect(() => moveCard(dir, 'c-1', 'build', 'owner')).toThrow(/already at build/);
     const file = readCards(dir);
     writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
-    moveCard(dir, 'c-1', 'build', 'owner', { note: 'parked by mistake' });
-    expect([card('c-1').stage, card('c-1').gate]).toEqual(['build', undefined]);
+    const events = card('c-1').events.length;
+    expect(() => moveCard(dir, 'c-1', 'build', 'owner', { note: 'parked by mistake' })).toThrow(/waiting at the spec gate .*approve c-1/);
+    expect([card('c-1').stage, card('c-1').gate, card('c-1').events.length]).toEqual(['build', 'spec', events]);
   });
 });
 

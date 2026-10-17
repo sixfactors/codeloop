@@ -29,7 +29,7 @@ const scan = (text: string) => {
 };
 
 beforeEach(() => {
-  process.argv[1] = resolve('dist/index.js');
+  process.argv[1] = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
   dir = mkdtempSync(join(tmpdir(), 'codeloop-scan-'));
   write('.codeloop/lanes/plan.yaml', 'id: plan\nversion: 1\nmetric: { name: m, source: cards }\nwip: 1\nstages:\n  - { id: gather, output: "plan/{id}/signals.md", done: { cmd: "test -f plan/{id}/signals.md" } }\n');
   addCompetitor(dir, { name: 'acme', title: 'Acme', changelog: 'https://acme.test/changelog' });

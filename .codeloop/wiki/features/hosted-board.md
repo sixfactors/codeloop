@@ -1,6 +1,6 @@
 ---
 title: The team shares a hosted board with its wiki
-initiative: hosted-board-the-team-shares
+initiative: codeloop-cloud
 epic: hosted
 status: planned
 rice:

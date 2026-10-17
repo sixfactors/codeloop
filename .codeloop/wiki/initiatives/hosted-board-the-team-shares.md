@@ -1,6 +1,6 @@
 ---
 title: A hosted board the team shares
-status: active
+status: superseded by codeloop-cloud
 metric: returning teams
 goal: 10 installs, 3 return within 14 days
 persona: team

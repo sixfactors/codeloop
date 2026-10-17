@@ -14,7 +14,7 @@ No competitor pages in `.codeloop/wiki/competitors/`. The target is this product
 ## Options
 
 - Retarget today's AppShell to the six places: map Initiatives+Roadmap → Plan, Stats → Reports, drop Artifacts from the rail (Proof absorbs it per design §8), add a Releases nav slot (empty shell until the releases screen card), keep ProjectSwitcher and CommandPalette, and extend palette actions plus list keyboard to match the card note. Chosen — matches design §5 / §10 ("fresh shell, reusing the shared components that fit"), `architecture/ui.md` screen map, and unlock-before-build (chrome exists; IA does not).
-- Delete the workspace shell and rebuild from chanl-admin templates. Rejected — switcher, palette, collapsible sidebar and peek already fit; a rewrite burns the hub `/p/<id>` work for no product gain.
+- Delete the workspace shell and rebuild from a private project's templates. Rejected — switcher, palette, collapsible sidebar and peek already fit; a rewrite burns the hub `/p/<id>` work for no product gain.
 - Close the card as `have` because switcher and ⌘K ship. Rejected — a founder still cannot find Plan, Releases or Reports; the title names six places first.
 - Defer nav until every screen card (c-134+) lands. Rejected — build order starts screens at c-133 with the shell; later cards own screen bodies, not the rail.
 

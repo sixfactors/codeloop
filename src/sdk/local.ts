@@ -86,6 +86,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     closeCard: async (ref, outcome, note, opts) => services.closeCard(projectDir, ref, role(opts), outcome, note),
     parkCard: async (ref, note, opts) => services.parkCard(projectDir, ref, role(opts), note),
     placeCard: async (ref, stage, opts) => services.placeCard(projectDir, ref, stage, role(opts)),
+    moveStuck: async (ref, opts) => services.moveStuck(projectDir, ref, role(opts)),
     reopenCard: async (ref, opts) => reopenCard(projectDir, ref, role(opts), { to: opts?.to, note: opts?.note }),
     moveCard: async (ref, stage, note, opts) => moveCard(projectDir, ref, stage, role(opts), { note }),
     editCard: async (ref, edit, opts) => editCard(projectDir, ref, role(opts), edit),
@@ -108,6 +109,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),
+    writeSummary: async (ref, input, opts) => services.saveSummary(projectDir, ref, input, role(opts)),
     splitCard: async (ref, titles, opts) => services.splitCard(projectDir, ref, titles, role(opts)),
     detectSetup: async () => services.detectSetup(projectDir),
     adoptSkills: async (opts = {}) => {
@@ -197,7 +199,7 @@ export const createLocalClient = (projectDir: string = projectRoot(), options: L
 
 export { CodeloopClient };
 /** The `## Q<n>` block parser and the per-card limit, for a CLI reading questions from a file. */
-export { MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
+export { interviewQuestions, MAX_QUESTIONS, parseQuestions } from '../lib/interview.js';
 /** The directory holding the board: CODELOOP_PROJECT_DIR when a builder runs in a worktree, else the working directory. */
-export { projectRoot } from '../lib/project-root.js';
+export { linkedCheckout, projectRoot } from '../lib/project-root.js';
 export { parseWindow, renderProgress } from '../lib/story-progress.js';

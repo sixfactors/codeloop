@@ -3,7 +3,10 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { findCard, readCards, RefusalError } from '../cards.js';
-import { advanceCard, createCard, resolveRole } from '../engine.js';
+import { advanceCard, createCard, recordEvent, resolveRole } from '../engine.js';
+
+// The lane limit counts stories an agent is working on: an agent-start with no agent-run after it.
+const inFlight = (dir: string, id: string) => recordEvent(dir, id, () => ({ action: 'agent-start', agent: 'fake', log: 'x.log' }));
 import { approveFlow, describeAdvance, startCard } from '../flow.js';
 import { buildInbox } from '../inbox.js';
 import { lintLane, loadLanes } from '../lane.js';
@@ -123,6 +126,8 @@ describe('run', () => {
     lane('market', '  - id: draft\n    output: out/{id}.md\n    done: { cmd: "grep -q claim out/{id}.md" }\n');
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
     const retries = () => readCards(dir).cards[0].retries.draft;
+    // A draft without the claim: a missing output would be no work, and count nothing.
+    write('out/c-1.md', 'no good');
 
     expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'failed' }]);
     expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'unchanged' }]);
@@ -200,6 +205,7 @@ describe('split, done and drop free lane slots without leaving duplicates', () =
     advanceCard(dir, 'c-001');
     const { cards } = splitCard(dir, 'c-001', ['Export my todos as a CSV file', 'Export my todos as a JSON file'], 'owner');
     expect(cards.map(c => c.stage)).toEqual(['two', 'queued']);
+    inFlight(dir, cards[0].id);
     expect(promoteQueued(dir)).toEqual([]);
     closeCard(dir, cards[0].id, 'owner', 'done');
     expect(promoteQueued(dir).map(c => [c.id, c.stage])).toEqual([[cards[1].id, 'two']]);
@@ -221,6 +227,7 @@ describe('split, done and drop free lane slots without leaving duplicates', () =
     createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
     expect(() => closeCard(dir, 'c-001', 'agent', 'done')).toThrow(/owner's decision/);
     expect(() => closeCard(dir, 'c-001', 'owner', 'dropped')).toThrow(/say why/);
+    inFlight(dir, 'c-001');
     expect(() => createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' })).toThrow(/c-001/);
     closeCard(dir, 'c-001', 'owner', 'done');
     expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
@@ -250,6 +257,7 @@ describe('what the lane limit counts', () => {
     const file = readCards(dir);
     writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify({ ...file, cards: file.cards.map(c => ({ ...c, gate: 'stuck', awaiting: 'owner' })) }, null, 2));
     expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
+    inFlight(dir, 'c-002');
     expect(() => createCard(dir, { lane: 'build', title: 'Share a todo list', id: 'c-003' })).toThrow(/c-002/);
   });
 

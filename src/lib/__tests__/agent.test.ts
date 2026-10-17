@@ -1,18 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { spawnSync } from 'child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
-import { buildBrief, loadAgents, resolveAgent } from '../agent.js';
+import { buildBrief, loadAgents, resolveAgent, runAgent } from '../agent.js';
 import { findCard, readCards, type Card } from '../cards.js';
 import { advanceCard, approveCard, createCard, recordEvent, rejectCard } from '../engine.js';
 import { nextHint } from '../flow.js';
 import { planRun, runDue, runDueWithAgent } from '../run.js';
-import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus } from '../schedule.js';
+import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus, writeScheduleScript } from '../schedule.js';
+import { applyAgentsConfig } from '../scaffold.js';
 import { capture } from '../wiki.js';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 let dir: string;
 
 function write(path: string, text: string): void {
@@ -305,10 +306,13 @@ describe('run --agent', () => {
     createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
     createCard(dir, { lane: 'build', title: 'b', id: 'c-002' });
     lane('build', TWO_STAGES, 'wip: 1\n');
+    // Only a story an agent is working on holds a slot: c-001 has a run in flight from another process.
+    recordEvent(dir, 'c-001', () => ({ action: 'agent-start', agent: 'fake', log: 'x.log' }));
 
     const limited = await run();
-    expect(limited.agents!.map(a => a.started)).toEqual([true, false]);
-    expect(limited.agents![1].reason).toMatch(/lane build works on 1 card at a time \(wip\)/);
+    expect(limited.agents!.map(a => a.started)).toEqual([false, false]);
+    expect(limited.agents![1].reason).toMatch(/lane build works on 1 card at a time .*c-001 \(draft, agent fake on draft\).*\(wip\)/);
+    recordEvent(dir, 'c-001', () => ({ action: 'agent-run', agent: 'fake', exit: 0, log: 'x.log' }));
 
     createCard(dir, { lane: 'market', title: 'c', id: 'c-003' });
     write('out/c-003.md', 'draft');
@@ -317,6 +321,19 @@ describe('run --agent', () => {
     const full = await run();
     expect(full.agents!.map(a => a.started)).toEqual([false, false]);
     expect(full.agents![0].reason).toMatch(/1 card is waiting on you \(capacity.gates_per_day is 1\)/);
+  });
+
+  it('a trivial card never takes or waits for the only wip slot, whichever card comes first (--dry-run)', () => {
+    agents('touch agent-ran < {brief}');
+    for (const sizes of [['trivial', 'M'], ['M', 'trivial']]) {
+      rmSync(join(dir, '.codeloop'), { recursive: true, force: true });
+      lane('build', TWO_STAGES, 'wip: 1\n');
+      agents('touch agent-ran < {brief}');
+      sizes.forEach((size, n) => createCard(dir, { lane: 'build', title: size, id: `c-00${n + 1}`, fields: { size } }));
+      const lines = planRun(dir, resolveAgent(dir));
+      expect(lines).toHaveLength(2);
+      for (const line of lines) expect(line).toMatch(/would start agent fake on draft/);
+    }
   });
 
   it('leaves a card alone while an earlier run is still working on it', async () => {
@@ -381,10 +398,23 @@ describe('schedule', () => {
     expect(() => everyToCron('soon')).toThrow(/--cron/);
   });
 
-  it('writes a line that runs `run --agent` in this repo and logs to state/run.log', () => {
-    expect(line('*/30 * * * *')).toBe(
-      `*/30 * * * * cd '${dir}' && PATH='/usr/bin:/bin' '${process.execPath}' '/opt/codeloop/dist/index.js' run --agent fake >> .codeloop/state/run.log 2>&1 # codeloop:${dir}`,
-    );
+  it('writes a short line whose script runs `run --agent` in this repo with the installing PATH, logging to state/run.log', () => {
+    // cron drops a line over 1000 characters; an inline PATH alone can be that long.
+    const longPath = Array.from({ length: 60 }, (_, i) => `/opt/tool-${i}/bin`).join(':');
+    const entry = join(dir, 'entry.mjs');
+    write('entry.mjs', "import { writeFileSync } from 'fs';\nwriteFileSync('ran.json', JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2), path: process.env.PATH }));\n");
+    const schedule = { cron: '*/30 * * * *', agent: 'fake', entry, path: longPath };
+    const cronLine = scheduleLine(dir, schedule);
+    expect(cronLine.length).toBeLessThan(200);
+    expect(cronLine).toMatch(new RegExp(`^\\*/30 \\* \\* \\* \\* '[^']+\\.sh' # codeloop:`));
+
+    const script = writeScheduleScript(dir, schedule);
+    expect(cronLine).toContain(script);
+    mkdirSync(join(dir, '.codeloop/state'), { recursive: true });
+    const ran = spawnSync('/bin/sh', [script], { cwd: tmpdir(), encoding: 'utf-8', env: { PATH: '/usr/bin:/bin' } });
+    expect(ran.status).toBe(0);
+    const seen = JSON.parse(readFileSync(join(dir, 'ran.json'), 'utf-8'));
+    expect(seen).toEqual({ cwd: realpathSync(dir), args: ['run', '--agent', 'fake'], path: longPath });
   });
 
   it('install keeps other crontab entries and replaces its own; remove takes only its own', () => {
@@ -399,5 +429,31 @@ describe('schedule', () => {
     expect(readFileSync(join(dir, 'crontab.txt'), 'utf-8')).toBe('0 9 * * * /usr/bin/backup\n');
     expect(scheduleStatus(dir, crontab).line).toBeUndefined();
     expect(removeSchedule(dir, crontab)).toBe(false);
+  });
+});
+
+describe('the codex and cursor presets init writes', () => {
+  it('hand a 40 KB brief to the agent on stdin, not as one argument', async () => {
+    const bin = join(dir, 'bin');
+    for (const name of ['codex', 'cursor-agent']) write(`bin/${name}`, `#!/bin/sh\nprintf '%s args, longest %s, stdin %s\\n' "$#" "$(for a in "$@"; do printf '%s\\n' "\${#a}"; done | sort -n | tail -1)" "$(wc -c | tr -d ' ')" > ${name}.seen\n`);
+    for (const name of ['codex', 'cursor-agent']) chmodSync(join(bin, name), 0o755);
+    write('.codeloop/config.yaml', 'project:\n  name: demo\n');
+    write('brief.md', 'x'.repeat(40_000));
+    const PATH = process.env.PATH;
+    process.env.PATH = `${bin}:${PATH}`;
+    try {
+      applyAgentsConfig(dir, ['codex', 'cursor']);
+    } finally {
+      process.env.PATH = PATH;
+    }
+    for (const name of ['codex', 'cursor']) {
+      const ran = await runAgent(dir, resolveAgent(dir, name), join(dir, 'brief.md'), join(dir, `${name}.log`), { env: { PATH: `${bin}:${PATH}` } });
+      expect(ran.exit).toBe(0);
+    }
+    for (const seen of ['codex.seen', 'cursor-agent.seen']) {
+      const [, longest, stdin] = /args, longest (\d*), stdin (\d+)/.exec(readFileSync(join(dir, seen), 'utf-8'))!;
+      expect(Number(longest || 0)).toBeLessThan(100);
+      expect(Number(stdin)).toBe(40_000);
+    }
   });
 });

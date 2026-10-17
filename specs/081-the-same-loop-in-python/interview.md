@@ -7,7 +7,7 @@ recommended: Spine templates live in core (`spines/ERD.md`, `contracts.md`); onl
 answer: 
 
 ## Q3 Acceptance: what proves it?
-recommended: Given sherpa-backend with the plugin, when `init` and a card runs build, then brief shows the fastapi rules, the done-check runs pytest and the spine check, and the same build.yaml that chanl-api uses works unchanged.
+recommended: Given sherpa-backend with the plugin, when `init` and a card runs build, then brief shows the fastapi rules, the done-check runs pytest and the spine check, and the same build.yaml that a private project uses works unchanged.
 answer: 
 
 ## Q4 Riskiest assumption: core leaks NestJS assumptions (npm test, package.json). What is the test?

@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import { CopyInstall } from '@/components/copy-install';
 import { cn } from '@/lib/utils';
 
-// Copied from chanl-site/src/components/sections/hero-section-split.tsx: the 12-column split with
+// Copied from a private project's src/components/sections/hero-section-split.tsx: the 12-column split with
 // text left and the product right. The voice carousel is replaced by static screenshots behind a
 // tab row, and framer-motion is dropped.
 const SCREENS = [

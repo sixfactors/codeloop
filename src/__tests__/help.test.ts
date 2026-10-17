@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import type { Command } from 'commander';
 import { buildProgram } from '../program.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 
 /** Every command path in the tree, nested ones included: `['card', 'new']`, `['import', 'speckit']`. */
 function paths(command: Command, prefix: string[] = []): string[][] {

@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/shared/short-id-cell.tsx. Changes: formatShortId is inlined
+// Copied from a private project's components/shared/short-id-cell.tsx. Changes: formatShortId is inlined
 // (codeloop ids are already short, so the whole id shows); the full id is a native `title`, since a
 // tooltip primitive on every board card would put the floating layer in the board's first load.
 

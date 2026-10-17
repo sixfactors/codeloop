@@ -3,5 +3,9 @@
 # activity of the card its `Card:` (or `Feature:`) trailer names. Never fails the commit, which has
 # already happened by the time this runs.
 [ -d .codeloop ] || exit 0
-command -v codeloop >/dev/null 2>&1 || exit 0
-codeloop guard commit >/dev/null 2>&1 || true
+# Install writes absolute paths here: GUI git clients start hooks with a bare PATH.
+CODELOOP_NODE=${CODELOOP_NODE:-node}
+codeloop=codeloop
+export CODELOOP_NODE
+[ -x "$codeloop" ] || codeloop=$(command -v codeloop) || exit 0
+"$codeloop" guard commit >/dev/null 2>&1 || true

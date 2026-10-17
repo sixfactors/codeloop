@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createApp } from '../server.js';
@@ -27,6 +27,20 @@ describe('story control routes', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  it('seeds the wiki outline only for the owner, and never forced from the board', async () => {
+    writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'demo', dependencies: { express: '4' } }));
+    const stack = join(tmpDir, '.codeloop/wiki/reference/stack.md');
+    const refused = await make(false)('/api/wiki/outline', 'POST', {});
+    expect(refused.status).toBe(403);
+    expect(existsSync(stack)).toBe(false);
+
+    const call = make(true);
+    expect((await call('/api/wiki/outline', 'POST', {})).status).toBe(200);
+    writeFileSync(stack, `${readFileSync(stack, 'utf-8')}\nHand-edited.\n`);
+    expect((await call('/api/wiki/outline', 'POST', { force: true })).status).toBe(200);
+    expect(readFileSync(stack, 'utf-8')).toContain('Hand-edited.');
+  });
+
   it('reopens a done story to the backlog and edits a title, as the owner', async () => {
     const call = make(true);
     const reopened = await call('/api/cards/c-083/reopen', 'POST', { to: 'backlog', note: 'not finished' });
@@ -35,6 +49,14 @@ describe('story control routes', () => {
     const edited = await call('/api/cards/c-090', 'PATCH', { title: 'A clearer title' });
     expect(edited.status).toBe(200);
     expect(((await edited.json()) as { card: { title: string } }).card.title).toBe('A clearer title');
+  });
+
+  it('parks a stuck story when the owner rejects it from the panel, with or without a note', async () => {
+    writeFileSync(join(tmpDir, '.codeloop/cards.json'), JSON.stringify({ version: 1, cards: [{ ...card('c-090', 'build'), gate: 'stuck', awaiting: 'owner', retries: { build: 3 } }] }));
+    const res = await make(true)('/api/cards/c-090/reject', 'POST', {});
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { decision: { card: { stage: string; parked_from?: string; gate?: string } } };
+    expect(body.decision.card).toMatchObject({ stage: 'proposed', parked_from: 'build', gate: 'proposal' });
   });
 
   it('answers 409 when the story forbids the change, and 403 on a read-only board', async () => {

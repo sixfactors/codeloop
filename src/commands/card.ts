@@ -2,15 +2,17 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { DONE, DROPPED, type ActivityEntry, type Card, type CardListFilter, type StoryFlags } from '../sdk/index.js';
-import { createLocalClient, projectRoot } from '../sdk/local.js';
+import { createLocalClient, linkedCheckout, projectRoot } from '../sdk/local.js';
 import { guard } from './guard.js';
 
 const client = () => createLocalClient(projectRoot());
 
 function line(card: Card & { band?: string; score?: number }): string {
   const state = card.gate ? chalk.yellow(`waiting for you: ${card.gate}`) : card.stage === DONE ? chalk.green('done') : card.stage;
-  const rank = card.band ? chalk.dim(`${card.band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
-  return `  ${card.id}  ${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
+  // The priority the picks use: the card's own when set, else its feature's RICE band.
+  const band = card.priority ?? card.band;
+  const rank = band ? chalk.dim(`${band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
+  return `  ${card.id}  ${card.bug ? chalk.red('bug ') : card.bug_reported_by ? chalk.yellow(`reported bug (${card.bug_reported_by}) `) : ''}${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
 }
 
 function print(result: { lines: string[]; exitCode: number }): void {
@@ -28,6 +30,11 @@ export function onStartActivate(fn: (id: string) => Promise<void>): void {
 const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => {
   const { stage, activate, ...rest } = opts;
   const created = await client().cards.new({ ...rest, lane, title }, { as: opts.as });
+  // Only the owner's --bug flags a story directly; anyone else's waits at the owner's proposal gate.
+  if (created.card.bug_reported_by) {
+    console.log(`proposed ${created.card.id} in ${created.card.lane}, reported as critical by ${created.card.bug_reported_by}; it waits for the owner to approve it`);
+    return;
+  }
   // Work already under way enters at the stage it has reached, not at the first one.
   const { card, hint } = stage && stage !== created.card.stage ? await client().cards.place(created.card.id, stage, { as: opts.as }) : created;
   console.log(`created ${card.id} in ${card.lane} at stage ${card.stage}${card.ticket ? ` for ${card.ticket}` : ''}${card.spec ? ` (${card.spec}/)` : ''}`);
@@ -72,6 +79,7 @@ function storyOptions(command: Command): Command {
     .option('--effort <weeks>', "Weeks; replaces the feature's effort in this card's RICE score")
     .option('--metric <metric>', 'The one stage metric this card moves')
     .option('--ticket <key>', 'Tracker key, like ACME-412; a title starting "ACME-412: " sets it too')
+    .option('--bug', "A critical bug: every pick takes it first; from anyone but the owner it is a report that waits at the owner's gate")
     .option('--force', 'Create it even though the title or story fails the standard');
 }
 
@@ -126,10 +134,19 @@ cardCommand
   .option('--left <text>', 'What is left to do')
   .option('--blocked <text>', 'What blocked the work')
   .option('--worktree <path>', 'The git worktree the work is in; the proof is run there instead of the project root')
-  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string }) => {
+  .option('--needed <text>', "The story summary's line on what the story needs")
+  .option('--done <text>', "The story summary's line on what is done")
+  .action(guard(async (id: string, opts: { branch: string; head: string; proof: string; left?: string; blocked?: string; worktree?: string; needed?: string; done?: string }) => {
     const c = client();
-    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree: opts.worktree });
+    // Run from a linked worktree of the project, the proof runs in that checkout, where the
+    // builder's branch is, not in the main tree the board lives in.
+    const worktree = opts.worktree ?? linkedCheckout(projectRoot());
+    const rec = await c.cards.handback(id, { branch: opts.branch, head: opts.head, proof: opts.proof, left: opts.left, blocked: opts.blocked, worktree, ...(opts.needed || opts.done ? { summary: { needed: opts.needed, done: opts.done } } : {}) });
     console.log(`proof exit ${rec.proof.exit}; hand-back recorded for ${rec.card} at ${rec.stage} (${rec.branch}@${rec.head.slice(0, 8)})`);
+    if (rec.proof.exit !== 0) {
+      const head = rec.proof.output.split('\n').slice(0, 12).join('\n').trimEnd();
+      console.error(`proof failed with exit ${rec.proof.exit}\n  cwd: ${rec.proof.cwd ?? '(not recorded)'}\n  command (${rec.proof.shell ?? 'sh'} -c): ${rec.proof.cmd}${head ? `\n  output:\n${head.replace(/^/gm, '    ')}` : ''}`);
+    }
     await c.close();
   }));
 
@@ -201,9 +218,9 @@ cardCommand
   .description('Show a card, its current stage brief and its events')
   .option('--json', 'JSON output')
   .action(guard(async (id: string, opts: { json?: boolean }) => {
-    const { card, brief: stage, hint, tasks, evidenceFiles, commits, phaseTime } = await client().cards.show(id);
+    const { card, brief: stage, hint, tasks, evidenceFiles, commits, phaseTime, stuck } = await client().cards.show(id);
     if (opts.json) {
-      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits, phaseTime }, null, 2));
+      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits, phaseTime, ...(stuck ? { stuck } : {}) }, null, 2));
       return;
     }
     console.log(line(card));
@@ -221,6 +238,13 @@ cardCommand
       if (stage.done) console.log(`  check:  ${stage.done}`);
       for (const note of stage.notes) console.log(`  note:   ${note}`);
       for (const f of stage.feedback) console.log(chalk.yellow(f.kind === 'rejected' ? `  rejected: ${f.note}` : `  returned from ${f.from}: ${f.note}`));
+    }
+    if (stuck) {
+      // The same explanation the story page and the inbox show.
+      console.log(chalk.yellow(`  what you must do: ${stuck.action}`));
+      console.log(`  work tried: ${stuck.tried}`);
+      console.log(`  shipped:    ${stuck.shipped}`);
+      if (stuck.error) console.log(chalk.dim(`  the error (last line): ${stuck.error.split('\n').filter(Boolean).at(-1)}`));
     }
     if (phaseTime) console.log(chalk.dim(`  ${phaseTime.text}`));
     const moving = card.display?.moving;
@@ -300,6 +324,18 @@ cardCommand
       else console.log(`${item.end.status === 'done' ? chalk.green(item.end.status) : chalk.red(item.end.status)}: ${item.end.outcome}${item.end.note ? ` (${item.end.note})` : ''}`);
       if (item.end.status !== 'done') process.exit(2);
     }
+  }));
+
+cardCommand
+  .command('summary <id>')
+  .description("Write the story summary's needed and done lines; what you must do comes from the board. As an agent it never replaces a line a person wrote")
+  .option('--needed <text>', 'What the story needs, in one plain sentence')
+  .option('--done <text>', 'What is already done, in one plain sentence')
+  .option(...ROLE)
+  .action(guard(async (id: string, opts: { needed?: string; done?: string; as?: string }) => {
+    const { written, kept } = await client().cards.summary(id, { needed: opts.needed, done: opts.done }, { as: opts.as });
+    if (written.length) console.log(`wrote ${written.join(' and ')} on ${id}`);
+    if (kept.length) console.log(chalk.yellow(`kept the ${kept.join(' and ')} line a person wrote; an agent adds to the summary but never replaces a person's line`));
   }));
 
 cardCommand
@@ -387,14 +423,16 @@ cardCommand
 
 cardCommand
   .command('edit <id>')
-  .description('Edit a card: its title, story, priority, feature or size; the story line in its spec.md follows')
+  .description('Edit a card: its title, story, priority, feature or size, or flag it as a critical bug; the story line in its spec.md follows')
   .option('--title <title>', 'What the user can now do')
   .option('--story <story>', '"As a <persona>, I can <what>, so that <outcome>"')
   .option('--priority <p>', 'P1, P2, P3 or P4')
   .option('--feature <feature>', 'The capability this card is a slice of')
   .option('--size <size>', 'S, M or L')
+  .option('--bug', "Flag it as a critical bug, which every pick takes first; from an agent it is a report the owner confirms")
+  .option('--no-bug', 'Clear the critical-bug flag (the owner only)')
   .option(...ROLE)
-  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string }) => {
+  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string; bug?: boolean }) => {
     const { as, ...edit } = opts;
     const card = await client().cards.edit(id, edit, { as });
     console.log(`${card.id} is edited`);

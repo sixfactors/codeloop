@@ -30,22 +30,43 @@ export function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
 }
 
-/** `ref` is a card id or its number. A folder recorded on the card wins over a folder found by number. */
+/** The folder a new spec gets: `<specs>/<nnn>-<slug of text>`. The one place a spec folder name is made. */
+export function specFolderFor(projectDir: string, key: string, text: string): string {
+  return `${specsDir(projectDir)}/${key}-${slugify(text) || 'feature'}`;
+}
+
+/**
+ * Which spec folder a card means. The card's `spec` field wins while that folder exists; when it is
+ * unset or names a folder that is not there, `<specs>/<key>` or the one `<specs>/<key>-*` folder is
+ * the card's. `repair` is set when a recorded field pointed at a missing folder and one was found.
+ */
+export function pickSpecDir(spec: string | undefined, key: string, root: string, folders: string[], exists: (dir: string) => boolean): { dir?: string; repair?: boolean; matches: number } {
+  if (spec && exists(spec)) return { dir: spec, matches: 1 };
+  const exact = folders.includes(key) ? [`${root}/${key}`] : [];
+  const found = exact.length ? exact : folders.filter(d => d.startsWith(`${key}-`)).map(d => `${root}/${d}`);
+  if (found.length === 1) return { dir: found[0], repair: !!spec && spec !== found[0], matches: 1 };
+  return { ...(spec ? { dir: spec } : {}), matches: found.length };
+}
+
+/**
+ * `ref` is a card id or its number. A folder recorded on the card wins over a folder found by
+ * number, unless it is missing: then the one numbered folder is used and written back to the card.
+ */
 export function resolveSpecDir(projectDir: string, ref: string): string {
   const card = findCardOrNone(readCards(projectDir).cards, ref);
-  if (card?.spec) return card.spec;
   const key = card ? cardKey(card) : cardNumber(ref);
   const root = specsDir(projectDir);
-  if (existsSync(specPath(projectDir, root, key))) return `${root}/${key}`;
   const specs = specPath(projectDir, root);
-  const found = existsSync(specs) ? readdirSync(specs).filter(d => d.startsWith(`${key}-`)) : [];
-  if (found.length === 1) return `${root}/${found[0]}`;
-  throw new RefusalError(found.length ? `${root}/${key}-* matches ${found.length} folders; pass the card id` : `no spec folder for ${ref}; run \`codeloop spec new <card-id>\``);
+  const folders = card?.spec && existsSync(specPath(projectDir, card.spec)) ? [] : existsSync(specs) ? readdirSync(specs) : [];
+  const picked = pickSpecDir(card?.spec, key, root, folders, d => existsSync(specPath(projectDir, d)));
+  if (picked.repair && card) annotateCard(projectDir, card.id, { spec: picked.dir }, 'spec', { note: `${picked.dir} (was ${card.spec}, which is missing)` });
+  if (picked.dir) return picked.dir;
+  throw new RefusalError(picked.matches ? `${root}/${key}-* matches ${picked.matches} folders; pass the card id` : `no spec folder for ${ref}; run \`codeloop spec new <card-id>\``);
 }
 
 export function newSpec(projectDir: string, cardId: string, role: Role = 'agent'): { dir: string; created: string[] } {
   const card = findCard(readCards(projectDir).cards, cardId);
-  const dir = card.spec ?? `${specsDir(projectDir)}/${cardKey(card)}-${slugify(card.title)}`;
+  const dir = card.spec ?? specFolderFor(projectDir, cardKey(card), card.title);
   const created: string[] = [];
   mkdirSync(specPath(projectDir, dir), { recursive: true });
   for (const name of ['research.md', 'spec.md', 'plan.md', 'tasks.md']) {

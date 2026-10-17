@@ -99,8 +99,8 @@ describe('layering: CLI commands reach the engine only through the SDK', () => {
 
 /**
  * A builder runs inside its story worktree, whose cwd holds a stale committed copy of the board.
- * A command that reads cards, state, wiki or config from `process.cwd()` there reads that copy
- * (a gate once failed with `card "c-143" not found`), so board reads go through projectRoot().
+ * A command that reads cards, state, wiki or config from `process.cwd()` there reads that copy,
+ * where a story made after it was committed is missing, so board reads go through projectRoot().
  * Only these files may name the working directory, each for a reason that is about the directory
  * the user is standing in rather than the board.
  */

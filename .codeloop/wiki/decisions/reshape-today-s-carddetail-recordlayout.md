@@ -13,7 +13,7 @@ updated: 2026-10-14
 ## Options
 
 - Reshape today's `CardDetail` / `RecordLayout` / `GateCard` / `CardDrawer` into the design's record: property panel on the right, Proof tab that absorbs Evidence (acceptance lines + runs + review + commits + mocks), gate banner with Approve / Send back on the same pane, and default tab = waiting reason (Proof at a gate, Questions when open, Tasks while an agent runs). Chosen — matches design §5 Story wireframe and §8 ("Card page, card drawer → Story record and peek"; "Evidence page → The story's Proof tab"), unlock-before-build, and build order ("Story record first").
-- Delete the card page and rebuild from chanl-admin templates. Rejected — RecordLayout, GateCard, Questions, Spec/Tasks tabs and peek already fit; a rewrite burns the shared body for no product gain.
+- Delete the card page and rebuild from a private project's templates. Rejected — RecordLayout, GateCard, Questions, Spec/Tasks tabs and peek already fit; a rewrite burns the shared body for no product gain.
 - Close the card as `have` because Approve and an Evidence tab ship. Rejected — a founder still opens a separate evidence folder and never sees each acceptance line next to the decision; the title names proof beside the decision.
 - Wait for GET `/api/stories/:id` (c-121) before any UI change. Rejected — the screen can reshape with today's `useCard` / `useCardFull` / `useQuestions` joins; the one-call story view is a later swap, not a blocker for the layout.
 

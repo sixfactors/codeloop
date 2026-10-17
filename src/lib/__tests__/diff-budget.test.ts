@@ -46,11 +46,26 @@ describe('storyDiff', () => {
 });
 
 describe('a page under docs/', () => {
-  it('counts as a file but adds no lines, so a trivial story with a 433-line page stays within budget', () => {
-    put('docs/architecture/enterprise-architecture.html', 430); put('docs/README.md', 3); put('src/x.ts', 4);
+  it('counts a Markdown page as a file and at one tenth of its lines, so a trivial story with a 433-line page stays within budget', () => {
+    put('docs/architecture/enterprise-architecture.md', 430); put('docs/README.md', 3); put('src/x.ts', 4);
     commit('docs: the page', 'Card: c-001');
-    expect(storyDiff(dir, 'c-001')).toEqual({ files: 3, lines: 4, commits: 1 });
+    expect(storyDiff(dir, 'c-001')).toEqual({ files: 3, lines: 4 + 43 + 1, commits: 1 });
     expect(checkBudget(dir, 'c-001', 'trivial').pass).toBe(true);
+  });
+
+  it('counts an .html or .mdx page in full, so a 490-line script page breaks the trivial budget', () => {
+    put('docs/tools/runner.html', 490); put('docs/guide.mdx', 20);
+    commit('docs: a script page', 'Card: c-001');
+    expect(storyDiff(dir, 'c-001')).toEqual({ files: 2, lines: 510, commits: 1 });
+    expect(checkBudget(dir, 'c-001', 'trivial').pass).toBe(false);
+  });
+
+  it('a 10,000-line page breaks the trivial budget, and the message says how pages count', () => {
+    put('docs/big.md', 10_000);
+    commit('docs: the big page', 'Card: c-001');
+    const v = checkBudget(dir, 'c-001', 'trivial');
+    expect(v.pass).toBe(false);
+    expect(v.message).toBe('diff 1 files / 1,000 lines (Markdown pages under docs/ count at one tenth of their lines) exceeds the trivial budget (3 files / 50 lines); split the story');
   });
 });
 

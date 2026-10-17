@@ -312,7 +312,9 @@ export function writeMocksIndex(projectDir: string): { path: string; mocks: numb
     const title = cards.find(c => c.id === id)?.title ?? /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? id;
     const archived = ARCHIVE_PREFIXES.find(p => path.startsWith(p));
     const legacy = archived ? path.slice(archived.length).split('/') : [];
-    return { project: meta.project ?? legacy[0] ?? 'mocks', topic: meta.topic ?? legacy[1] ?? 'other', id, title, from: mockLineage(html)[1], href: mockHref(path).replace(/^\/mocks\//, ''), at: statSync(full).mtimeMs };
+    // An in-app mock is a page of the app at /mocks/<folder>/, beside this gallery; its page.tsx is not served.
+    const href = path.endsWith(`/mocks/${basename(dirname(path))}/${APP_PAGE}`) ? `${encodeURIComponent(basename(dirname(path)))}/` : mockHref(path).replace(/^\/mocks\//, '');
+    return { project: meta.project ?? legacy[0] ?? 'mocks', topic: meta.topic ?? legacy[1] ?? 'other', id, title, from: mockLineage(html)[1], href, at: statSync(full).mtimeMs };
   });
   const newest = (items: typeof found) => Math.max(...items.map(i => i.at));
   const group = <K extends 'project' | 'topic'>(items: typeof found, key: K) =>
