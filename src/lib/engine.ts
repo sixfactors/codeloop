@@ -456,7 +456,7 @@ export const waitingOnOwner = (cards: Card[]) => cards.filter(c => c.gate && c.s
  */
 export function proposeCard(
   projectDir: string,
-  input: { lane: string; title: string; id?: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine'; fields?: CardFields } & Clock,
+  input: { lane: string; title: string; id?: string; description?: string; source?: string; dedupe?: string; role?: Role | 'engine'; note?: string; fields?: CardFields } & Clock,
 ): { card: Card; created: boolean } {
   const lane = loadLane(projectDir, input.lane);
   if (lane.stages.length === 0) throw new RefusalError(`lane ${lane.id} has no stages`);
@@ -483,7 +483,7 @@ export function proposeCard(
       awaiting: 'owner',
       retries: {},
       evidence: [],
-      events: [event(now, input.role ?? 'agent', 'propose', PROPOSED, input.source)],
+      events: [event(now, input.role ?? 'agent', 'propose', PROPOSED, input.note ?? input.source)],
       createdAt: at,
       updatedAt: at,
     };

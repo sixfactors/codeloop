@@ -122,7 +122,7 @@ export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, s
   const stage = lanes.find(l => l.id === c.lane)?.stages.find(s => s.id === c.stage);
   const parkedAt = c.events.filter(e => e.action === 'park' || e.action === 'stuck').at(-1);
   const last_check = c.stage === PROPOSED
-    ? 'not started: a proposal'
+    ? `not started: a proposal${c.bug_reported_by ? `, reported as critical by ${c.bug_reported_by}` : ''}`
     : stuck
     ? explanationText(stuck)
     : c.gate === 'stuck'

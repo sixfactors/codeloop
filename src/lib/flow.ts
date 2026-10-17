@@ -2,6 +2,7 @@ import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalErr
 import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
+import { clock } from './clock.js';
 
 export const usesSpec = (lane: Lane) => lane.stages.some(s => `${s.output ?? ''} ${s.done?.cmd ?? ''}`.includes('{spec}') || s.done?.cmd?.includes('codeloop spec check'));
 
@@ -26,6 +27,7 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
   // either; it does get the spec folder a story started directly gets, or its first stage has
   // nowhere to write.
   if (gate === PROPOSAL_GATE) {
+    if (card.stage !== DROPPED && card.bug_reported_by) confirmBug(projectDir, card.id, role);
     if (card.stage !== DROPPED && usesSpec(loadLane(projectDir, card.lane))) newSpec(projectDir, card.id, role);
     return { card: findCard(readCards(projectDir).cards, card.id), gate };
   }
@@ -46,6 +48,15 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
     }
     throw e;
   }
+}
+
+/** Approving a reported bug's proposal is the owner confirming it: the flag every pick reads is set now. */
+function confirmBug(projectDir: string, id: string, role: Role): void {
+  const file = readCards(projectDir);
+  const { bug_reported_by: by, ...card } = findCard(file.cards, id);
+  const now = clock().toISOString();
+  const confirmed: Card = { ...card, bug: true, events: [...card.events, { at: now, actor: role, human: role !== 'agent', action: 'edit', stage: card.stage, note: `bug: confirmed the report by ${by}` }], updatedAt: now };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === id ? confirmed : c)));
 }
 
 function currentStage(projectDir: string, card: Card): Stage | undefined {

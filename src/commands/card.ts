@@ -30,6 +30,11 @@ export function onStartActivate(fn: (id: string) => Promise<void>): void {
 const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => {
   const { stage, activate, ...rest } = opts;
   const created = await client().cards.new({ ...rest, lane, title }, { as: opts.as });
+  // Only the owner's --bug flags a story directly; anyone else's waits at the owner's proposal gate.
+  if (created.card.bug_reported_by) {
+    console.log(`proposed ${created.card.id} in ${created.card.lane}, reported as critical by ${created.card.bug_reported_by}; it waits for the owner to approve it`);
+    return;
+  }
   // Work already under way enters at the stage it has reached, not at the first one.
   const { card, hint } = stage && stage !== created.card.stage ? await client().cards.place(created.card.id, stage, { as: opts.as }) : created;
   console.log(`created ${card.id} in ${card.lane} at stage ${card.stage}${card.ticket ? ` for ${card.ticket}` : ''}${card.spec ? ` (${card.spec}/)` : ''}`);
@@ -74,7 +79,7 @@ function storyOptions(command: Command): Command {
     .option('--effort <weeks>', "Weeks; replaces the feature's effort in this card's RICE score")
     .option('--metric <metric>', 'The one stage metric this card moves')
     .option('--ticket <key>', 'Tracker key, like ACME-412; a title starting "ACME-412: " sets it too')
-    .option('--bug', 'A critical bug: every pick takes it before any other story')
+    .option('--bug', "A critical bug: every pick takes it first; from anyone but the owner it is a report that waits at the owner's gate")
     .option('--force', 'Create it even though the title or story fails the standard');
 }
 
@@ -424,8 +429,8 @@ cardCommand
   .option('--priority <p>', 'P1, P2, P3 or P4')
   .option('--feature <feature>', 'The capability this card is a slice of')
   .option('--size <size>', 'S, M or L')
-  .option('--bug', 'Flag it as a critical bug, which every pick takes first; an agent may set this')
-  .option('--no-bug', 'Clear the critical-bug flag')
+  .option('--bug', "Flag it as a critical bug, which every pick takes first; from an agent it is a report the owner confirms")
+  .option('--no-bug', 'Clear the critical-bug flag (the owner only)')
   .option(...ROLE)
   .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string; bug?: boolean }) => {
     const { as, ...edit } = opts;

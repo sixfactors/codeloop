@@ -97,7 +97,7 @@ export function createMcpServer(projectDir: string): McpServer {
     return result ?? { passed: null, output: `stage ${stage.id} waits for event "${stage.done?.event}", not a command` };
   });
   // newProposal is the same path as `codeloop card propose` / the SDK: story title checks apply.
-  tool('propose', 'Propose a card in the inbox; it waits for the owner to promote it, and nothing starts it.', { lane: z.string(), title: z.string(), description: z.string().optional(), source: z.string().optional(), bug: z.boolean().optional().describe('A critical bug: every pick takes it first') }, a => {
+  tool('propose', 'Propose a card in the inbox; it waits for the owner to promote it, and nothing starts it.', { lane: z.string(), title: z.string(), description: z.string().optional(), source: z.string().optional(), bug: z.boolean().optional().describe('Report it as a critical bug; the owner confirms it when promoting the card, and only then does every pick take it first') }, a => {
     const { card: proposed, created } = services.newProposal(projectDir, { lane: a.lane, title: a.title, description: a.description, source: a.source, bug: a.bug }, mcpRole());
     return { id: proposed.id, lane: proposed.lane, created };
   });

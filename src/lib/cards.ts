@@ -83,8 +83,13 @@ export interface StoryFields {
   size?: Size;
   /** P1 (brings money) to P4 (nice to have); set from the story page. */
   priority?: string;
-  /** A critical bug: every pick takes it before any other story, whatever its priority. An agent may set or clear it. */
+  /** A critical bug: every pick takes it before any other story, whatever its priority. Only the owner sets or clears it. */
   bug?: boolean;
+  /**
+   * Who reported the story as a critical bug without being the owner. pickOrder reads only `bug`, so a
+   * report changes no pick until the owner confirms it (approving the proposal, or `card edit --bug`).
+   */
+  bug_reported_by?: string;
   points?: number;
   initiative?: string;
   epic?: string;
@@ -225,6 +230,9 @@ export const DONE = 'done';
 /** A card someone proposed and the owner has not promoted. It waits at gate `proposal` and holds no place in its lane. */
 export const PROPOSED = 'proposed';
 export const PROPOSAL_GATE = 'proposal';
+
+/** The name a non-owner's critical-bug report carries: the agent run's name when there is one, else the role. */
+export const bugReporter = (role: string): string => process.env.CODELOOP_AGENT_RUN || role;
 /** A proposal the owner turned down. */
 export const DROPPED = 'dropped';
 /** A story queued behind another by a shape breakdown's `on_done.queue`: it holds no lane slot until `after` reaches `done` (or, with no `after`, until wip opens up). `codeloop run` promotes it; nothing else does, because the owner's plan approval already covers it. */

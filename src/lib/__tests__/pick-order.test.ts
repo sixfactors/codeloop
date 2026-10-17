@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -68,21 +68,76 @@ describe('pick order', () => {
     await client.close();
   });
 
-  it('an agent can flag a critical bug, on an existing story or a new one, and bug stories come first; either role clears it', async () => {
+  it('only the owner flag moves a story to the front; an agent\'s bug is a report the owner confirms', async () => {
     const agent = createLocalClient(dir);
-    await agent.cards.edit('c-001', { bug: true }, { as: 'agent' });
+    const owner = createLocalClient(dir);
+    const order = () => planRun(dir, null).map(l => l.split(':')[0]);
+    // An agent flagging an existing story records the report and leaves the order alone.
+    const reported = await agent.cards.edit('c-001', { bug: true }, { as: 'agent' });
+    expect(reported.bug).toBeUndefined();
+    expect(reported.bug_reported_by).toBe('agent');
+    expect(order()).toEqual(EXPECTED);
+    // An agent's new bug waits at the owner's proposal gate, marked, and no pick takes it.
     const { card: made } = await agent.cards.new({ lane: 'build', title: 'Fix the login crash', id: 'c-005', size: 'S', bug: true }, { as: 'agent' });
-    expect(made.bug).toBe(true);
-    // Both bugs lead, ordered between themselves by the same rule (c-001 is RICE P3, c-005 is P4).
-    expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual(['c-001', 'c-005', ...EXPECTED.filter(id => id !== 'c-001')]);
-    await agent.cards.edit('c-001', { bug: false }, { as: 'agent' });
-    await agent.cards.edit('c-005', { bug: false }, { as: 'owner' });
-    expect(findCard(readCards(dir).cards, 'c-001').bug).toBeUndefined();
-    expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual([...EXPECTED, 'c-005']);
+    expect(made).toMatchObject({ stage: 'proposed', gate: 'proposal', awaiting: 'owner', bug_reported_by: 'agent' });
+    expect(made.bug).toBeUndefined();
+    expect(made.events.at(-1)?.note).toBe('reported as critical by agent');
+    expect(order()).toEqual(EXPECTED);
+    // The owner's approval confirms it: the flag is set and every pick takes it first.
+    await owner.cards.approve('c-005', { as: 'owner' });
+    expect(findCard(readCards(dir).cards, 'c-005')).toMatchObject({ stage: 'build', bug: true });
+    expect(order()).toEqual(['c-005', ...EXPECTED]);
+    // An agent cannot clear an owner-set flag; the owner can.
+    await expect(agent.cards.edit('c-005', { bug: false }, { as: 'agent' })).rejects.toThrow(/owner/);
+    expect(findCard(readCards(dir).cards, 'c-005').bug).toBe(true);
+    await owner.cards.edit('c-005', { bug: false }, { as: 'owner' });
+    expect(order()).toEqual([...EXPECTED, 'c-005']);
+    // The owner sets the flag directly.
+    await owner.cards.edit('c-001', { bug: true }, { as: 'owner' });
+    expect(findCard(readCards(dir).cards, 'c-001').bug_reported_by).toBeUndefined();
+    expect(order()[0]).toBe('c-001');
+  });
+
+  it('the CLI, MCP propose and HTTP POST /cards turn an agent\'s --bug into a waiting report', async () => {
+    const { cardCommand } = await import('../../commands/card.js');
+    const env = { dir: process.env.CODELOOP_PROJECT_DIR, run: process.env.CODELOOP_AGENT_RUN };
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    process.env.CODELOOP_AGENT_RUN = 'builder';
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await cardCommand.parseAsync(['new', 'build', 'Fix the logout crash', '--id', 'c-006', '--size', 'S', '--bug'], { from: 'user' });
+    } finally {
+      log.mockRestore();
+      if (env.dir === undefined) delete process.env.CODELOOP_PROJECT_DIR; else process.env.CODELOOP_PROJECT_DIR = env.dir;
+      if (env.run === undefined) delete process.env.CODELOOP_AGENT_RUN; else process.env.CODELOOP_AGENT_RUN = env.run;
+    }
+    expect(findCard(readCards(dir).cards, 'c-006')).toMatchObject({ stage: 'proposed', bug_reported_by: 'builder' });
+    expect(findCard(readCards(dir).cards, 'c-006').bug).toBeUndefined();
+
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test', version: '1' });
+    await Promise.all([createMcpServer(dir).connect(a), client.connect(b)]);
+    await client.callTool({ name: 'propose', arguments: { lane: 'build', title: 'Fix the signup crash', bug: true } });
+    await client.close();
+    const viaMcp = readCards(dir).cards.find(c => c.title === 'Fix the signup crash');
+    expect(viaMcp).toMatchObject({ stage: 'proposed', bug_reported_by: 'agent' });
+    expect(viaMcp?.bug).toBeUndefined();
+
+    const post = (owner: boolean, title: string) =>
+      createApp(dir, undefined, { token: 't', owner }).app.request('/api/cards', { method: 'POST', headers: { 'content-type': 'application/json', 'x-codeloop-token': 't' }, body: JSON.stringify({ lane: 'build', title, size: 'S', bug: true }) });
+    const res = await post(false, 'Fix the reset crash');
+    expect(res.status).toBe(201);
+    const viaHttp = readCards(dir).cards.find(c => c.title === 'Fix the reset crash');
+    expect(viaHttp).toMatchObject({ stage: 'proposed', bug_reported_by: 'agent' });
+    expect(viaHttp?.bug).toBeUndefined();
+    expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual(EXPECTED);
+    // An owner server sets the flag directly.
+    expect((await post(true, 'Fix the export crash')).status).toBe(201);
+    expect(readCards(dir).cards.find(c => c.title === 'Fix the export crash')).toMatchObject({ stage: 'build', bug: true });
   });
 
   it('the board API returns each column already in pick order, with each story\'s priority and bug flag', async () => {
-    await createLocalClient(dir).cards.edit('c-001', { bug: true }, { as: 'agent' });
+    await createLocalClient(dir).cards.edit('c-001', { bug: true }, { as: 'owner' });
     const { app } = createApp(dir);
     type Story = { id: string; priority?: string; bug?: boolean };
     const board = (await (await app.request('/api/board?lane=build')).json()) as { columns: { stories: Story[] }[]; phases: { cells: Record<string, Story[]> }[] };

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { activeSessions, currentSession } from './active-card.js';
-import { DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, QUEUED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
+import { bugReporter, DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, QUEUED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
 import { assertRoomInLane, type Role } from './engine.js';
 import { loadLane, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
@@ -132,7 +132,7 @@ export interface CardEdit {
   priority?: string;
   feature?: string;
   size?: string;
-  /** true flags a critical bug, false clears it; the one edit an agent may make. */
+  /** true flags a critical bug, false clears it. Only the owner's flag counts; an agent's true is recorded as a report. */
   bug?: boolean;
 }
 
@@ -140,9 +140,11 @@ const STORY = /^As an? (.+?), I can (.+?), so that (.+?)\.?$/s;
 
 /** Edits a story's fields; the story line in spec.md follows when the story changes. */
 export function editCard(projectDir: string, id: string, role: Role, edit: CardEdit, opts: Opts = {}): Card {
-  // An agent that finds a critical bug may flag it (or clear the flag); every other field is the owner's.
+  // An agent that finds a critical bug may report it; the flag every pick reads, and every other field, is the owner's.
   const onlyBug = edit.bug !== undefined && Object.entries(edit).every(([k, v]) => k === 'bug' || v === undefined);
   if (!onlyBug) ownerOnly(role, 'editing a card');
+  if (edit.bug === false && role !== 'owner') throw new RefusalError("clearing the critical-bug flag is the owner's decision");
+  const reporter = edit.bug && role !== 'owner' ? bugReporter(role) : undefined;
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const changes: Partial<Card> = {};
@@ -181,11 +183,13 @@ export function editCard(projectDir: string, id: string, role: Role, edit: CardE
     changes.size = size as Size;
     names.push('size');
   }
-  if (edit.bug !== undefined) names.push(edit.bug ? 'bug' : 'no bug');
+  if (edit.bug !== undefined) names.push(reporter ? `reported as critical by ${reporter}` : edit.bug ? 'bug' : 'no bug');
   if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature, --size or --bug');
   const now = opts.now ?? clock();
-  const { bug: _bug, ...unflagged } = before;
-  const card: Card = { ...(edit.bug === false ? unflagged : before), ...changes, ...(edit.bug ? { bug: true } : {}), events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
+  // The owner's decision either way settles any report; a report leaves the flag as it was.
+  const { bug: _bug, bug_reported_by: _by, ...unflagged } = before;
+  const base: Card = reporter ? { ...before, bug_reported_by: reporter } : edit.bug === undefined ? before : { ...unflagged, ...(edit.bug ? { bug: true } : {}) };
+  const card: Card = { ...base, ...changes, events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   // After the board write, so a refused or conflicting edit leaves the spec alone.
   if (storyLine) writeStoryLine(projectDir, card, storyLine);

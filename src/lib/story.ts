@@ -71,7 +71,7 @@ export interface StoryFlags {
   /** Weeks; replaces the feature's effort in this card's RICE score. */
   effort?: string | number;
   metric?: string;
-  /** Flags the story as a critical bug, which every pick takes first. */
+  /** Flags the story as a critical bug, which every pick takes first; from anyone but the owner it is a report (services.newProposal). */
   bug?: boolean;
   force?: boolean;
 }

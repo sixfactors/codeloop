@@ -156,6 +156,15 @@ guardCommand
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
 // `orch run --review` without --dry-run closes and places stories on the owner's behalf.
 const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|cards?\s+(?:done|drop|approve|reject)\b|orch\b(?![^;&|\n]*--dry-run)[^;&|\n]*--review)\b|--as[ =](owner|reviewer)\b/;
+// `--bug` / `--no-bug` on `card new|edit` or `start` sets the flag every pick reads first, but only
+// when the command acts as the owner; as an agent or reviewer it is a report the owner confirms, and
+// `card propose --bug` always is, so neither asks.
+const BUG_FLAG = /\bcodeloop\s+(?:cards?\s+(?:new|edit)|start)\b[^;&|\n]*\s--(?:no-)?bug\b/;
+function directBugFlag(command: string): RegExpExecArray | null {
+  const hit = BUG_FLAG.exec(command);
+  if (!hit || /--as[ =](agent|reviewer)\b/.test(command.slice(hit.index).split(/[;&|\n]/)[0])) return null;
+  return (process.env.CODELOOP_ROLE ?? (process.env.CODELOOP_AGENT_RUN ? 'agent' : 'owner')) === 'owner' ? hit : null;
+}
 
 guardCommand
   .command('bash')
@@ -503,7 +512,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
   const moved = await gateCrossingMove(command);
-  const hit = moved ? [moved] : OWNER_ACTION.exec(command);
+  const hit = moved ? [moved] : OWNER_ACTION.exec(command) ?? directBugFlag(command);
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.

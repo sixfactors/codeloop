@@ -10,7 +10,7 @@ import { homedir } from 'os';
 import { basename, dirname, join, resolve, sep } from 'path';
 import { buildBrief, loadAgents } from './agent.js';
 import { checkBoardPassword, readBoardAuth, writeBoardAuth } from './auth.js';
-import { DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, writeSummary, type Card } from './cards.js';
+import { bugReporter, DONE, DROPPED, findCard, inLane, PROPOSED, QUEUED, readCards, RefusalError, writeSummary, type Card } from './cards.js';
 import { detectProject, type ProjectDetection } from './detect.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as parkCardLib, placeCard as placeCardLib, createCard, proposeCard, queueCard, recordEvent, rejectCard, resolveRole, type AdvanceResult, type Role } from './engine.js';
@@ -175,6 +175,8 @@ export function splitTicket(title: string, ticket?: string): { title: string; ti
 
 /** `codeloop start` / `card new`: the story check runs first, so a technical title is refused. */
 export function newCard(projectDir: string, input: NewCardInput, who?: Role): CardCreated {
+  // Only the owner's flag jumps the queue, so anyone else's critical bug waits at the owner's gate.
+  if (input.bug && (who ?? 'agent') !== 'owner') return newProposal(projectDir, input, who);
   const { title, ticket } = splitTicket(input.title, input.ticket);
   const card = startCard(projectDir, { lane: input.lane, title, id: input.id, role: who ?? 'agent', fields: { ...storyFields(title, input), ...(ticket ? { ticket } : {}) } });
   return { card, hint: nextHint(projectDir, card) };
@@ -183,8 +185,12 @@ export function newCard(projectDir: string, input: NewCardInput, who?: Role): Ca
 /** `card propose`: a `source` names the finding, so the same one is never proposed twice. */
 export function newProposal(projectDir: string, input: ProposalInput, who?: Role): CardProposed {
   const { title, ticket } = splitTicket(input.title, input.ticket);
-  const fields = { ...storyFields(title, input), ...(ticket ? { ticket } : {}) };
+  const { bug, ...story } = storyFields(title, input);
+  // A non-owner's bug is a report: pickOrder ignores it until the owner approves the proposal (approveFlow).
+  const reporter = bug && (who ?? 'agent') !== 'owner' ? bugReporter(who ?? 'agent') : undefined;
+  const fields = { ...story, ...(bug && !reporter ? { bug } : {}), ...(reporter ? { bug_reported_by: reporter } : {}), ...(ticket ? { ticket } : {}) };
   const { card, created } = proposeCard(projectDir, {
+    ...(reporter ? { note: `reported as critical by ${reporter}` } : {}),
     lane: input.lane,
     title,
     id: input.id,
