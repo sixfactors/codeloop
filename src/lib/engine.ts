@@ -179,7 +179,7 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
 /**
  * A failure no story work can fix, said in one line: the check printed nothing but the
  * legacy-layout notice, or could not find its own card on the board it read (a worktree's
- * cards.json without the story, as c-143's research check did in its worktree).
+ * cards.json that does not hold the story).
  */
 function toolFault(card: Card, raw: string, text: string, work?: string): string | undefined {
   if (!text.trim() && raw.includes(LEGACY_NOTICE)) return 'the check printed only the legacy-layout notice; `codeloop store move --layout dotfolder` ends it';
