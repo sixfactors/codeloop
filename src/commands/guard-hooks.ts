@@ -155,7 +155,8 @@ guardCommand
 
 // Owner actions an assistant must never take in its own shell tool. The hook only fires for the
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
-const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|cards?\s+(?:done|drop|approve|reject))\b|--as[ =](owner|reviewer)\b/;
+// `orch run --review` without --dry-run closes and places stories on the owner's behalf.
+const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|cards?\s+(?:done|drop|approve|reject)\b|orch\b(?![^;&|\n]*--dry-run)[^;&|\n]*--review)\b|--as[ =](owner|reviewer)\b/;
 
 guardCommand
   .command('bash')

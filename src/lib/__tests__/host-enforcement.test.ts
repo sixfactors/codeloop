@@ -208,7 +208,7 @@ describe('guard bash (assistant shell tool hook)', () => {
     cli(['guard', 'bash', ...(format ? ['--format', format] : [])], { input: JSON.stringify({ tool_input: { command } }) });
 
   it('sends owner actions to the person as a permission prompt instead of running them silently', () => {
-    for (const command of ['codeloop approve c-5', 'cd x && codeloop reject c-5 "no"', 'codeloop answer c-5 1 --accept', 'codeloop next c-5 --as owner', 'codeloop card done c-5']) {
+    for (const command of ['codeloop approve c-5', 'cd x && codeloop reject c-5 "no"', 'codeloop answer c-5 1 --accept', 'codeloop next c-5 --as owner', 'codeloop card done c-5', 'codeloop orch run --review --changed', 'codeloop orch --review']) {
       const r = call(command);
       expect(r.status, command).toBe(0);
       expect(JSON.parse(r.stdout).hookSpecificOutput, command).toMatchObject({ hookEventName: 'PreToolUse', permissionDecision: 'ask' });
@@ -216,7 +216,7 @@ describe('guard bash (assistant shell tool hook)', () => {
   });
 
   it('lets ordinary commands through, including agent-safe codeloop ones', () => {
-    for (const command of ['npm test', 'codeloop brief c-5', 'codeloop next c-5', 'codeloop ask c-5 --file q.md', 'git commit -m "approve the copy"']) {
+    for (const command of ['npm test', 'codeloop brief c-5', 'codeloop next c-5', 'codeloop ask c-5 --file q.md', 'git commit -m "approve the copy"', 'codeloop orch run --review --dry-run', 'codeloop orch run c-5']) {
       const r = call(command);
       expect(r.status, command).toBe(0);
       expect(r.stdout.trim(), command).toBe('');

@@ -229,6 +229,32 @@ describe('the review pass', () => {
     expect(existsSync(join(dir, 'specs/c-2/interview.md'))).toBe(true);
   });
 
+  it('a process started by `run --agent` cannot run the review pass for real, only preview it', async () => {
+    commit('c-1', ['src/a.ts']);
+    board([card('c-1', { gate: 'stuck', awaiting: 'owner' })]);
+    const errors: string[] = [];
+    const err = vi.spyOn(console, 'error').mockImplementation((line: string) => void errors.push(line));
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const exit = vi.spyOn(process, 'exit').mockImplementation(((code: number) => { throw new Error(`exit ${code}`); }) as never);
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    process.env.CODELOOP_AGENT_RUN = 'claude';
+    try {
+      await expect(orchCommand.parseAsync(['run', '--review'], { from: 'user' })).rejects.toThrow('exit 2');
+      expect(errors.join('\n')).toMatch(/acts as agent/);
+      expect(find('c-1').stage).toBe('research');
+      await orchCommand.parseAsync(['run', '--review', '--dry-run'], { from: 'user' });
+      expect(find('c-1').stage).toBe('research');
+    } finally {
+      delete process.env.CODELOOP_PROJECT_DIR;
+      delete process.env.CODELOOP_AGENT_RUN;
+      // Commander keeps option values between parses of the same command object.
+      orchCommand.commands.find(c => c.name() === 'run')!.setOptionValue('dryRun', undefined);
+      err.mockRestore();
+      log.mockRestore();
+      exit.mockRestore();
+    }
+  });
+
   it('US5: `orch run --review` prints fixed, asked and could-not-tell, each line naming its evidence', async () => {
     const placed = commit('c-1', ['src/a.ts']);
     const asked = commit('c-2', ['src/b.ts']);

@@ -30,6 +30,9 @@ orchCommand
     const projectDir = projectRoot();
     if (opts.review) {
       if (id) throw new RefusalError('--review reads the whole board; drop the card id, or run `codeloop orch run <card>` without --review');
+      // The pass closes and places stories, which the engine lets `review` do past the agent refusal,
+      // so a process started by `run --agent` may only preview it.
+      if (!opts.dryRun && process.env.CODELOOP_AGENT_RUN) throw new RefusalError('this process was started by `codeloop run --agent` and acts as agent; `orch run --review` closes and places stories, which is the owner\'s. Use --dry-run to preview it');
       reportLines(reviewPass(projectDir, { all: !opts.changed, dryRun: opts.dryRun })).forEach(l => console.log(`  ${l}`));
       return;
     }
