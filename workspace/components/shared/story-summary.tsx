@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { AttributeCard } from '@/components/shared/record-layout';
-import { FieldRow } from '@/components/shared/field-row';
+import { FieldSectionLabel } from '@/components/shared/field-row';
 import { useCanWrite, useSaveSummary } from '@/hooks/use-api';
 import { whoLine } from '@/lib/story-folds';
 import { toast } from '@/lib/toast';
@@ -30,6 +30,16 @@ function Line({ l, extra }: { l: SummaryViewLine; extra?: React.ReactNode }) {
       {extra}
       <span className="text-xs text-muted-foreground" data-testid="summary-who">{whoLine(l)}</span>
     </span>
+  );
+}
+
+/** A label over its line, full width: the three lines stay short enough on a phone for the buttons under them to show. */
+function Row({ label, testId, children }: { label: string; testId: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 px-1 pb-1 text-[13px]" data-testid={testId}>
+      <FieldSectionLabel className="px-0 pt-1">{label}</FieldSectionLabel>
+      {children}
+    </div>
   );
 }
 
@@ -69,12 +79,12 @@ export function StorySummary({ cardId, summary, waiting, extra }: { cardId: stri
           </div>
         ) : (
           <>
-            <FieldRow label="What it needs" value={<Line l={summary.needed} />} testId="summary-needed" />
-            <FieldRow label="What is done" value={<Line l={summary.done} />} testId="summary-done" />
+            <Row label="What it needs" testId="summary-needed"><Line l={summary.needed} /></Row>
+            <Row label="What is done" testId="summary-done"><Line l={summary.done} /></Row>
           </>
         )}
-        <div className={cn('rounded-md', waiting && 'bg-warning/10 ring-1 ring-warning/40')} data-testid="summary-you-wrap" data-waiting={waiting || undefined}>
-          <FieldRow icon={waiting ? Hourglass : undefined} label="What you must do" value={<Line l={summary.you} extra={extra} />} testId="summary-you" />
+        <div className={cn('rounded-md', waiting && 'bg-warning/10 px-1 ring-1 ring-warning/40')} data-testid="summary-you-wrap" data-waiting={waiting || undefined}>
+          <Row label="What you must do" testId="summary-you"><span className="flex min-w-0 items-start gap-1.5">{waiting ? <Hourglass className="mt-0.5 size-3.5 shrink-0 text-warning" aria-label="Waiting on you" /> : null}<Line l={summary.you} extra={extra} /></span></Row>
         </div>
       </div>
     </AttributeCard>

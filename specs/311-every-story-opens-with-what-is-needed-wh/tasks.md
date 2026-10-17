@@ -16,7 +16,7 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 - [x] T005 [US3] [sdk] A summary write in the SDK and a hook to edit one line from the page, in src/sdk and workspace/lib/queries.ts
 - [x] T006 [US1] [ui] A story summary card with who and when on each line and an Edit action, above the buttons and the step bar, in workspace/components/shared/story-summary.tsx and workspace/components/shared/card-detail.tsx
 - [x] T007 [US2] [ui] Fold checks and scores, history, raw output, tasks and commits and details under headings with counts, a failing check shown on its heading, in workspace/components/shared/card-detail.tsx
-- [ ] T008 [US1] [test] One test per failure mode uc-311-01 to uc-311-07 in src/lib/__tests__/story-summary.test.ts and a story page browser test at phone width, each seen failing once with the fix reverted
+- [x] T008 [US1] [test] One test per failure mode uc-311-01 to uc-311-07 in src/lib/__tests__/story-summary.test.ts and a story page browser test at phone width, each seen failing once with the fix reverted
 
 ## Rubric
 

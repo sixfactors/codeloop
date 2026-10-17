@@ -56,7 +56,7 @@ function boardDone(card: Card, journey: Journey): SummaryViewLine {
   const done = journey.steps.filter(s => s.state === 'done').map(s => s.id);
   const t = journey.tasks;
   const tasks = t?.total ? `; ${t.done} of ${t.total} tasks done` : '';
-  const text = done.length ? `${sentence(listOf(done)).replace(/\.$/, '')} ${done.length === 1 ? 'is' : 'are'} finished${tasks}.` : `Nothing yet. The story is at ${card.stage}${tasks}.`;
+  const text = card.stage === DONE ? `The story is done${tasks}.` : done.length ? `${sentence(listOf(done)).replace(/\.$/, '')} ${done.length === 1 ? 'is' : 'are'} finished${tasks}.` : `Nothing yet. The story is at ${card.stage}${tasks}.`;
   const last = journey.steps.filter(s => s.state === 'done').at(-1)?.leftAt;
   return { text, by: BOARD, byKind: 'board', step: card.stage, ...(last ? { at: last } : {}) };
 }
