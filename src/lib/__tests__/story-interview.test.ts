@@ -96,7 +96,7 @@ describe('questions', () => {
     expect(path).toBe('.codeloop/specs/002-try-a-dark-theme/interview.md');
     expect(read(path)).toBe('## Q1 Dark by default?\nrecommended: no\nanswer: \n');
     addQuestions(dir, card.id, [2, 3, 4, 5].map(n => ({ question: `Q number ${n}` })));
-    expect(() => addQuestions(dir, card.id, [{ question: 'One more' }])).toThrow(/6 questions would be on c-002, the limit is 5/);
+    expect(() => addQuestions(dir, card.id, [{ question: 'One more' }])).toThrow(/6 interview questions would be on c-002, the limit is 5/);
     expect(readQuestions(dir, findCard(readCards(dir).cards, card.id)).map(q => q.n)).toEqual([1, 2, 3, 4, 5]);
   });
 
