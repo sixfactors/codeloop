@@ -60,6 +60,24 @@ describe('story size at build entry', () => {
   });
 });
 
+describe('the task cap on finished work', () => {
+  it('approves a story at the spec gate whose twelve tasks are all ticked', () => {
+    write('.codeloop/lanes/build.yaml', `id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - { id: spec, done: { cmd: "true" }, gate: { name: spec, approver: owner } }\n  - { id: build, done: { cmd: "true" } }\n  - { id: review, done: { cmd: "true" } }\n`);
+    createCard(dir, { lane: 'build', title: 'Big story', id: 'c-1' });
+    const cards = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'));
+    cards.cards[0].spec = 'specs/001-big';
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify(cards));
+    write('specs/001-big/tasks.md', tasks(12));
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const cli = (...args: string[]) => runCli(args, { cwd: dir, encoding: 'utf-8', env });
+    write('specs/001-big/tasks.md', tasks(12).replace(/- \[ \]/g, '- [x]'));
+    expect(advanceCard(dir, 'c-1').card.gate).toBe('spec');
+    const approved = cli('approve', 'c-1');
+    expect(approved.stderr).not.toMatch(/split it/);
+    expect(readCards(dir).cards[0].stage).toBe('build');
+  });
+});
+
 describe('Task trailer ticks the board', () => {
   const git = (...args: string[]) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd: dir, encoding: 'utf-8' });
   const commit = (trailers: string) => {

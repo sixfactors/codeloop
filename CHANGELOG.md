@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The eight-task cap judges planned work only: a story whose tasks are all ticked is approved and placed into build whatever its task count or size, while a story with open tasks over the cap is still refused at build entry.
 - A lane's `wip` counts only stories an agent is working on now: an agent run in flight on the story's stage, or a builder session on it that wrote to its activity within `monitor.stall_minutes`. Stories parked at a gate, waiting for answers or between turns hold no slot. `card new`, approving a proposal, `card place`, `card reopen`, queued promotion and the scheduler all count it this way, and a refusal names each story holding a slot and what is working on it. Trivial stories still never hold one.
 - `codeloop answer <id> --accept-all` accepts an answer an agent wrote under a question in interview.md as written, falling back to `recommended:`; `check questions` still counts only answers a person recorded. Answering keeps the text before the questions and the `## Rubric` lines after them, which it used to drop.
 - `codeloop card move <id> <stage>` starts a queued story (a split sibling waiting in Up next) at that stage when its lane has room; `card reopen` and `approve` on a queued story now point at `card move <id> <stage>` instead of at each other.
