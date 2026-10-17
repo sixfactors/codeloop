@@ -18,7 +18,6 @@ export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { pathInPlan, planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
-import { storyCommitTimes } from './diff-budget.js';
 import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
@@ -743,24 +742,28 @@ function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerp
 const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
 
 /**
- * Whether a commit since `from` (or, for the first failure, since `at`) is work on this card.
- * Another story's commit in a shared tree moves HEAD too, so only a commit carrying the card's
- * `Card:` or `Feature:` trailer counts, or one with no trailer at all that touches a file in the
- * card's plan.
+ * Whether a commit since `from` is work on this card. A commit naming the card in a `Card:` or
+ * `Feature:` trailer is; otherwise one touching a file in the card's plan is, whatever other
+ * trailers it carries; a card with no plan takes any commit with no trailers, since nothing says it
+ * belongs to another story. With no `from` (the first failure: no head was kept when the card
+ * entered the stage) commits since `at` are read and only the first two rules apply, as there is no
+ * head move to judge. A `from` the log cannot reach (the branch was rewritten) falls back to `at`.
  */
 function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; at: number }): boolean {
-  if (!since.from) return storyCommitTimes(projectDir, card.id).some(t => t >= Math.floor(since.at / 1000) * 1000);
-  const log = spawnSync('git', ['log', '--format=%x01%H%x00%B', `${since.from}..HEAD`], { cwd: projectDir, encoding: 'utf-8' });
-  if (log.status !== 0) return false;
+  const log = (range: string[]) => spawnSync('git', ['log', '--name-only', '--format=%x01%H%x00%B%x00', ...range], { cwd: projectDir, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
+  const byTime = [`--since=@${Math.floor(since.at / 1000)}`, 'HEAD'];
+  let run = log(since.from ? [`${since.from}..HEAD`] : byTime);
+  if (run.status !== 0 && since.from) run = log(byTime);
+  if (run.status !== 0) return false;
   const plan = planFiles(projectDir, card);
-  for (const rec of log.stdout.split('\u0001')) {
-    const [sha, body = ''] = rec.split('\u0000');
+  for (const rec of run.stdout.split('\u0001')) {
+    const [sha, body = '', files = ''] = rec.split('\u0000');
     if (!sha?.trim()) continue;
     const cards = [...body.matchAll(TRAILER)].map(m => m[1]);
     if (cards.includes(card.id)) return true;
-    if (cards.length || !plan) continue;
-    const files = spawnSync('git', ['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', sha.trim()], { cwd: projectDir, encoding: 'utf-8' });
-    if (files.status === 0 && files.stdout.split('\n').some(f => f && pathInPlan(projectDir, plan, f))) return true;
+    if (plan) {
+      if (files.split('\n').some(f => f.trim() && pathInPlan(projectDir, plan, f.trim()))) return true;
+    } else if (since.from && !cards.length) return true;
   }
   return false;
 }

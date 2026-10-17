@@ -103,6 +103,44 @@ describe('a repeated check', () => {
   });
 });
 
+describe('a commit as work on the story', () => {
+  // A first draft, so the first failure counts and keeps the head it ran on.
+  beforeEach(() => {
+    writeFileSync(join(dir, 'out.md'), 'a first draft');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(1);
+  });
+  const commit = (file: string, ...message: string[]) => {
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, file), file);
+    git('add', file);
+    git('commit', '-q', ...message.flatMap(m => ['-m', m]));
+  };
+
+  it('counts any commit with no trailer when the story has no plan', () => {
+    commit('src/fix.ts', 'fix on main with no hook');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
+  });
+
+  it("counts a commit carrying another story's trailer when it touches a file in this story's plan", () => {
+    mkdirSync(join(dir, 'specs/c-1'), { recursive: true });
+    writeFileSync(join(dir, 'specs/c-1/plan.md'), '# plan\n\n## Files\n\n- src/mine.ts\n');
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(c => ({ ...c, spec: 'specs/c-1' })));
+    commit('src/mine.ts', 'feat: the branch story', 'A body of two\n\nparagraphs.', 'Feature: c-9');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
+  });
+
+  it("reads the story's commits by time when the head the failure ran on is gone", () => {
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(c => ({ ...c, events: c.events.map(e => (e.action === 'fail' ? { ...e, head: '0'.repeat(40) } : e)) })));
+    commit('src/rebased.ts', 'work after a rebase', 'Card: c-1');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
+  });
+});
+
 describe('a check with no work behind it', () => {
   it('spends no retry on a missing output, however often it runs, and still records each failure', () => {
     for (let i = 0; i < 3; i++) expect(advanceCard(dir, 'c-1').outcome).toBe('failed');
