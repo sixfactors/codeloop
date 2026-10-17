@@ -15,3 +15,5 @@ changelog: https://github.com/github/spec-kit/releases
 - c-311 Every story opens with what is needed, what is done and what I must do: No per-feature summary: the spec, plan and tasks files are read in full, and progress is the ticked task list | https://github.com/github/spec-kit
 
 - c-313 A small story runs its early stages in one agent turn: The person runs specify, clarify, plan and tasks one after another in the same agent chat, so the early phases share one session; nothing checks a phase before the next starts | https://github.com/github/spec-kit
+
+- c-314 Several small stories build together in one turn: One implement run works one feature's task list; several small features mean several runs | https://github.com/github/spec-kit
