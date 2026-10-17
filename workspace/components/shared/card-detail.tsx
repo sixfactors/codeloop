@@ -37,7 +37,7 @@ import { useCard, useCardFull, useCardOutput, isMissing } from '@/hooks/use-api'
 import { mockUrl } from '@/lib/api';
 import { evidenceId } from '@/lib/routes';
 import { useRoutes } from '@/components/providers/project-provider';
-import type { Card as CardT, EvidenceFile } from '@/lib/types';
+import type { Card as CardT, EvidenceFile, StuckExplanation } from '@/lib/types';
 
 const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : undefined);
 
@@ -167,13 +167,14 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
   const folds = full.data ? foldHeadings(full.data) : undefined;
   const holder = journey?.holder;
   const waiting = holder?.kind === 'you';
+  const stuck = full.data?.summary?.stuck;
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {/* The summary, the actions and the step bar stay in view; everything else folds under them with a count (c-311). */}
-      {fullMissing ? null : full.error ? <InlineError title="Story failed to load" error={full.error} onRetry={() => full.refetch()} /> : <StorySummary cardId={card.id} summary={full.data?.summary} waiting={waiting} />}
+      {fullMissing ? null : full.error ? <InlineError title="Story failed to load" error={full.error} onRetry={() => full.refetch()} /> : <StorySummary cardId={card.id} summary={full.data?.summary} waiting={waiting} extra={stuck ? <StuckFacts stuck={stuck} /> : undefined} />}
       {/* Keyed by card: the drawer pager moving to another story must not carry this one's panel over. */}
-      <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} compact />
+      <CurrentStepPanel key={card.id} card={card} journey={journey} display={full.data?.card.display} rubric={full.data?.rubric} stuck={full.data?.summary?.stuck} compact />
       {journey ? <JourneyStepper journey={journey} /> : !full.data && !full.error ? <Skeleton className="h-12 w-full rounded-lg" /> : null}
       {folds && full.data ? (
         <div className="flex min-w-0 flex-col gap-2" data-testid="story-folds">
@@ -211,6 +212,16 @@ export function CardDetailBody({ card, stacked }: { card: CardT; stacked?: boole
         </div>
       ) : !full.data && !full.error ? <Skeleton className="h-40 w-full rounded-xl" /> : null}
     </div>
+  );
+}
+
+/** Under a stuck story's "what you must do": whether work was tried and what shipped (c-308). On a phone they sit under the buttons instead, so the buttons stay on the first screen. */
+function StuckFacts({ stuck }: { stuck: StuckExplanation }) {
+  return (
+    <span className="hidden gap-0.5 text-xs text-muted-foreground sm:grid" data-testid="stuck-facts">
+      <span>Work tried: {stuck.tried}</span>
+      <span>Shipped: {stuck.shipped}</span>
+    </span>
   );
 }
 

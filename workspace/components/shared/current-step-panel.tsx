@@ -9,7 +9,8 @@
 // The caller keys it by card id, so moving the drawer to another story starts it fresh.
 
 import { useEffect, useState } from 'react';
-import { Bot, Check, CheckCircle2, FileText, Hand, Lock, ParkingSquare, Play, Square, UserRound, Workflow, X, XCircle } from 'lucide-react';
+import { ArrowRight, Bot, Check, CheckCircle2, ChevronRight, FileText, Hand, Hourglass, ParkingSquare, Play, RotateCcw, Square, UserRound, Workflow, X, XCircle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -24,9 +25,9 @@ import { RunLogPane } from '@/components/shared/run-log-pane';
 import { phaseTimeText, since } from '@/components/shared/journey-stepper';
 import { StatePill } from '@/components/shared/state-pill';
 import { RubricRows } from '@/components/shared/rubric-rows';
-import { useAdvance, useBrief, useCanWrite, useDecide, useOrch, useOrchRun, usePark, useSetupStatus } from '@/hooks/use-api';
+import { useAdvance, useBrief, useCanWrite, useDecide, useMoveStuck, useOrch, useOrchRun, usePark, useSetupStatus } from '@/hooks/use-api';
 import { toast } from '@/lib/toast';
-import type { Card as CardT, Journey, StageRubric, StoryState } from '@/lib/types';
+import type { Card as CardT, Journey, StageRubric, StoryState, StuckExplanation } from '@/lib/types';
 
 function Why({ reason, children }: { reason?: string; children: React.ReactNode }) {
   if (!reason) return <>{children}</>;
@@ -101,7 +102,46 @@ function AgentShape({ card, journey, compact }: { card: CardT; journey: Journey;
   );
 }
 
-function YouShape({ card, journey, rubric, compact }: { card: CardT; journey: Journey; rubric?: StageRubric | null; compact?: boolean }) {
+/**
+ * A stuck story's actions (c-308): at most two buttons from its explanation (move it to where its
+ * shipped work points, stopping before any gate; one more try only when something changed) and
+ * Send it back. Everything else is said in the summary's "what you must do" line.
+ */
+function StuckActions({ card, stuck, note, onDone }: { card: CardT; stuck: StuckExplanation; note: string; onDone: () => void }) {
+  const decide = useDecide();
+  const move = useMoveStuck();
+  const { canWrite, reason } = useCanWrite();
+  const busy = decide.isPending || move.isPending;
+  const title = canWrite ? undefined : reason;
+  const act = (action: 'approve' | 'reject') =>
+    decide.mutate({ id: card.id, action, note: note || undefined }, { onSuccess: () => { toast.success(action === 'approve' ? `${card.id} gets one more try` : `Sent ${card.id} back`); onDone(); }, onError: (e) => toast.error(`${action === 'approve' ? 'Try again' : 'Send it back'} failed: ${(e as Error).message}`) });
+  return (
+    <div className="flex flex-col gap-2" data-testid="stuck-actions" data-kind={stuck.kind}>
+      <div className="flex flex-wrap gap-2">
+        {stuck.buttons.includes('move') && stuck.moveTo ? (
+          <Button size="sm" disabled={!canWrite || busy} title={title} onClick={() => move.mutate({ id: card.id }, { onSuccess: () => toast.success(`Moved ${card.id} to ${stuck.moveTo}`), onError: (e) => toast.error(`Move failed: ${(e as Error).message}`) })} data-testid="stuck-move"><ArrowRight />Move it to {stuck.moveTo}</Button>
+        ) : null}
+        {stuck.buttons.includes('retry') ? (
+          <Button size="sm" variant={stuck.kind === 'broken' ? 'outline' : 'default'} disabled={!canWrite || busy} title={title} onClick={() => act('approve')} data-testid="stuck-retry"><RotateCcw />{stuck.kind === 'broken' ? 'Try again now the check is fixed' : 'Let an agent try once more'}</Button>
+        ) : null}
+        <Button size="sm" variant="outline" disabled={!canWrite || busy} title={title} onClick={() => act('reject')} data-testid="gate-reject"><X />Send it back</Button>
+      </div>
+      {stuck.error ? (
+        <Collapsible className="rounded-lg border" data-testid="stuck-error">
+          <CollapsibleTrigger className="group flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-90" aria-hidden />
+            <span>Show the error</span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="border-t px-3 py-2">
+            <pre className="max-h-48 w-full overflow-auto font-mono text-[11px] whitespace-pre-wrap wrap-anywhere">{stuck.error}</pre>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+    </div>
+  );
+}
+
+function YouShape({ card, journey, rubric, compact, stuck }: { card: CardT; journey: Journey; rubric?: StageRubric | null; compact?: boolean; stuck?: StuckExplanation }) {
   const decide = useDecide();
   const { canWrite, reason } = useCanWrite();
   const [note, setNote] = useState('');
@@ -112,9 +152,16 @@ function YouShape({ card, journey, rubric, compact }: { card: CardT; journey: Jo
       { onSuccess: () => { toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${card.id}`); setNote(''); }, onError: (e) => toast.error(`${action === 'approve' ? 'Approve' : 'Reject'} failed: ${(e as Error).message}`) }
     );
   return (
-    <AttributeCard title={holder.gate ? (holder.gate === 'stuck' ? `Stuck at ${card.stage}` : `Waiting for you at ${card.stage}`) : 'Questions for you'} icon={holder.gate ? Lock : Hand} className="border-warning/50" testId="panel-you">
+    <AttributeCard title={holder.gate ? (holder.gate === 'stuck' ? `Stuck at ${card.stage}` : `Waiting for you at ${card.stage}`) : 'Questions for you'} icon={holder.gate ? Hourglass : Hand} className="border-warning/50" testId="panel-you">
       {compact ? null : <CheckLine journey={journey} />}
-      {holder.gate ? (
+      {holder.gate === 'stuck' && stuck ? (
+        <div className="mt-2 flex flex-col gap-2">
+          <StuckActions card={card} stuck={stuck} note={note} onDone={() => setNote('')} />
+          <p className="grid gap-0.5 text-xs text-muted-foreground sm:hidden" data-testid="stuck-facts-phone"><span>Work tried: {stuck.tried}</span><span>Shipped: {stuck.shipped}</span></p>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note for Send it back (optional)" rows={2} aria-label="Gate note" disabled={!canWrite} />
+          {!canWrite ? <p className="text-xs text-muted-foreground">{reason}</p> : null}
+        </div>
+      ) : holder.gate ? (
         <div className="mt-2 flex flex-col gap-2">
           <p className="text-xs text-muted-foreground" data-testid="gate-explain">
             {holder.gate === 'stuck'
@@ -192,7 +239,7 @@ function NobodyShape({ card, journey, compact }: { card: CardT; journey: Journey
 }
 
 /** `compact`: the story page shows the check and rubric in its folds, so the panel keeps only who holds it and the actions. */
-export function CurrentStepPanel({ card, journey, display, rubric, compact }: { card: CardT; journey?: Journey; display?: StoryState; rubric?: StageRubric | null; compact?: boolean }) {
+export function CurrentStepPanel({ card, journey, display, rubric, compact, stuck }: { card: CardT; journey?: Journey; display?: StoryState; rubric?: StageRubric | null; compact?: boolean; /** A stuck story's explanation from the API; its buttons replace Approve. */ stuck?: StuckExplanation }) {
   if (!journey) return null;
   const current = journey.steps.find((s) => s.state === 'current' || s.state === 'gate');
   if (!current) return null;
@@ -205,7 +252,7 @@ export function CurrentStepPanel({ card, journey, display, rubric, compact }: { 
         <span>{current.id}{current.enteredAt ? ` since ${since(current.enteredAt)}` : ''}</span>
         {time ? <span className="tabular-nums" data-testid="step-time">{time}</span> : null}
       </p>
-      {shape === 'agent' ? <AgentShape card={card} journey={journey} compact={compact} /> : shape === 'you' ? <YouShape card={card} journey={journey} rubric={rubric} compact={compact} /> : <NobodyShape card={card} journey={journey} compact={compact} />}
+      {shape === 'agent' ? <AgentShape card={card} journey={journey} compact={compact} /> : shape === 'you' ? <YouShape card={card} journey={journey} rubric={rubric} compact={compact} stuck={stuck} /> : <NobodyShape card={card} journey={journey} compact={compact} />}
     </div>
   );
 }
