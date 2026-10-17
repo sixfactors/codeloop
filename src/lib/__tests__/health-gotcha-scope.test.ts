@@ -64,6 +64,8 @@ describe("a story's health delta", () => {
     expect(checkHealth(dir, 'c-1').delta, 'the untrailered commit touched src/a.ts, which c-1 changed').toBeLessThan(0);
 
     rmSync(join(dir, '.codeloop/wiki/gotchas/on-c.md'));
+    // c-2 also touches src/a.ts, a c-1 file: its trailer keeps it out all the same.
+    write('src/a.ts', 'export const a = 4;\nexport const shared = 1;\n');
     write('src/e.ts', 'export const e = 1;\n');
     gotcha('on-e', 'src/e.ts');
     commit('feat: e\n\nCard: c-2');
