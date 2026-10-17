@@ -24,7 +24,7 @@ import { closeCard, placeCard, RefusalError, recordEvent, reviewCloseRefusal, re
 import { addQuestions, readQuestions } from './interview.js';
 import { loadLane, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { withLock } from './lock.js';
-import { mockAppDir, mockTarget } from './mock.js';
+import { codeStageIndex, mergedWorkTarget, notWork } from './merged-work.js';
 import { readOff } from './off.js';
 import { specPath } from './project-root.js';
 import { untouchedOutput } from './stage-scaffold.js';
@@ -34,10 +34,6 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const REVIEW_STATE = '.codeloop/state/review-pass.json';
 /** Every question the pass asks starts with this, so a later pass can tell it already asked. */
 export const REVIEW_PREFIX = 'Review:';
-
-// Planning, evidence and tool state: commits that touch only these say nothing about where the
-// story's work is. specs/, evidence/ and shape/ are the legacy layout of the .codeloop store.
-const NOT_WORK = [/^\.codeloop\//, /^specs\//, /^evidence\//, /^shape\//, /^docs\//, /^CHANGELOG\.md$/];
 
 export type Verb = 'place' | 'close' | 'write-stage' | 'ask';
 
@@ -84,13 +80,6 @@ interface ReviewState {
 const short = (sha: string) => sha.slice(0, 8);
 const shas = (commits: string[]) => commits.map(short).join(', ');
 
-/** Paths that are not the story's work: the store, docs, and where mocks are drawn. */
-export function notWork(projectDir: string): (path: string) => boolean {
-  const app = mockTarget(projectDir) === 'app' ? mockAppDir(projectDir) : undefined;
-  const mocks = app ? `${app}/mocks/` : undefined;
-  return path => NOT_WORK.some(re => re.test(path)) || (mocks !== undefined && path.startsWith(mocks));
-}
-
 export interface MergedWork {
   /** Trunk commits carrying the story's id that change a file outside `notWork`. */
   merged: StoryCommit[];
@@ -103,18 +92,12 @@ export interface MergedWork {
 export function mergedWork(projectDir: string, card: Card): MergedWork {
   const commits = storyCommits(projectDir, card.id);
   if (!commits.length) return { merged: [], unmerged: [], files: [] };
-  const skip = notWork(projectDir);
+  const skip = notWork(projectDir, card);
   const touched = commitFiles(projectDir, commits.map(c => c.sha));
   const work = commits.filter(c => (touched.get(c.sha) ?? []).some(p => !skip(p)));
   const merged = work.filter(c => c.merged);
   const files = [...new Set(merged.flatMap(c => (touched.get(c.sha) ?? []).filter(p => !skip(p))))].sort();
   return { merged, unmerged: work.filter(c => !c.merged), files };
-}
-
-/** Where merged code puts a story: the stage after the last one that writes a file in its spec folder. */
-export function codeStageIndex(lane: Lane): number {
-  const last = lane.stages.map(s => s.output?.startsWith('{spec}/') ?? false).lastIndexOf(true);
-  return last + 1 < lane.stages.length ? last + 1 : -1;
 }
 
 const asked = (projectDir: string, card: Card, key: string) => readQuestions(projectDir, card).some(q => q.question.startsWith(`${REVIEW_PREFIX} ${key}.`));
@@ -163,12 +146,7 @@ export function planFix(projectDir: string, card: Card, cards: Card[] = readCard
   if (code < 0 || cur >= code) return undefined;
 
   // As far toward the code stage as no gate stands in the way.
-  let target = cur;
-  for (let i = cur + 1; i <= code; i++) {
-    if (!stageApplies(lane.stages[i], card)) continue;
-    if (reviewMoveRefusal(lane, card, i)) break;
-    target = i;
-  }
+  const target = mergedWorkTarget(lane, card) ?? cur;
   const codeId = lane.stages[code].id;
   // Only a missing file or the untouched template is written; a file someone started is never replaced.
   const unwritten = (from: number, to: number) => lane.stages.slice(from, to).filter(s => stageApplies(s, card) && untouchedOutput(projectDir, card, s)).map(s => s.id);
@@ -228,7 +206,7 @@ export function stageText(projectDir: string, card: Card, stage: Stage, work: Me
     if (!/^verdict:\s*\S/m.test(text)) text = `${text.trimEnd()}\n\nverdict: build\n`;
   } else if (name === 'tasks.md') {
     const files = commitFiles(projectDir, work.merged.map(c => c.sha));
-    const skip = notWork(projectDir);
+    const skip = notWork(projectDir, card);
     const tasks = [...work.merged].reverse().map((c, i) => `- [x] T${String(i + 1).padStart(3, '0')} [${layerOf((files.get(c.sha) ?? []).filter(p => !skip(p)))}] ${c.subject} (\`${short(c.sha)}\`)`);
     text = /^## Rubric/m.test(text) ? text.replace(/^## Rubric/m, `${tasks.join('\n')}\n\n## Rubric`) : `${text.trimEnd()}\n\n${tasks.join('\n')}\n`;
   }

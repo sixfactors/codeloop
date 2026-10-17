@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A stuck story's Move it button targets the same step the review pass places it at (the build step, not the one after it), and both read the same rule for shipped work, so a commit touching only CHANGELOG.md or shape/ no longer offers a move.
 - `PUT /api/cards/<id>/summary` needs a server started with `--owner`, like place and close, and records the writer from the server, never from a `by` in the body.
 - The review pass closes a story only when its current stage's check passed since it got there and every later stage passed; an approval alone, such as an outward gate approved on entry before the deploy ran, no longer closes it.
 - `codeloop stats` shows agent starts per story by size: how many starts a story took to its first gate (the spec gate for an M story) and from build to done; `--json` lists them per story under `agent_starts`.

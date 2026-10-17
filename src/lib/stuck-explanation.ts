@@ -10,6 +10,7 @@ import { commitFiles, storyCommits, type StoryCommit } from './diff-budget.js';
 import { approveCard, placeCard, workFingerprint, type Role } from './engine.js';
 import { checkSentence } from './journey.js';
 import { loadLane, type Lane } from './lane.js';
+import { mergedWorkTarget, notWork } from './merged-work.js';
 import { progressSince } from './progress.js';
 
 export interface StuckExplanation {
@@ -34,32 +35,19 @@ const hhmm = (iso: string) => { const d = new Date(iso); return `${pad(d.getHour
 const dayTime = (ms: number) => { const d = new Date(ms); return `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const times = (n: number) => `${n} ${n === 1 ? 'time' : 'times'}`;
 
-/** A commit path that is not shipped work: docs, the board's own files, the spec folder, evidence and mocks. */
-export function isPaperwork(path: string, card: Pick<Card, 'spec'>): boolean {
-  return /^(docs|\.codeloop|specs|evidence)\//.test(path) || /(^|\/)mocks\//.test(path) || Boolean(card.spec && path.startsWith(`${card.spec.replace(/\/$/, '')}/`));
-}
-
-/** Merged commits under the story that change something besides docs, specs, evidence and mocks. */
+/** Merged commits under the story that change something `notWork` does not set aside. */
 export function shippedCommits(projectDir: string, card: Card, commits: StoryCommit[] = storyCommits(projectDir, card.id)): StoryCommit[] {
   const merged = commits.filter(c => c.merged);
   if (!merged.length) return [];
   const files = commitFiles(projectDir, merged.map(c => c.sha));
-  return merged.filter(c => (files.get(c.sha) ?? []).some(p => !isPaperwork(p, card)));
+  const skip = notWork(projectDir, card);
+  return merged.filter(c => (files.get(c.sha) ?? []).some(p => !skip(p)));
 }
 
-/**
- * The step a story's shipped code points to: the one after the lane's build step (the stage whose
- * check reads the task list). Never past a gate: the first gated stage from here on is as far as a
- * move goes, and when the story's own stage is gated there is no move.
- */
-export function moveTarget(lane: Lane, card: Pick<Card, 'stage'>): string | undefined {
-  const here = lane.stages.findIndex(s => s.id === card.stage);
-  const build = lane.stages.findIndex(s => s.id === 'build' || /\btask check\b/.test(s.done?.cmd ?? ''));
-  if (here < 0 || build < 0) return undefined;
-  let target = Math.min(build + 1, lane.stages.length - 1);
-  const gate = lane.stages.findIndex((s, i) => i >= here && s.gate);
-  if (gate >= 0) target = Math.min(target, gate);
-  return target > here ? lane.stages[target].id : undefined;
+/** The step a story's shipped code points to: the same place the review pass would put it. */
+export function moveTarget(lane: Lane, card: Card): string | undefined {
+  const target = mergedWorkTarget(lane, card);
+  return target === undefined ? undefined : lane.stages[target].id;
 }
 
 const atStage = (events: CardEvent[], stage: string, from: number) => events.slice(from + 1).filter(e => e.stage === stage);

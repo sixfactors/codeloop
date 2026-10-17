@@ -5,7 +5,8 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { CHECK_CRASHED, readCards } from '../cards.js';
-import { advanceCard, createCard, markStuck, recordEvent } from '../engine.js';
+import { advanceCard, createCard, markStuck, placeCard, recordEvent } from '../engine.js';
+import { planFix } from '../review-pass.js';
 import { buildInbox } from '../inbox.js';
 import { createApp } from '../server.js';
 import { showCard } from '../services.js';
@@ -79,6 +80,34 @@ describe('the stuck explanation', () => {
     expect(card()).toMatchObject({ stage: 'spec', gate: 'stuck' });
     expect(explain().buttons).not.toContain('move');
     expect(() => moveStuck(dir, 'c-1', 'owner')).toThrow(/no step to move to/);
+  });
+
+  it('uc-308-02: the move button targets the step the review pass places at, and a changelog or shape commit is not shipped work', () => {
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), `id: build
+version: 1
+metric: { name: m, source: cards }
+retries: 1
+stages:
+  - id: spec
+    output: "{spec}/tasks.md"
+    done: { cmd: "exit 1" }
+  - id: data-model
+    output: "{spec}/data-model.md"
+    done: { cmd: "exit 1" }
+  - id: build
+    done: { cmd: "echo task check; exit 1" }
+  - id: verify
+    done: { cmd: "exit 1" }
+`);
+    commit('CHANGELOG.md', 'docs: changelog');
+    commit('shape/board.md', 'docs: shape');
+    placeCard(dir, 'c-1', 'data-model', 'owner');
+    advanceCard(dir, 'c-1');
+    expect(card()).toMatchObject({ stage: 'data-model', gate: 'stuck' });
+    expect(explain().buttons).not.toContain('move');
+    commit('src/board.ts', 'feat: the board');
+    expect(explain()).toMatchObject({ kind: 'shipped', moveTo: 'build' });
+    expect(planFix(dir, card())).toMatchObject({ verb: 'place', to: 'build' });
   });
 
   it('uc-308-03: a broken check says the check broke, with the step and time, and keeps the raw error apart', () => {
