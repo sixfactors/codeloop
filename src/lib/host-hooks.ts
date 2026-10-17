@@ -5,6 +5,42 @@ import { fileURLToPath } from 'url';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
+/** Single-quoted for sh, so a path with spaces or quotes stays one word. */
+const shq = (text: string) => `'${text.replace(/'/g, `'\\''`)}'`;
+
+/**
+ * The node running this process and the package's own bin folder. Hooks and MCP entries are
+ * written with these: GUI hosts and GUI git clients start them with a bare PATH, where a bare
+ * `codeloop` exits 127 and the guard passes without running.
+ */
+export function codeloopPaths(): { node: string; bin: string } {
+  return { node: process.execPath, bin: join(PACKAGE_ROOT, 'bin') };
+}
+
+/** A hook command from the templates (`codeloop ...` or `codeloop-hook ...`) with absolute paths. */
+export function absoluteCommand(command: string): string {
+  const { node, bin } = codeloopPaths();
+  const hook = /^codeloop-hook(\s|$)/.exec(command);
+  if (hook) return `CODELOOP_NODE=${shq(node)} CODELOOP_BIN=${shq(join(bin, 'codeloop'))} ${shq(join(bin, 'codeloop-hook'))}${command.slice('codeloop-hook'.length)}`;
+  if (/^codeloop(\s|$)/.test(command)) return `CODELOOP_NODE=${shq(node)} ${shq(join(bin, 'codeloop'))}${command.slice('codeloop'.length)}`;
+  return command;
+}
+
+/** Every `command` string in a template entry, with absolute paths. */
+function withPaths<T>(entry: T): T {
+  if (Array.isArray(entry)) return entry.map(withPaths) as T;
+  if (entry && typeof entry === 'object') return Object.fromEntries(Object.entries(entry).map(([k, v]) => [k, k === 'command' && typeof v === 'string' ? absoluteCommand(v) : withPaths(v)])) as T;
+  return entry;
+}
+
+/** A git hook template with this install's node and codeloop paths written into it. */
+function gitHookSource(name: string): string {
+  const { node, bin } = codeloopPaths();
+  return readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8')
+    .replace(/^CODELOOP_NODE=\$\{CODELOOP_NODE:-node\}$/m, () => `CODELOOP_NODE=\${CODELOOP_NODE:-${shq(node)}}`)
+    .replace(/^codeloop=codeloop$/m, () => `codeloop=${shq(join(bin, 'codeloop'))}`);
+}
+
 export interface HookInstall {
   name: string;
   installed: boolean;
@@ -25,7 +61,12 @@ function mergeHooksFile(projectDir: string, destRel: string, templateFile: strin
   let changed = false;
   for (const [event, entries] of Object.entries(template.hooks)) {
     dest.hooks[event] ??= [];
-    for (const entry of entries) {
+    // An entry from an install before absolute paths runs the same hook again; it is replaced.
+    const bare = new Set(entries.map(e => JSON.stringify(e)));
+    const kept = (dest.hooks[event] as unknown[]).filter(e => !bare.has(JSON.stringify(e)));
+    if (kept.length !== dest.hooks[event].length) changed = true;
+    dest.hooks[event] = kept;
+    for (const entry of entries.map(withPaths)) {
       const exists = (dest.hooks[event] as unknown[]).some(e => JSON.stringify(e) === JSON.stringify(entry));
       if (!exists) {
         dest.hooks[event].push(entry);
@@ -44,7 +85,8 @@ function mergeHooksFile(projectDir: string, destRel: string, templateFile: strin
 function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push' | 'post-commit'): HookInstall {
   const run = spawnSync('git', ['rev-parse', '--git-path', 'hooks'], { cwd: projectDir, encoding: 'utf-8' });
   if (run.status !== 0) return { name, installed: false, reason: 'not a git repository' };
-  const source = readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
+  const source = gitHookSource(name);
+  const template = readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
   // A repo with core.hooksPath never runs .git/hooks. Husky points it at .husky/_ and runs the
   // script of the same name one level up, so that is where the guard has to go, appended to
   // whatever the repo already runs there.
@@ -61,7 +103,9 @@ function installGitHook(projectDir: string, name: 'pre-commit' | 'pre-push' | 'p
   }
   const path = join(resolve(projectDir, hooksPath || run.stdout.trim()), name);
   if (existsSync(path) && readFileSync(path, 'utf-8') === source) return { name, installed: true, path, reason: 'unchanged' };
-  if (existsSync(path)) {
+  // The hook as an earlier install wrote it, bare PATH lookups and all: replaced whole.
+  const earlier = existsSync(path) && readFileSync(path, 'utf-8') === template;
+  if (existsSync(path) && !earlier) {
     // A hook the repo already runs (its own script, or one a `prepare` step copies in) keeps running
     // first; the guard is appended after it under a marker, once.
     const current = readFileSync(path, 'utf-8');
@@ -96,7 +140,7 @@ export function hasGitGuardHooks(projectDir: string): boolean {
     const path = join(dir, name);
     if (!existsSync(path)) return false;
     const text = readFileSync(path, 'utf-8');
-    return text.includes(`# codeloop ${name}`) || text === readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
+    return text.includes(`# codeloop ${name}`) || text === gitHookSource(name) || text === readFileSync(join(PACKAGE_ROOT, 'templates/hooks', name), 'utf-8');
   });
 }
 

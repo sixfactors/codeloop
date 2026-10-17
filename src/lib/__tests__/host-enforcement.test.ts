@@ -5,7 +5,9 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { getActiveCard, setActiveCard } from '../active-card.js';
+import { installHostHooks } from '../host-hooks.js';
 import { render } from '../render.js';
+import { applyMcpConfig } from '../scaffold.js';
 import { guardSignal, WARNINGS_PATH } from '../../watch/guard.js';
 import { runCli } from '../../__tests__/cli.js';
 
@@ -317,6 +319,41 @@ stages:
     }
   });
 
+  it('asks the person for a --bug that would set the pick-jumping flag as the owner, and lets an agent\'s report through', async () => {
+    writeCard('c-1', 'spec');
+    const { guardBash, withStdin } = await import('../../commands/guard-hooks.js');
+    const env = { dir: process.env.CODELOOP_PROJECT_DIR, run: process.env.CODELOOP_AGENT_RUN, role: process.env.CODELOOP_ROLE };
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    delete process.env.CODELOOP_AGENT_RUN;
+    delete process.env.CODELOOP_ROLE;
+    const asks = async (command: string) => {
+      const out: string[] = [];
+      const log = vi.spyOn(console, 'log').mockImplementation((line: unknown) => { out.push(String(line)); });
+      try {
+        await withStdin(JSON.stringify({ tool_input: { command } }), () => guardBash({ format: 'claude' }));
+      } finally {
+        log.mockRestore();
+      }
+      return out.join('\n').includes('"permissionDecision":"ask"');
+    };
+    try {
+      for (const command of ['codeloop card new build "Fix the login crash" --bug', 'codeloop card edit c-1 --bug', 'codeloop cards edit c-1 --no-bug', 'codeloop start build "Fix the login crash" --bug']) {
+        expect(await asks(command), command).toBe(true);
+      }
+      for (const command of ['codeloop card propose build "Fix the login crash" --bug', 'codeloop card edit c-1 --bug --as agent', 'codeloop card new build "Fix the login crash"']) {
+        expect(await asks(command), command).toBe(false);
+      }
+      // Inside an agent run the same --bug is only a report the owner confirms.
+      process.env.CODELOOP_AGENT_RUN = 'builder';
+      expect(await asks('codeloop card new build "Fix the login crash" --bug')).toBe(false);
+    } finally {
+      for (const [key, value] of [['CODELOOP_PROJECT_DIR', env.dir], ['CODELOOP_AGENT_RUN', env.run], ['CODELOOP_ROLE', env.role]] as const) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it('answers Cursor in its beforeShellExecution format', () => {
     expect(JSON.parse(call('codeloop approve c-5', 'cursor').stdout)).toMatchObject({ permission: 'ask' });
     expect(JSON.parse(call('npm test', 'cursor').stdout)).toEqual({ permission: 'allow' });
@@ -402,7 +439,7 @@ describe('git hooks when the repo already has one', () => {
     expect(result.status).toBe(0);
     const hook = readFileSync(join(dir, '.git/hooks/pre-commit'), 'utf-8');
     expect(hook.indexOf('pnpm -s verify')).toBeLessThan(hook.indexOf('# codeloop pre-commit'));
-    expect(hook).toContain('codeloop guard diff --staged');
+    expect(hook).toContain('"$codeloop" guard diff --staged');
     cli(['init', '--hooks']);
     expect(readFileSync(join(dir, '.git/hooks/pre-commit'), 'utf-8').match(/# codeloop pre-commit/g)).toHaveLength(1);
   });
@@ -418,7 +455,7 @@ describe('git hooks under core.hooksPath (husky layout)', () => {
     const hook = readFileSync(join(dir, '.husky/pre-commit'), 'utf-8');
     expect(hook).toContain('npm test');
     expect(hook).toContain('# codeloop pre-commit');
-    expect(hook).toContain('codeloop guard diff --staged');
+    expect(hook).toContain('"$codeloop" guard diff --staged');
     expect(readFileSync(join(dir, '.husky/pre-push'), 'utf-8')).toContain('# codeloop pre-push');
     expect(existsSync(join(dir, '.git/hooks/pre-commit'))).toBe(false);
     const again = cli(['init', '--hooks']);
@@ -554,6 +591,47 @@ stages:
     const push = spawnSync(join(dir, '.git/hooks/pre-push'), [], { cwd: dir, encoding: 'utf-8', env: { ...process.env, PATH, CODELOOP_GUARD: 'off' } });
     expect(commit.status).toBe(0);
     expect(push.status).toBe(0);
+  });
+});
+
+describe('hooks under a bare PATH (GUI hosts and GUI git clients)', () => {
+  const BARE = '/usr/bin:/bin';
+  const stagedOutsidePlan = () => {
+    spawnSync('git', ['init', '-q'], { cwd: dir });
+    writeCard('c-7', 'spec', { spec: 'specs/c-7' });
+    write('specs/c-7/plan.md', '# c-7 plan\n\n## Files\n\n- src/ok.ts\n');
+    setActiveCard(dir, 'c-7');
+    write('src/bad.ts', 'bad\n');
+    spawnSync('git', ['add', 'src/bad.ts'], { cwd: dir });
+  };
+
+  it('the installed pre-commit and the Claude edit hook still run codeloop with no codeloop or node on PATH', () => {
+    stagedOutsidePlan();
+    installHostHooks(dir);
+    const commit = spawnSync(join(dir, '.git/hooks/pre-commit'), [], { cwd: dir, encoding: 'utf-8', env: { ...process.env, PATH: BARE } });
+    expect(commit.stderr).toMatch(/outside c-7's plan/);
+    expect(commit.status).toBe(1);
+
+    const settings = JSON.parse(readFileSync(join(dir, '.claude/settings.json'), 'utf-8'));
+    const edit = settings.hooks.PreToolUse.find((g: { matcher: string }) => g.matcher === 'Edit|Write|MultiEdit').hooks[0].command as string;
+    const ran = spawnSync('/bin/sh', ['-c', edit], { cwd: dir, encoding: 'utf-8', input: JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: join(dir, 'src/ok.ts') } }), env: { ...process.env, PATH: BARE, CODELOOP_HOOKD_SOCK: join(dir, 'no.sock') } });
+    expect(ran.status).not.toBe(127);
+    expect(ran.stderr).not.toMatch(/not found/);
+  });
+
+  it('pre-commit refuses when a card is active and codeloop cannot be found, instead of passing', () => {
+    stagedOutsidePlan();
+    writeFileSync(join(dir, '.git/hooks/pre-commit'), readFileSync(join(ROOT, 'templates/hooks/pre-commit'), 'utf-8'), { mode: 0o755 });
+    const commit = spawnSync(join(dir, '.git/hooks/pre-commit'), [], { cwd: dir, encoding: 'utf-8', env: { ...process.env, PATH: BARE } });
+    expect(commit.status).toBe(1);
+    expect(commit.stderr).toMatch(/codeloop is not installed where this hook looks/);
+  });
+
+  it('.mcp.json names the absolute codeloop and node, and upgrades a bare entry from an earlier init', () => {
+    write('.mcp.json', JSON.stringify({ mcpServers: { codeloop: { command: 'codeloop', args: ['mcp'] } } }));
+    expect(applyMcpConfig(dir, ['claude'])).toEqual(['.mcp.json']);
+    const entry = JSON.parse(readFileSync(join(dir, '.mcp.json'), 'utf-8')).mcpServers.codeloop;
+    expect(entry).toEqual({ command: join(ROOT, 'bin/codeloop'), args: ['mcp'], env: { CODELOOP_NODE: process.execPath } });
   });
 });
 
