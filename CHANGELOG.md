@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A failed check counts toward a story's retries only when work was tried since the last failure: an agent run, a hand-back or session edit, a new head commit, or a changed output. A check on a missing output, on the untouched template, or in a sweep is recorded and spends no retry.
 - The board keeps you signed in whichever link you open: codeloop prints localhost links and sends 127.0.0.1 pages there, a second hub on another port no longer signs you out of the first, and the sidebar no longer flashes Read only while it checks your session.
 - An assistant's `card move` that skips a gate, undoes one, or clears a wait asks the person first, like `approve`; a move to the stage a parked card is at clears its wait.
 - `card edit --size trivial` works, and the session working a card can `card move` it (which clears a gate it was waiting at), so a story re-sized by mistake can be put back.

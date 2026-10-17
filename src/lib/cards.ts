@@ -14,6 +14,8 @@ export interface CardEvent {
   note?: string;
   /** On an approval: what the stage's output and check were when it was given. */
   fingerprint?: string;
+  /** On fail: HEAD when the check ran. */
+  head?: string;
   /** Reserved for an approval recorded by an authenticated store. Local approvals have none. */
   approvalId?: string;
   /** On agent-start and agent-run: the configured agent, its exit code (null when killed), and where its output went. */

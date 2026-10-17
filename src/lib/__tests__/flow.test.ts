@@ -123,6 +123,8 @@ describe('run', () => {
     lane('market', '  - id: draft\n    output: out/{id}.md\n    done: { cmd: "grep -q claim out/{id}.md" }\n');
     createCard(dir, { lane: 'market', title: 't', id: 'c-1' });
     const retries = () => readCards(dir).cards[0].retries.draft;
+    // A draft without the claim: a missing output would be no work, and count nothing.
+    write('out/c-1.md', 'no good');
 
     expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'failed' }]);
     expect(runDue(dir).advanced).toEqual([{ id: 'c-1', outcome: 'unchanged' }]);

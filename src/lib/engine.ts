@@ -18,6 +18,7 @@ export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
+import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
 // epic page and build stories. Imported here the same way researchSummary and appendFindings are:
@@ -625,15 +626,54 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
   return promoted;
 }
 
-/** True when the card's activity has no line other than a check since its last check line (or has no check line). */
-function quietSinceLastCheck(projectDir: string, id: string): boolean {
+// Activity lines that are someone working on the story: a session's edits, commands, prompts and
+// commits (the guard hooks), an edit from the app, a hand-back, a merge. Engine, doctor and orch
+// lines, a lane upgrade or a sweep are not.
+const WORK_LINES = new Set(['edit', 'story-edit', 'cmd', 'prompt', 'commit', 'handback', 'merge']);
+
+/** True when a work line sits on the card's activity after its last check line (or there is no check line). */
+function workSinceLastCheck(projectDir: string, id: string): boolean {
   const items: ActivityEntry[] = [];
   for (let page = readActivity(projectDir, id, { limit: 1000 }); ; page = readActivity(projectDir, id, { after: page.next, limit: 1000 })) {
     items.push(...page.items);
     if (!page.next) break;
   }
   const lastCheck = items.map(i => i.kind).lastIndexOf('check');
-  return lastCheck < 0 || items.slice(lastCheck + 1).every(i => i.kind === 'check' || i.kind === 'check-skipped');
+  // A session's own `codeloop next` or `card check` writes a cmd line just before the check it runs.
+  return items.slice(lastCheck + 1).some(i => WORK_LINES.has(i.kind) && !(i.kind === 'cmd' && /^(npx )?codeloop\b/.test(String(i.text ?? ''))));
+}
+
+/** HEAD of the project's git repo, or undefined outside one. */
+export function headCommit(projectDir: string): string | undefined {
+  const run = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectDir, encoding: 'utf-8' });
+  return run.status === 0 ? run.stdout.trim() || undefined : undefined;
+}
+
+/**
+ * What the stage's work is now, as a hash: the output file, or for a stage with none the working
+ * tree. The check's own output is no guide (test runners print timings); outside a git repo there
+ * is no tree to read, and `outside` stands in.
+ */
+export function workFingerprint(projectDir: string, card: Card, stage: Stage, outside = 'no tree'): string {
+  const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
+  const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? outside;
+  return createHash('sha1').update(work).digest('hex');
+}
+
+/**
+ * Whether anyone tried work on the stage since its last failed check: an agent ran on it, a work
+ * line was written, HEAD moved, or the output changed. A missing output, or one still the template,
+ * is no work, so a check before the folder exists, on the template, or in a sweep spends no retry.
+ * With no earlier failure and no agent or work line, only an untouched output is no work.
+ */
+function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean }): boolean {
+  const events = card.events ?? [];
+  const lastFail = events.map(e => e.stage === stage.id && e.action === 'fail').lastIndexOf(true);
+  if (opts.workLines || events.slice(lastFail + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
+  if (lastFail < 0) return !opts.untouched;
+  const head = events[lastFail].head;
+  if (opts.head && head && opts.head !== head) return true;
+  return !opts.untouched && card.failures?.[stage.id] !== opts.fingerprint;
 }
 
 /**
@@ -676,7 +716,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
 
   // Read before this run's own check line is appended: only work by someone since the last check
   // makes the next failure a fresh attempt.
-  const quiet = quietSinceLastCheck(projectDir, id);
+  const workLines = workSinceLastCheck(projectDir, id);
   const check = runCheck(projectDir, card, stage, undefined, undefined, opts.checkTimeoutMs);
   const output = check?.output ?? '';
   if (check) appendActivity(projectDir, id, { session: currentSession(), kind: 'check', stage: stage.id, pass: check.passed, output });
@@ -712,18 +752,15 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       if (before.gate === 'stuck' || (before.retries[stage.id] ?? 0) >= lane.retries) return { card: before, outcome: 'stuck', output, started: [], because: {} };
       // An unattended run retries on a schedule. If the work has not changed since the last failure
       // there is nothing new to judge, so it must not use up a retry.
-      // The check's own output is no guide (test runners print timings), so a stage with no output
-      // file is judged by the working tree instead.
-      const stageOutput = stage.output ? specPath(projectDir, substitute(stage.output, card, { projectDir })) : null;
-      const work = stageOutput ? (existsSync(stageOutput) && statSync(stageOutput).isFile() ? readFileSync(stageOutput) : 'missing') : treeState(projectDir) ?? output;
-      const fingerprint = createHash('sha1').update(work).digest('hex');
+      const fingerprint = workFingerprint(projectDir, card, stage, output);
       if (opts.unattended && before.failures?.[stage.id] === fingerprint) return { card: before, outcome: 'unchanged', output, started: [], because: {} };
       card.failures = { ...before.failures, [stage.id]: fingerprint };
-      // The same failure with no activity since the last check is a repeated button press, not a new attempt.
-      const repeat = quiet && before.failures?.[stage.id] === fingerprint;
-      const failures = (card.retries[stage.id] ?? 0) + (repeat ? 0 : 1);
+      // Only a failure with work behind it counts toward the cap; any other is recorded and costs nothing.
+      const head = headCommit(projectDir);
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined });
+      const failures = (card.retries[stage.id] ?? 0) + (counted ? 1 : 0);
       card.retries[stage.id] = failures;
-      card.events.push(event(now, 'engine', 'fail', stage.id, output));
+      card.events.push({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}) });
       const stuck = failures >= lane.retries;
       if (stuck) {
         card.gate = 'stuck';
