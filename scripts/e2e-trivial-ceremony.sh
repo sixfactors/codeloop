@@ -17,7 +17,8 @@ mkdir -p "$WORK/bin" "$WORK/project"
 printf '#!/bin/sh\nexec node "%s/index.js" "$@"\n' "$DIST" > "$WORK/bin/codeloop"
 chmod +x "$WORK/bin/codeloop"
 export PATH="$WORK/bin:$PATH"
-unset CODELOOP_ROLE CODELOOP_PROJECT_DIR CODELOOP_WORK_DIR CODELOOP_CARD CODELOOP_AGENT_RUN
+# An assistant host's session variables make the default role agent (engine.ts ASSISTANT_SESSION_VARS).
+unset CODELOOP_ROLE CODELOOP_PROJECT_DIR CODELOOP_WORK_DIR CODELOOP_CARD CODELOOP_AGENT_RUN CLAUDECODE CLAUDE_CODE_SESSION_ID CURSOR_AGENT CURSOR_CONVERSATION_ID CURSOR_SESSION_ID
 cd "$WORK/project"
 
 codeloop init --tools claude --starter generic > /dev/null

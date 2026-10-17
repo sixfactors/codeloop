@@ -21,7 +21,8 @@ mkdir -p "$WORK/bin" "$PROJECT"
 printf '#!/bin/sh\nexec node "%s/index.js" "$@"\n' "$DIST" > "$WORK/bin/codeloop"
 chmod +x "$WORK/bin/codeloop"
 export PATH="$WORK/bin:$PATH"
-unset CODELOOP_ROLE
+# An assistant host's session variables make the default role agent (engine.ts ASSISTANT_SESSION_VARS).
+unset CODELOOP_ROLE CLAUDECODE CLAUDE_CODE_SESSION_ID CURSOR_AGENT CURSOR_CONVERSATION_ID CURSOR_SESSION_ID
 cd "$PROJECT"
 
 pass=0
@@ -538,8 +539,8 @@ json "card run left its record beside the agent logs" "d.stage==='spec' && d.eve
 printf '#!/bin/sh\nif [ "$1" = "-l" ]; then cat "%s/crontab.txt" 2>/dev/null; else cat > "%s/crontab.txt"; fi\n' "$WORK" "$WORK" > "$WORK/bin/fake-crontab"
 chmod +x "$WORK/bin/fake-crontab"
 export CODELOOP_CRONTAB="$WORK/bin/fake-crontab"
-expect 0 "schedule install --print prints the crontab line and installs nothing" sh -c "codeloop schedule install --every 30m --print | grep -q '^\*/30 \* \* \* \* cd .* run --agent >> .codeloop/state/run.log 2>&1 # codeloop:' && test ! -e '$WORK/crontab.txt'"
-expect 0 "schedule install, status and remove go through the crontab command" sh -c "codeloop schedule install --cron '0 3 * * *' --agent fake > /dev/null && grep -q '^0 3 \* \* \* .* run --agent fake ' '$WORK/crontab.txt' && codeloop schedule status | grep -q 'installed: 0 3' && codeloop schedule remove && ! grep -q codeloop '$WORK/crontab.txt'"
+expect 0 "schedule install --print prints the crontab line and its script, and installs nothing" sh -c "codeloop schedule install --every 30m --print | tee sched.out | grep -q \"^\\*/30 \\* \\* \\* \\* '[^']*\\.sh' # codeloop:\" && grep -q ' run --agent >> .codeloop/state/run.log 2>&1' sched.out && test ! -e '$WORK/crontab.txt'"
+expect 0 "schedule install, status and remove go through the crontab command; the line runs a script that runs run --agent" sh -c "codeloop schedule install --cron '0 3 * * *' --agent fake > /dev/null && grep -q \"^0 3 \\* \\* \\* '[^']*\\.sh' # codeloop:\" '$WORK/crontab.txt' && grep -q ' run --agent fake >> ' \"\$(sed -n \"s/^0 3 [*] [*] [*] '\\([^']*\\)'.*/\\1/p\" '$WORK/crontab.txt')\" && codeloop schedule status | grep -q 'installed: 0 3' && codeloop schedule remove && ! grep -q codeloop '$WORK/crontab.txt'"
 unset CODELOOP_CRONTAB
 
 # --- shipped build lane: research sources, competitor pages, the mock stage -------------------
