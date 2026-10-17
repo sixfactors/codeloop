@@ -66,13 +66,13 @@ describe('questions with options', () => {
     expect(q3.options).toHaveLength(3);
   });
 
-  it('accept all answers every open question with its recommendation in one write and leaves an answered one alone', () => {
+  it('accept all answers every open question with its recommendation in one write and keeps a written answer as written', () => {
     const { answered, skipped } = acceptAllAnswers(dir, 'c-001');
-    expect(answered.map(q => [q.n, q.answer])).toEqual([[1, 'CSV with one row per invoice'], [2, 'the invoices list toolbar'], [3, 'the quarter']]);
+    expect(answered.map(q => [q.n, q.answer])).toEqual([[1, 'CSV with one row per invoice'], [2, 'the invoices list toolbar'], [3, 'the quarter'], [4, 'yes, keep it']]);
     expect(skipped).toEqual([]);
     const after = parseQuestions(readFileSync(join(dir, 'specs/001/interview.md'), 'utf-8'));
     expect(after.find(q => q.n === 4)!.answer).toBe('yes, keep it');
-    expect(readCards(dir).cards[0].events.filter(e => e.action === 'answer').map(e => e.actor)).toEqual(['owner', 'owner', 'owner']);
+    expect(readCards(dir).cards[0].events.filter(e => e.action === 'answer').map(e => e.actor)).toEqual(['owner', 'owner', 'owner', 'owner']);
   });
 
   it('POST accept-all returns the count, and the questions payload carries options', async () => {
@@ -80,7 +80,7 @@ describe('questions with options', () => {
     const res = await app.request('/api/cards/c-001/questions/accept-all', { method: 'POST', headers: { 'x-codeloop-token': 't', 'content-type': 'application/json' }, body: '{}' });
     expect(res.status).toBe(200);
     const body = await res.json() as { accepted: number; questions: { n: number; options?: unknown[] }[] };
-    expect(body.accepted).toBe(3);
+    expect(body.accepted).toBe(4);
     expect(body.questions.find(q => q.n === 1)!.options).toHaveLength(2);
   });
 });
@@ -92,10 +92,11 @@ describe('accept all through the SDK', () => {
     const { app } = createApp(dir, undefined, { token: 't', owner: true });
     const http = createHttpClient({ token: 't', fetch: (url, init) => app.request(url, init) });
     const viaHttp = await http.questions.acceptAll('c-001');
-    expect(viaHttp.accepted).toBe(3);
+    expect(viaHttp.accepted).toBe(4);
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [card('c-001')] }, null, 2));
     write('specs/001/interview.md', FORK);
     const viaLocal = await createLocalClient(dir).questions.acceptAll('c-001', { as: 'owner' });
-    expect(viaLocal.accepted).toBe(3);
+    expect(viaLocal.accepted).toBe(4);
     expect(viaLocal.questions.map(q => q.answer)).toEqual(viaHttp.questions.map(q => q.answer));
   });
 });
@@ -111,5 +112,25 @@ describe('an answer is a person\'s decision', () => {
     acceptAllAnswers(dir, 'c-001');
     writeAnswer(dir, 'c-001', 4, { text: 'yes, keep it' });
     expect(questionsNotDecided(dir, 'c-001')).toEqual([]);
+  });
+});
+
+describe('answers an agent wrote into interview.md', () => {
+  it('check questions refuses them, accept-all accepts them as written, and the rubric lines survive', async () => {
+    const { runCli } = await import('../../__tests__/cli.js');
+    const rubric = '## Rubric\n- I2 pass: specs/001/interview.md tags each question\n';
+    write('specs/001/interview.md', `# Interview\n\n${FORK}\n${rubric}`);
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const cli = (...args: string[]) => runCli(args, { cwd: dir, encoding: 'utf-8', env });
+    expect(cli('check', 'questions', 'c-001').stdout + cli('check', 'questions', 'c-001').stderr).toMatch(/Q4 has an answer no person gave/);
+    const accepted = cli('answer', 'c-001', '--accept-all');
+    expect(accepted.stdout).toMatch(/accepted 4/);
+    const text = readFileSync(join(dir, 'specs/001/interview.md'), 'utf-8');
+    expect(text.startsWith('# Interview\n')).toBe(true);
+    expect(text.endsWith(rubric)).toBe(true);
+    expect(parseQuestions(text).find(q => q.n === 4)!.answer).toBe('yes, keep it');
+    const check = cli('check', 'questions', 'c-001');
+    expect(check.stdout + check.stderr).not.toMatch(/Q\d/);
+    expect(check.status).toBe(0);
   });
 });

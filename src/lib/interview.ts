@@ -92,7 +92,30 @@ function block(q: Question): string {
 
 /** The markdown `parseQuestions` reads back. */
 export const renderQuestions = (questions: Question[]) => questions.map(block).join('\n');
-const render = renderQuestions;
+
+/**
+ * The file with its questions replaced by `questions`, keeping everything that is not a question:
+ * the text before the first one and every section under another heading (the `## Rubric` lines at
+ * the end), so writing an answer never drops what the agent wrote around the questions.
+ */
+function rewrite(text: string, questions: Question[]): string {
+  const prefix: string[] = [];
+  const rest: string[] = [];
+  let seen = false;
+  let inQuestion = false;
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    if (/^## Q\d+\s/.test(line)) {
+      seen = inQuestion = true;
+      continue;
+    }
+    if (/^#{1,6}\s/.test(line) && seen) inQuestion = false;
+    if (!seen) prefix.push(line);
+    else if (!inQuestion) rest.push(line);
+  }
+  const head = prefix.join('\n').replace(/\n+$/, '');
+  const tail = rest.join('\n').replace(/^\n+/, '').replace(/\n+$/, '');
+  return `${head ? `${head}\n\n` : ''}${renderQuestions(questions)}${tail ? `\n${tail}\n` : ''}`;
+}
 
 /** `<spec dir>/interview.md`, or undefined when the card has no spec folder yet. */
 export function interviewPath(projectDir: string, card: Card): string | undefined {
@@ -137,7 +160,7 @@ export function addQuestions(projectDir: string, ref: string, items: { question:
     }));
     const problems = questionProblems(added);
     if (problems.length) throw new RefusalError(problems.join('; '));
-    writeFileSync(file, render([...existing, ...added]));
+    writeFileSync(file, rewrite(existsSync(file) ? readFileSync(file, 'utf-8') : '', [...existing, ...added]));
     return { path, added };
   });
 }
@@ -152,7 +175,8 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
   const file = path && join(projectDir, path);
   if (!file || !existsSync(file)) throw new RefusalError(`${card.id} has no questions; \`codeloop ask ${card.id} "<question>"\` adds one`);
   const written = withLock(file, () => {
-    const questions = parseQuestions(readFileSync(file, 'utf-8'));
+    const original = readFileSync(file, 'utf-8');
+    const questions = parseQuestions(original);
     const q = questions.find(x => x.n === n);
     if (!q) throw new RefusalError(`${card.id} has no question Q${n} (${questions.length ? questions.map(x => `Q${x.n}`).join(', ') : 'none'})`);
     let text: string;
@@ -165,7 +189,7 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
     }
     if (!text) throw new RefusalError(answer.accept ? `Q${n} has no recommended answer to accept` : 'an answer cannot be empty');
     q.answer = text;
-    writeFileSync(file, render(questions));
+    writeFileSync(file, rewrite(original, questions));
     return q;
   });
   recordEvent(projectDir, card.id, () => ({ action: 'answer', actor: role, human: true, note: `Q${n}: ${written.answer}` }));
@@ -173,35 +197,48 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
 }
 
 /**
- * Accepts the recommended answer on every open question of the card in one locked write, one answer
- * event per question. A question with no recommendation is skipped and named; an answered one is left alone.
+ * Accepts every undecided question of the card in one locked write, one answer event per question.
+ * An answer line an agent wrote (an answer no person's event stands behind) is accepted as written;
+ * otherwise the recommendation is. A question with neither is skipped and named; one a person
+ * already answered is left alone.
  */
 export function acceptAllAnswers(projectDir: string, ref: string, role: Role = 'owner'): { answered: Question[]; skipped: Question[] } {
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
   const file = path && join(projectDir, path);
   if (!file || !existsSync(file)) throw new RefusalError(`${card.id} has no questions`);
+  const decided = decidedNumbers(card);
   const result = withLock(file, () => {
-    const questions = parseQuestions(readFileSync(file, 'utf-8'));
-    const open = questions.filter(q => !q.answer);
+    const original = readFileSync(file, 'utf-8');
+    const questions = parseQuestions(original);
+    const open = questions.filter(q => !q.answer || !decided.has(q.n));
     // Resolve every recommendation first, so a bad letter refuses before anything is written.
-    const resolved = open.map(q => ({ q, text: recommendedText(q) }));
-    const answered: Question[] = [];
+    const resolved = open.map(q => ({ q, written: Boolean(q.answer), text: q.answer || recommendedText(q) }));
+    const answered: (Question & { written: boolean })[] = [];
     const skipped: Question[] = [];
-    for (const { q, text } of resolved) {
+    for (const { q, written, text } of resolved) {
       if (!text) {
         skipped.push(q);
         continue;
       }
       q.answer = text;
-      answered.push(q);
+      answered.push({ ...q, written });
     }
-    if (answered.length) writeFileSync(file, render(questions));
+    if (answered.some(q => !q.written)) writeFileSync(file, rewrite(original, questions));
     return { answered, skipped };
   });
-  for (const q of result.answered) recordEvent(projectDir, card.id, () => ({ action: 'answer', actor: role, human: true, note: `Q${q.n}: ${q.answer} (accepted the recommendation)` }));
-  return result;
+  for (const q of result.answered) recordEvent(projectDir, card.id, () => ({ action: 'answer', actor: role, human: true, note: `Q${q.n}: ${q.answer} (${q.written ? 'accepted the written answer' : 'accepted the recommendation'})` }));
+  return { answered: result.answered.map(({ written: _w, ...q }) => q), skipped: result.skipped };
 }
+
+const decidedNumbers = (card: Card): Set<number> =>
+  new Set(
+    card.events
+      .filter(e => e.action === 'answer' && e.human)
+      .map(e => /^Q(\d+):/.exec(e.note ?? '')?.[1])
+      .filter((n): n is string => Boolean(n))
+      .map(Number),
+  );
 
 /**
  * Answered questions with no answer event from a person behind them: an answer line written into
@@ -209,12 +246,6 @@ export function acceptAllAnswers(projectDir: string, ref: string, role: Role = '
  */
 export function questionsNotDecided(projectDir: string, ref: string): number[] {
   const card = findCard(readCards(projectDir).cards, ref);
-  const decided = new Set(
-    card.events
-      .filter(e => e.action === 'answer' && e.human)
-      .map(e => /^Q(\d+):/.exec(e.note ?? '')?.[1])
-      .filter((n): n is string => Boolean(n))
-      .map(Number),
-  );
+  const decided = decidedNumbers(card);
   return readQuestions(projectDir, card).filter(q => q.answer && !decided.has(q.n)).map(q => q.n);
 }
