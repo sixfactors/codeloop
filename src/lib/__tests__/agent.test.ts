@@ -319,6 +319,19 @@ describe('run --agent', () => {
     expect(full.agents![0].reason).toMatch(/1 card is waiting on you \(capacity.gates_per_day is 1\)/);
   });
 
+  it('a trivial card never takes or waits for the only wip slot, whichever card comes first (--dry-run)', () => {
+    agents('touch agent-ran < {brief}');
+    for (const sizes of [['trivial', 'M'], ['M', 'trivial']]) {
+      rmSync(join(dir, '.codeloop'), { recursive: true, force: true });
+      lane('build', TWO_STAGES, 'wip: 1\n');
+      agents('touch agent-ran < {brief}');
+      sizes.forEach((size, n) => createCard(dir, { lane: 'build', title: size, id: `c-00${n + 1}`, fields: { size } }));
+      const lines = planRun(dir, resolveAgent(dir));
+      expect(lines).toHaveLength(2);
+      for (const line of lines) expect(line).toMatch(/would start agent fake on draft/);
+    }
+  });
+
   it('leaves a card alone while an earlier run is still working on it', async () => {
     lane('build', TWO_STAGES);
     agents('touch agent-ran');

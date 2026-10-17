@@ -12,7 +12,7 @@ import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -139,8 +139,9 @@ function running(card: Card, agent: AgentConfig, now: Date): boolean {
 
 /** Why no agent may start for this card now, from the board as given. `planned` counts starts a dry run has already listed. */
 function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0): string | undefined {
-  const ahead = cards.filter(c => c.lane === lane.id && workable(c)).findIndex(c => c.id === card.id);
-  if (lane.wip !== undefined && ahead >= lane.wip) return `lane ${lane.id} works on ${plural(lane.wip, 'card', 'cards')} at a time (wip); this one waits its turn`;
+  // A trivial card holds no wip slot, so it is never limited on wip and never counts ahead of one that does.
+  const ahead = cards.filter(c => c.lane === lane.id && holdsSlot(c)).findIndex(c => c.id === card.id);
+  if (lane.wip !== undefined && card.size !== 'trivial' && ahead >= lane.wip) return `lane ${lane.id} works on ${plural(lane.wip, 'card', 'cards')} at a time (wip); this one waits its turn`;
   const { gatesPerDay } = loadEngineConfig(projectDir);
   const parked = waitingOnOwner(cards);
   if (gatesPerDay !== undefined && parked >= gatesPerDay) return `${plural(parked, 'card is', 'cards are')} waiting on you (capacity.gates_per_day is ${gatesPerDay}); clear the inbox first`;
