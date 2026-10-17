@@ -13,6 +13,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm --prefix ui ci
+      - run: npm --prefix workspace ci
       # The e2e script loads the board page, so the UI is built too.
       - run: npm run build:all
       - run: npm test
