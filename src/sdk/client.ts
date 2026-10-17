@@ -162,6 +162,7 @@ export interface Transport {
   closeCard(ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   parkCard(ref: string, note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   placeCard(ref: string, stage: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
+  moveStuck(ref: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   /** A done or dropped card back to its lane's first stage, or to `backlog`. */
   reopenCard(ref: string, opts?: RoleOption & { to?: string; note?: string }): Promise<Card>;
   /** An active card to any stage of its lane; a note is required when it goes back past a passed gate. */
@@ -306,6 +307,8 @@ export class CodeloopClient {
     close: (ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption) => this.transport.closeCard(ref, outcome, note, opts),
     park: (ref: string, note?: string, opts?: RoleOption) => this.transport.parkCard(ref, note, opts),
     place: (ref: string, stage: string, opts?: RoleOption) => this.transport.placeCard(ref, stage, opts),
+    /** A stuck story to the step its shipped work shows, stopping before any gate; refused when its explanation offers no move. */
+    moveStuck: (ref: string, opts?: RoleOption) => this.transport.moveStuck(ref, opts),
     reopen: (ref: string, opts?: RoleOption & { to?: string; note?: string }) => this.transport.reopenCard(ref, opts),
     move: (ref: string, stage: string, note?: string, opts?: RoleOption) => this.transport.moveCard(ref, stage, note, opts),
     edit: (ref: string, fields: CardEdit, opts?: RoleOption) => this.transport.editCard(ref, fields, opts),

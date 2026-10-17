@@ -180,6 +180,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     moveCard: (ref, stage, note) => post<{ card: Awaited<ReturnType<Transport['moveCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/move`, { stage, note }).then(b => b.card),
     editCard: (ref, edit) => json<{ card: Awaited<ReturnType<Transport['editCard']>> }>(`/api/cards/${encodeURIComponent(ref)}`, { method: 'PATCH', body: JSON.stringify(edit) }).then(b => b.card),
     placeCard: (ref, stage) => post<{ placed: Awaited<ReturnType<Transport['placeCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/place`, { stage }).then(b => b.placed),
+    moveStuck: ref => post<{ moved: Awaited<ReturnType<Transport['moveStuck']>> }>(`/api/cards/${encodeURIComponent(ref)}/move-stuck`, {}).then(b => b.moved),
     closeCard: (ref, outcome, note) => post<{ closed: Awaited<ReturnType<Transport['closeCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/close`, { outcome, note }).then(b => b.closed),
     rejectCard: (ref, note) => post<{ decision: Awaited<ReturnType<Transport['rejectCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/reject`, { note }).then(b => b.decision),
     brief: async ref => (await send(`/api/cards/${encodeURIComponent(ref)}/brief`)).text(),

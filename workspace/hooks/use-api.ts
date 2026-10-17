@@ -289,6 +289,15 @@ export function usePark() {
 export const useBrief = (id: string, enabled: boolean) =>
   useQuery({ queryKey: [...QK.show(id), 'brief'], queryFn: () => api.brief(id), enabled: Boolean(id) && enabled, retry: false });
 
+/** The stuck story's move button. */
+export function useMoveStuck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.moveStuck(id),
+    onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
 /** Edit one line of the story summary from the page; the story refetches with the new line and its author. */
 export function useSaveSummary() {
   const qc = useQueryClient();

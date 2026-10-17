@@ -14,7 +14,7 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 - [x] T003 [US3] [api] A broken check reads as the check broke, with the step and time, and keeps the raw error apart from the reason, in src/lib/journey.ts
 - [x] T004 [US4] [api] The inbox failing list drops a failure once a later check at the same step passed, in src/lib/inbox.ts
 - [x] T005 [US5] [api] `codeloop card show` and the inbox print the same explanation the page shows, in src/commands/card.ts and src/lib/inbox.ts
-- [ ] T006 [US2] [sdk] The move-to-step action in the SDK and a hook for it, in src/sdk and workspace/lib/queries.ts
+- [x] T006 [US2] [sdk] The move-to-step action in the SDK and a hook for it, in src/sdk and workspace/lib/queries.ts
 - [ ] T007 [US1] [ui] The explanation as the summary's "what you must do" line with the two buttons and Show the error, in workspace/components/shared/current-step-panel.tsx
 - [ ] T008 [US1] [test] One test per failure mode uc-308-01 to uc-308-07 in src/lib/__tests__/stuck-explanation.test.ts, each seen failing once with the fix reverted
 

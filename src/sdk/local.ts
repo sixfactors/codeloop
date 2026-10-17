@@ -86,6 +86,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     closeCard: async (ref, outcome, note, opts) => services.closeCard(projectDir, ref, role(opts), outcome, note),
     parkCard: async (ref, note, opts) => services.parkCard(projectDir, ref, role(opts), note),
     placeCard: async (ref, stage, opts) => services.placeCard(projectDir, ref, stage, role(opts)),
+    moveStuck: async (ref, opts) => services.moveStuck(projectDir, ref, role(opts)),
     reopenCard: async (ref, opts) => reopenCard(projectDir, ref, role(opts), { to: opts?.to, note: opts?.note }),
     moveCard: async (ref, stage, note, opts) => moveCard(projectDir, ref, stage, role(opts), { note }),
     editCard: async (ref, edit, opts) => editCard(projectDir, ref, role(opts), edit),

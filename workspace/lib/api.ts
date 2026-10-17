@@ -190,6 +190,8 @@ export const api = {
   /** Starts one orchestrated turn; `builder` is agent, agent:<name>, session:<x> or person. Returns before it ends. */
   orchRun: async (id: string, opts: { builder: string; wait?: number | false }) => (await client()).orch.run(id, opts),
   park: async (id: string, note?: string) => (await client()).cards.park(id, note),
+  /** A stuck story to the step its shipped work shows, stopping before any gate. */
+  moveStuck: async (id: string) => (await client()).cards.moveStuck(id),
   /** A done or dropped story back to its lane's first stage, or to the backlog with `to: 'backlog'`. */
   reopen: async (id: string, opts: { to?: string; note?: string } = {}) => (await client()).cards.reopen(id, opts),
   move: async (id: string, stage: string, note?: string) => (await client()).cards.move(id, stage, note),
