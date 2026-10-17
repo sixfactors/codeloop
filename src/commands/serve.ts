@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { readBoardAuth } from '../lib/auth.js';
 import { createApp } from '../lib/server.js';
 import { getIndex } from '../lib/index/index.js';
-import { findWorkspaceBuild, loadNext, splitListener, staticChunks } from '../lib/next-server.js';
+import { appMockRoutes, findWorkspaceBuild, loadNext, splitListener, staticChunks } from '../lib/next-server.js';
 import { findProjectRoot, openUrl, readServeState, removeServeState, serveStateAlive, serveUrl, writeServeState } from '../lib/serve-state.js';
 import { registerProject } from '../lib/hub-registry.js';
 import { hubUrl } from '../lib/hub-state.js';
@@ -202,7 +202,7 @@ export const serveCommand = new Command('serve')
     const { createServer } = await import('http');
     const { getRequestListener } = await import('@hono/node-server');
     const api = getRequestListener(app.fetch);
-    const server = createServer(pages ? splitListener(api, pages, { anyHost: !loopback, chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined }) : api);
+    const server = createServer(pages ? splitListener(api, pages, { anyHost: !loopback, chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined, appMocks: workspaceBuild ? appMockRoutes(workspaceBuild) : undefined }) : api);
     server.listen(port, options.host, () => {
       writeServeState(projectDir, { port, host: options.host, token, pid: process.pid, owner, startedAt: new Date().toISOString() });
       const auth = readBoardAuth(projectDir);

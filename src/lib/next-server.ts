@@ -10,6 +10,31 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 /** Hono answers these; everything else is a page. */
 export const isApiPath = (url: string) => /^\/(api|mocks)(\/|\?|$)/.test(url);
 
+/** The folder of an in-app mock page request, `/mocks/<slug>/`, or undefined for any other path. */
+const appMockSlug = (url: string) => {
+  const slug = /^\/mocks\/([^/?@]+)\/?(?:\?.*)?$/.exec(url)?.[1];
+  try {
+    return slug ? decodeURIComponent(slug) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * The in-app mocks the build can render: each `app/mocks/<slug>/page.tsx` the build compiled, read
+ * from its route manifest. A mock page added after the build is not in it, as Next cannot render it.
+ */
+export function appMockRoutes(buildDir: string): Set<string> {
+  const file = join(buildDir, '.next', 'app-path-routes-manifest.json');
+  if (!existsSync(file)) return new Set();
+  try {
+    const routes = Object.values(JSON.parse(readFileSync(file, 'utf-8')) as Record<string, string>);
+    return new Set(routes.flatMap(r => /^\/mocks\/([^/]+)$/.exec(r)?.[1] ?? []));
+  } catch {
+    return new Set();
+  }
+}
+
 /**
  * Where a standalone workspace build lives: the packaged one first, then a dev checkout's own
  * `next build` output (nested under `standalone/workspace/` when Next traced from the repo root).
@@ -70,7 +95,8 @@ export async function loadNext(dir: string, opts: { hostname: string; port: numb
 }
 
 /**
- * One listener for one port: `/api/*` and `/mocks/*` go to Hono, the rest to the pages handler.
+ * One listener for one port: `/api/*` and `/mocks/*` go to Hono, except an in-app mock page the
+ * build compiled (`/mocks/<slug>/`); the rest go to the pages handler.
  * Pages are server-rendered with board data, so they get the same loopback-host rule as the API.
  */
 const CHUNK_MIME: Record<string, string> = { '.js': 'application/javascript', '.css': 'text/css', '.map': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.txt': 'text/plain' };
@@ -94,10 +120,13 @@ export function staticChunks(buildDir: string): NodeHandler | undefined {
   };
 }
 
-export function splitListener(api: NodeHandler, pages: NodeHandler, opts: { anyHost?: boolean; chunks?: NodeHandler } = {}): NodeHandler {
+export function splitListener(api: NodeHandler, pages: NodeHandler, opts: { anyHost?: boolean; chunks?: NodeHandler; appMocks?: ReadonlySet<string> } = {}): NodeHandler {
   return (req, res) => {
     const url = req.url ?? '/';
-    if (isApiPath(url)) return api(req, res);
+    // An in-app mock is a page of the build; the HTML mocks and the gallery under /mocks stay on Hono.
+    const slug = appMockSlug(url);
+    const appMock = slug !== undefined && opts.appMocks?.has(slug) === true;
+    if (isApiPath(url) && !appMock) return api(req, res);
     if (opts.chunks && url.startsWith('/_next/static/')) return opts.chunks(req, res);
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
     if (!opts.anyHost && !LOOPBACK.has(host)) {
@@ -122,9 +151,18 @@ export function splitListener(api: NodeHandler, pages: NodeHandler, opts: { anyH
  * `x-codeloop-mode: hub` plus the absence of that header is how the bare `/` renders the hub home
  * instead of a board — there is no project to show one for.
  */
-export function hubListener(api: NodeHandler, pages: NodeHandler, opts: { anyHost?: boolean; chunks?: NodeHandler } = {}): NodeHandler {
+export function hubListener(api: NodeHandler, pages: NodeHandler, opts: { anyHost?: boolean; chunks?: NodeHandler; appMocks?: ReadonlySet<string> } = {}): NodeHandler {
   return (req, res) => {
     const url = req.url ?? '/';
+    // The project's mock gallery is served at /api/p/<id>/mocks/, so its link to an in-app mock
+    // lands here; the page itself lives at /p/<id>/mocks/<slug>/.
+    const fromGallery = /^\/api\/p\/([^/?]+)(\/mocks\/[^?]*)(\?.*)?$/.exec(url);
+    const slug = fromGallery ? appMockSlug(fromGallery[2]) : undefined;
+    if (fromGallery && slug !== undefined && opts.appMocks?.has(slug)) {
+      res.writeHead(302, { Location: `/p/${fromGallery[1]}${fromGallery[2]}${fromGallery[3] ?? ''}` });
+      res.end();
+      return;
+    }
     if (isApiPath(url)) return api(req, res);
     if (opts.chunks && url.startsWith('/_next/static/')) return opts.chunks(req, res);
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');

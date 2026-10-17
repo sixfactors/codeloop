@@ -4,7 +4,7 @@ import { dirname, join } from 'path';
 import { connect } from 'net';
 import { fileURLToPath } from 'url';
 import { createHubApp } from '../lib/hub.js';
-import { findWorkspaceBuild, hubListener, loadNext, staticChunks } from '../lib/next-server.js';
+import { appMockRoutes, findWorkspaceBuild, hubListener, loadNext, staticChunks } from '../lib/next-server.js';
 import { hubStateAlive, hubUrl, loadHubSecrets, readHubState, removeHubState, writeHubState, type HubState } from '../lib/hub-state.js';
 import { openUrl } from '../lib/serve-state.js';
 
@@ -121,7 +121,7 @@ export async function runHubForeground(port: number, host: string, opts: { open?
   const { createServer } = await import('http');
   const { getRequestListener } = await import('@hono/node-server');
   const api = getRequestListener(hub.app.fetch);
-  const server = createServer(pages ? hubListener(api, pages, { chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined }) : api);
+  const server = createServer(pages ? hubListener(api, pages, { chunks: workspaceBuild ? staticChunks(workspaceBuild) : undefined, appMocks: workspaceBuild ? appMockRoutes(workspaceBuild) : undefined }) : api);
 
   await new Promise<void>((resolveListen, rejectListen) => {
     server.once('error', rejectListen);

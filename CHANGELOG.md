@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A mock composed as a page of the app (`app/mocks/<folder>/page.tsx`) opens on the board at `/mocks/<folder>/` and under the hub at `/p/<id>/mocks/<folder>/`, and the mocks gallery links to it; HTML mocks are served as before.
 - Rejecting a stuck story with no note says it parked the story and no longer claims a note was recorded.
 - A person's commit with no trailer counts as work on a story with no plan and no trailered commits when it changes the stage output or a file in the story's spec folder, so that work spends a retry like any other.
 - `codeloop start --stage <stage>` works on a lane whose first stage is outward: the new card skips that stage's entry gate it was parked at, and parks again when the stage it lands on is outward.
