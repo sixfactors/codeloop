@@ -16,7 +16,7 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 - [x] T005 [US4] [api] Run the pass at the start of each orchestrator pass and before each pick on stories changed since the last pass, and add `codeloop orch run --review` that reads every open story and stops at the run budget (src/lib/run.ts, src/commands/orch.ts)
 - [x] T006 [US5] [api] Pass report with fixed, asked and could-not-tell sections, each line naming the story and its evidence, printed by `codeloop orch run --review` (src/commands/orch.ts)
 - [x] T007 [US1] [test] One test per failure mode uc-307-01 to uc-307-07 in src/lib/__tests__/review-pass.test.ts, each seen failing once with the fix reverted
-- [ ] T008 [US4] [docs] The review pass in the orchestrator protocol on site/content/docs/concepts/orchestrator-and-workers.md
+- [x] T008 [US4] [docs] The review pass in the orchestrator protocol on site/content/docs/concepts/orchestrator-and-workers.md
 
 ## Rubric
 

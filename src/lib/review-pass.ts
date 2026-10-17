@@ -221,7 +221,7 @@ export function stageText(projectDir: string, card: Card, stage: Stage, work: Me
   let text = [lines[0], ...top, ...lines.slice(1)].join('\n');
   const name = basename(path);
   if (name === 'research.md') {
-    const sources = work.files.filter(f => existsSync(join(projectDir, f))).slice(0, 5).map(f => `- source: ${f} — changed by the merged work`);
+    const sources = work.files.filter(f => existsSync(join(projectDir, f))).slice(0, 5).map(f => `- source: ${f} - changed by the merged work`);
     text = text.replace(/^## Sources\n/m, `## Sources\n\n${sources.join('\n')}\n`);
     if (!/^verdict:\s*\S/m.test(text)) text = `${text.trimEnd()}\n\nverdict: build\n`;
   } else if (name === 'tasks.md') {

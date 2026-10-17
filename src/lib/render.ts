@@ -40,8 +40,21 @@ function laneBody(lane: Lane, skills: SkillEntry[]): string {
   return lines.join('\n');
 }
 
+const ORCH_DESCRIPTION = 'Run this board as the codeloop orchestrator, reviewing every story before each pick, then brief, gate and report.';
+const orchText = () => readFileSync(join(PACKAGE_ROOT, 'templates/orch/orch.md'), 'utf-8');
+
+/** The orchestrator protocol, as each host takes a command: /orch in Claude Code and Cursor, a skill in Codex. */
+function orchFiles(host: Host): Record<string, string> {
+  const body = orchText();
+  // Cursor reads the same command file as Claude Code (see scaffold.ts).
+  const command = `---\ndescription: ${ORCH_DESCRIPTION}\n---\n\n${body}`;
+  if (host === 'claude') return { '.claude/commands/orch.md': command };
+  if (host === 'cursor') return { '.cursor/commands/orch.md': command };
+  return { '.agents/skills/codeloop-orch/SKILL.md': `---\nname: codeloop-orch\ndescription: ${ORCH_DESCRIPTION}\n---\n\n${body}` };
+}
+
 function files(lanes: Lane[], skills: SkillEntry[], host: Host): Record<string, string> {
-  const out: Record<string, string> = {};
+  const out: Record<string, string> = orchFiles(host);
   for (const lane of lanes) {
     const description = `Work a codeloop card through the ${lane.id} lane: ${lane.stages.map(s => s.id).join(', ')}.`;
     if (host === 'claude') {

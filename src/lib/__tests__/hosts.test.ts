@@ -53,8 +53,11 @@ describe('render', () => {
     const first = render(dir, ['claude', 'cursor', 'codex']);
     expect(first.written.sort()).toEqual([
       '.agents/skills/codeloop-market/SKILL.md',
+      '.agents/skills/codeloop-orch/SKILL.md',
       '.claude/agents/codeloop-market-draft.md',
       '.claude/agents/codeloop-market-publish.md',
+      '.claude/commands/orch.md',
+      '.cursor/commands/orch.md',
       '.cursor/rules/codeloop-market.mdc',
       '.cursor/rules/codeloop.mdc',
       '.github/copilot-instructions.md',
@@ -68,6 +71,8 @@ describe('render', () => {
     expect(before['AGENTS.md']).toMatch(/^# Agents\n\nHouse rules stay here\.\n\n<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['CLAUDE.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*codeloop guard session[\s\S]*<!-- codeloop:end -->\n$/);
     expect(before['.github/copilot-instructions.md']).toMatch(/^<!-- codeloop:start -->[\s\S]*<!-- codeloop:end -->\n$/);
+    // The orchestrator protocol, with the review pass first, as each host takes a command.
+    for (const f of ['.claude/commands/orch.md', '.cursor/commands/orch.md', '.agents/skills/codeloop-orch/SKILL.md']) expect(before[f]).toMatch(/# \/orch: run this board[\s\S]*codeloop orch run --review --changed/);
     expect(before['.cursor/rules/codeloop.mdc']).toMatch(/alwaysApply: true/);
   });
 });
