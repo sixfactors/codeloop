@@ -748,10 +748,11 @@ const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
 /**
  * Whether a commit since `from` is work on this card. A commit naming the card in a `Card:` or
  * `Feature:` trailer is; otherwise one touching a file in the card's plan is, whatever other
- * trailers it carries; a card with no plan takes any commit with no trailers, since nothing says it
- * belongs to another story. With no `from` (the first failure: no head was kept when the card
- * entered the stage) commits since `at` are read and only the first two rules apply, as there is no
- * head move to judge. A `from` the log cannot reach (the branch was rewritten) falls back to `at`.
+ * trailers it carries; for a card with no plan, a commit with no trailers is when it touches a file
+ * that one of the card's own trailered commits touched, so a chore on main is nobody's retry. With
+ * no `from` (the first failure: no head was kept when the card entered the stage) commits since `at`
+ * are read and only the first two rules apply, as there is no head move to judge. A `from` the log
+ * cannot reach (the branch was rewritten) falls back to `at`.
  */
 function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; at: number }): boolean {
   const log = (range: string[]) => spawnSync('git', ['log', '--name-only', '--format=%x01%H%x00%B%x00', ...range], { cwd: projectDir, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
@@ -760,14 +761,18 @@ function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; a
   if (run.status !== 0 && since.from) run = log(byTime);
   if (run.status !== 0) return false;
   const plan = planFiles(projectDir, card);
-  for (const rec of run.stdout.split('\u0001')) {
+  const records = (stdout: string) => stdout.split('\u0001').flatMap(rec => {
     const [sha, body = '', files = ''] = rec.split('\u0000');
-    if (!sha?.trim()) continue;
-    const cards = [...body.matchAll(TRAILER)].map(m => m[1]);
+    return sha?.trim() ? [{ cards: [...body.matchAll(TRAILER)].map(m => m[1]), files: files.split('\n').map(f => f.trim()).filter(Boolean) }] : [];
+  });
+  let owned: Set<string> | undefined;
+  // Files the card's own trailered commits touched, over all history; read once, only when needed.
+  const ownFiles = () => (owned ??= new Set(records(log([`--grep=^(Card|Feature):[[:space:]]*${card.id}[[:space:]]*$`, '-E', 'HEAD']).stdout).filter(r => r.cards.includes(card.id)).flatMap(r => r.files)));
+  for (const { cards, files } of records(run.stdout)) {
     if (cards.includes(card.id)) return true;
     if (plan) {
-      if (files.split('\n').some(f => f.trim() && pathInPlan(projectDir, plan, f.trim()))) return true;
-    } else if (since.from && !cards.length) return true;
+      if (files.some(f => pathInPlan(projectDir, plan, f))) return true;
+    } else if (since.from && !cards.length && files.some(f => ownFiles().has(f))) return true;
   }
   return false;
 }

@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -119,9 +119,15 @@ describe('a commit as work on the story', () => {
     git('commit', '-q', ...message.flatMap(m => ['-m', m]));
   };
 
-  it('counts any commit with no trailer when the story has no plan', () => {
-    commit('src/fix.ts', 'fix on main with no hook');
+  it("counts a commit with no trailer for a story with no plan only when it touches a file of the story's own commits", () => {
+    writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), readFileSync(join(dir, '.codeloop/lanes/market.yaml'), 'utf-8').replace('retries: 2', 'retries: 4'));
+    commit('src/chore.ts', 'chore: bump a version on main');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(1);
+    commit('src/mine.ts', 'feat: the story', 'Card: c-1');
     expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
+    writeFileSync(join(dir, 'src/mine.ts'), 'fixed');
+    git('commit', '-qam', 'fix on main with no hook');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(3);
   });
 
   it("counts a commit carrying another story's trailer when it touches a file in this story's plan", () => {
