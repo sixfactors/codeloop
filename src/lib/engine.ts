@@ -563,7 +563,11 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
   // An approval or a stuck count belongs to the stage it was given at; placing past it would carry it to the new one.
-  const waiting = gateRefusal(before);
+  // A card made at an outward first stage parks at that stage's entry gate on creation. Until
+  // anything has run, that gate decides nothing yet, so placing the card past it is allowed.
+  const first = firstStage(lane, before);
+  const onlyEntryGate = before.stage === first.id && !!first.gate?.outward && before.gate === first.gate.name && before.events.every(e => ['create', 'skip', 'park'].includes(e.action));
+  const waiting = onlyEntryGate ? undefined : gateRefusal(before);
   if (waiting) throw new RefusalError(waiting);
   if (stage === SPLIT_BEFORE_STAGE) {
     const problem = storySizeProblem(projectDir, before);
@@ -571,6 +575,7 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   }
   const now = opts.now ?? clock();
   const card: Card = { ...enter(before, stage), events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  parkIfOutward(card, lane, now);
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }

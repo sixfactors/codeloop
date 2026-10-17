@@ -40,6 +40,23 @@ describe('place', () => {
   });
 });
 
+describe('place on a lane whose first stage is outward', () => {
+  it('places a just-created card past the entry gate it parked at, and parks it again at an outward target', () => {
+    writeFileSync(
+      join(dir, '.codeloop/lanes/post.yaml'),
+      `id: post\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: announce\n    done: { cmd: "true" }\n    gate: { name: publish, approver: owner, outward: true }\n  - id: build\n    done: { cmd: "true" }\n  - id: release\n    done: { cmd: "true" }\n    gate: { name: prod, approver: owner, outward: true }\n`,
+    );
+    createCard(dir, { lane: 'post', title: 'Already drafted', id: 'c-1' });
+    expect(card('c-1')).toMatchObject({ stage: 'announce', gate: 'publish' });
+    placeCard(dir, 'c-1', 'build', 'owner');
+    expect(card('c-1').stage).toBe('build');
+    expect(card('c-1').gate).toBeUndefined();
+    createCard(dir, { lane: 'post', title: 'Ready to release', id: 'c-2' });
+    placeCard(dir, 'c-2', 'release', 'owner');
+    expect(card('c-2')).toMatchObject({ stage: 'release', gate: 'prod', awaiting: 'owner' });
+  });
+});
+
 describe('reopen', () => {
   it('returns a done card to the first stage with the gate and failure marks cleared', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });

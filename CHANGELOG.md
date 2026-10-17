@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `codeloop start --stage <stage>` works on a lane whose first stage is outward: the new card skips that stage's entry gate it was parked at, and parks again when the stage it lands on is outward.
 - Approving a stuck story that was parked puts it back on its stage with its retries cleared, so its first check no longer parks it stuck again with the old reason.
 - A no-op agent on a stage whose check writes a report file into the repo (junit.xml) is started once, not twice: the start records the work as its own check left it.
 - A story's health delta counts only the critical gotchas scoped to the files its own commits changed, so a gotcha another story adds elsewhere no longer lowers it.
