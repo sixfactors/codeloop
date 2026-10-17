@@ -110,6 +110,19 @@ describe('a carried turn', () => {
     expect(card().retries).toEqual({});
   }, 60_000);
 
+  it('uc-313-02: a carried turn that starts at interview waits for the answers instead of failing the questions check', async () => {
+    project(agent(['interview', 'mock', 'spec'], { questions: true }));
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE.replace('done: { cmd: "test -f notes/interview.md" }', `done: { cmd: 'node "${CLI}" check questions {id} --min 1' }`));
+    placeCard(dir, 'c-001', 'interview', 'owner');
+    const turn = await orchTurn(dir, 'c-001');
+    expect(turn.carried).toEqual(['interview', 'mock', 'spec']);
+    expect(turn.outcome).toBe('questions');
+    expect(turn.note).toMatch(/waiting for answers: Q1/);
+    expect(card().stage).toBe('interview');
+    expect(card().retries).toEqual({});
+    expect(card().events.some(e => e.action === 'fail')).toBe(false);
+  }, 60_000);
+
   it('a turn that lands research and then asks questions still runs orch.after_merge for the landed work', async () => {
     project(agent(['research', 'interview', 'mock', 'spec'], { questions: true }));
     writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}  after_merge:\n    build: "echo built > .after-merge"\n`);

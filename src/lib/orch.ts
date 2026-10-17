@@ -13,7 +13,7 @@ function refuseWhileOff(projectDir: string): void {
 }
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { AGENT_RUNS_DIR, briefPath, buildBrief, loadAgents, resolveAgent, runAgent, type AgentConfig } from './agent.js';
 import { activeSessions, currentSession, type SessionCard } from './active-card.js';
@@ -24,7 +24,7 @@ import { currentStage, advanceCard, headCommit, recordEvent, workFingerprint, ty
 import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
-import { openQuestions } from './interview.js';
+import { INTERVIEW, openQuestions } from './interview.js';
 import { carriedStages, loadLane, type Stage } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
@@ -297,8 +297,9 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   let crashed = false;
   let asked = false;
   // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
-  // A carried turn gates and advances the stages before the questions first (advanceCarried).
-  const open = turn.carried ? [] : openQuestions(projectDir, card);
+  // A carried turn gates and advances the stages before the questions first (advanceCarried),
+  // unless it starts at the stage that asks them: then nothing comes before them to land.
+  const open = !turn.carried || asksQuestions(projectDir, card, turn.stage) ? openQuestions(projectDir, card) : [];
   if (open.length) {
     turn.note = `waiting for answers: ${open.map(q => `Q${q.n}`).join(', ')} on ${card.id}`;
     turn.outcome = 'questions';
@@ -418,6 +419,12 @@ function advanceCarried(projectDir: string, id: string, turn: OrchTurn): { outco
     if (adv.outcome !== 'moved') break;
   }
   return { ...last, at: ' ' };
+}
+
+/** True for the stage whose output is the card's interview file: its check is the one that reads the answers. */
+function asksQuestions(projectDir: string, card: Card, stageId: string): boolean {
+  const output = loadLane(projectDir, card.lane).stages.find(s => s.id === stageId)?.output;
+  return !!output && basename(output) === INTERVIEW;
 }
 
 const TAIL_BYTES = 4096;
