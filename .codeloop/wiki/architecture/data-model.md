@@ -35,6 +35,7 @@ erDiagram
 | Stage | lane file | `done.cmd`, `gate` | The check whose exit code decides, and who must approve (owner or reviewer) |
 | Feature | `.codeloop/wiki/features/` | `rice` | Reach, impact and confidence 1 to 10 and effort in weeks; the inbox orders by this score |
 | Question | `specs/` per card | `recommended`, `answer` | The interview stage is done when every question has an answer |
+| ReviewPass | `.codeloop/state/review-pass.json` | `at` | The orchestrator's review pass reads only stories changed since `at`; it moves only when a pass completes (c-307) |
 
 ## Sharp edges
 
