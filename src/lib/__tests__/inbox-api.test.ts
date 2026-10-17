@@ -104,6 +104,14 @@ describe('inbox-shaped card queries', () => {
     expect(deriveInbox(cards, [], new Date(0)).perLane).toEqual([expect.objectContaining({ lane: 'market', holding: 3 })]);
   });
 
+  it("the workspace's fallback failing reads fail events since the stage was entered, counted or not", async () => {
+    const { deriveInbox } = await import('../../../workspace/lib/cards.js');
+    const ev = (action: string, stage: string, extra: object = {}) => ({ at: '2026-10-15T10:00:00.000Z', actor: 'engine', human: false, action, stage, ...extra });
+    const at = (id: string, events: object[]) => ({ id, title: id, lane: 'market', stage: 'draft', laneVersion: 1, retries: {}, evidence: [], events, createdAt: '', updatedAt: '' }) as unknown as Card;
+    const cards = [at('u', [ev('create', 'draft'), ev('fail', 'draft', { counted: false })]), at('m', [ev('create', 'draft'), ev('fail', 'draft'), ev('move', 'draft', { actor: 'owner' })])];
+    expect(deriveInbox(cards, [], new Date(0)).failing.cards.map(c => c.id)).toEqual(['u']);
+  });
+
   it('a proposal does not count as waiting on you; failing means two failed checks and an hour quiet, not one', async () => {
     proposeCard(dir, { lane: 'market', title: 'Maybe later', id: 'c-6' });
     writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market
