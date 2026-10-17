@@ -19,7 +19,7 @@ function write(path: string, text: string): void {
 const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe' });
 const card = () => readCards(dir).cards[0];
 // The doctor works a failing story once it has been quiet for a while.
-const later = () => new Date(Date.now() + 2 * 3_600_000);
+const later = (h = 2) => new Date(Date.now() + h * 3_600_000);
 const starts = () => card().events.filter(e => e.action === 'agent-start').length;
 
 beforeEach(() => {
@@ -32,9 +32,13 @@ afterEach(() => {
 });
 
 describe('an agent restart', () => {
+  let outside: string;
+  // Outside the repo, so counting the check's runs is not itself a change to the tree.
+  const checks = () => (existsSync(join(outside, 'checks')) ? readFileSync(join(outside, 'checks'), 'utf-8').split('\n').filter(Boolean).length : 0);
   beforeEach(() => {
-    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 9\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n');
-    // An agent that does nothing, as c-143's did 13 times at one commit.
+    outside = mkdtempSync(join(tmpdir(), 'codeloop-restart-out-'));
+    write('.codeloop/lanes/build.yaml', `id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: ${JSON.stringify(`echo x >> ${join(outside, 'checks')}; echo 2 of 4 tasks open; exit 1`)} }\n`);
+    // An agent that exits 0 and changes nothing.
     write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
     write('src/a.ts', 'one');
     git('init', '-q');
@@ -45,24 +49,28 @@ describe('an agent restart', () => {
     appendActivity(dir, 'c-1', { kind: 'edit', file: 'src/a.ts' });
     advanceCard(dir, 'c-1');
   });
+  afterEach(() => rmSync(outside, { recursive: true, force: true }));
 
-  it('is refused while the head commit and the stage work are the same as at the last start', async () => {
-    await doctorTick(dir, later());
+  it('parks the story stuck once the agent ran and changed nothing, and the doctor stops checking it', async () => {
+    await doctorTick(dir, later(2));
     expect(starts()).toBe(1);
-    const second = await doctorTick(dir, later());
+    const second = await doctorTick(dir, later(3));
+    expect(second.find(a => a.id === 'c-1')).toMatchObject({ action: 'agent-not-started', note: expect.stringMatching(/the agent ran and changed nothing; a person needs to look/) });
+    expect(card().gate).toBe('stuck');
+    expect(card().events.filter(e => e.action === 'stuck').at(-1)?.note).toBe('the agent ran and changed nothing; a person needs to look');
+    const seen = checks();
+    for (let h = 4; h < 8; h++) await doctorTick(dir, later(h));
+    expect(checks()).toBe(seen);
     expect(starts()).toBe(1);
-    expect(second.find(a => a.id === 'c-1')).toMatchObject({ action: 'agent-not-started', note: expect.stringMatching(/nothing changed since/) });
-    // The refused turn does not spend a retry either: nobody worked.
-    expect(card().retries.draft).toBe(2);
+    expect(card().gate).toBe('stuck');
   });
 
   it('is allowed again once the head commit moved', async () => {
-    await doctorTick(dir, later());
-    await doctorTick(dir, later());
+    await doctorTick(dir, later(2));
     expect(starts()).toBe(1);
     write('src/a.ts', 'two');
     git('commit', '-qam', 'a person fixed the setup');
-    await doctorTick(dir, later());
+    await doctorTick(dir, later(3));
     expect(starts()).toBe(2);
   });
 });

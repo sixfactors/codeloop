@@ -12,7 +12,7 @@ import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -151,8 +151,12 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
   return undefined;
 }
 
+const ASKS_FOR_START = new Set(['reject', 'returned', 'agent-start', 'doctor-start', 'unstick']);
+const NOTHING_CHANGED = 'the agent ran and changed nothing; a person needs to look';
+
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
-async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean }) | null> {
+// `stuck`: the start was refused on unchanged work and the card was parked for a person.
+async function agentStep(projectDir: string, id: string, agent: AgentConfig, now: Date, logFile?: string, budget?: Budget): Promise<(AgentStep & { busy?: boolean; stuck?: boolean }) | null> {
   const card = findCard(readCards(projectDir).cards, id);
   const lane = loadLane(projectDir, card.lane);
   const stage: Stage | undefined = lane.stages.find(s => s.id === card.stage);
@@ -162,14 +166,25 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   if (running(card, agent, now)) return { ...step, started: false, busy: true, reason: `agent ${agent.name} is still running on ${stage.id} from an earlier run` };
   // A rejection, or a return from the next stage's entry gate, asks for the work to be done again,
   // so the agent is started with the note even though the check still passes. Once per note.
-  const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'returned' || e.action === 'agent-start')).at(-1);
-  if (asked?.action !== 'reject' && asked?.action !== 'returned' && runCheck(projectDir, card, stage)?.passed) return null;
-  // A start on the head commit and stage work of the last one repeats that run (c-143: 13 hand-backs
-  // at one commit); orch runs stop on the same rule in breaker(). Outside git there is no head to compare.
+  // A doctor-start or an owner's unstick asks for one more start on unchanged work.
+  const asked = card.events.filter(e => e.stage === stage.id && ASKS_FOR_START.has(e.action)).at(-1);
+  const redo = asked?.action === 'reject' || asked?.action === 'returned';
+  // A start on the head commit and stage work of the last one repeats that run; orch runs stop on
+  // the same rule in breaker(). Outside git there is no head to compare.
   const head = headCommit(projectDir);
   const work = head ? workFingerprint(projectDir, card, stage) : undefined;
-  if (head && asked?.action === 'agent-start' && asked.head === head && asked.fingerprint === work) {
-    return { ...step, started: false, reason: `nothing changed since agent ${asked.agent ?? agent.name} last started on ${stage.id} (head ${head.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
+  const same = head !== undefined && asked?.action === 'agent-start' && asked.head === head && asked.fingerprint === work;
+  // A check that already failed after that start, on this head and work, would fail the same way.
+  const judged = same && card.events.slice(card.events.indexOf(asked!)).some(e => e.stage === stage.id && e.action === 'fail');
+  if (!redo && !judged && runCheck(projectDir, card, stage)?.passed) return null;
+  if (same) {
+    // A counted failure means the agent's run was judged; nothing new can follow on its own, so the
+    // story waits for a person instead of failing quietly with retries to spare.
+    if (!card.gate && (card.retries[stage.id] ?? 0) > 0) {
+      markStuck(projectDir, id, NOTHING_CHANGED, now);
+      return { ...step, started: false, stuck: true, reason: NOTHING_CHANGED };
+    }
+    return { ...step, started: false, reason: `nothing changed since agent ${asked!.agent ?? agent.name} last started on ${stage.id} (head ${head!.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
   }
 
   const spent = budget?.stop(`${id}:${stage.id}`);
@@ -252,11 +267,16 @@ export async function workCard(projectDir: string, id: string, stage: string, ag
   try {
     const step = agent ? await agentStep(projectDir, id, agent, now, logFile, budget) : null;
     if (step) {
-      const { busy, ...entry } = step;
+      const { busy, stuck, ...entry } = step;
       turn.agent = entry;
       if (busy) {
         turn.busy = true;
         turn.advanced = { id, outcome: 'refused', note: entry.reason };
+        return turn;
+      }
+      if (stuck) {
+        turn.outcome = 'stuck';
+        turn.advanced = { id, outcome: 'stuck', note: entry.reason };
         return turn;
       }
     }

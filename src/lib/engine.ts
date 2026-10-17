@@ -346,6 +346,22 @@ export function recordEvent(
   }
 }
 
+/** Parks a card at gate stuck for the owner, with `note` as the reason the inbox shows. A card already at a gate is left as it is. */
+export function markStuck(projectDir: string, id: string, note: string, now: Date = clock()): Card {
+  for (let attempt = 0; ; attempt++) {
+    const file = readCards(projectDir);
+    const before = findCard(file.cards, id);
+    if (before.gate) return before;
+    const card: Card = { ...before, gate: 'stuck', awaiting: 'owner', events: [...before.events, event(now, 'engine', 'stuck', before.stage, note)], updatedAt: now.toISOString() };
+    try {
+      writeCards(projectDir, file, replace(file.cards, card));
+      return card;
+    } catch (e) {
+      if (!(e instanceof ConflictError) || attempt >= 5) throw e;
+    }
+  }
+}
+
 /**
  * Cards for work that already exists elsewhere (Spec Kit, BMAD). They are an inventory, so the
  * wip limit does not apply and each lands at the stage its source status maps to.
