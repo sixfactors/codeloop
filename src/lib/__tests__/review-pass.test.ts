@@ -7,6 +7,7 @@ import { orchCommand } from '../../commands/orch.js';
 import { readCards, type Card } from '../cards.js';
 import { placeCard } from '../engine.js';
 import { readQuestions } from '../interview.js';
+import { checkResearch } from '../research.js';
 import { readReviewState, reportLines, reviewPass } from '../review-pass.js';
 import { doctorTick } from '../run.js';
 
@@ -159,8 +160,28 @@ describe('the review pass', () => {
     expect(events.filter(e => e.action === 'review-write').map(e => e.stage)).toEqual(['research']);
     const research = readFileSync(join(dir, 'specs/c-1/research.md'), 'utf-8');
     expect(research).toContain(sha.slice(0, 8));
-    expect(research).toMatch(/^- source: src\/a\.ts/m);
-    expect(research).toMatch(/^verdict: build$/m);
+    expect(research).toMatch(/^- gap: source to confirm: src\/a\.ts/m);
+  });
+
+  it('uc-307-03: a drafted stage never passes its own check: no sources cited, no verdict, tasks unticked, each a gap', () => {
+    commit('c-1', ['src/a.ts']);
+    commit('c-2', ['src/b.ts']);
+    board([
+      card('c-1', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } }),
+      card('c-2', { stage: 'spec', gate: 'stuck', awaiting: 'owner', retries: { spec: 3 } }),
+    ]);
+
+    reviewPass(dir, { all: true });
+
+    expect(checkResearch(dir, 'c-1', 1).errors).toEqual([
+      'specs/c-1/research.md has no line starting with "verdict:"',
+      'specs/c-1/research.md cites 0 sources, needs 1 (`- source: <url or path> - <note>`)',
+    ]);
+    const tasks = readFileSync(join(dir, 'specs/c-2/tasks.md'), 'utf-8');
+    expect(tasks).toMatch(/^- \[ \] T001 \[api\] feat: work for c-2/m);
+    expect(tasks).not.toMatch(/^- \[x\]/m);
+    expect(reviewQuestions('c-1')[0].question).toMatch(/research: Sources \(the changed files are listed to confirm; none is cited yet\).*research: verdict/);
+    expect(reviewQuestions('c-2')[0].question).toMatch(/spec: tasks from the merged commits are unticked/);
   });
 
   it('uc-307-03: a stage file someone started is never replaced', () => {

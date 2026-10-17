@@ -10,8 +10,9 @@
  *   written, so it is written from the merged work and the stage's own check decides.
  * - ask: a gate, a split or a drop becomes one inbox question with the recommended answer.
  *
- * A written stage is then read back: each section the merged work could not fill is a gap, and the
- * gaps become one question. The pass never writes a `skip` event.
+ * A written stage is a draft: it never satisfies the stage's check by itself. Each part the merged
+ * work could not honestly fill is a gap, and the gaps become one question. The pass never writes a
+ * `skip` event.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { basename, dirname, join } from 'path';
@@ -192,25 +193,35 @@ export function emptySections(text: string): string[] {
   return out;
 }
 
-/** The stage's output, filled from the merged work: the commits and files on top, then per-stage content. */
-export function stageText(projectDir: string, card: Card, stage: Stage, work: MergedWork): { path: string; text: string } {
+/**
+ * The stage's output, drafted from the merged work: the commits and files on top, then per-stage
+ * content. Nothing in it satisfies the stage's own check by itself: changed files are listed as
+ * sources to confirm, not as sources, no verdict is written, and tasks from the merged commits are
+ * left unticked. `gaps` names what a person or agent still has to complete, so the check fails
+ * until someone does it honestly.
+ */
+export function stageText(projectDir: string, card: Card, stage: Stage, work: MergedWork): { path: string; text: string; gaps: string[] } {
   const path = substitute(stage.output!, card, { projectDir });
   const lines = template(projectDir, card, path).split('\n');
   const commitLines = work.merged.map(c => `- \`${short(c.sha)}\` ${c.subject}`);
-  const top = ['', `<!-- review pass: written from the merged work and the code, not by the ${stage.skill ?? stage.id} skill -->`, 'Merged work on the trunk:', '', ...commitLines, '', `Files it changed: ${work.files.slice(0, 12).map(f => `\`${f}\``).join(', ')}${work.files.length > 12 ? `, and ${work.files.length - 12} more` : ''}`];
+  const top = ['', `<!-- review pass: drafted from the merged work and the code, not by the ${stage.skill ?? stage.id} skill; its gaps are open questions in the inbox -->`, 'Merged work on the trunk:', '', ...commitLines, '', `Files it changed: ${work.files.slice(0, 12).map(f => `\`${f}\``).join(', ')}${work.files.length > 12 ? `, and ${work.files.length - 12} more` : ''}`];
   let text = [lines[0], ...top, ...lines.slice(1)].join('\n');
+  const gaps: string[] = [];
   const name = basename(path);
   if (name === 'research.md') {
-    const sources = work.files.filter(f => existsSync(join(projectDir, f))).slice(0, 5).map(f => `- source: ${f} - changed by the merged work`);
-    text = text.replace(/^## Sources\n/m, `## Sources\n\n${sources.join('\n')}\n`);
-    if (!/^verdict:\s*\S/m.test(text)) text = `${text.trimEnd()}\n\nverdict: build\n`;
+    // Not `- source:` lines: a changed file is where to look, not evidence for the pain or the verdict.
+    const candidates = work.files.filter(f => existsSync(join(projectDir, f))).slice(0, 5).map(f => `- gap: source to confirm: ${f} - changed by the merged work; say what it shows, then write it as a source line`);
+    if (candidates.length) text = text.replace(/^## Sources\n/m, `## Sources\n\n${candidates.join('\n')}\n`);
+    if (candidates.length) gaps.push(`${stage.id}: Sources (the changed files are listed to confirm; none is cited yet)`);
+    if (!/^verdict:\s*\S/m.test(text)) gaps.push(`${stage.id}: verdict (build, buy or drop)`);
   } else if (name === 'tasks.md') {
     const files = commitFiles(projectDir, work.merged.map(c => c.sha));
     const skip = notWork(projectDir, card);
-    const tasks = [...work.merged].reverse().map((c, i) => `- [x] T${String(i + 1).padStart(3, '0')} [${layerOf((files.get(c.sha) ?? []).filter(p => !skip(p)))}] ${c.subject} (\`${short(c.sha)}\`)`);
+    const tasks = [...work.merged].reverse().map((c, i) => `- [ ] T${String(i + 1).padStart(3, '0')} [${layerOf((files.get(c.sha) ?? []).filter(p => !skip(p)))}] ${c.subject} (\`${short(c.sha)}\`)`);
     text = /^## Rubric/m.test(text) ? text.replace(/^## Rubric/m, `${tasks.join('\n')}\n\n## Rubric`) : `${text.trimEnd()}\n\n${tasks.join('\n')}\n`;
+    if (tasks.length) gaps.push(`${stage.id}: tasks from the merged commits are unticked until each is checked against its commit`);
   }
-  return { path, text };
+  return { path, text, gaps };
 }
 
 // --- applying ----------------------------------------------------------------------------------
@@ -228,12 +239,13 @@ function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], 
       gaps.push(`${id}: the questions it would ask`);
       continue;
     }
-    const { path, text } = stageText(projectDir, card, stage, work);
+    const { path, text, gaps: drafted } = stageText(projectDir, card, stage, work);
     const file = specPath(projectDir, path);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, text);
     wrote.push(path);
     recordEvent(projectDir, card.id, () => ({ action: 'review-write', actor: 'orchestrator', stage: id, note: `review pass: wrote ${path} from the merged work (commits ${shas(plan.commits)})` }), now);
+    gaps.push(...drafted);
     for (const section of emptySections(text)) gaps.push(`${id}: ${section}`);
   }
   let refused: string | undefined;
@@ -241,7 +253,7 @@ function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], 
   if (gaps.length && !asked(projectDir, card, key)) {
     // The files are written either way; a full interview only means the gaps are reported, not asked.
     try {
-      addQuestions(projectDir, card.id, [{ question: question(key, `The review pass wrote ${wrote.length ? wrote.join(', ') : 'these stages'} from the merged work (${shas(plan.commits)}) and could not fill ${gaps.join('; ')}. What should they say?`), recommended: `Nothing more: the merged work (${shas(plan.commits)}) already answers them`, kind: 'gap' }], 'agent');
+      addQuestions(projectDir, card.id, [{ question: question(key, `The review pass wrote ${wrote.length ? wrote.join(', ') : 'these stages'} from the merged work (${shas(plan.commits)}) and could not fill ${gaps.join('; ')}. What should they say?`), recommended: `Read the merged work (${shas(plan.commits)}) and complete each one; the stage's check fails until then`, kind: 'gap' }], 'agent');
     } catch (e) {
       if (!(e instanceof RefusalError)) throw e;
       refused = e.message;
