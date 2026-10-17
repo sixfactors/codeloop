@@ -18,6 +18,8 @@ import { codeloopHome } from './hub-registry.js';
 export const SEPARATOR = '--CODELOOP-STDERR--';
 export const IDLE_MS = 10 * 60 * 1000;
 const ENV_PREFIX = /^(CODELOOP_|CLAUDE_CODE_|CURSOR_)/;
+/** Verbs whose throw blocks (exit 2) instead of falling back: the CLI refuses the same way, and an allow here would let an unchecked edit through. */
+const FAIL_CLOSED = new Set(['edit']);
 
 export const hookdSocket = (): string => process.env.CODELOOP_HOOKD_SOCK || join(codeloopHome(), 'state', 'hookd.sock');
 
@@ -99,7 +101,10 @@ export async function execute(req: Request): Promise<string> {
     await withStdin(req.body, () => run(req.args));
   } catch (e) {
     if (e instanceof ExitSignal) code = e.code;
-    else {
+    else if (FAIL_CLOSED.has(req.verb)) {
+      err.push(`${(await import('../commands/guard-hooks.js')).editGuardFailed(e)}\n`);
+      code = 2;
+    } else {
       Object.assign(console, { log: saved.log, error: saved.error, warn: saved.warn });
       process.exit = saved.exit;
       return 'FALLBACK\n';

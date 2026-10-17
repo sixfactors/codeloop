@@ -117,7 +117,19 @@ export const guardCommand = new Command('guard').description('Hooks that enforce
 guardCommand
   .command('edit [path]')
   .description('PreToolUse hook for Edit|Write|MultiEdit: exits 2 with no active card, or when the path is outside the plan and the card is past its spec gate')
-  .action(guardEdit);
+  .action(async (path?: string) => {
+    try {
+      await guardEdit(path);
+    } catch (e) {
+      // A hook that exits 1 lets the edit through, so a guard that cannot decide refuses instead.
+      console.error(editGuardFailed(e));
+      process.exit(2);
+    }
+  });
+
+/** The refusal printed when the edit guard throws, on the CLI and the daemon path alike. */
+export const editGuardFailed = (e: unknown): string =>
+  chalk.red(`codeloop: the edit guard failed (${e instanceof Error ? e.message : String(e)}), so the edit is refused until it can check`);
 
 // Open stories by priority band, then score, then age: what a session with nothing active should pick from.
 async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
