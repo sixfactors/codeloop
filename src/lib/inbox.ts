@@ -22,7 +22,7 @@ export interface Inbox {
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
   failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
   /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
-  backlog: { count: number; oldest?: { id: string; title: string; since: string } };
+  backlog: { count: number; oldest?: { id: string; title: string; since: string; bug_reported_by?: string } };
   /** Wiki pages changed here and in the cloud: merge the cloud version into the local page, then delete it. */
   needs_merge: { path: string; cloud: string }[];
   /** Cards whose interview.md has a question without an answer. */
@@ -179,7 +179,7 @@ export const shippedWithin = (cards: Card[], now: Date, days = 7) => cards.filte
 export function backlogOf(cards: Card[]): Inbox['backlog'] {
   const proposed = cards
     .filter(c => c.stage === PROPOSED)
-    .map(c => ({ id: c.id, title: c.title, since: c.events.filter(e => e.action === 'propose').at(-1)?.at ?? c.createdAt }))
+    .map(c => ({ id: c.id, title: c.title, since: c.events.filter(e => e.action === 'propose').at(-1)?.at ?? c.createdAt, ...(c.bug_reported_by ? { bug_reported_by: c.bug_reported_by } : {}) }))
     .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
   return { count: proposed.length, ...(proposed[0] ? { oldest: proposed[0] } : {}) };
 }

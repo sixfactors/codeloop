@@ -12,7 +12,7 @@ function line(card: Card & { band?: string; score?: number }): string {
   // The priority the picks use: the card's own when set, else its feature's RICE band.
   const band = card.priority ?? card.band;
   const rank = band ? chalk.dim(`${band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
-  return `  ${card.id}  ${card.bug ? chalk.red('bug ') : ''}${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
+  return `  ${card.id}  ${card.bug ? chalk.red('bug ') : card.bug_reported_by ? chalk.yellow(`reported bug (${card.bug_reported_by}) `) : ''}${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
 }
 
 function print(result: { lines: string[]; exitCode: number }): void {

@@ -86,6 +86,14 @@ describe('inbox-shaped card queries', () => {
     expect(ids(body.needsYou.cards)).toEqual(['c-3', 'c-1', 'c-2']);
   });
 
+  it("/api/inbox marks a backlog proposal an agent reported as a critical bug, so the owner sees it before opening it", async () => {
+    const { app } = createApp(dir, undefined, { token: 't' });
+    const made = await app.request('/api/cards', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': 't' }, body: JSON.stringify({ lane: 'market', title: 'Fix the broken signup link', bug: true }) });
+    expect(made.status).toBe(201);
+    const body = await (await app.request('/api/inbox')).json();
+    expect(body.backlog.oldest).toMatchObject({ title: 'Fix the broken signup link', bug_reported_by: 'agent' });
+  });
+
   it('/api/initiatives returns initiatives by score, highest first and unscored last, for the table to render as given', async () => {
     mkdirSync(join(dir, '.codeloop/wiki/initiatives'), { recursive: true });
     mkdirSync(join(dir, '.codeloop/wiki/features'), { recursive: true });
