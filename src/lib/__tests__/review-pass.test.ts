@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { orchCommand } from '../../commands/orch.js';
+import { setActiveCard } from '../active-card.js';
 import { readCards, type Card } from '../cards.js';
 import { placeCard } from '../engine.js';
 import { readQuestions } from '../interview.js';
@@ -158,6 +159,19 @@ describe('the review pass', () => {
     const report = reviewPass(dir, { all: true, dryRun: true });
 
     expect(reportLines(report)[1]).toBe('warning: trunk main is 1 commit behind HEAD; merged work may read as unmerged');
+  });
+
+  it('a story held by a builder mid-turn is left alone and reported as could-not-tell', () => {
+    commit('c-1', ['src/a.ts']);
+    board([card('c-1', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } })]);
+    setActiveCard(dir, 'c-1', 'orch-c-1');
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-1').stage).toBe('research');
+    expect(existsSync(join(dir, 'specs/c-1/research.md'))).toBe(false);
+    expect(report.unclear.map(l => l.id)).toEqual(['c-1']);
+    expect(report.unclear[0].note).toMatch(/^held by .+, working it now, so left alone \(would place: /);
   });
 
   it('uc-307-02: docs-only and mock-only commits are not merged work', () => {

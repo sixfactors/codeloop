@@ -17,6 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { activeSessions, currentSession } from './active-card.js';
 import { Budget } from './budget.js';
 import { DONE, inLane, readCards, type Card } from './cards.js';
 import { clock } from './clock.js';
@@ -268,6 +269,9 @@ function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], 
 export function applyFix(projectDir: string, plan: Plan, now: Date = clock()): { section: 'fixed' | 'asked' | 'unclear'; line: ReviewLine } | undefined {
   const line = (note: string, verb: Plan['verb'] = plan.verb): ReviewLine => ({ id: plan.id, verb, note, evidence: plan.evidence });
   if (plan.verb === 'unclear') return { section: 'unclear', line: line(plan.note) };
+  // A builder mid-turn (a live session or an orchestrator lease) owns the story's stage until it hands back.
+  const holder = activeSessions(projectDir).find(s => s.card === plan.id && s.session !== currentSession());
+  if (holder) return { section: 'unclear', line: line(`held by ${holder.label ?? holder.session}, working it now, so left alone (would ${plan.verb}: ${plan.note})`, 'unclear') };
   const card = readCards(projectDir).cards.find(c => c.id === plan.id)!;
   try {
     if (plan.verb === 'ask') {

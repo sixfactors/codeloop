@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The review pass leaves a story alone while another session or an orchestrator lease holds it, and lists it under could not tell with who holds it, instead of placing it under a builder mid-turn.
 - When `git.trunk` names a branch that does not exist, no commit reads as merged (it used to fall back to whatever was checked out), and the review report says so; when the trunk is behind HEAD the report says by how many commits, since merged work may read as unmerged.
 - `codeloop orch batch [cards...]` builds up to five trivial or S stories at build in one agent turn in the main tree, only stories whose plans list different files; features may mix. Each story keeps its own lease, agent-start and agent-run, hand-back, gate, checks and approvals, and its page names the batch and the stories built with it. A story that fails leaves the batch with the failure named on it and builds alone next, while the others move on.
 - A stage the review pass writes is a draft that never passes its own check: changed files are listed as sources to confirm instead of cited, no verdict is written, tasks from merged commits stay unticked, and each of those is a gap in the inbox question.
