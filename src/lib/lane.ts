@@ -31,6 +31,8 @@ export interface Stage {
   review?: { agent: string; skill?: string };
   /** Consecutive stages with the same `carry` group run in one agent turn; each keeps its own check and events. A gate may sit only on the group's last stage. */
   carry?: string;
+  /** A later stage whose brief and gate this stage takes on for a card that skips it (verify takes review's for an S story). */
+  fold?: string;
 }
 
 export interface Lane {
@@ -142,6 +144,12 @@ export function carriedStages(lane: Lane, stage: Stage, card: { size?: string })
   return out;
 }
 
+/** The stage `stage` folds in for this card: its `fold` target when the card skips that stage, else undefined. */
+export function foldedStage(lane: Lane, stage: Stage, card: { size?: string }): Stage | undefined {
+  const target = stage.fold ? lane.stages.find(s => s.id === stage.fold) : undefined;
+  return target && !stageApplies(target, card) ? target : undefined;
+}
+
 /** The stage after `stage` that runs for the card, or undefined at the end of the lane. */
 export function nextStage(lane: Lane, stage: Stage, card: { size?: string }): Stage | undefined {
   return lane.stages.slice(lane.stages.indexOf(stage) + 1).find(s => stageApplies(s, card));
@@ -186,6 +194,7 @@ export function lintLane(lane: Lane, skills: SkillEntry[] | null = null): string
       if (group[0] === at && group.some((i, n) => n > 0 && i !== group[n - 1] + 1)) errors.push(`${where} carry ${stage.carry}: its stages are not consecutive (${group.map(i => lane.stages[i].id).join(', ')})`);
       if (stage.gate && group.some(i => i > at)) errors.push(`${where} carry ${stage.carry}: stage ${stage.id} has gate ${stage.gate.name}, so the carry would run past it; end the group at ${stage.id}`);
     }
+    if (stage.fold && !lane.stages.slice(lane.stages.indexOf(stage) + 1).some(s => s.id === stage.fold)) errors.push(`${at}: fold names "${stage.fold}", which is not a later stage of the lane`);
     if (stage.review && !stage.review.agent) errors.push(`${at}: review has no agent (a preset under agents: in .codeloop/config.yaml)`);
     if (known && stage.skill && !known.has(stage.skill)) {
       errors.push(`${at}: skill "${stage.skill}" is not in ${SKILLS_INDEX}`);

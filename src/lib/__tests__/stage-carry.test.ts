@@ -5,7 +5,8 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readCards, type Card } from '../cards.js';
-import { createCard } from '../engine.js';
+import { advanceCard, approveCard, createCard } from '../engine.js';
+import { buildBrief } from '../agent.js';
 import { lintLane, parseLane } from '../lane.js';
 import { orchTurn, readOrch } from '../orch.js';
 import { newSpec } from '../spec.js';
@@ -145,4 +146,42 @@ describe('a carried turn', () => {
     // The failure is counted on the stage that failed, not on the stage the turn started at.
     expect(card().retries).toEqual({ mock: 1 });
   }, 60_000);
+});
+
+describe('review folded into verify for an S story', () => {
+  const FOLD = 'id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "true" }\n  - id: verify\n    fold: review\n    done: { cmd: "true" }\n    gate: { name: local, approver: owner }\n  - id: review\n    when: "size >= M"\n    skill: review\n    output: notes/review.md\n    done: { cmd: "true" }\n    gate: { name: pr, approver: reviewer }\n  - id: staging\n    done: { cmd: "false" }\n';
+  const lane = () => {
+    mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
+    writeFileSync(join(dir, '.codeloop/config.yaml'), 'project:\n  name: demo\n');
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), FOLD);
+  };
+
+  it('uc-313-06: an S story runs the review triage in verify and still waits for the reviewer before it moves on', () => {
+    lane();
+    createCard(dir, { lane: 'build', title: 'Fix the date on the post', id: 'c-001', fields: { size: 'S' } });
+    advanceCard(dir, 'c-001');
+    expect(card().stage).toBe('verify');
+    expect(buildBrief(dir, card())).toMatch(/## Folded in: review[\s\S]*Write notes\/review\.md[\s\S]*pr gate still asks the reviewer/);
+    expect(advanceCard(dir, 'c-001').outcome).toBe('parked');
+    expect([card().gate, card().awaiting]).toEqual(['local', 'owner']);
+    approveCard(dir, 'c-001', 'owner');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('parked');
+    expect([card().stage, card().gate, card().awaiting]).toEqual(['verify', 'pr', 'reviewer']);
+    expect(() => approveCard(dir, 'c-001', 'owner')).toThrow(/needs reviewer/);
+    approveCard(dir, 'c-001', 'reviewer');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('moved');
+    expect(card().stage).toBe('staging');
+    expect(card().events.find(e => e.action === 'skip')?.stage).toBe('review');
+  });
+
+  it('an M story keeps its own review stage and verify asks only its own gate', () => {
+    lane();
+    createCard(dir, { lane: 'build', title: 'Founders can read the launch post', id: 'c-001', fields: { size: 'M' } });
+    advanceCard(dir, 'c-001');
+    expect(buildBrief(dir, card())).not.toContain('Folded in');
+    advanceCard(dir, 'c-001');
+    approveCard(dir, 'c-001', 'owner');
+    expect(advanceCard(dir, 'c-001').outcome).toBe('moved');
+    expect(card().stage).toBe('review');
+  });
 });

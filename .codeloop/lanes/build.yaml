@@ -58,6 +58,8 @@ stages:
       - "Work the tasks in layer order: [api] with the api skill, [sdk] with the sdk skill, [ui] with the ui skill. Tick each task line as it is done."
   - id: verify
     skill: verify
+    # An S or trivial story skips review: its triage runs in this turn and the pr gate is asked here, after local.
+    fold: review
     output: evidence/{nnn}/verify.md
     done: { cmd: "codeloop verify {id} && codeloop check rubric {id}" }
     notes:
@@ -67,6 +69,7 @@ stages:
   # Review is a triage: every finding gets a verdict (fix now, defer, unnecessary) and evidence; deferred findings become proposals.
   # Every changed file outside the story's plan also gets a keep / revert / move verdict in a `## Scope` table.
   - id: review
+    when: "size >= M"
     skill: review
     output: evidence/{nnn}/review.md
     done: { cmd: "codeloop check file evidence/{nnn}/review.md --has 'verdict: approve' && codeloop check scope {id} && codeloop check wiki-landed {id} --stage review && codeloop check rubric {id}" }

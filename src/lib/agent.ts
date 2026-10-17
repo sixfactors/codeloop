@@ -9,7 +9,7 @@ import { RefusalError, safeName, type Card } from './cards.js';
 import { listCompetitors } from './competitors.js';
 import { loadConfig } from './config.js';
 import { stageBrief } from './flow.js';
-import { loadLane, loadSkillsIndex, shellQuote, SKILLS_INDEX, substitute } from './lane.js';
+import { foldedStage, loadLane, loadSkillsIndex, shellQuote, skipReason, SKILLS_INDEX, substitute } from './lane.js';
 import { checkEnv } from './shell.js';
 import { parseFrontmatter } from './skills.js';
 import { readTasks } from './spec.js';
@@ -198,6 +198,20 @@ export function buildBrief(projectDir: string, card: Card): string {
 
   const laneStage = lane.stages.find(s => s.id === card.stage);
   if (laneStage) lines.push(...rubricBrief(projectDir, card, laneStage));
+
+  // A stage that folds in one this card skips (review, for an S story) does that stage's work too,
+  // and the folded stage's gate is asked after this one's.
+  const folded = laneStage ? foldedStage(lane, laneStage, card) : undefined;
+  if (folded) {
+    lines.push(`## Folded in: ${folded.id}`, '', `This story skips the ${folded.id} stage (${skipReason(folded, card)}), so its work is done in this turn.${folded.output ? ` Write ${substitute(folded.output, card, { projectDir })} as that stage would.` : ''}${folded.gate ? ` After this stage's own approval, the ${folded.gate.name} gate still asks the ${folded.gate.approver} before the story moves on.` : ''}`, '');
+    if (folded.done?.cmd) lines.push(`The ${folded.id} stage's check, for reference:`, '', `    ${substitute(folded.done.cmd, card, { projectDir })}`, '');
+    for (const note of folded.notes ?? []) lines.push(`- ${folded.id} note: ${note}`);
+    if (folded.notes?.length) lines.push('');
+    if (folded.skill) {
+      const body = skillBody(projectDir, folded.skill);
+      lines.push(`## Skill: ${folded.skill}`, '', body ? substitute(body, card, { projectDir }) : `The skill's text is not in ${SKILLS_INDEX}; use the /${folded.skill} skill if your tool has it.`, '');
+    }
+  }
 
   if (stage.skill) {
     for (const file of skillStateFiles(projectDir, stage.skill)) {

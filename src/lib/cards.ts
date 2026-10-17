@@ -18,6 +18,8 @@ export interface CardEvent {
   head?: string;
   /** On fail: the failure counted toward the lane's retries (work was tried before it). */
   counted?: boolean;
+  /** On approve and auto-approve: the gate the decision answered, for a stage that asks two (a folded one). Absent means the stage's own gate. */
+  gate?: string;
   /** Reserved for an approval recorded by an authenticated store. Local approvals have none. */
   approvalId?: string;
   /** On agent-start and agent-run: the configured agent, its exit code (null when killed), and where its output went. */

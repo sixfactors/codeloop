@@ -16,7 +16,7 @@ import { builderIdle } from './stall.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, enter, findCard, gateRefusal, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
-import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
+import { firstStage, foldedStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { pathInPlan, planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
 import { untouchedOutput } from './stage-scaffold.js';
@@ -121,8 +121,15 @@ export function currentStage(lane: Lane, card: Card): Stage {
 const DECISIONS = ['approve', 'auto-approve', 'reject', 'park'];
 
 // The latest gate event for the stage decides: a park or a rejection after an approval withdraws it.
-function approval(card: Card, stage: Stage): CardEvent | undefined {
-  const last = card.events.filter(e => e.stage === stage.id && DECISIONS.includes(e.action)).at(-1);
+// A stage that also asks a folded gate keeps the two apart: an approval or a park for one gate
+// says nothing about the other, and a rejection withdraws both.
+function approval(card: Card, stage: Stage, gate: string | undefined = stage.gate?.name): CardEvent | undefined {
+  const concerns = (e: CardEvent) => {
+    if (!gate || e.action === 'reject') return true;
+    if (e.action === 'park') return !e.note?.startsWith('gate ') || e.note.startsWith(`gate ${gate} `) || e.note === `gate ${gate}`;
+    return (e.gate ?? stage.gate?.name) === gate;
+  };
+  const last = card.events.filter(e => e.stage === stage.id && DECISIONS.includes(e.action) && concerns(e)).at(-1);
   return last && (last.action === 'approve' || last.action === 'auto-approve') ? last : undefined;
 }
 
@@ -138,7 +145,9 @@ export function reviewMoveRefusal(lane: Lane, card: Card, to: number): string | 
   if (from < 0 || to <= from) return `the review pass moves ${card.id} only forward from ${card.stage}`;
   if (card.gate && card.gate !== 'stuck') return `${card.id} waits at the ${card.gate} gate; the review pass never moves past a gate`;
   const gated = lane.stages.slice(from, to).find(s => s.gate && stageApplies(s, card) && !approved(card, s));
-  return gated ? `the ${gated.gate!.name} gate at ${gated.id} lies between; the review pass never moves past a gate` : undefined;
+  if (gated) return `the ${gated.gate!.name} gate at ${gated.id} lies between; the review pass never moves past a gate`;
+  const folding = lane.stages.slice(from, to).find(s => { const f = foldedStage(lane, s, card); return f?.gate && stageApplies(s, card) && !approval(card, s, f.gate.name); });
+  return folding ? `the ${foldedStage(lane, folding, card)!.gate!.name} gate folded into ${folding.id} lies between; the review pass never moves past a gate` : undefined;
 }
 
 /** What the review pass passes to placeCard or closeCard: the merged commits its move rests on. */
@@ -1001,6 +1010,21 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
     }
   }
 
+  // A card that skips a stage this one folds in (review, for an S story) is asked that stage's
+  // gate here too, after this stage's own: the approval moves, it is never dropped.
+  const folded = foldedStage(lane, stage, card);
+  if (folded?.gate && !approval(card, stage, folded.gate.name)) {
+    if (loadEngineConfig(projectDir).gatesMode === 'trusted') {
+      card.events.push({ ...event(now, 'engine', 'auto-approve', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, gates.mode trusted)`), gate: folded.gate.name });
+    } else {
+      card.gate = folded.gate.name;
+      card.awaiting = folded.gate.approver;
+      card.events.push(event(now, 'engine', 'park', stage.id, `gate ${folded.gate.name} (folded from ${folded.id}, after the check passed)`));
+      writeCards(projectDir, file, replace(file.cards, card));
+      return { card, outcome: 'parked', output, started: [], because: {} };
+    }
+  }
+
   if (rerun) {
     card.retries[stage.id] = 0;
     card.events.push(event(now, 'engine', 'unstick', stage.id, 'the check passes after work landed on the story'));
@@ -1098,7 +1122,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   } else {
     const stage = loadLane(projectDir, before.lane).stages.find(s => s.id === before.stage);
     const fingerprint = stage ? stageFingerprint(projectDir, before, stage) : undefined;
-    card.events = [...before.events, { ...event(now, role, 'approve', card.stage, opts.note ?? `gate ${gate}`), ...(fingerprint ? { fingerprint } : {}) }];
+    card.events = [...before.events, { ...event(now, role, 'approve', card.stage, opts.note ?? `gate ${gate}`), ...(gate ? { gate } : {}), ...(fingerprint ? { fingerprint } : {}) }];
   }
   writeCards(projectDir, file, replace(file.cards, card));
   return card;
