@@ -45,4 +45,37 @@ describe("a story's health delta", () => {
     commit('docs: a gotcha with no scope\n\nCard: c-1');
     expect(checkHealth(dir, 'c-1').delta).toBeLessThan(0);
   });
+
+  it('on its own branch counts every file since the merge-base, not only those of the trailered commits', () => {
+    git('checkout', '-q', '-b', 'story');
+    write('README.md', 'one line\n');
+    commit('docs: readme\n\nCard: c-1');
+    write('src/b.ts', 'export const b = 1;\n');
+    gotcha('src-wide', 'src/**');
+    commit('feat: b');
+    expect(checkHealth(dir, 'c-1').delta).toBeLessThan(0);
+  });
+
+  it("on trunk counts an untrailered commit that touches the story's files or its plan, never another story's", () => {
+    write('src/a.ts', 'export const a = 3;\nexport const shared = 1;\n');
+    write('src/c.ts', 'export const c = 1;\n');
+    gotcha('on-c', 'src/c.ts');
+    commit('fix: a and c');
+    expect(checkHealth(dir, 'c-1').delta, 'the untrailered commit touched src/a.ts, which c-1 changed').toBeLessThan(0);
+
+    rmSync(join(dir, '.codeloop/wiki/gotchas/on-c.md'));
+    write('src/e.ts', 'export const e = 1;\n');
+    gotcha('on-e', 'src/e.ts');
+    commit('feat: e\n\nCard: c-2');
+    write('specs/001-one/plan.md', '# Plan\n\n## Files\n\n- `src/d.ts`\n');
+    write('.codeloop/cards.json', JSON.stringify({ version: 1, cards: [{ id: 'c-1', title: 'one', lane: 'build', stage: 'build', spec: 'specs/001-one' }] }));
+    commit('chore: plan for c-1');
+    const base = checkHealth(dir, 'c-1').delta!;
+    expect(base, "c-2's gotcha on its own file stays out").toBe(0);
+
+    write('src/d.ts', 'export const d = 1;\n');
+    gotcha('on-d', 'src/d.ts');
+    commit('feat: d');
+    expect(checkHealth(dir, 'c-1').delta, 'the untrailered commit touched src/d.ts, in the plan').toBeLessThan(0);
+  });
 });

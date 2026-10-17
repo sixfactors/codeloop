@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A story's health check on its own branch scopes gotchas to every file changed since the merge-base. On a shared trunk it adds untrailered commits that touch the story's trailered files or its plan files, so one `Card:` commit on README.md no longer hides untrailered source changes and the gotchas scoped to them.
 - A story's health check counts a critical gotcha with no scope, which `wiki capture` writes by default, as applying to every file; it used to leave it out of every story's delta.
 - The eight-task cap judges planned work only: a story whose tasks are all ticked is approved and placed into build whatever its task count or size, while a story with open tasks over the cap is still refused at build entry.
 - A lane's `wip` counts only stories an agent is working on now: an agent run in flight on the story's stage, or a builder session on it that wrote to its activity within `monitor.stall_minutes`. Stories parked at a gate, waiting for answers or between turns hold no slot. `card new`, approving a proposal, `card place`, `card reopen`, queued promotion and the scheduler all count it this way, and a refusal names each story holding a slot and what is working on it. Trivial stories still never hold one.
