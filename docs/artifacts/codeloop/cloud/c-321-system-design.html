@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: system-design 1 -->
+<!-- codeloop artifact lineage: c-321 <- base -->
+<!-- codeloop-artifact
+id: c-321
+kind: system-design
+title: Codeloop Cloud architecture
+scope: [founder, builder agent, reviewer, team member, public visitor, git, Protobox]
+components: [CLI, web board, hub, core library, story files, agent records, sync worker, hosted service, Protobox store driver]
+environments: [local laptop, Codeloop Cloud, public demo]
+-->
+<title>c-321 Codeloop Cloud architecture</title>
+<style>
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }
+
+
+/* Design-page additions: diagrams scroll inside their own frame; prose keeps a reading width. */
+.shell p, .shell li { max-width: 72ch; }
+section.contract ul, section.contract ol { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.diagram { overflow-x: auto; border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); padding: var(--space-3); }
+.diagram svg { display: block; width: 760px; max-width: none; height: auto; font-family: inherit; }
+.diagram svg text { fill: var(--text); font-size: 13px; }
+.diagram svg text.small { font-size: 11px; fill: var(--muted); }
+.diagram svg text.head { font-weight: 600; }
+.diagram svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.diagram svg .box.git { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.diagram svg .box.cloud { fill: var(--surface); stroke: var(--warn); stroke-width: 1.5; }
+.diagram svg .box.pub { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.diagram svg .lane { fill: none; stroke: var(--border); stroke-dasharray: 4 4; }
+.diagram svg .arrow { stroke: var(--muted); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+.diagram svg .arrow.two { marker-start: url(#ahs); }
+.diagram svg #ah path, .diagram svg #ahs path { fill: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); }
+.key .chip.git { border-color: var(--accent); color: var(--accent); }
+.key .chip.cloud { border-color: var(--warn); color: var(--warn); }
+.key .chip.pub { border-color: var(--ok); color: var(--ok); }
+pre.tree { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-2); border: var(--line) solid var(--border); border-radius: var(--radius-card); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: 1.45; }
+pre.mermaid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+.lead { font-size: var(--text-lg); }
+td.yes { color: var(--ok); } td.no { color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); }
+.q h4 { font-size: var(--text-base); }
+.q p { font-size: var(--text-sm); }
+.status { color: var(--muted); font-size: var(--text-sm); }
+
+/* Design-page additions: diagrams scroll inside their own frame; prose keeps a reading width. */
+.shell p, .shell li { max-width: 72ch; }
+section.contract ul, section.contract ol { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.diagram { overflow-x: auto; border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); padding: var(--space-3); }
+.diagram svg { display: block; width: 760px; max-width: none; height: auto; font-family: inherit; }
+.diagram svg text { fill: var(--text); font-size: 13px; }
+.diagram svg text.small { font-size: 11px; fill: var(--muted); }
+.diagram svg text.head { font-weight: 600; }
+.diagram svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.diagram svg .box.git { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.diagram svg .box.cloud { fill: var(--surface); stroke: var(--warn); stroke-width: 1.5; }
+.diagram svg .box.pub { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.diagram svg .lane { fill: none; stroke: var(--border); stroke-dasharray: 4 4; }
+.diagram svg .arrow { stroke: var(--muted); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+.diagram svg .arrow.two { marker-start: url(#ahs); }
+.diagram svg #ah path, .diagram svg #ahs path { fill: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); }
+.key .chip.git { border-color: var(--accent); color: var(--accent); }
+.key .chip.cloud { border-color: var(--warn); color: var(--warn); }
+.key .chip.pub { border-color: var(--ok); color: var(--ok); }
+pre.tree { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-2); border: var(--line) solid var(--border); border-radius: var(--radius-card); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: 1.45; }
+pre.mermaid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+.lead { font-size: var(--text-lg); }
+td.yes { color: var(--ok); } td.no { color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); }
+.q h4 { font-size: var(--text-base); }
+.q p { font-size: var(--text-sm); }
+.status { color: var(--muted); font-size: var(--text-sm); }
+
+/* Design-page additions: diagrams scroll inside their own frame; prose keeps a reading width. */
+.shell p, .shell li { max-width: 72ch; }
+section.contract ul, section.contract ol { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.diagram { overflow-x: auto; border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); padding: var(--space-3); }
+.diagram svg { display: block; width: 760px; max-width: none; height: auto; font-family: inherit; }
+.diagram svg text { fill: var(--text); font-size: 13px; }
+.diagram svg text.small { font-size: 11px; fill: var(--muted); }
+.diagram svg text.head { font-weight: 600; }
+.diagram svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.diagram svg .box.git { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.diagram svg .box.cloud { fill: var(--surface); stroke: var(--warn); stroke-width: 1.5; }
+.diagram svg .box.pub { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.diagram svg .lane { fill: none; stroke: var(--border); stroke-dasharray: 4 4; }
+.diagram svg .arrow { stroke: var(--muted); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+.diagram svg .arrow.two { marker-start: url(#ahs); }
+.diagram svg #ah path, .diagram svg #ahs path { fill: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); }
+.key .chip.git { border-color: var(--accent); color: var(--accent); }
+.key .chip.cloud { border-color: var(--warn); color: var(--warn); }
+.key .chip.pub { border-color: var(--ok); color: var(--ok); }
+pre.tree { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-2); border: var(--line) solid var(--border); border-radius: var(--radius-card); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: 1.45; }
+pre.mermaid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+.lead { font-size: var(--text-lg); }
+td.yes { color: var(--ok); } td.no { color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); }
+.q h4 { font-size: var(--text-base); }
+.q p { font-size: var(--text-sm); }
+.status { color: var(--muted); font-size: var(--text-sm); }
+
+/* Design-page additions: diagrams scroll inside their own frame; prose keeps a reading width. */
+.shell p, .shell li { max-width: 72ch; }
+section.contract ul, section.contract ol { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.diagram { overflow-x: auto; border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); padding: var(--space-3); }
+.diagram svg { display: block; width: 800px; max-width: none; height: auto; font-family: inherit; }
+.diagram svg text { fill: var(--text); font-size: 13px; }
+.diagram svg text.small { font-size: 11px; fill: var(--muted); }
+.diagram svg text.head { font-weight: 600; }
+.diagram svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.diagram svg .box.git { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.diagram svg .box.cloud { fill: var(--surface); stroke: var(--warn); stroke-width: 1.5; }
+.diagram svg .box.pub { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.diagram svg .lane { fill: none; stroke: var(--border); stroke-dasharray: 4 4; }
+.diagram svg .arrow { stroke: var(--muted); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+.diagram svg .arrow.two { marker-start: url(#ahs); }
+.diagram svg #ah path, .diagram svg #ahs path { fill: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); }
+.key .chip.git { border-color: var(--accent); color: var(--accent); }
+.key .chip.cloud { border-color: var(--warn); color: var(--warn); }
+.key .chip.pub { border-color: var(--ok); color: var(--ok); }
+pre.tree { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-2); border: var(--line) solid var(--border); border-radius: var(--radius-card); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: 1.45; }
+pre.mermaid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+.lead { font-size: var(--text-lg); }
+td.yes { color: var(--ok); } td.no { color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); }
+.q h4 { font-size: var(--text-base); }
+.q p { font-size: var(--text-sm); }
+.status { color: var(--muted); font-size: var(--text-sm); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Codeloop Cloud architecture</h1>
+    <p class="meta">c-321 · codeloop · cloud · system design</p>
+    <p class="scope">Codeloop from one laptop to a team on Codeloop Cloud, the shared context and coordination point for agents that run on your own machines: what runs where, which copy is the record, and the steps to get there.</p>
+    <p class="status">Status: proposal, 17 October 2026. Decision pending on the open questions at the end.</p>
+  </header>
+
+  <section class="contract">
+    <h3>The problem</h3>
+    <p class="lead">Every story on a codeloop board lives in one shared file. Every agent and person writes to it, so a commit that stages it carries everyone else's unsaved changes, and moving the file out of the repository takes the board's history out of git. Sharing with a second machine means syncing one large file both ways. Agents reach the board by launching the command line and reading its text.</p>
+    <p>This design gives each story its own folder in git, holding its state and an add-only history beside its plan and evidence. One local process, the <strong>hub</strong>, serves the web board and an MCP link from the same core library the command line uses. <strong>MCP</strong> (Model Context Protocol) is the standard that lets an agent in Claude Code, Cursor or Codex call tools behind one URL. Codeloop Cloud, on Protobox, is the central context and coordination point for a team's own agents: the board, the wiki and knowledge base, skills, and agent presence, served over a hosted board and one MCP link, with a filtered public view. It never runs an agent, never merges, and never touches anyone's code or git. Agents run on members' machines in Claude Code, Cursor or Codex and report in. Each step below works on its own.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Context</h3>
+    <p>Who uses the system and which outside systems it depends on.</p>
+    <table>
+      <tr><th>Actor or external system</th><th>Relationship</th></tr>
+      <tr><td>Founder (owner)</td><td>Runs the command line, approves gates and answers questions on the board or in the shell. The only role that decides.</td></tr>
+      <tr><td>Builder agent</td><td>Claude Code, Cursor or Codex, always on a member's machine. Calls the MCP tools and reports its presence; its edits and shell commands pass through the guard hooks, the small checks each host runs before a tool call.</td></tr>
+      <tr><td>Reviewer</td><td>Signs in, reads, rejects with a note. Never approves or answers.</td></tr>
+      <tr><td>Team member</td><td>Signs in to Codeloop Cloud, reads the board, proposes stories, adds notes.</td></tr>
+      <tr><td>Public visitor</td><td>Reads the filtered demo board and wiki. No sign-in, nothing writable.</td></tr>
+      <tr><td>Git</td><td>Holds every story folder. The record for a local project; a complete export once a project is linked to Cloud.</td></tr>
+      <tr><td>Protobox</td><td>The hosted product Cloud runs inside. Reused as is: sign-in, workspaces, API keys, the one MCP URL per workspace, and its database (MongoDB).</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Software layers</h3>
+    <p>Five layers, the same on your machine and in the cloud. The command line and the web board are thin peers: both call the core library, which holds the engine, the lanes, the checks and the role rules. Every decision about a story is made there.</p>
+    <div class="key"><span class="chip git">in git</span><span class="chip cloud">Codeloop Cloud</span><span class="chip">process, no data of its own</span></div>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-label="Five layers of codeloop, local column and cloud column">
+<defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
+</defs>
+<text x="200" y="22" text-anchor="middle" class="head">Your machine</text>
+<text x="605" y="22" text-anchor="middle" class="head">Codeloop Cloud, on Protobox</text>
+<rect class="lane" x="20" y="32" width="360" height="478" rx="10"/>
+<rect class="lane" x="420" y="32" width="370" height="478" rx="10"/>
+<text x="26" y="56" class="small">Thin peers</text>
+<text x="26" y="156" class="small">Hub</text>
+<text x="26" y="256" class="small">Core library</text>
+<text x="26" y="356" class="small">Store</text>
+<text x="26" y="456" class="small">Sync</text>
+<rect class="box" x="100" y="40" width="85" height="54" rx="8"/>
+<text x="142.5" y="63.0" text-anchor="middle" class="">CLI</text>
+<text x="142.5" y="79.0" text-anchor="middle" class="small">codeloop</text>
+<rect class="box" x="195" y="40" width="85" height="54" rx="8"/>
+<text x="237.5" y="63.0" text-anchor="middle" class="">Web board</text>
+<text x="237.5" y="79.0" text-anchor="middle" class="small">browser</text>
+<rect class="box" x="290" y="40" width="85" height="54" rx="8"/>
+<text x="332.5" y="63.0" text-anchor="middle" class="">Agents</text>
+<text x="332.5" y="79.0" text-anchor="middle" class="small">MCP clients</text>
+<rect class="box" x="430" y="40" width="140" height="54" rx="8"/>
+<text x="500.0" y="63.0" text-anchor="middle" class="">Hosted board</text>
+<text x="500.0" y="79.0" text-anchor="middle" class="small">browser, signed in</text>
+<rect class="box" x="580" y="40" width="200" height="54" rx="8"/>
+<text x="680.0" y="63.0" text-anchor="middle" class="">Agents on your machines</text>
+<text x="680.0" y="79.0" text-anchor="middle" class="small">report in: one workspace MCP URL</text>
+<rect class="box" x="100" y="130" width="275" height="60" rx="8"/>
+<text x="237.5" y="156.0" text-anchor="middle" class="head">Local hub, one port</text>
+<text x="237.5" y="172.0" text-anchor="middle" class="">web API · MCP link · event stream</text>
+<rect class="box cloud" x="430" y="130" width="350" height="60" rx="8"/>
+<text x="605.0" y="156.0" text-anchor="middle" class="head">Hosted service: coordination only</text>
+<text x="605.0" y="172.0" text-anchor="middle" class="">board · wiki, knowledge, skills · agent presence</text>
+<rect class="box" x="100" y="230" width="275" height="54" rx="8"/>
+<text x="237.5" y="253.0" text-anchor="middle" class="head">Core library</text>
+<text x="237.5" y="269.0" text-anchor="middle" class="">engine, roles, checks, orch, worktrees, merge</text>
+<rect class="box" x="430" y="230" width="350" height="54" rx="8"/>
+<text x="605.0" y="253.0" text-anchor="middle" class="head">Core library, coordination subset</text>
+<text x="605.0" y="269.0" text-anchor="middle" class="">no merge, gate run, orch run or builder start</text>
+<rect class="box git" x="100" y="330" width="275" height="60" rx="8"/>
+<text x="237.5" y="356.0" text-anchor="middle" class="head">Story files in git</text>
+<text x="237.5" y="372.0" text-anchor="middle" class="">.codeloop/stories/&lt;nnn&gt;/ · cache later</text>
+<rect class="box cloud" x="430" y="330" width="350" height="60" rx="8"/>
+<text x="605.0" y="356.0" text-anchor="middle" class="head">Protobox store driver</text>
+<text x="605.0" y="372.0" text-anchor="middle" class="">MongoDB · one document per event</text>
+<rect class="box" x="100" y="430" width="275" height="60" rx="8"/>
+<text x="237.5" y="456.0" text-anchor="middle" class="head">Sync worker</text>
+<text x="237.5" y="472.0" text-anchor="middle" class="">push after each local write · pull on events</text>
+<rect class="box cloud" x="430" y="430" width="350" height="60" rx="8"/>
+<text x="605.0" y="456.0" text-anchor="middle" class="head">Sync endpoint</text>
+<text x="605.0" y="472.0" text-anchor="middle" class="">per story, per event, by hash</text>
+<path class="arrow" d="M142,94 L142,330"/>
+<text x="60" y="300" class="small">CLI and hooks write</text>
+<text x="60" y="313" class="small">files directly</text>
+<path class="arrow" d="M237,94 L237,130"/>
+<path class="arrow" d="M332,94 L332,130"/>
+<path class="arrow" d="M300,190 L300,230"/>
+<path class="arrow" d="M300,284 L300,330"/>
+<path class="arrow two" d="M237,390 L237,430"/>
+<path class="arrow" d="M500,94 L500,130"/>
+<path class="arrow" d="M680,94 L680,130"/>
+<path class="arrow" d="M605,190 L605,230"/>
+<path class="arrow" d="M605,284 L605,330"/>
+<path class="arrow two" d="M605,390 L605,430"/>
+<path class="arrow two" d="M375,460 L430,460"/>
+<text x="402" y="452" text-anchor="middle" class="small">https</text>
+<text x="200" y="505" text-anchor="middle" class="small">Writer to the files: the local process holding the story lock</text>
+<text x="605" y="505" text-anchor="middle" class="small">Writer to the database: the hosted service. Runs no agents</text>
+</svg></div>
+    <p><strong>Which process owns writes.</strong> On your machine there is no single writer. The command line, the hook helper (a resident process answering the hooks over a local socket) and the hub each load the core library and write a story's files directly, under a lock on that story's folder, so no command waits for the hub and no hook waits for anything but the disk. In the cloud the hosted service is the only writer to the database and checks the caller's role on every call. It runs the coordination part of the core library only: board, wiki, skills, presence. Everything that executes, the orchestrated turn, worktrees, merge, gate runs, scheduled agent runs, exists only in the downloadable version on a machine with the code.</p>
+    <p class="muted">Text version of the layers, for readers without the picture.</p>
+    <pre class="mermaid">
+flowchart TD
+  UI["Thin peers: Node command line, browser web board, MCP clients in Claude Code, Cursor and Codex"] --> API["Hub: Hono HTTP API, MCP over Streamable HTTP, server-sent events"]
+  API --> SVC["Core library: TypeScript engine, lanes, checks, roles"]
+  SVC --> DATA["Store: per-story files in git; SQLite cache later; MongoDB through the Protobox driver"]
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Local only, open source</h3>
+    <p>Open source is Codeloop Cloud run on your own machine: the same product, the same commands and board, with the features that need a server left out. You install one package and run <code>codeloop init</code> in a project. From then on every command writes files under <code>.codeloop</code>. No server, no account, no network. Linking adds sharing and takes nothing away.</p>
+    <table>
+      <tr><th>Feature</th><th>Open source</th><th>Codeloop Cloud</th></tr>
+      <tr><td>People</td><td>One user, the owner of the machine</td><td>A team, each on their own machine, with roles</td></tr>
+      <tr><td>Agents</td><td>Agents on this machine, seen on this machine</td><td>Agents on every member's machine, seen on one board</td></tr>
+      <tr><td>Runs your agents locally</td><td>Yes: orchestrated turns, worktrees, merge, scheduled runs</td><td>No. Cloud coordinates agents you run</td></tr>
+      <tr><td>Wiki, knowledge base, skills</td><td>In the project's git</td><td>Shared across the team and every agent</td></tr>
+      <tr><td>Board</td><td>Local, in the project's git</td><td>Synced; one record for the team, git export on every machine</td></tr>
+      <tr><td>Roles</td><td>Owner and agent, by process</td><td>Owner, reviewer, builder agent, team member, by sign-in and key</td></tr>
+      <tr><td>MCP link</td><td>The local hub's link, on this machine</td><td>Hosted, one workspace URL reachable from anywhere</td></tr>
+      <tr><td>Public demo</td><td>None</td><td>A read-only public view of projects the owner marks public</td></tr>
+      <tr><td>Hub down or offline</td><td>Everything but the web board keeps working</td><td>Same, and writes queue until the cloud is back</td></tr>
+    </table>
+    <p>One layout for every project. codeloop decides the folder names, a project on the older layout is moved on its first command, and the settings that let a project pick where its files go are removed. A story's folder holds everything about it:</p>
+<pre class="tree">.codeloop/
+  stories/321/
+    state.json       stage, gate, priority, size, feature, awaiting   (replayed from history)
+    history.jsonl    one line per event, add-only: propose, promote, approve, answer, park …
+    research.md  spec.md  plan.md  tasks.md
+    evidence/        verify.md, use-case results
+    mock.html
+  wiki/  lanes/  config.yaml                       shared, in git
+  state/agents/&lt;id&gt;.json                           who is working what, where; not in git
+  state/activity/321.jsonl                        every edit, command and prompt; not in git</pre>
+    <p>Two per-story files, on purpose. The <strong>history</strong> is the board's record: decisions, stage moves, notes, who made each. The <strong>activity stream</strong> is what a coding session did: file paths, shell commands, prompt text. It stays on the machine, outside git, because it holds exactly what the public view must never carry.</p>
+    <p><strong>When the hub is down.</strong> The hub serves the web board and the MCP link, nothing else. Every command and hook still works, because they open the story files themselves. An agent on the MCP link falls back to the command line, which its skill already knows. <code>codeloop open</code> starts the hub again. Hooks never call the hub or the network.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Deployment topology</h3>
+    <table>
+      <tr><th>Environment</th><th>Where each piece runs</th><th>Notes</th></tr>
+      <tr><td>local laptop</td><td>Command line, hook helper, hub on one local port, story files in the repository</td><td>Works with no network and no account</td></tr>
+      <tr><td>Codeloop Cloud</td><td>Hosted service on Protobox: store driver on MongoDB, web API, MCP at the workspace URL, hosted board, sync endpoint</td><td>One Protobox workspace per team; sign-in and keys come from Protobox. Coordinates agents, runs none</td></tr>
+      <tr><td>public demo</td><td>A read-only route of the hosted service for projects the owner marked public, with the public filter applied at read time</td><td>No sign-in, nothing writable</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Cloud connected, team</h3>
+    <p>You link a project once: <code>codeloop cloud connect &lt;workspace MCP URL&gt; &lt;owner key&gt;</code>. It writes <code>.codeloop/cloud.json</code>, outside git, and registers the project in the workspace. A teammate who clones the repository runs the same command with their own key.</p>
+    <table>
+      <tr><th>What</th><th>Direction</th><th>When</th></tr>
+      <tr><td>Story state and history events</td><td>Both ways</td><td>Pushed right after each local write lands on disk; pulled by the hub from the cloud's event stream and by every command before it reads</td></tr>
+      <tr><td>Research, spec, plan, tasks, evidence text</td><td>Both ways, as files, matched by content hash</td><td>Same as above</td></tr>
+      <tr><td>Wiki, knowledge pages, skills, lanes, config</td><td>Both ways; lanes and config only from an owner</td><td>On change</td></tr>
+      <tr><td>Agent records</td><td>Machine to cloud; read everywhere</td><td>On every change of state or activity</td></tr>
+      <tr><td>Activity streams</td><td>Never</td><td>They stay on the machine</td></tr>
+      <tr><td>Code</td><td>Never</td><td>Your git remote, as today</td></tr>
+    </table>
+
+    <h4>Which copy is the record</h4>
+    <p><strong>Option 1: git files stay the record, the cloud is a synced mirror.</strong> Linking changes nothing. But two machines hold two records, the mirror has to merge them to show one board, and roles are enforced only inside each machine's process, so nothing stops an altered client from writing an approval.</p>
+    <p><strong>Option 2: for a linked project the cloud is the record; the git files are a complete export codeloop keeps current on every machine.</strong> One place hands out story numbers, orders events, enforces roles and serves the public view. Offline writes are provisional until they arrive, and shared work depends on Protobox being up.</p>
+    <p><strong>Recommended: option 2</strong>, with one rule: the export is complete. <code>codeloop cloud disconnect</code> leaves a project identical to one never linked, and the cloud copy can be rebuilt from any up-to-date checkout.</p>
+
+    <h4>Two machines or two people on one story</h4>
+    <p>Every history event carries the story id, a time, who made it and a random event id; nothing is edited or removed. Merging two copies of a story is the union of their events, sorted by time then event id, and the state file is replayed from the result, so state is never merged by hand.</p>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-label="Two machines and the cloud merging one story's history">
+<defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
+</defs>
+<rect class="box git" x="20" y="30" width="270" height="110" rx="8"/>
+<text x="155.0" y="73.0" text-anchor="middle" class="head">Laptop A</text>
+<text x="155.0" y="89.0" text-anchor="middle" class="">story 321</text>
+<text x="155.0" y="105.0" text-anchor="middle" class="">history: e1 e2 e5 (owner approve)</text>
+<rect class="box git" x="470" y="30" width="270" height="110" rx="8"/>
+<text x="605.0" y="73.0" text-anchor="middle" class="head">Laptop B</text>
+<text x="605.0" y="89.0" text-anchor="middle" class="">story 321</text>
+<text x="605.0" y="105.0" text-anchor="middle" class="">history: e1 e2 e3 e4 (agent note, tick)</text>
+<rect class="box cloud" x="230" y="180" width="300" height="100" rx="8"/>
+<text x="380.0" y="218.0" text-anchor="middle" class="head">Codeloop Cloud, story 321</text>
+<text x="380.0" y="234.0" text-anchor="middle" class="">union: e1 e2 e3 e4 e5</text>
+<text x="380.0" y="250.0" text-anchor="middle" class="">state replayed from the merged history</text>
+<path class="arrow two" d="M200,140 L300,180"/>
+<path class="arrow two" d="M560,140 L460,180"/>
+<text x="200" y="175" class="small">push pending, pull new</text>
+<text x="470" y="175" class="small">push pending, pull new</text>
+<text x="380" y="20" text-anchor="middle" class="small">Events never change or disappear; a decision that no longer fits is answered by a new event</text>
+</svg></div>
+    <p>Most pairs of events do not touch: a note and a task tick both stay. Where two decide the same thing, the rules are fixed: an owner decision beats an agent one; a later owner decision beats an earlier one; an approval whose fingerprint no longer matches the handed-back work is set aside and the gate asks again, as the engine already does. Only two owner decisions that contradict each other at the same gate park the story, with both notes, for a person.</p>
+    <p>Two machines can also propose at the same moment and pick the same number. The cloud hands each linked machine a block of numbers at link time, so numbers never collide and never change (question 2).</p>
+
+    <h4>Offline</h4>
+    <p>Everything local works offline. A write lands in the story files first and is marked pending; the next command, or the hub, pushes it. Today's sync writes the cloud before the local file and blocks on the network; this design reverses the order, and no hook ever waits for the network.</p>
+
+    <h4>Agents through one URL</h4>
+    <p>Protobox gives every workspace one MCP endpoint, <code>&lt;workspace&gt;.protobox.app/mcp</code>. Codeloop Cloud registers its tools there, so an agent adds one URL and one key and sees the same dozen tools the local hub serves: next up, get story, advance, task done, hand back, note, ask, propose, check, brief, and the owner-only approve and answer. MCP clients can send only an <code>Authorization: Bearer</code> header, so the key is the whole identity: its kind decides the caller's role, and no tool argument can raise it. On a linked project an agent may use either link; both end in the same record.</p>
+    <p><strong>What the cloud does not expose.</strong> The hosted API and MCP have no merge, gate-run, orchestrated-run or start-builder action. Those stay commands of the downloadable version, on the machine that has the code and the agent. The cloud records what they did.</p>
+    <p><strong>Checks run where the code is.</strong> Size budget, health and the stage checks run locally, by the command line or the hook, and their results sync as events. Where a check measures is a user preference: the story's branch, main, or the branch the agent is on, because a solo founder may run several agents on one branch while a team uses one worktree per story (question 6).</p>
+  </section>
+
+  <section class="contract">
+    <h3>Agents and people</h3>
+    <p>When several people work from their own machines, the board must answer at a glance: which agent, started by whom, on whose machine, is on which story and branch right now, and is it working, waiting or stalled. Today that answer is spread over a session file per live host session, a lease file per orchestrated turn, a holder computed from the story's events, and an idle check over the activity stream. None of it leaves the machine.</p>
+    <p>The design makes the agent a first-class item in the data model. A <strong>person</strong> is a team member with a role and the machines they sign in from. An <strong>agent</strong> belongs to a person and to one story at a time:</p>
+    <table>
+      <tr><th>Agent field</th><th>Holds</th></tr>
+      <tr><td>id</td><td>Random, assigned when the agent starts</td></tr>
+      <tr><td>kind</td><td>Claude Code, Cursor, Codex, CI</td></tr>
+      <tr><td>person</td><td>Who started it; a scheduled or CI run names the person whose key it uses</td></tr>
+      <tr><td>machine</td><td>The machine name it runs on</td></tr>
+      <tr><td>project, story, branch</td><td>What it works on, and the git branch its commits land on</td></tr>
+      <tr><td>started at, last activity</td><td>Times; last activity is updated by hooks and tool calls, never by the doctor's own nudge</td></tr>
+      <tr><td>state</td><td>working, waiting on owner, stalled, done</td></tr>
+      <tr><td>files held</td><td>The plan's file list it holds while working, the lease</td></tr>
+    </table>
+    <p>A story gains two fields: its branch, and the agents that worked it, current and past, with their person and machine. The board's row for a story reads "Claude Code, started by Ana on her laptop, on branch feat/sync, working, last seen 3 minutes ago", and the needs-you feed lists every agent in the waiting state across the team.</p>
+    <p><strong>What it replaces.</strong> The session file becomes an agent record in state working. The lease file becomes the agent's files-held list; the edit hook refuses another agent's edit to a held file as today, reading the record instead. The computed holder becomes the story's current agent. The stall check sets state to stalled when last activity passes the limit, instead of deriving it on each read. A person working by hand is an agent of kind "person" on their own machine, so one query covers everyone.</p>
+    <p><strong>How it syncs.</strong> An agent record is written by the local agent, through the hooks and the MCP tools, or by the command line that started it. The cloud never starts an agent; it only receives reports. Records live in <code>.codeloop/state/agents/</code> outside git, because they describe a moment on a machine, not the story. On a linked project they sync on every change, so every member sees every machine's agents, and the cloud marks an agent stalled when its machine stops reporting. The story's agents list is part of its history, so it is in git and travels with the story.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Data stores</h3>
+    <table>
+      <tr><th>Store</th><th>Holds</th><th>Notes</th></tr>
+      <tr><td>Story folders in git</td><td>State, history, research, spec, plan, tasks, evidence, mock, per story</td><td>The record locally; the export when linked</td></tr>
+      <tr><td>Agent records, local disk</td><td>One file per agent: kind, person, machine, story, branch, state, files held</td><td>Synced to the cloud when linked; never in git</td></tr>
+      <tr><td>Activity streams, local disk</td><td>Edits, commands, prompts per story</td><td>Never synced, never public</td></tr>
+      <tr><td>Local cache, later</td><td>An index of every story for board-wide views</td><td>SQLite, rebuilt from the folders; safe to delete</td></tr>
+      <tr><td>MongoDB on Protobox</td><td>Collections: projects, stories (state), events (one document each), files (text by hash), pages, lanes, config, members with roles and machines, agents</td><td>One document per event keeps a busy story clear of the document size limit</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Identity, roles and permissions</h3>
+    <p>codeloop already knows three roles: owner, reviewer and agent. Cloud adds team member and public visitor. The founder is an owner; a project can have more than one.</p>
+    <table>
+      <tr><th>Role</th><th>Read</th><th>Propose, note</th><th>Advance, tick, hand back, stage output</th><th>Write summaries</th><th>Move by hand</th><th>Reject</th><th>Approve, answer</th><th>Roles, publish</th></tr>
+      <tr><td>Owner</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+      <tr><td>Reviewer</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="yes">review line</td><td class="no">no</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td></tr>
+      <tr><td>Builder agent</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
+      <tr><td>Team member</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
+      <tr><td>Public visitor</td><td class="yes">filtered</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
+    </table>
+    <p><strong>How a role is enforced.</strong> Locally the role comes from the process: a person's shell is owner, a process started by <code>codeloop run --agent</code> is agent and cannot say otherwise. On the local hub a signed-in session is owner and the start-up token is agent. In the cloud, Protobox sign-in gives a person an identity, workspace membership gives the role, and each API key is minted for one role. The hosted service checks the role on every API and MCP call, whatever the client claimed; the local check only shapes the message. A refusal is a structured error naming the role that could do it.</p>
+    <p><strong>What the public view filters.</strong> Deny by default: a project is public only when an owner turns it on, and a story, note or page marked private stays out. Of a public project the view serves titles, user stories, stage, gate, size, priority, feature, history events, specs and plans of stories past their spec gate, evidence summaries, and wiki pages marked public. It never serves activity streams (not in the cloud at all), agent records, specs before their gate, evidence files (a screenshot may show a machine), keys, sessions or members. Every text it serves passes a machine-path scan; a matching line is withheld with a marker, so a leak shows up in a test that feeds the view a worst-case story.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Migration path</h3>
+    <p>Seven steps, each usable on its own and shipped in this order. Sizes use the board's scale (S, M, L) with a rough calendar reading.</p>
+    <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" role="img" aria-label="Seven migration steps in order">
+<defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ahs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z"/></marker>
+</defs>
+<rect class="box git" x="10" y="20" width="102" height="70" rx="8"/>
+<text x="61.0" y="51.0" text-anchor="middle" class="">1. Story folders</text>
+<text x="61.0" y="67.0" text-anchor="middle" class="small">one layout</text>
+<path class="arrow" d="M112,55 L123,55"/>
+<rect class="box git" x="123" y="20" width="102" height="70" rx="8"/>
+<text x="174.0" y="51.0" text-anchor="middle" class="">2. Hub MCP</text>
+<text x="174.0" y="67.0" text-anchor="middle" class="small">with roles</text>
+<path class="arrow" d="M225,55 L236,55"/>
+<rect class="box git" x="236" y="20" width="102" height="70" rx="8"/>
+<text x="287.0" y="51.0" text-anchor="middle" class="">3. Priority</text>
+<text x="287.0" y="67.0" text-anchor="middle" class="small">critical flag</text>
+<path class="arrow" d="M338,55 L349,55"/>
+<rect class="box git" x="349" y="20" width="102" height="70" rx="8"/>
+<text x="400.0" y="51.0" text-anchor="middle" class="">4. Local cache</text>
+<text x="400.0" y="67.0" text-anchor="middle" class="small">rebuildable</text>
+<path class="arrow" d="M451,55 L462,55"/>
+<rect class="box cloud" x="462" y="20" width="102" height="70" rx="8"/>
+<text x="513.0" y="51.0" text-anchor="middle" class="">5. Cloud link</text>
+<text x="513.0" y="67.0" text-anchor="middle" class="small">and sync</text>
+<path class="arrow" d="M564,55 L575,55"/>
+<rect class="box cloud" x="575" y="20" width="102" height="70" rx="8"/>
+<text x="626.0" y="51.0" text-anchor="middle" class="">6. Team roles</text>
+<text x="626.0" y="67.0" text-anchor="middle" class="small">sign-in</text>
+<path class="arrow" d="M677,55 L688,55"/>
+<rect class="box pub" x="688" y="20" width="102" height="70" rx="8"/>
+<text x="739.0" y="51.0" text-anchor="middle" class="">7. Public demo</text>
+<text x="739.0" y="67.0" text-anchor="middle" class="small">read-only</text>
+<text x="400" y="112" text-anchor="middle" class="small">Blue steps need no account or network. Orange steps need Codeloop Cloud. Green is public.</text>
+</svg></div>
+    <table>
+      <tr><th>Step</th><th>Size</th><th>What you see</th></tr>
+      <tr><td>1. Per-story folders, one layout</td><td>M, about two weeks</td><td>Your commit carries only your story. The shared board file is gone after one automatic move on the first command. The location settings disappear from config.</td></tr>
+      <tr><td>2. Hub MCP with roles</td><td>M, about a week</td><td>One line in your agent's MCP config replaces the command-line skill. Agents get structured results; approve and answer refuse them.</td></tr>
+      <tr><td>3. Priority and critical flag</td><td>S, days</td><td>Stories carry P1 to P4 and a critical mark; next up orders by them. Pausing a running story stays manual until question 5 is answered.</td></tr>
+      <tr><td>4. Local cache</td><td>S, days</td><td>Board pages open fast on a project with hundreds of stories. Deleting the cache file is safe; it is rebuilt from the folders.</td></tr>
+      <tr><td>5. Cloud link and sync</td><td>L, three to four weeks</td><td><code>codeloop cloud connect</code>, then the same board on a second machine and at the hosted URL. Agents can use the workspace MCP URL.</td></tr>
+      <tr><td>6. Team roles</td><td>M, about two weeks</td><td>Invite a teammate from the Protobox workspace; they sign in and see the board with their role. Approve and answer stay yours.</td></tr>
+      <tr><td>7. Public demo</td><td>M, about two weeks</td><td>A public URL shows codeloop's own board and wiki read-only, through the filter.</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Tech choices</h3>
+    <table>
+      <tr><th>Choice</th><th>Alternative considered</th><th>Why</th><th>Cost</th></tr>
+      <tr><td>Per-story files in git as the local record</td><td>A local database as the record</td><td>Git already holds the plan and evidence; a commit carries one story; nothing to install or run</td><td>Board-wide views read many files, hence the cache in step 4</td></tr>
+      <tr><td>History is the record, state is a replay</td><td>Merging state files field by field</td><td>A union of add-only events merges without hand conflicts, on two machines or in the cloud</td><td>Replay time, bounded by the cache</td></tr>
+      <tr><td>Sync per story and per event</td><td>Pushing the whole board file, as today</td><td>Small, mergeable, safe offline, carries who did what</td><td>Replaces the current cloud sync code</td></tr>
+      <tr><td>Protobox store driver, one document per event</td><td>One document per story</td><td>No size ceiling on a long-lived story; appends are cheap</td><td>More documents, an index on story id</td></tr>
+      <tr><td>MCP over HTTP from the hub</td><td>The stdio MCP server alone</td><td>One link for every host; the role comes from the credential</td><td>The stdio server stays as a fallback</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Risks and what stays out of scope</h3>
+    <ul>
+      <li>A merge-rule bug misplaces a story. The history is add-only and replay is deterministic, so <code>codeloop doctor</code> can replay any story from git and show the difference.</li>
+      <li>Protobox is down. Local work continues and queues; the shared board is stale until it returns. A team that cannot wait reads the git export.</li>
+      <li>Private text reaches the public view. Deny by default, activity streams never leave the machine, the path scan withholds matches, and one test feeds the view a story built to leak.</li>
+      <li>Local and server role checks drift. The server's check is final; the local one only shapes the message.</li>
+      <li>codeloop releases become tied to Protobox deploys. The sync and MCP endpoints are versioned, and the command line refuses a server it does not understand with a clear message.</li>
+      <li>Story-number collisions on two machines until the number blocks ship with step 5.</li>
+      <li>Pressure to make the cloud "do the work". Every execution feature stays in the downloadable version; the cloud's API has no verb for it, so the line holds by construction.</li>
+    </ul>
+    <p><strong>Out of scope here:</strong> Protobox internals; the web board's visual redesign; running builder agents in the cloud, by design; a hook file for Codex; links between projects; live shared editing of a spec file, which git handles.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Open questions</h3>
+    <div class="q"><h4>1. When a project is linked to Codeloop Cloud, which copy is the record?</h4><p>Options: (a) the git files stay the record and the cloud is a synced mirror; (b) the cloud is the record for linked projects and the git files are a complete export codeloop keeps current. Recommendation: (b), with disconnect guaranteed to leave the project as if never linked.</p></div>
+    <div class="q"><h4>2. How do two machines avoid picking the same story number?</h4><p>Options: (a) the cloud hands each linked machine a block of numbers at link time; (b) offline stories get a temporary id and are renumbered when they sync; (c) ids become random strings. Recommendation: (a); numbers never change, so commit trailers and notes stay right.</p></div>
+    <div class="q"><h4>3. How do teammates sign in?</h4><p>Options: (a) Protobox accounts only, roles from the workspace; (b) codeloop's own invite links and passwords. Recommendation: (a); the local hub password stays for a machine with no cloud link.</p></div>
+    <div class="q"><h4>4. How does the public demo stay current?</h4><p>Options: (a) live from the cloud record through the filter, with a per-project switch; (b) a snapshot an owner publishes by hand. Recommendation: (a); a snapshot adds a step that gets forgotten and shows a stale loop.</p></div>
+    <div class="q"><h4>5. When a P1 arrives, what happens to a P2 a builder is working on?</h4><p>Options: (a) park it automatically with a note, after the builder's uncommitted work is handed back; (b) ask the owner first; (c) no pause, the P1 waits for a free slot. Recommendation: (b) now, moving to (a) once hand-back on pause exists.</p></div>
+    <div class="q"><h4>6. Where should checks such as size budget and health measure by default?</h4><p>Options: (a) the story's branch against main; (b) main itself; (c) the branch the agent is on, whatever it is. Recommendation: (c) as the default, since it is right for a founder running several agents on one branch and for a team on one worktree per story; a project can set (a) or (b).</p></div>
+  </section>
+
+</div>
+</body>
+</html>
