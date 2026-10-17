@@ -1,0 +1,6 @@
+# Mock rubric: c-311
+
+## Rubric
+
+- M2 pass: the story-page screen in workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx has a frame per state: needs-you workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:149, normal workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:152 and workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:155, empty workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:158, needs-you with a stale summary workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:161, loading workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:164, error workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:167
+- M4 pass: US1 and US2 at workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:149, US2 opened at workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:155, US3 at workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:152, US4 at workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:158, US5 at workspace/app/mocks/311-every-story-opens-with-what-is-needed-wh/page.tsx:161
