@@ -22,7 +22,7 @@ mkdir -p "$WORK/bin" "$PROJECT"
 printf '#!/bin/sh\nexec node "%s/index.js" "$@"\n' "$DIST" > "$WORK/bin/codeloop"
 chmod +x "$WORK/bin/codeloop"
 export PATH="$WORK/bin:$PATH"
-# An assistant host's session variables make the default role agent (engine.ts ASSISTANT_SESSION_VARS).
+# An assistant host's session variables name its session; the run must not depend on which host starts it.
 unset CODELOOP_ROLE CODELOOP_WORK_DIR CODELOOP_PROJECT_DIR CODELOOP_CARD CLAUDECODE CLAUDE_CODE_SESSION_ID CURSOR_AGENT CURSOR_CONVERSATION_ID CURSOR_SESSION_ID
 export GIT_AUTHOR_NAME=owner GIT_AUTHOR_EMAIL=owner@example.test GIT_COMMITTER_NAME=owner GIT_COMMITTER_EMAIL=owner@example.test
 
