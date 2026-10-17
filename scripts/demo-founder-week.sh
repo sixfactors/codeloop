@@ -16,6 +16,8 @@ trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null; rm -rf "$WORK"' EX
 LOG="$WORK/step.log"
 PROJECT="$WORK/exportly"
 mkdir -p "$WORK/bin" "$WORK/site" "$PROJECT"
+# The demo registers its temp project with the hub; its own home keeps that out of the real registry.
+export CODELOOP_HOME="$WORK/home"
 printf '#!/bin/sh\nexec node "%s/dist/index.js" "$@"\n' "$ROOT" > "$WORK/bin/codeloop"
 chmod +x "$WORK/bin/codeloop"
 export PATH="$WORK/bin:$PATH"
