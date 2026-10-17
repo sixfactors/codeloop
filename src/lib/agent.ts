@@ -318,7 +318,7 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
     // The timeout kill runs in a process of its own: a timer here waits while this process sits in a
     // synchronous check (a doctor tick's spawnSync), and runs labelled 10 minutes lasted 16 to 103.
     if (child.pid) {
-      watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
+      watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -- -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
       watchdog.on('error', () => undefined);
       watchdog.unref();
     }
