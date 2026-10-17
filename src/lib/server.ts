@@ -235,6 +235,13 @@ export function createApp(
     await refreshCards();
     return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), placed });
   }));
+  // A stuck story's move button: clears the stuck gate and places it where its shipped work points.
+  app.post(api('/cards/:id/move-stuck'), writing(async c => {
+    if (!owner) return readOnly(c, 'move a stuck story');
+    const moved = services.moveStuck(projectDir, c.req.param('id'), 'owner');
+    await refreshCards();
+    return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), moved });
+  }));
   app.post(api('/cards/:id/close'), writing(async c => {
     if (!owner) return readOnly(c, 'end a card');
     const body = await json(c, { outcome: 'done' as 'done' | 'dropped', note: undefined as string | undefined });

@@ -30,6 +30,7 @@ import { formatMinutes, lastActivityAt, phaseTime, readActivity, readAllActivity
 import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
 import { storyCommits, type StoryCommit } from './diff-budget.js';
 import { summaryView, type SummaryView } from './story-summary.js';
+import { moveStuck as moveStuckLib, stuckExplanation, type StuckExplanation } from './stuck-explanation.js';
 import { activityText, enteredAt, journeyOf, lastActivity, storyLiveLine, type Journey } from './journey.js';
 import { loadConfig } from './config.js';
 import { newSpec, readTasks, type Task } from './spec.js';
@@ -109,6 +110,8 @@ export interface CardShow {
   evidenceFiles: EvidenceFile[];
   /** Commits carrying the card's trailer on any branch, newest first, at most 20. */
   commits: StoryCommit[];
+  /** On a stuck story: why, and which action moves it, the same as its page and the inbox. */
+  stuck?: StuckExplanation;
   /** Time in the current phase: wall, working and idle minutes; absent when the card has no entry time. */
   phaseTime?: { stage: string; wallMinutes: number; activeMinutes: number; idleMinutes: number; /** "in build 6h 04m, working 1h 12m". */ text: string };
 }
@@ -140,7 +143,7 @@ export interface CardFull {
   commits: StoryCommit[];
   evidenceFiles: EvidenceFile[];
   /** What it needs, what is done and what you must do, each with who wrote it and when. */
-  summary: SummaryView;
+  summary: SummaryView & { stuck?: StuckExplanation };
 }
 
 export interface PageWrite {
@@ -411,7 +414,13 @@ export function showCard(projectDir: string, ref: string): CardShow {
   const entered = lane.stages.some(x => x.id === card.stage) ? enteredAt(card.events ?? [], card.stage, lane.stages[0].id) : undefined;
   const spent = entered ? phaseTime(readAllActivity(projectDir, card.id), entered, Date.now()) : undefined;
   const time = spent ? { stage: card.stage, ...spent, text: `in ${card.stage} ${formatMinutes(spent.wallMinutes)}, working ${formatMinutes(spent.activeMinutes)}` } : undefined;
-  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20) };
+  return { card: { ...card, ...holderOf(projectDir, card.id), ...(display ? { display } : {}) }, ...(time ? { phaseTime: time } : {}), brief: stageBrief(projectDir, card), hint: [nextHint(projectDir, card), card.stage === SPLIT_BEFORE_STAGE ? storySizeProblem(projectDir, card) : undefined].filter(Boolean).join('\n'), tasks: storyTasks(projectDir, card), evidenceFiles: evidenceFiles(projectDir, card), commits: storyCommits(projectDir, card.id).slice(0, 20), ...(card.gate === 'stuck' ? { stuck: stuckExplanation(projectDir, card) } : {}) };
+}
+
+/** The stuck story's move button: to the step its shipped work shows, stopping before any gate. */
+export function moveStuck(projectDir: string, ref: string, who: Role): { card: Card; hint: string } {
+  const { card } = moveStuckLib(projectDir, ref, who);
+  return { card, hint: nextHint(projectDir, card) };
 }
 
 /**
@@ -611,6 +620,8 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
   const evidence = (await store.evidence.list()).find(e => e.cardId === card.id) ?? null;
   const page = (await store.pages.get(`${WIKI_DIR}/cards/${card.id}.md`)) ?? null;
   const journey = journeyOf(projectDir, card, { tasks, health: display?.health });
+  const commits = storyCommits(projectDir, card.id);
+  const stuck = stuckExplanation(projectDir, card, { commits });
   return {
     card: { ...card, ...holderOf(projectDir, card.id), ...(mock ? { mock: mockHref(mock) } : {}), openQuestions: index.openQuestions(card.id).length, display },
     spec,
@@ -621,9 +632,9 @@ export async function cardFull(index: ProjectIndex, store: Store, ref: string): 
     page,
     journey,
     rubric: rubricOf(projectDir, card.id),
-    commits: storyCommits(projectDir, card.id).slice(0, 20),
+    commits: commits.slice(0, 20),
     evidenceFiles: evidenceFiles(projectDir, card),
-    summary: summaryView(card, journey),
+    summary: { ...summaryView(card, journey, stuck), ...(stuck ? { stuck } : {}) },
   };
 }
 
