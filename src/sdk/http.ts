@@ -212,6 +212,7 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     handbacks: ref => json(`/api/cards/${encodeURIComponent(ref)}/handbacks?t=${Date.now()}`),
     stageOutput: ref => json(`/api/cards/${encodeURIComponent(ref)}/output?t=${Date.now()}`),
     writeStageOutput: (ref, text) => json(`/api/cards/${encodeURIComponent(ref)}/output`, { method: 'PUT', body: JSON.stringify({ text }) }),
+    writeSummary: (ref, input) => json(`/api/cards/${encodeURIComponent(ref)}/summary`, { method: 'PUT', body: JSON.stringify(input) }),
     splitCard: (ref, titles) => post(`/api/cards/${encodeURIComponent(ref)}/split`, { titles }),
     detectSetup: () => post('/api/setup/detect', {}),
     adoptSkills: (opts = {}) => post('/api/setup/adopt', opts),

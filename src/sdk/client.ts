@@ -197,6 +197,7 @@ export interface Transport {
   orchView(ref: string): Promise<OrchView>;
   stageOutput(ref: string): Promise<StageOutput>;
   writeStageOutput(ref: string, text: string, opts?: RoleOption): Promise<StageOutput>;
+  writeSummary(ref: string, input: { needed?: string; done?: string }, opts?: RoleOption): Promise<{ card: Card; written: string[]; kept: string[] }>;
   splitCard(ref: string, titles: string[], opts?: RoleOption): Promise<SplitResult>;
   detectSetup(): Promise<ProjectDetection>;
   adoptSkills(opts?: { from?: string[]; replace?: boolean }): Promise<AdoptCounts>;
@@ -328,6 +329,8 @@ export class CodeloopClient {
     output: (ref: string) => this.transport.stageOutput(ref),
     /** Writes the current stage's output file, making its folders. The check does not run. */
     writeOutput: (ref: string, text: string, opts?: RoleOption) => this.transport.writeStageOutput(ref, text, opts),
+    /** Writes the summary's needed and done lines. As an agent it never replaces a line a person wrote; `kept` names those. */
+    summary: (ref: string, input: { needed?: string; done?: string }, opts?: RoleOption) => this.transport.writeSummary(ref, input, opts),
     /** What happened on the card, oldest first: edits, commands, checks, commits, gates. Pass `next` back as `after` for the next page. */
     activity: (ref: string, query?: ActivityQuery) => this.transport.cardActivity(ref, query),
     /** The card's activity as it happens, from the live stream; `after` replays from a cursor first. */

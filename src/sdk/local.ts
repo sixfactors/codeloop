@@ -108,6 +108,7 @@ export function localTransport(projectDir: string, options: LocalOptions = {}): 
     handbacks: async ref => services.listHandbacks(projectDir, ref),
     stageOutput: async ref => services.stageOutput(projectDir, ref),
     writeStageOutput: async (ref, text, opts) => services.writeStageOutput(projectDir, ref, text, role(opts)),
+    writeSummary: async (ref, input, opts) => services.saveSummary(projectDir, ref, input, role(opts)),
     splitCard: async (ref, titles, opts) => services.splitCard(projectDir, ref, titles, role(opts)),
     detectSetup: async () => services.detectSetup(projectDir),
     adoptSkills: async (opts = {}) => {

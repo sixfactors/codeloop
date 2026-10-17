@@ -212,6 +212,8 @@ export const api = {
   /** The current stage's output file: its path, and its text or null before it is written. */
   cardOutput: async (id: string): Promise<CardOutput> => (await client()).cards.output(id),
   saveCardOutput: async (id: string, text: string): Promise<CardOutput> => (await client()).cards.writeOutput(id, text),
+  /** The summary's needed and done lines, written as the board's role. */
+  saveSummary: async (id: string, input: { needed?: string; done?: string }) => (await client()).cards.summary(id, input),
   /** Sibling stories under the same feature, each `split_from` this card. */
   splitCard: async (id: string, titles: string[]): Promise<SplitResult> => (await client()).cards.split(id, titles),
   setupStatus: async (): Promise<SetupStatus> => (await client()).setup.status(),

@@ -289,6 +289,15 @@ export function usePark() {
 export const useBrief = (id: string, enabled: boolean) =>
   useQuery({ queryKey: [...QK.show(id), 'brief'], queryFn: () => api.brief(id), enabled: Boolean(id) && enabled, retry: false });
 
+/** Edit one line of the story summary from the page; the story refetches with the new line and its author. */
+export function useSaveSummary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, needed, done }: { id: string; needed?: string; done?: string }) => api.saveSummary(id, { needed, done }),
+    onSuccess: (_r, { id }) => refreshCard(qc, id),
+  });
+}
+
 export function useDecide() {
   const qc = useQueryClient();
   return useMutation({

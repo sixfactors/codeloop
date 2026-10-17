@@ -155,6 +155,38 @@ export type StoryCommit = SdkCardFull['commits'][number];
 export type StageRubric = NonNullable<SdkCardFull['rubric']>;
 export type RubricRow = StageRubric['rows'][number];
 
+/** One line of the story summary: who wrote it (`board` when worked out from the board's facts), at which step and when. */
+export interface SummaryViewLine {
+  text: string;
+  by: string;
+  byKind: 'person' | 'agent' | 'board';
+  step: string;
+  at?: string;
+}
+
+/** What the story needs, what is done and what you must do; `you` always comes from the board. */
+export interface SummaryView {
+  needed: SummaryViewLine;
+  done: SummaryViewLine;
+  you: SummaryViewLine;
+  mark?: 'unwritten' | 'stale';
+  /** For a stuck story: the explanation the "what you must do" line was taken from. */
+  stuck?: StuckExplanation;
+}
+
+/** Why a stuck story is stuck and which action moves it (c-308), worked out on the server. */
+export interface StuckExplanation {
+  kind: 'broken' | 'shipped' | 'changed' | 'unchanged';
+  step: string;
+  at?: string;
+  tried: string;
+  shipped: string;
+  action: string;
+  buttons: ('move' | 'retry')[];
+  moveTo?: string;
+  error?: string;
+}
+
 export interface CardFull {
   card: Card & CardHolder & { display?: StoryState };
   /** The lane's phases with this story's place in them, its holder and its last check, from the API. */
@@ -168,6 +200,7 @@ export interface CardFull {
   rubric?: StageRubric | null;
   /** Newest first, at most 20. */
   commits?: StoryCommit[];
+  summary?: SummaryView;
 }
 
 /** A row of GET /api/artifacts. A mock also carries its `data-screen` frames, its in-app folder and the
