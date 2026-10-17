@@ -28,6 +28,7 @@ erDiagram
 | Card | `.codeloop/cards.json` | `laneVersion` | A card finishes on the lane version it started on; `lane promote` bumps the version without moving cards |
 | Card | `.codeloop/cards.json` | `gate`, `awaiting` | Set together when parked; `gate: stuck` means retries ran out and the owner must unstick |
 | Card | `.codeloop/cards.json` | `retries`, `failures` | Per-stage failure count and the fingerprint of the work at the last failure |
+| Card | `.codeloop/cards.json` | `summary` | What the story needs and what is done, one line each with who wrote it, person or agent, the step and the time; an agent write never replaces a person's line, and "what you must do" is worked out from the board on each read (c-311) |
 | Card | `.codeloop/cards.json` | `stage` | `done`, `proposed`, `dropped` and `queued` are not lane stages and hold no wip slot (`inLane` in `src/lib/cards.ts`) |
 | CardEvent | `card.events` | `fingerprint` | On an approval: hash of the output and check, so a later change re-parks the card |
 | CardEvent | `card.events` | `agent`, `exit`, `log` | `agent-start` and `agent-run` pairs; `max_runs_per_day` is counted from these |
