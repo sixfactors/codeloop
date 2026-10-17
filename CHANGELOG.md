@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- An `approve` whose move on is refused (a story too big to enter build) leaves the story waiting at its gate, unapproved, and says why; before, the approval was written and the story sat at the stage with no gate.
 - `codeloop orch run --review` without `--dry-run` is refused in a process started by `run --agent`, and the assistant's shell guard asks the person before running it, since it closes and places stories.
 - `codeloop start --stage <stage>` works on an outward-first lane that writes specs: the spec event start records no longer counts as the entry gate having decided something; a place is refused once an agent started, a check failed or ran, or the gate was approved or rejected.
 - An S or trivial story skips the review stage (`when: size >= M`): verify's brief carries the review triage (`fold: review`), and after the owner's local approval verify still parks at the pr gate for the reviewer, so nothing moves on unreviewed. Approvals now record the gate they answered.

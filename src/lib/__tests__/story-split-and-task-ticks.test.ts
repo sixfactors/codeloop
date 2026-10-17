@@ -159,3 +159,21 @@ describe('task check on a story that skipped spec', () => {
     expect(check().stdout).toMatch(/no tasks: c-1 skips the spec stage/);
   });
 });
+
+describe('an approve the advance refuses', () => {
+  it('keeps the card at its gate with the refusal, so a second approve says the same', () => {
+    write('.codeloop/lanes/build.yaml', `id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - { id: spec, done: { cmd: "true" }, gate: { name: spec, approver: owner } }\n  - { id: build, done: { cmd: "true" } }\n`);
+    createCard(dir, { lane: 'build', title: 'Big story', id: 'c-1' });
+    const cards = JSON.parse(readFileSync(join(dir, '.codeloop/cards.json'), 'utf-8'));
+    cards.cards[0].spec = 'specs/001-big';
+    writeFileSync(join(dir, '.codeloop/cards.json'), JSON.stringify(cards));
+    write('specs/001-big/tasks.md', tasks(12));
+    expect(advanceCard(dir, 'c-1').card.gate).toBe('spec');
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const approve = () => runCli(['approve', 'c-1'], { cwd: dir, encoding: 'utf-8', env });
+    expect(approve().stderr).toMatch(/c-1 has 12 tasks; split it/);
+    expect(readCards(dir).cards[0]).toMatchObject({ stage: 'spec', gate: 'spec', awaiting: 'owner' });
+    expect(readCards(dir).cards[0].events.some(e => e.action === 'approve')).toBe(false);
+    expect(approve().stderr).toMatch(/c-1 has 12 tasks; split it/);
+  });
+});

@@ -1,4 +1,4 @@
-import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, type Card } from './cards.js';
+import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card } from './cards.js';
 import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
@@ -34,7 +34,18 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
   // the advance after approval carries it. Without this the approval was recorded and the advance
   // then refused, asking for an event that had already arrived.
   const event = !stage?.done?.cmd ? stage?.done?.event : undefined;
-  return { card, gate, advanced: advanceCard(projectDir, card.id, { event }) };
+  try {
+    return { card, gate, advanced: advanceCard(projectDir, card.id, { event }) };
+  } catch (e) {
+    // The approval and the move it allows are one decision: a refused move (the story too big to
+    // enter build) puts the card back at its gate as it was, so it never ends at the stage gateless.
+    if (e instanceof RefusalError) {
+      const file = readCards(projectDir);
+      writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? before : c)));
+      throw new RefusalError(`${before.id} stays at the ${gate} gate, not approved: ${e.message}`);
+    }
+    throw e;
+  }
 }
 
 function currentStage(projectDir: string, card: Card): Stage | undefined {
