@@ -52,7 +52,7 @@ export function deriveInbox(cards: Card[], lanes: Lane[], since: Date, limit = 5
   const laneIds = uniq([...lanes.map((l) => l.id), ...cards.map((c) => c.lane)]);
   const perLane = laneIds.map((lane) => {
     const mine = cards.filter((c) => c.lane === lane && !isProposed(c) && !isDropped(c));
-    return { lane, active: mine.filter((c) => !isGateWaiting(c) && !isShipped(c)).length, parked: mine.filter(isGateWaiting).length, done: mine.filter(isShipped).length };
+    return { lane, active: mine.filter((c) => !isGateWaiting(c) && !isShipped(c)).length, holding: mine.filter((c) => !isGateWaiting(c) && !isShipped(c) && c.size !== 'trivial').length, parked: mine.filter(isGateWaiting).length, done: mine.filter(isShipped).length };
   });
   return { needsYou: cap(gates), failing: cap(failing), backlog, questions: cap(asking), shipped: cap(shipped), perLane };
 }

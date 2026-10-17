@@ -118,7 +118,7 @@ export type CardsPage = Omit<CardsPayload, 'version' | 'owner' | 'nextCursor' | 
 /** A card as the inbox lists it: the list copy plus what a parked card needs read. */
 export type InboxCard = Card & Partial<Pick<SdkInboxCard, 'read' | 'last_check' | 'since' | 'first' | 'last_event'>>;
 export type InboxList = Paged2<InboxCard>;
-export type LaneNumbers = Pick<SdkLaneNumbers, 'lane' | 'active' | 'parked' | 'done'> & Partial<SdkLaneNumbers>;
+export type LaneNumbers = Pick<SdkLaneNumbers, 'lane' | 'active' | 'holding' | 'parked' | 'done'> & Partial<SdkLaneNumbers>;
 /** GET /api/inbox: gated work, failing checks, backlog count, and the per-lane numbers. */
 export interface InboxPayload {
   summary?: string;

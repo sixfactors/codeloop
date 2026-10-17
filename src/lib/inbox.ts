@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { DONE, DROPPED, inLane, PROPOSED, readCards, type Card, type CardEvent } from './cards.js';
 import { clock } from './clock.js';
+import { holdsSlot } from './engine.js';
 import { byScoreThenOldest, chainOf, featureMap, listFeatures, type Band } from './features.js';
 import { loadLanes, substitute, type Lane } from './lane.js';
 import { openQuestions } from './interview.js';
@@ -31,6 +32,8 @@ export interface Inbox {
     metric?: string;
     target?: string;
     active: number;
+    /** Active cards that hold a wip slot: a trivial story holds none, so this is what the lane's wip bounds. */
+    holding: number;
     parked: number;
     done: number;
     human_turns_per_card: number | null;
@@ -130,6 +133,7 @@ export function laneNumbers(cards: Card[], lanes: Lane[]): LaneNumbers[] {
       metric: lane?.metric?.name,
       target: lane?.metric?.target,
       active: mine.filter(c => inLane(c) && !c.gate).length,
+      holding: mine.filter(holdsSlot).length,
       parked: mine.filter(c => c.gate).length,
       done: done.length,
       human_turns_per_card: mine.length ? mine.reduce((n, c) => n + c.events.filter(e => e.human).length, 0) / mine.length : null,

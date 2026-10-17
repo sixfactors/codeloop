@@ -230,7 +230,6 @@ export function InboxView() {
           <AttributeCard title="Numbers per lane" icon={Waypoints} testId="inbox-lanes" className="lg:col-span-2">
             {data.perLane.length ? data.perLane.map((l) => {
               const lane = lanes.data.find((x) => x.id === l.lane);
-              const inFlight = l.active + l.parked;
               return (
                 <FieldRow
                   key={l.lane}
@@ -244,7 +243,7 @@ export function InboxView() {
                       {typeof l.first_pass_rate === 'number' ? <MetaChip label="First pass" value={`${Math.round(l.first_pass_rate * 100)}%`} /> : null}
                     </span>
                   }
-                  adornment={lane?.wip ? <UsageBar label="WIP" current={inFlight} limit={lane.wip} size="sm" showLabel={false} className="w-16" /> : undefined}
+                  adornment={lane?.wip ? <UsageBar label="WIP" current={l.holding} limit={lane.wip} size="sm" showLabel={false} className="w-16" /> : undefined}
                 />
               );
             }) : <EmptyState compact icon={Waypoints} title="No lanes yet" description="Lane numbers appear once stories exist." />}

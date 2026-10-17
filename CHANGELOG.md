@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The inbox's WIP bar per lane counts only the stories that hold a wip slot, so a trivial story or one parked at a gate no longer fills it; `/api/inbox` returns that count as `perLane[].holding`.
 - The shell guard asks about every `card move` in a compound command, not only the first, reads options wherever they sit (`card move --note x <id> <stage>`), and asks rather than allows a move it cannot read against the board.
 - `run --agent` no longer gives a lane's only wip slot to a trivial story: a trivial story starts beside the work holding the slots and never makes an S or M story wait.
 - An agent is restarted on a story only once its work or the head commit changed since its last start; a check that fails only on the legacy-layout notice, or on its own card missing from the board it read, is one check-error and spends no retry; an agent past its timeout is killed on time even while codeloop is busy in a check.

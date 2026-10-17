@@ -87,6 +87,14 @@ describe('inbox-shaped card queries', () => {
     expect(withInbox.cards[0].events.length).toBeGreaterThan(0);
   });
 
+  it('perLane counts the cards that hold a wip slot: a trivial story and a parked one hold none', async () => {
+    createCard(dir, { lane: 'market', title: 'Fix a typo', id: 'c-8', fields: { size: 'trivial' } });
+    const { app } = createApp(dir);
+    const body = await (await app.request('/api/inbox')).json();
+    // c-4, c-5 and c-8 are active; c-1..c-3 are parked at the copy gate.
+    expect(body.perLane).toEqual([expect.objectContaining({ lane: 'market', active: 3, holding: 2, parked: 3 })]);
+  });
+
   it('a proposal does not count as waiting on you; failing means two failed checks and an hour quiet, not one', async () => {
     proposeCard(dir, { lane: 'market', title: 'Maybe later', id: 'c-6' });
     writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market
