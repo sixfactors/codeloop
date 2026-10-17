@@ -12,4 +12,6 @@ changelog: https://kiro.dev/changelog/
 
 - c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No public view of a team's specs: requirements, design and tasks are documents inside the editor's spec session; the docs describe no hosted or shared read-only copy | https://kiro.dev/docs/specs/
 
+- c-367 The board moves a story when its work ships, so shipped work never looks unfinished: Tasks in a spec show in-progress and completed as the agent works them inside the editor; the docs name no link from a commit or a merge to a task's status | https://kiro.dev/docs/specs/
+
 - c-362 I approve and answer from chat, and the page loads fast and lists every artifact: The person confirms each spec phase (requirements, design, tasks) in chat before the next. Analyze Requirements offers a suggested fix per question to select one at a time; there is no documented accept-all and no named approver. Specs are listed in a Specs pane and by #spec in chat | https://kiro.dev/docs/specs/

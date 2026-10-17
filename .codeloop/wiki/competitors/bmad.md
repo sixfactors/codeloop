@@ -14,4 +14,6 @@ changelog: https://github.com/bmad-code-org/BMAD-METHOD/releases
 
 - c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No hosted board or public view of its own work: its briefs, specifications and stories are files in the user's project, and the project's own planning is public only as GitHub issues and discussions | https://github.com/bmad-code-org/BMAD-METHOD
 
+- c-367 The board moves a story when its work ships, so shipped work never looks unfinished: A story's status lives in its plan file; a build stops at `built` and the user or orchestrator marks it `done` by hand. Code review appends a block and never changes the status, and nothing reads git to move it | https://docs.bmad-method.org/plan/break-work-into-stories-and-track-it/
+
 - c-362 I approve and answer from chat, and the page loads fast and lists every artifact: Gates are lettered menus in the chat ([A] Approve, [E] Edit), and the agent halts until the person picks one. Approval is recorded only as the spec file's status (ready-for-dev), with no record of who approved. No accept-all of recommended answers. Its index-docs skill that listed generated documents was removed from core | https://github.com/bmad-code-org/BMAD-METHOD/blob/49069b8b/src/bmm-skills/4-implementation/bmad-quick-dev/step-02-plan.md
