@@ -294,6 +294,11 @@ describe('stats', () => {
       rework: 0.5,
       stuck_rate: 0.5,
       first_pass_rate_by_gate: { 'market/copy': 0.5 },
+      agent_starts: [
+        { card: 'c-1', size: 'M', to_first_gate: null, from_build: null },
+        { card: 'c-2', size: 'M', to_first_gate: null, from_build: null },
+      ],
+      agent_starts_by_size: { M: { to_first_gate: null, from_build: null } },
     });
   });
 });

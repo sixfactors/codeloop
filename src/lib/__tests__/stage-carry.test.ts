@@ -5,7 +5,9 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readCards, type Card } from '../cards.js';
-import { advanceCard, approveCard, createCard } from '../engine.js';
+import { advanceCard, approveCard, createCard, placeCard, recordEvent } from '../engine.js';
+import { computeStats } from '../stats.js';
+import { loadLanes } from '../lane.js';
 import { buildBrief } from '../agent.js';
 import { lintLane, parseLane } from '../lane.js';
 import { orchTurn, readOrch } from '../orch.js';
@@ -184,4 +186,22 @@ describe('review folded into verify for an S story', () => {
     expect(advanceCard(dir, 'c-001').outcome).toBe('moved');
     expect(card().stage).toBe('review');
   });
+});
+
+describe('codeloop stats counts agent starts per story', () => {
+  it('US5: a carried M story reaches the spec gate after one agent start; an S story counts its starts from build on', async () => {
+    project(agent(['research', 'interview', 'mock', 'spec']));
+    await orchTurn(dir, 'c-001');
+    createCard(dir, { lane: 'build', title: 'Fix the date on the post', id: 'c-002', fields: { size: 'S' } });
+    placeCard(dir, 'c-002', 'build', 'owner');
+    recordEvent(dir, 'c-002', () => ({ action: 'agent-start', agent: 'fake', log: 'a.log' }));
+    recordEvent(dir, 'c-002', () => ({ action: 'agent-run', agent: 'fake', exit: 0, log: 'a.log' }));
+    recordEvent(dir, 'c-002', () => ({ action: 'agent-start', agent: 'fake', log: 'b.log' }));
+    const stats = computeStats(readCards(dir).cards, loadLanes(dir));
+    expect(stats.agent_starts).toEqual([
+      { card: 'c-001', size: 'M', to_first_gate: 1, from_build: null },
+      { card: 'c-002', size: 'S', to_first_gate: null, from_build: 2 },
+    ]);
+    expect(stats.agent_starts_by_size.M.to_first_gate).toBe(1);
+  }, 60_000);
 });

@@ -50,6 +50,11 @@ function print(label: string, s: Stats): void {
   console.log(`  rework (rejects/approvals) ${n(s.rework)}`);
   console.log(`  stuck rate             ${pct(s.stuck_rate)}`);
   for (const [gate, rate] of Object.entries(s.first_pass_rate_by_gate)) console.log(`  first pass at ${gate.padEnd(16)} ${pct(rate)}`);
+  for (const [size, a] of Object.entries(s.agent_starts_by_size)) console.log(`  agent starts, ${size.padEnd(7)} to the first gate ${n(a.to_first_gate)}, build to done ${n(a.from_build)}`);
+  if (s.agent_starts.length === 1) {
+    const a = s.agent_starts[0];
+    console.log(`  agent starts on ${a.card}: to the first gate ${a.to_first_gate ?? '-'}, from build ${a.from_build ?? '-'}`);
+  }
 }
 
 export const statsCommand = new Command('stats')
