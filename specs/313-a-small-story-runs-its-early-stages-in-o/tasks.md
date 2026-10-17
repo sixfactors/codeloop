@@ -9,7 +9,7 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 `codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
 -->
 
-- [ ] T001 [US1] [api] A `carry` key on lane stages, refused when the carried stages are not consecutive or run past a gate, in src/lib/lane.ts, and set on research to spec in .codeloop/lanes/build.yaml and templates/lanes/build.yaml
+- [x] T001 [US1] [api] A `carry` key on lane stages, refused when the carried stages are not consecutive or run past a gate, in src/lib/lane.ts, and set on research to spec in .codeloop/lanes/build.yaml and templates/lanes/build.yaml
 - [ ] T002 [US1] [api] One brief for a carried turn listing each stage's skill, output and check, with the time limit summed over the carried stages and capped, in src/lib/orch.ts
 - [ ] T003 [US1] [api] Settle a carried turn: one hand-back names every stage it moved, each stage advances only through its own check, and each gets its own agent-run event, in src/lib/orch.ts
 - [ ] T004 [US2] [api] End a carried turn as soon as the story has open questions, recorded as waiting for answers, in src/lib/orch.ts and src/lib/run.ts

@@ -4,10 +4,12 @@ metric: { name: cycle_time_days, source: cards, target: "<5" }
 trigger: { manual: true }
 wip: 2
 retries: 3
+# Stages with the same `carry:` group run in one agent turn, stopping at the first gate, open question or failed check; the engine still runs each stage's own check.
 # A stage with `when: size >= M` runs for M and L cards only: a trivial or S card enters at build and the skipped stages are recorded with the reason. Raise or lower the bound per stage to change the road.
 stages:
   - id: research
     when: "size >= M"
+    carry: early
     skill: research
     output: "{spec}/research.md"
     done: { cmd: "codeloop check research {id} --min-sources 3 && codeloop check wiki-landed {id} --stage research && codeloop check rubric {id}" }
@@ -19,6 +21,7 @@ stages:
   # from the inbox or the board. The stage waits until every question has an answer.
   - id: interview
     when: "size >= M"
+    carry: early
     skill: interview
     output: "{spec}/interview.md"
     done: { cmd: "codeloop check questions {id} --min 3 && codeloop check rubric {id}" }
@@ -28,6 +31,7 @@ stages:
   # Optional per card: a card with nothing to draw writes `screens: none` in its spec and passes without a mock.
   - id: mock
     when: "size >= M"
+    carry: early
     skill: mock
     done: { cmd: "codeloop check mock {id} && codeloop check rubric {id}" }
     notes:
@@ -35,6 +39,7 @@ stages:
       - "Draw only what is new. A screen that already exists in another card's mock is referenced with `from: mocks/<nnn>`; the building-blocks page (c-132) holds every shared state. A card with nothing to draw writes `screens: none`."
   - id: spec
     when: "size >= M"
+    carry: early
     skill: spec
     output: "{spec}/tasks.md"
     done: { cmd: "codeloop spec check {id} && codeloop check rubric {id}" }

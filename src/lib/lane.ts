@@ -29,6 +29,8 @@ export interface Stage {
   when?: string;
   /** A second agent judges the stage's output against its rubric before the check; `codeloop check rubric` then needs `{spec}/review-<stage>.md` with `verdict: accept`. */
   review?: { agent: string; skill?: string };
+  /** Consecutive stages with the same `carry` group run in one agent turn; each keeps its own check and events. A gate may sit only on the group's last stage. */
+  carry?: string;
 }
 
 export interface Lane {
@@ -123,6 +125,23 @@ export function skipReason(stage: Stage, card: { size?: string }): string {
   return `size ${card.size ?? 'M'}: the stage runs only when ${stage.when}`;
 }
 
+/**
+ * The stages one agent turn carries from `stage`: that stage, then the following stages of its
+ * `carry` group that run for the card, ending at the first one with a gate. A stage with no carry
+ * group is carried alone.
+ */
+export function carriedStages(lane: Lane, stage: Stage, card: { size?: string }): Stage[] {
+  const out = [stage];
+  if (!stage.carry || stage.gate) return out;
+  for (const next of lane.stages.slice(lane.stages.indexOf(stage) + 1)) {
+    if (next.carry !== stage.carry) break;
+    if (!stageApplies(next, card)) continue;
+    out.push(next);
+    if (next.gate) break;
+  }
+  return out;
+}
+
 /** The stage after `stage` that runs for the card, or undefined at the end of the lane. */
 export function nextStage(lane: Lane, stage: Stage, card: { size?: string }): Stage | undefined {
   return lane.stages.slice(lane.stages.indexOf(stage) + 1).find(s => stageApplies(s, card));
@@ -160,6 +179,12 @@ export function lintLane(lane: Lane, skills: SkillEntry[] | null = null): string
     if (stage.when) {
       const err = whenError(stage.when);
       if (err) errors.push(`${at}: ${err}`);
+    }
+    if (stage.carry) {
+      const at = lane.stages.indexOf(stage);
+      const group = lane.stages.map((s, i) => (s.carry === stage.carry ? i : -1)).filter(i => i >= 0);
+      if (group[0] === at && group.some((i, n) => n > 0 && i !== group[n - 1] + 1)) errors.push(`${where} carry ${stage.carry}: its stages are not consecutive (${group.map(i => lane.stages[i].id).join(', ')})`);
+      if (stage.gate && group.some(i => i > at)) errors.push(`${where} carry ${stage.carry}: stage ${stage.id} has gate ${stage.gate.name}, so the carry would run past it; end the group at ${stage.id}`);
     }
     if (stage.review && !stage.review.agent) errors.push(`${at}: review has no agent (a preset under agents: in .codeloop/config.yaml)`);
     if (known && stage.skill && !known.has(stage.skill)) {

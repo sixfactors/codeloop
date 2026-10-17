@@ -7,6 +7,7 @@ retries: 3
 stages:
   - id: research
     when: "size >= M"
+    carry: early
     skill: research
     output: "{spec}/research.md"
     done: { cmd: "codeloop check research {id} --min-sources 3 && codeloop check wiki-landed {id} --stage research && codeloop check rubric {id}" }
@@ -18,6 +19,7 @@ stages:
   # from the inbox or the board. The stage waits until every question has an answer.
   - id: interview
     when: "size >= M"
+    carry: early
     skill: interview
     output: "{spec}/interview.md"
     done: { cmd: "codeloop check questions {id} --min 3 && codeloop check rubric {id}" }
@@ -27,6 +29,7 @@ stages:
   # Optional per card: a card with nothing to draw writes `screens: none` in its spec and passes without a mock.
   - id: mock
     when: "size >= M"
+    carry: early
     skill: mock
     done: { cmd: "codeloop check mock {id} && codeloop check rubric {id}" }
     notes:
@@ -34,6 +37,7 @@ stages:
       - "Draw only what is new. A screen that already exists in another card's mock is referenced with `from: mocks/<nnn>`; the building-blocks page (c-132) holds every shared state. A card with nothing to draw writes `screens: none`."
   - id: spec
     when: "size >= M"
+    carry: early
     skill: spec
     output: "{spec}/tasks.md"
     done: { cmd: "codeloop spec check {id} && codeloop check rubric {id}" }
