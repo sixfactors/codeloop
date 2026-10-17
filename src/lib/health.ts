@@ -120,6 +120,9 @@ export function parseLintErrors(output: string): number {
 
 export const parseTypeErrors = (output: string): number => output.split('\n').filter(l => /error TS\d+/.test(l)).length;
 
+/** A gotcha with no scope (what `wiki capture` writes by default) applies to every file. */
+const inScope = (scope: string[], files?: string[]) => !files || !scope.length || scope.some(g => files.some(f => globMatches(g, f)));
+
 /**
  * `files`: count only the critical gotchas whose scope matches one of these paths. A story's before
  * and after are both measured on its own files, so a gotcha another story adds elsewhere in the
@@ -135,7 +138,7 @@ function measure(root: string, s: Settings, wikiRoot: string, files?: string[]):
     tests: countTests(root, testFiles),
     lint: s.lintCmd ? parseLintErrors(run(s.lintCmd, root)) : null,
     types: typesCmd ? parseTypeErrors(run(typesCmd, root)) : null,
-    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical' && (!files || p.scope.some(g => files.some(f => globMatches(g, f))))).length,
+    gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical' && inScope(p.scope, files)).length,
     todo: countTodo(root, source),
   };
   return { ...part, score: scoreOf(part, s.weights) };

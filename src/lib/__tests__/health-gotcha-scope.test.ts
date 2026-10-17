@@ -39,4 +39,10 @@ describe("a story's health delta", () => {
     commit('docs: a gotcha on the story\'s file\n\nCard: c-1');
     expect(checkHealth(dir, 'c-1').delta).toBeLessThan(0);
   });
+
+  it('counts a critical gotcha with an empty scope, which applies to every file', () => {
+    write('.codeloop/wiki/gotchas/everywhere.md', '---\ntitle: everywhere\nseverity: critical\nscope: []\n---\nbody\n');
+    commit('docs: a gotcha with no scope\n\nCard: c-1');
+    expect(checkHealth(dir, 'c-1').delta).toBeLessThan(0);
+  });
 });
