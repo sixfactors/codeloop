@@ -107,14 +107,15 @@ describe('the session that holds the card', () => {
 });
 
 describe('move to the stage it is at', () => {
-  it('clears a gate wait, and is refused when there is none', () => {
+  it('is refused, and a card waiting at a gate keeps waiting for approve or reject', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
     placeCard(dir, 'c-1', 'build', 'owner');
     expect(() => moveCard(dir, 'c-1', 'build', 'owner')).toThrow(/already at build/);
     const file = readCards(dir);
     writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
-    moveCard(dir, 'c-1', 'build', 'owner', { note: 'parked by mistake' });
-    expect([card('c-1').stage, card('c-1').gate]).toEqual(['build', undefined]);
+    const events = card('c-1').events.length;
+    expect(() => moveCard(dir, 'c-1', 'build', 'owner', { note: 'parked by mistake' })).toThrow(/waiting at the spec gate .*approve c-1/);
+    expect([card('c-1').stage, card('c-1').gate, card('c-1').events.length]).toEqual(['build', 'spec', events]);
   });
 });
 
