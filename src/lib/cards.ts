@@ -66,17 +66,7 @@ export function gateRefusal(card: Pick<Card, 'id' | 'stage' | 'gate'>): string |
   return undefined;
 }
 
-const ENTERS = new Set(['place', 'promote', 'unpark', 'returned', 'move', 'reopen']);
-
-/** Index of the event that brought the card into `stage` last (an advance into it, or a placement, promotion, return or move to it); -1 when it has been there since it was made. */
-export function stageEntryIndex(events: Pick<CardEvent, 'action' | 'stage' | 'note'>[] = [], stage: string): number {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    if (e.action === 'advance' && /^to (\S+)/.exec(e.note ?? '')?.[1] === stage) return i;
-    if (ENTERS.has(e.action) && e.stage === stage) return i;
-  }
-  return -1;
-}
+export { stageEntryIndex } from './stage-entry.js';
 
 /** `trivial` is below S: a one-line fix that skips the ceremony stages (`when: size >= S`). */
 export type Size = 'trivial' | 'S' | 'M' | 'L';

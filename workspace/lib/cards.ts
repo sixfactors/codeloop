@@ -1,3 +1,4 @@
+import { stageEntryIndex } from '@protoboxai/codeloop/sdk';
 import type { Card, InboxPayload, Lane } from './types';
 
 export const isProposed = (c: Card) => c.stage === 'proposed';
@@ -8,21 +9,10 @@ export const isGateWaiting = (c: Card) => Boolean(c.gate || c.awaiting) && !isPr
 export const DONE_STAGE_IDS = ['done', 'shipped', 'live', 'released'];
 const DONE_STAGES = new Set(DONE_STAGE_IDS);
 export const isShipped = (c: Card) => DONE_STAGES.has(c.stage);
-// The server's stageEntryIndex (src/lib/cards.ts), kept here so the client bundle does not pull in the server's file access.
-const ENTERS = new Set(['place', 'promote', 'unpark', 'returned', 'move', 'reopen']);
-function enteredAt(c: Card): number {
-  const events = c.events ?? [];
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    if (e.action === 'advance' && /^to (\S+)/.exec(e.note ?? '')?.[1] === c.stage) return i;
-    if (ENTERS.has(e.action) && e.stage === c.stage) return i;
-  }
-  return -1;
-}
 /** In a lane, not at a gate, with a failed check on the current stage since it was entered, counted toward retries or not (the server's health rule). */
 export const isFailing = (c: Card) =>
   !isProposed(c) && !isDropped(c) && !isGateWaiting(c) && !isShipped(c) &&
-  ((c.retries?.[c.stage] ?? 0) > 0 || (c.events ?? []).slice(enteredAt(c) + 1).some((e) => e.action === 'fail' && e.stage === c.stage));
+  ((c.retries?.[c.stage] ?? 0) > 0 || (c.events ?? []).slice(stageEntryIndex(c.events, c.stage) + 1).some((e) => e.action === 'fail' && e.stage === c.stage));
 
 /** The server's wip rule (engine.ts holdsSlot): in a lane (not queued, done, proposed or dropped), at no gate, not trivial. A lane's own live or released stage still holds a slot. */
 export const holdsSlot = (c: Card) => !['queued', 'done', 'proposed', 'dropped'].includes(c.stage) && !c.gate && c.size !== 'trivial';
