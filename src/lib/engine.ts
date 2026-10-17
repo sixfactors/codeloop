@@ -3,7 +3,7 @@ import { specPath, workDir } from './project-root.js';
 import { spawnSync } from 'child_process';
 import { checkEnv } from './shell.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import { createHash } from 'crypto';
 import { appendFindings } from './competitors.js';
 import { decisionFromResearch } from './wiki-rules.js';
@@ -756,12 +756,14 @@ const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
  * Whether a commit since `from` is work on this card. A commit naming the card in a `Card:` or
  * `Feature:` trailer is; otherwise one touching a file in the card's plan is, whatever other
  * trailers it carries; for a card with no plan, a commit with no trailers is when it touches a file
- * that one of the card's own trailered commits touched, so a chore on main is nobody's retry. With
+ * that one of the card's own trailered commits touched, so a chore on main is nobody's retry; when
+ * it has no trailered commits either, one is when it changes the stage output or a file in the
+ * card's spec folder, so a person's untrailered work on the story still counts. With
  * no `from` (the first failure: no head was kept when the card entered the stage) commits since `at`
  * are read and only the first two rules apply, as there is no head move to judge. A `from` the log
  * cannot reach (the branch was rewritten) falls back to `at`.
  */
-function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; at: number }): boolean {
+function commitsWorkOn(projectDir: string, card: Card, stage: Stage, since: { from?: string; at: number }): boolean {
   const log = (range: string[]) => spawnSync('git', ['log', '--name-only', '--format=%x01%H%x00%B%x00', ...range], { cwd: projectDir, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
   const byTime = [`--since=@${Math.floor(since.at / 1000)}`, 'HEAD'];
   let run = log(since.from ? [`${since.from}..HEAD`] : byTime);
@@ -775,11 +777,13 @@ function commitsWorkOn(projectDir: string, card: Card, since: { from?: string; a
   let owned: Set<string> | undefined;
   // Files the card's own trailered commits touched, over all history; read once, only when needed.
   const ownFiles = () => (owned ??= new Set(records(log([`--grep=^(Card|Feature):[[:space:]]*${card.id}[[:space:]]*$`, '-E', 'HEAD']).stdout).filter(r => r.cards.includes(card.id)).flatMap(r => r.files)));
+  // The story's own files when it has neither a plan nor a trailered commit: the stage output and the spec folder.
+  const storyFiles = () => [...(stage.output ? [relative(workDir(projectDir), specPath(projectDir, substitute(stage.output, card, { projectDir })))] : []), ...(card.spec ? [card.spec] : [])];
   for (const { cards, files } of records(run.stdout)) {
     if (cards.includes(card.id)) return true;
     if (plan) {
       if (files.some(f => pathInPlan(projectDir, plan, f))) return true;
-    } else if (since.from && !cards.length && files.some(f => ownFiles().has(f))) return true;
+    } else if (since.from && !cards.length && files.some(f => (ownFiles().size ? ownFiles().has(f) : pathInPlan(projectDir, storyFiles(), f)))) return true;
   }
   return false;
 }
@@ -871,7 +875,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
         writeCards(projectDir, file, replace(file.cards, kept));
         return { card: kept, outcome: 'stuck', output, started: [], because: {} };
       }
-      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, storyCommits: since => commitsWorkOn(projectDir, before, since) });
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, storyCommits: since => commitsWorkOn(projectDir, before, stage, since) });
       card.events.push(failed(counted));
       // An unattended run on the work the last failure judged, with nothing tried since, has nothing new to say.
       if (opts.unattended && !counted && before.failures?.[stage.id] === fingerprint) {

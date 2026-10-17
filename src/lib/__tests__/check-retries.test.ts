@@ -131,6 +131,14 @@ describe('a commit as work on the story', () => {
     expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(3);
   });
 
+  it('counts a commit with no trailer for a story with no plan and no trailered commits when it changes a file in its spec folder', () => {
+    const file = readCards(dir);
+    writeCards(dir, file, file.cards.map(c => ({ ...c, spec: 'specs/c-1' })));
+    mkdirSync(join(dir, 'specs/c-1'), { recursive: true });
+    commit('specs/c-1/research.md', 'research written with no hook');
+    expect(advanceCard(dir, 'c-1').card.retries.draft).toBe(2);
+  });
+
   it("counts a commit carrying another story's trailer when it touches a file in this story's plan", () => {
     mkdirSync(join(dir, 'specs/c-1'), { recursive: true });
     writeFileSync(join(dir, 'specs/c-1/plan.md'), '# plan\n\n## Files\n\n- src/mine.ts\n');
