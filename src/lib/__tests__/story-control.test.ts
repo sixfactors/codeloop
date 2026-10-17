@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { setActiveCard } from '../active-card.js';
 import { DONE, readCards, writeCards } from '../cards.js';
-import { closeCard, createCard, placeCard, RefusalError } from '../engine.js';
+import { closeCard, createCard, placeCard, queueCard, RefusalError } from '../engine.js';
 import { editCard, moveCard, reopenCard } from '../story-control.js';
 
 let dir: string;
@@ -140,6 +140,15 @@ describe('move', () => {
 
     expect(() => moveCard(dir, 'c-1', 'build', 'owner')).toThrow(/held by/);
     expect(card('c-1').stage).toBe('draft');
+  });
+});
+
+describe('move of a queued story', () => {
+  it('starts it while the lane holds only idle stories, since only worked-on stories count against wip', () => {
+    writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), `id: build\nversion: 1\nwip: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: draft\n    done: { cmd: "true" }\n  - id: build\n    done: { cmd: "true" }\n`);
+    createCard(dir, { lane: 'build', title: 'I see my todos', id: 'c-1' });
+    queueCard(dir, { lane: 'build', title: 'I export my todos', id: 'c-2' });
+    expect(moveCard(dir, 'c-2', 'build', 'owner').stage).toBe('build');
   });
 });
 

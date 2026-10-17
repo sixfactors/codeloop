@@ -113,7 +113,7 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
 function startQueued(projectDir: string, file: ReturnType<typeof readCards>, before: Card, stage: string, role: Role, opts: Opts): Card {
   const lane = loadLane(projectDir, before.lane);
   stageIndex(lane, stage);
-  assertRoomInLane(file.cards, lane, 1, [before.id], before.size);
+  assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
   const now = opts.now ?? clock();
   const card: Card = {
     ...enter(before, stage),
