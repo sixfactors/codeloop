@@ -7,7 +7,10 @@ export CODELOOP_HOME="${CODELOOP_HOME:-$(mktemp -d)}"  # keep test projects out 
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-[ -f "$ROOT/dist/index.js" ] || { echo "FAIL  dist/index.js missing; run npm run build"; exit 1; }
+# CODELOOP_E2E_DIST points the steps at a separate build, so the live dist (the global npm link) is never touched.
+DIST="${CODELOOP_E2E_DIST:-$ROOT/dist}"
+case "$DIST" in /*) ;; *) DIST="$ROOT/$DIST" ;; esac
+[ -f "$DIST/index.js" ] || { echo "FAIL  $DIST/index.js missing; run npm run build"; exit 1; }
 
 WORK="$(mktemp -d)"
 trap '[ -n "${E2E_KEEP:-}" ] && echo "kept $WORK" || rm -rf "$WORK"' EXIT
@@ -16,7 +19,7 @@ PROJECT="$WORK/app"
 mkdir -p "$WORK/bin" "$PROJECT"
 
 # Lane done.cmd lines call `codeloop`, so the built CLI has to be on PATH under that name.
-printf '#!/bin/sh\nexec node "%s/dist/index.js" "$@"\n' "$ROOT" > "$WORK/bin/codeloop"
+printf '#!/bin/sh\nexec node "%s/index.js" "$@"\n' "$DIST" > "$WORK/bin/codeloop"
 chmod +x "$WORK/bin/codeloop"
 export PATH="$WORK/bin:$PATH"
 unset CODELOOP_ROLE CODELOOP_WORK_DIR CODELOOP_PROJECT_DIR CODELOOP_CARD
