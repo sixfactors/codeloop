@@ -733,7 +733,10 @@ function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerp
     if (base.head !== opts.head && opts.storyCommits({ from: base.head, at: since })) return true;
   } else if (opts.head && opts.storyCommits({ at: since })) return true;
   if (!stage.output || opts.untouched) return false;
-  return !base || (base.fingerprint ?? card.failures?.[stage.id]) !== opts.fingerprint;
+  if (!base) return true;
+  // A base that kept no fingerprint says nothing about what the work was, so a changed output cannot be shown.
+  const judged = base.fingerprint ?? card.failures?.[stage.id];
+  return judged !== undefined && judged !== opts.fingerprint;
 }
 
 const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;

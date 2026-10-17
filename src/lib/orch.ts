@@ -20,7 +20,7 @@ import { activeSessions, currentSession, type SessionCard } from './active-card.
 import { appendActivity } from './activity.js';
 import { DONE, failedTimes, findCard, readCards, RefusalError, safeName, writeCards, type Card } from './cards.js';
 import { clock } from './clock.js';
-import { currentStage, advanceCard, recordEvent, type Outcome } from './engine.js';
+import { currentStage, advanceCard, headCommit, recordEvent, workFingerprint, type Outcome } from './engine.js';
 import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
@@ -215,10 +215,15 @@ function countFailure(projectDir: string, id: string, note: string): 'failed' | 
   const failures = Math.min((card.retries[stage.id] ?? 0) + 1, lane.retries);
   const stuck = failures >= lane.retries;
   const ev = (action: string, text = note) => ({ at: now, actor: 'engine', human: false, action, stage: stage.id, note: text });
+  // The head and work this failure judged, as the engine records them: the next engine check on
+  // the same work then sees nothing tried since and does not count a second retry.
+  const head = headCommit(projectDir);
+  const fingerprint = workFingerprint(projectDir, card, stage);
   const next: Card = {
     ...card,
     retries: { ...card.retries, [stage.id]: failures },
-    events: [...card.events, { ...ev('fail'), counted: true }, ...(stuck ? [ev('stuck', `${failedTimes(failures)}\n${note}`)] : [])],
+    failures: { ...card.failures, [stage.id]: fingerprint },
+    events: [...card.events, { ...ev('fail'), ...(head ? { head } : {}), fingerprint, counted: true }, ...(stuck ? [ev('stuck', `${failedTimes(failures)}\n${note}`)] : [])],
     ...(stuck ? { gate: 'stuck', awaiting: 'owner' as const } : {}),
     updatedAt: now,
   };

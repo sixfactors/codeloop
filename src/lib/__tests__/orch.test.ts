@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readActivity } from '../activity.js';
 import { readCards } from '../cards.js';
-import { createCard } from '../engine.js';
+import { advanceCard, createCard } from '../engine.js';
 import { mainTreeOf, projectRoot } from '../project-root.js';
 import { acceptAllAnswers } from '../interview.js';
 import { ensureStoryWorktree } from '../worktree.js';
@@ -86,6 +86,20 @@ describe('orchTurn', () => {
     const third = await orchTurn(dir, 'c-001');
     expect(third.outcome).toBe('stuck');
     expect(readCards(dir).cards[0].gate).toBe('stuck');
+  }, 60_000);
+});
+
+describe('an engine check after an orchestrator failure', () => {
+  it('does not count a second retry on the output the orchestrator judged', async () => {
+    project('id: build\nversion: 1\nretries: 3\nmetric: { name: m, source: cards }\nstages:\n  - id: code\n    output: notes.md\n    done: { cmd: "exit 1" }\n  - id: ship\n    done: { cmd: "true" }\n', IDLE_AGENT);
+    writeFileSync(join(dir, 'notes.md'), 'written by a person\n');
+    sh(`git add -A && ${GIT} commit -qm notes`);
+    await orchTurn(dir, 'c-001');
+    expect(readCards(dir).cards[0].retries.code).toBe(1);
+    expect(advanceCard(dir, 'c-001').outcome).toBe('failed');
+    const card = readCards(dir).cards[0];
+    expect(card.retries.code).toBe(1);
+    expect(card.events.filter(e => e.action === 'fail').at(-1)?.counted).toBe(false);
   }, 60_000);
 });
 
