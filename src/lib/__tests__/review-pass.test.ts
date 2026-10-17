@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { orchCommand } from '../../commands/orch.js';
 import { setActiveCard } from '../active-card.js';
 import { readCards, type Card } from '../cards.js';
-import { placeCard } from '../engine.js';
+import { advanceCard, approveCard, createCard, placeCard } from '../engine.js';
 import { readQuestions } from '../interview.js';
 import { checkResearch } from '../research.js';
 import { readReviewState, reportLines, reviewPass } from '../review-pass.js';
@@ -137,6 +137,22 @@ describe('the review pass', () => {
     expect(find('c-1').stage).toBe('live');
     expect(find('c-2').stage).toBe('verify');
     expect(report.fixed).toEqual([]);
+  });
+
+  it('uc-307-01: closes a story whose last stage check passed and whose last gate is approved, all written by the engine', () => {
+    const i = LANE.lastIndexOf('done: { cmd: "false" }');
+    write('.codeloop/lanes/build.yaml', `${LANE.slice(0, i)}done: { cmd: "true" }${LANE.slice(i + 'done: { cmd: "false" }'.length)}`);
+    createCard(dir, { lane: 'build', title: 'Accountants export invoices as CSV', id: 'c-5' });
+    placeCard(dir, 'c-5', 'review', 'owner');
+    expect(advanceCard(dir, 'c-5').outcome).toBe('parked');
+    approveCard(dir, 'c-5', 'reviewer');
+    commit('c-5', ['src/e.ts']);
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-5').stage).toBe('done');
+    expect(find('c-5').events.at(-1)).toMatchObject({ actor: 'orchestrator', action: 'close' });
+    expect(report.fixed.map(l => [l.id, l.verb])).toEqual([['c-5', 'close']]);
   });
 
   it('a configured trunk with no branch reads nothing as merged, and the report says why', () => {
