@@ -105,6 +105,8 @@ Exit codes: 2 when there is nothing to verify or an acceptance line has no use c
 
 Three failures on one stage, in the shipped lanes, park the card as stuck. On an unattended run the engine fingerprints the stage's output file (or the working tree, for a stage with no output file) and does not re-run a check when nothing changed since the last failure, so a scheduled run does not burn three retries on one broken file.
 
+A report file a check writes inside the repo (`junit.xml`, a coverage folder, a log) should be in `.gitignore`. The working tree fingerprint counts an untracked file by its name, so a check that rewrites the same report each run reads as unchanged, but a check that writes a new file name each run (a timestamp or run number in the name) reads as new work every time: the agent is started again and a retry is spent on nothing.
+
 ## Where the skills come from
 
 The `skill:` on a stage names a file in the skills index. `codeloop init` writes ten and indexes them; `codeloop adopt` indexes the skills and commands a repo already has so lanes can name those too. `codeloop render` turns every lane stage into a host-specific agent, rule or skill file. [Hosts](/docs/hosts) shows the output.
