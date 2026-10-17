@@ -9,7 +9,7 @@ import { loadConfig } from './config.js';
 import { addQuestions, openQuestions } from './interview.js';
 import { storyState } from './states.js';
 import { progressSince } from './progress.js';
-import { findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
+import { CHECK_CRASHED, findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
@@ -181,10 +181,12 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   // A check that already failed after that start, on this head and work, would fail the same way.
   const judged = same && card.events.slice(card.events.indexOf(asked!)).some(e => e.stage === stage.id && e.action === 'fail');
   let failedNow: string | undefined;
+  let crashedNow: string | undefined;
   if (!redo && !judged) {
     const check = runCheck(projectDir, card, stage);
     if (check?.passed) return null;
     failedNow = check && check.crashed === undefined ? check.output : undefined;
+    crashedNow = check?.crashed;
   }
   if (same) {
     // Nothing new can follow on its own, so the story waits for a person instead of being checked
@@ -192,6 +194,11 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
     if (!card.gate && (judged || failedNow !== undefined)) {
       markStuck(projectDir, id, NOTHING_CHANGED, now, failedNow);
       return { ...step, started: false, stuck: true, reason: NOTHING_CHANGED };
+    }
+    // A check that crashes again on the same work would crash in the advance too, twice a tick.
+    if (!card.gate && crashedNow !== undefined) {
+      markStuck(projectDir, id, CHECK_CRASHED, now, crashedNow);
+      return { ...step, started: false, stuck: true, reason: CHECK_CRASHED };
     }
     return { ...step, started: false, reason: `nothing changed since agent ${asked!.agent ?? agent.name} last started on ${stage.id} (head ${head!.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
   }

@@ -5,8 +5,8 @@ import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendActivity } from '../activity.js';
 import { runAgent } from '../agent.js';
-import { readCards, stuckReason } from '../cards.js';
-import { advanceCard, approveCard, createCard } from '../engine.js';
+import { CHECK_CRASHED, readCards, stuckReason } from '../cards.js';
+import { advanceCard, approveCard, createCard, recordEvent } from '../engine.js';
 import { journeyOf, storyLiveLine } from '../journey.js';
 import { LEGACY_NOTICE } from '../paths.js';
 import { doctorTick, runDueWithAgent } from '../run.js';
@@ -115,6 +115,32 @@ describe('an agent start after the owner moves a story back', () => {
     await runDueWithAgent(dir, { name: 'fake' }, later(2), { card: 'c-1' });
     expect(card().gate).toBeUndefined();
     expect(card().events.filter(e => e.action === 'agent-start' && e.stage === 'draft')).toHaveLength(2);
+  });
+});
+
+describe('a crashed check on unchanged work', () => {
+  beforeEach(() => {
+    write('.codeloop/lanes/build.yaml', `id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: ${JSON.stringify(`node -e "function f(){throw new Error('boom')} f()"`)} }\n`);
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+  });
+
+  it('parks the story for a person instead of checking it twice on every run', async () => {
+    for (let h = 1; h < 4; h++) await runDueWithAgent(dir, { name: 'fake' }, later(h), { card: 'c-1' });
+    expect(starts()).toBe(1);
+    expect(card().gate).toBe('stuck');
+    expect(stuckReason(card())).toBe(CHECK_CRASHED);
+  });
+
+  it('does not count an agent run that never started as work tried', () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n');
+    recordEvent(dir, 'c-1', () => ({ action: 'agent-run', agent: 'fake', exit: null, durationMs: 0, note: 'not started: over the memory ceiling' }));
+    expect(advanceCard(dir, 'c-1').outcome).toBe('failed');
+    expect(card().retries.draft ?? 0).toBe(0);
   });
 });
 

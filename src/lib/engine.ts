@@ -708,8 +708,8 @@ export function workFingerprint(projectDir: string, card: Card, stage: Stage, ou
  *    counted (states.ts reads fail events, not retries). The doctor and `run --agent` start an agent
  *    on it within the start limits (wip, gates_per_day, max_runs_per_day, run budget, memory).
  * 4. No restart while head and work are unchanged since the last agent start. When that refusal
- *    meets a failed check, the card parks stuck with NOTHING_CHANGED, and the check is not rerun
- *    until something the check can see changes (rerun-skip.ts).
+ *    meets a failed check, the card parks stuck with NOTHING_CHANGED (a crashed check: CHECK_CRASHED),
+ *    and the check is not rerun until something the check can see changes (rerun-skip.ts).
  * 5. At lane.retries counted failures the card parks stuck with failedTimes(n) as the reason.
  * 6. Owner approve on stuck clears the gate and the counts and writes `unstick`, which allows one
  *    agent start even on unchanged work; the next start on unchanged work is refused again (4).
@@ -727,7 +727,8 @@ function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerp
   const entry = stageEntryIndex(events, stage.id);
   const base = lastCountedFail(card, stage.id);
   const after = base ? events.indexOf(base) : entry;
-  if (opts.workLines || events.slice(after + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
+  // An agent-run with no exit and no duration is a start that was refused before the agent ran.
+  if (opts.workLines || events.slice(after + 1).some(e => e.stage === stage.id && e.action === 'agent-run' && !(e.exit === null && e.durationMs === 0))) return true;
   const since = base ? Date.parse(base.at) : entry >= 0 ? Date.parse(events[entry].at) : Date.parse(card.createdAt);
   if (base?.head && opts.head) {
     if (base.head !== opts.head && opts.storyCommits({ from: base.head, at: since })) return true;

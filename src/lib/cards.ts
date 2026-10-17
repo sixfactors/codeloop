@@ -30,6 +30,9 @@ export interface CardEvent {
 /** The reason a story parks stuck when its agent would be restarted on unchanged work after a failed check. */
 export const NOTHING_CHANGED = 'the agent ran and changed nothing; a person needs to look';
 
+/** The reason a story parks stuck when its check crashes again on work nothing has changed. */
+export const CHECK_CRASHED = 'the check itself crashed and nothing has changed since; a person needs to look';
+
 /** The reason a story parks stuck at its lane's retry limit. */
 export const failedTimes = (n: number) => `the check failed ${n} ${n === 1 ? 'time' : 'times'} with work tried before each; a person needs to look`;
 
@@ -40,7 +43,7 @@ export const failedTimes = (n: number) => `the check failed ${n} ${n === 1 ? 'ti
  */
 export function stuckReason(card: Pick<Card, 'stage' | 'retries' | 'events'>): string {
   const first = card.events?.filter(e => e.action === 'stuck').at(-1)?.note?.split('\n')[0] ?? '';
-  if (first === NOTHING_CHANGED || /^the check failed \d+ times? /.test(first)) return first;
+  if (first === NOTHING_CHANGED || first === CHECK_CRASHED || /^the check failed \d+ times? /.test(first)) return first;
   const n = card.retries?.[card.stage] ?? 0;
   return n > 0 ? failedTimes(n) : first || 'the check failed';
 }
