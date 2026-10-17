@@ -18,7 +18,7 @@ export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 export interface Inbox {
   summary: string;
   /** Started work waiting on a person: stage gates and stuck. Proposals are in `backlog`. */
-  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; priority?: string; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
+  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; priority?: string; bug?: boolean; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
   failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
   /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
@@ -131,6 +131,7 @@ export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, s
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, gate: c.gate!, awaiting: c.awaiting, ...scored,
     ...(c.priority ? { priority: c.priority } : {}),
+    ...(c.bug ? { bug: true } : {}),
     read: stage?.output ? substitute(stage.output, c) : undefined,
     ...(mock ? { mock } : {}),
     ...(c.source ? { source: c.source } : {}),

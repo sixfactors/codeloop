@@ -9,8 +9,10 @@ const client = () => createLocalClient(projectRoot());
 
 function line(card: Card & { band?: string; score?: number }): string {
   const state = card.gate ? chalk.yellow(`waiting for you: ${card.gate}`) : card.stage === DONE ? chalk.green('done') : card.stage;
-  const rank = card.band ? chalk.dim(`${card.band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
-  return `  ${card.id}  ${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
+  // The priority the picks use: the card's own when set, else its feature's RICE band.
+  const band = card.priority ?? card.band;
+  const rank = band ? chalk.dim(`${band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
+  return `  ${card.id}  ${card.bug ? chalk.red('bug ') : ''}${rank}${card.lane.padEnd(8)} ${state}  ${chalk.dim(card.title)}`;
 }
 
 function print(result: { lines: string[]; exitCode: number }): void {
@@ -72,6 +74,7 @@ function storyOptions(command: Command): Command {
     .option('--effort <weeks>', "Weeks; replaces the feature's effort in this card's RICE score")
     .option('--metric <metric>', 'The one stage metric this card moves')
     .option('--ticket <key>', 'Tracker key, like ACME-412; a title starting "ACME-412: " sets it too')
+    .option('--bug', 'A critical bug: every pick takes it before any other story')
     .option('--force', 'Create it even though the title or story fails the standard');
 }
 
@@ -415,14 +418,16 @@ cardCommand
 
 cardCommand
   .command('edit <id>')
-  .description('Edit a card: its title, story, priority, feature or size; the story line in its spec.md follows')
+  .description('Edit a card: its title, story, priority, feature or size, or flag it as a critical bug; the story line in its spec.md follows')
   .option('--title <title>', 'What the user can now do')
   .option('--story <story>', '"As a <persona>, I can <what>, so that <outcome>"')
   .option('--priority <p>', 'P1, P2, P3 or P4')
   .option('--feature <feature>', 'The capability this card is a slice of')
   .option('--size <size>', 'S, M or L')
+  .option('--bug', 'Flag it as a critical bug, which every pick takes first; an agent may set this')
+  .option('--no-bug', 'Clear the critical-bug flag')
   .option(...ROLE)
-  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string }) => {
+  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string; bug?: boolean }) => {
     const { as, ...edit } = opts;
     const card = await client().cards.edit(id, edit, { as });
     console.log(`${card.id} is edited`);

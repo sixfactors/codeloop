@@ -4,6 +4,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createLocalClient } from '../../sdk/local.js';
+import { findCard, readCards } from '../cards.js';
 import { createCard } from '../engine.js';
 import { createMcpServer } from '../mcp.js';
 import { ORCH_DIR, waitingOrchCards } from '../orch.js';
@@ -59,5 +61,18 @@ describe('pick order', () => {
     const res = (await client.callTool({ name: 'next_up', arguments: {} })) as { content: { text: string }[] };
     expect((JSON.parse(res.content[0].text) as { id: string }[]).map(c => c.id)).toEqual(EXPECTED);
     await client.close();
+  });
+
+  it('an agent can flag a critical bug, on an existing story or a new one, and bug stories come first; either role clears it', async () => {
+    const agent = createLocalClient(dir);
+    await agent.cards.edit('c-001', { bug: true }, { as: 'agent' });
+    const { card: made } = await agent.cards.new({ lane: 'build', title: 'Fix the login crash', id: 'c-005', size: 'S', bug: true }, { as: 'agent' });
+    expect(made.bug).toBe(true);
+    // Both bugs lead, ordered between themselves by the same rule (c-001 is RICE P3, c-005 is P4).
+    expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual(['c-001', 'c-005', ...EXPECTED.filter(id => id !== 'c-001')]);
+    await agent.cards.edit('c-001', { bug: false }, { as: 'agent' });
+    await agent.cards.edit('c-005', { bug: false }, { as: 'owner' });
+    expect(findCard(readCards(dir).cards, 'c-001').bug).toBeUndefined();
+    expect(planRun(dir, null).map(l => l.split(':')[0])).toEqual([...EXPECTED, 'c-005']);
   });
 });

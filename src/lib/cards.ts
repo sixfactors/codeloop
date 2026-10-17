@@ -83,6 +83,8 @@ export interface StoryFields {
   size?: Size;
   /** P1 (brings money) to P4 (nice to have); set from the story page. */
   priority?: string;
+  /** A critical bug: every pick takes it before any other story, whatever its priority. An agent may set or clear it. */
+  bug?: boolean;
   points?: number;
   initiative?: string;
   epic?: string;

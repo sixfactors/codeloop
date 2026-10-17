@@ -133,18 +133,18 @@ export const guardFailed = (verb: 'edit' | 'bash', e: unknown): string =>
 export const editGuardFailed = (e: unknown): string => guardFailed('edit', e);
 
 // Open stories in pick order (features.ts pickOrder): what a session with nothing active should pick from.
-async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
+async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string; bug?: boolean }[]> {
   const { inLane } = await cardsLib();
   const { listCards } = await servicesLib();
   const { byPickOrder } = await import('../lib/features.js');
   const open = (await listCards(projectDir)).filter(c => inLane(c as unknown as Card) && !c.gate);
   return byPickOrder(open)
     .slice(0, limit)
-    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.priority ?? c.band }));
+    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.priority ?? c.band, ...(c.bug ? { bug: true } : {}) }));
 }
 
-function candidateLines(list: { id: string; title: string; stage: string; band?: string }[]): string[] {
-  return list.map(c => `  ${c.id}  ${c.band ?? '--'}  ${c.stage.padEnd(9)} ${c.title}`);
+function candidateLines(list: { id: string; title: string; stage: string; band?: string; bug?: boolean }[]): string[] {
+  return list.map(c => `  ${c.id}  ${c.bug ? 'bug ' : ''}${c.band ?? '--'}  ${c.stage.padEnd(9)} ${c.title}`);
 }
 
 guardCommand

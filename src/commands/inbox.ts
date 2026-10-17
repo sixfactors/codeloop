@@ -20,7 +20,7 @@ export const inboxCommand = new Command('inbox')
       console.log(chalk.bold(`Waiting for you (${inbox.needs_you.length + inbox.needs_merge.length})`));
       for (const c of inbox.needs_you) {
         // The band rides along only when the card has a score: an unscored board reads as it always did.
-        console.log(`  ${c.id}  ${c.title}: ${c.lane}/${c.stage}, gate ${chalk.yellow(c.gate)}${c.score === undefined ? '' : `  ${chalk.dim(`${c.band} ${c.score}`)}`}`);
+        console.log(`  ${c.id}  ${c.bug ? `${chalk.red('bug')} ` : ''}${c.title}: ${c.lane}/${c.stage}, gate ${chalk.yellow(c.gate)}${c.score === undefined ? (c.priority ? `  ${chalk.dim(c.priority)}` : '') : `  ${chalk.dim(`${c.priority ?? c.band} ${c.score}`)}`}`);
         // A stuck story prints the explanation its page and `card show` print.
         if (c.stuck) console.log(`        ${chalk.yellow('stuck:')} ${c.last_check}`);
         else console.log(chalk.dim(`        read: ${c.read ?? 'nothing written for this stage'}   last check: ${c.last_check}`));

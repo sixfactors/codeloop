@@ -132,13 +132,17 @@ export interface CardEdit {
   priority?: string;
   feature?: string;
   size?: string;
+  /** true flags a critical bug, false clears it; the one edit an agent may make. */
+  bug?: boolean;
 }
 
 const STORY = /^As an? (.+?), I can (.+?), so that (.+?)\.?$/s;
 
 /** Edits a story's fields; the story line in spec.md follows when the story changes. */
 export function editCard(projectDir: string, id: string, role: Role, edit: CardEdit, opts: Opts = {}): Card {
-  ownerOnly(role, 'editing a card');
+  // An agent that finds a critical bug may flag it (or clear the flag); every other field is the owner's.
+  const onlyBug = edit.bug !== undefined && Object.entries(edit).every(([k, v]) => k === 'bug' || v === undefined);
+  if (!onlyBug) ownerOnly(role, 'editing a card');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
   const changes: Partial<Card> = {};
@@ -177,9 +181,11 @@ export function editCard(projectDir: string, id: string, role: Role, edit: CardE
     changes.size = size as Size;
     names.push('size');
   }
-  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature or --size');
+  if (edit.bug !== undefined) names.push(edit.bug ? 'bug' : 'no bug');
+  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature, --size or --bug');
   const now = opts.now ?? clock();
-  const card: Card = { ...before, ...changes, events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
+  const { bug: _bug, ...unflagged } = before;
+  const card: Card = { ...(edit.bug === false ? unflagged : before), ...changes, ...(edit.bug ? { bug: true } : {}), events: [...before.events, event(now, role, 'edit', before.stage, names.join(', '))], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   // After the board write, so a refused or conflicting edit leaves the spec alone.
   if (storyLine) writeStoryLine(projectDir, card, storyLine);
