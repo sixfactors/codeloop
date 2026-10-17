@@ -25,8 +25,11 @@ export const DEFAULT_BUDGET: Record<Size, Budget> = {
 const EXCLUDED = [/^evidence\//, /^specs\//, /^\.codeloop\//, /^CHANGELOG\.md$/];
 
 // A page or write-up under docs/ is read, not reviewed line by line, and one page runs to hundreds of
-// lines; it counts as a file against the budget but adds no lines, so a doc-sized story stays trivial.
+// lines, so it counts as a file and at one tenth of its lines: a one-page story stays trivial, and a
+// 10,000-line page still breaks the trivial budget.
 const PROSE = /^docs\/.+\.(md|mdx|html)$/;
+const PROSE_SHARE = 10;
+const PROSE_NOTE = ' (pages under docs/ count at one tenth of their lines)';
 
 function git(cwd: string, args: string[]): string {
   const run = spawnSync('git', args, { cwd, encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024 });
@@ -149,8 +152,14 @@ export function storyFiles(projectDir: string, cardId: string, opts: { branches?
 
 /** Files and added+deleted lines across the commits reachable from HEAD (or, with `branches`, from any branch) that carry a `Card:` or `Feature:` trailer for this card. */
 export function storyDiff(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): StoryDiff {
+  const { files, lines, commits } = measure(projectDir, cardId, opts);
+  return { files, lines, commits };
+}
+
+function measure(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string }): StoryDiff & { prose: boolean } {
   const { files, commits } = storyFiles(projectDir, cardId, opts);
-  return { files: files.size, lines: [...files].reduce((a, [path, n]) => a + (PROSE.test(path) ? 0 : n), 0), commits };
+  const counted = [...files].map(([path, n]) => (PROSE.test(path) ? Math.ceil(n / PROSE_SHARE) : n));
+  return { files: files.size, lines: counted.reduce((a, n) => a + n, 0), commits, prose: [...files.keys()].some(path => PROSE.test(path)) };
 }
 
 /** The budget for a size: defaults, overridden per size by `diff_budget:` in config. `budget: off` returns undefined. */
@@ -169,13 +178,14 @@ const n = (v: number) => v.toLocaleString('en-US');
 
 export function checkBudget(projectDir: string, cardId: string, size: Size | undefined, opts: { ref?: string } = {}): BudgetVerdict {
   const used = size ?? 'M';
-  const diff = storyDiff(projectDir, cardId, opts);
+  const { prose, ...diff } = measure(projectDir, cardId, opts);
   const limit = budgetFor(projectDir, used);
   if (!limit) return { ...diff, size: used, limit: 'off', pass: true, message: 'budget off' };
   const pass = diff.files <= limit.files && diff.lines <= limit.lines;
+  const note = prose ? PROSE_NOTE : '';
   const message = pass
-    ? `diff ${n(diff.files)} files / ${n(diff.lines)} lines is within the ${used} budget (${limit.files} files / ${n(limit.lines)} lines)`
-    : `diff ${n(diff.files)} files / ${n(diff.lines)} lines exceeds the ${used} budget (${limit.files} files / ${n(limit.lines)} lines); split the story`;
+    ? `diff ${n(diff.files)} files / ${n(diff.lines)} lines${note} is within the ${used} budget (${limit.files} files / ${n(limit.lines)} lines)`
+    : `diff ${n(diff.files)} files / ${n(diff.lines)} lines${note} exceeds the ${used} budget (${limit.files} files / ${n(limit.lines)} lines); split the story`;
   return { ...diff, size: used, limit, pass, message };
 }
 

@@ -46,11 +46,19 @@ describe('storyDiff', () => {
 });
 
 describe('a page under docs/', () => {
-  it('counts as a file but adds no lines, so a trivial story with a 433-line page stays within budget', () => {
+  it('counts as a file and at one tenth of its lines, so a trivial story with a 433-line page stays within budget', () => {
     put('docs/architecture/enterprise-architecture.html', 430); put('docs/README.md', 3); put('src/x.ts', 4);
     commit('docs: the page', 'Card: c-001');
-    expect(storyDiff(dir, 'c-001')).toEqual({ files: 3, lines: 4, commits: 1 });
+    expect(storyDiff(dir, 'c-001')).toEqual({ files: 3, lines: 4 + 43 + 1, commits: 1 });
     expect(checkBudget(dir, 'c-001', 'trivial').pass).toBe(true);
+  });
+
+  it('a 10,000-line page breaks the trivial budget, and the message says how pages count', () => {
+    put('docs/big.html', 10_000);
+    commit('docs: the big page', 'Card: c-001');
+    const v = checkBudget(dir, 'c-001', 'trivial');
+    expect(v.pass).toBe(false);
+    expect(v.message).toBe('diff 1 files / 1,000 lines (pages under docs/ count at one tenth of their lines) exceeds the trivial budget (3 files / 50 lines); split the story');
   });
 });
 
