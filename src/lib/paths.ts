@@ -90,10 +90,11 @@ export function layoutOfSpec(spec: string | undefined): Layout {
   return spec.startsWith('.codeloop/') ? 'dotfolder' : 'root';
 }
 
+export const LEGACY_NOTICE = 'codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/';
+
 /** The one-line notice a root-layout project gets on every command. */
 export function legacyNotice(projectDir: string): string | undefined {
-  if (layout(projectDir) !== 'root') return undefined;
-  return 'codeloop: this project keeps specs/, evidence/ and shape/ at the repo root (the legacy layout, removed in 0.7); `codeloop store move --layout dotfolder --dry-run` shows the move to .codeloop/';
+  return layout(projectDir) === 'root' ? LEGACY_NOTICE : undefined;
 }
 
 /** Root-level story folders still holding content: what `codeloop doctor` reports as the legacy layout. */

@@ -1,4 +1,4 @@
-import { evidenceOf, usecasesOf } from './paths.js';
+import { evidenceOf, LEGACY_NOTICE, usecasesOf } from './paths.js';
 import { specPath, workDir } from './project-root.js';
 import { spawnSync } from 'child_process';
 import { checkEnv } from './shell.js';
@@ -163,11 +163,28 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   // `ref` without `work`: a tree-mode story's commit range on the main tree's branch.
   const env = work ? { ...checkEnv(), CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: work, ...(ref ? { CODELOOP_STORY_REF: ref } : {}) } : ref ? { ...checkEnv(), CODELOOP_STORY_REF: ref } : checkEnv();
   const run = spawnSync(substitute(stage.done.cmd, card, { shell: true, projectDir }), { cwd: work ?? projectDir, shell: true, encoding: 'utf-8', timeout: timeoutMs, env, killSignal: 'SIGKILL' });
-  const output = tail(`${run.stdout ?? ''}${run.stderr ?? ''}`);
+  const raw = `${run.stdout ?? ''}${run.stderr ?? ''}`;
+  // The legacy-layout notice is printed by every codeloop command the check runs; it says nothing about the story.
+  const text = raw.split('\n').filter(l => l.trimEnd() !== LEGACY_NOTICE).join('\n');
+  const output = tail(text);
   // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
   if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
   const passed = run.status === 0;
-  return { passed, output, ...(checkCrashed(run.status, `${run.stdout ?? ''}${run.stderr ?? ''}`) ? { crashed: output } : {}) };
+  if (checkCrashed(run.status, raw)) return { passed, output, crashed: output };
+  const fault = passed ? undefined : toolFault(card, raw, text, work);
+  return { passed, output, ...(fault ? { crashed: fault } : {}) };
+}
+
+/**
+ * A failure no story work can fix, said in one line: the check printed nothing but the
+ * legacy-layout notice, or could not find its own card on the board it read (a worktree's
+ * cards.json without the story, as c-143's research check did in its worktree).
+ */
+function toolFault(card: Card, raw: string, text: string, work?: string): string | undefined {
+  if (!text.trim() && raw.includes(LEGACY_NOTICE)) return 'the check printed only the legacy-layout notice; `codeloop store move --layout dotfolder` ends it';
+  const missing = [...text.matchAll(/^card "([^"]+)" not found\s*$/gm)].some(m => m[1] === card.id);
+  if (missing) return `card ${card.id} is not on the board where the check ran${work ? ` (${work})` : ''}; no story work changes that`;
+  return undefined;
 }
 
 /**

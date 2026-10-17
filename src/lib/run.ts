@@ -12,7 +12,7 @@ import { progressSince } from './progress.js';
 import { findCard, inLane, readCards, safeName, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, loadEngineConfig, parkStuck, promoteQueued, workable, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -163,6 +163,13 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   // so the agent is started with the note even though the check still passes. Once per note.
   const asked = card.events.filter(e => e.stage === stage.id && (e.action === 'reject' || e.action === 'returned' || e.action === 'agent-start')).at(-1);
   if (asked?.action !== 'reject' && asked?.action !== 'returned' && runCheck(projectDir, card, stage)?.passed) return null;
+  // A start on the head commit and stage work of the last one repeats that run (c-143: 13 hand-backs
+  // at one commit); orch runs stop on the same rule in breaker(). Outside git there is no head to compare.
+  const head = headCommit(projectDir);
+  const work = head ? workFingerprint(projectDir, card, stage) : undefined;
+  if (head && asked?.action === 'agent-start' && asked.head === head && asked.fingerprint === work) {
+    return { ...step, started: false, reason: `nothing changed since agent ${asked.agent ?? agent.name} last started on ${stage.id} (head ${head.slice(0, 8)}, same work); it starts again once the work or the head commit changes` };
+  }
 
   const spent = budget?.stop(`${id}:${stage.id}`);
   if (spent) return { ...step, started: false, reason: spent };
@@ -174,7 +181,7 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
       if (reason) throw new RefusalError(reason);
       const n = current.events.filter(e => e.action === 'agent-start' && e.stage === stage.id).length + 1;
       log = logFile ?? `${AGENT_RUNS_DIR}/${id}-${safeName(stage.id, 'stage id')}-${n}.log`;
-      return { action: 'agent-start', agent: agent.name, log };
+      return { action: 'agent-start', agent: agent.name, log, ...(head ? { head, fingerprint: work } : {}) };
     }, now);
   } catch (e) {
     if (!(e instanceof RefusalError)) throw e;

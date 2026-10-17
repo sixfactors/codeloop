@@ -12,9 +12,9 @@ export interface CardEvent {
   action: string;
   stage?: string;
   note?: string;
-  /** On an approval: what the stage's output and check were when it was given. */
+  /** On an approval: what the stage's output and check were when it was given. On agent-start: the stage's work when the agent started. */
   fingerprint?: string;
-  /** On fail: HEAD when the check ran. */
+  /** On fail and agent-start: HEAD when the check ran or the agent started. */
   head?: string;
   /** Reserved for an approval recorded by an authenticated store. Local approvals have none. */
   approvalId?: string;
