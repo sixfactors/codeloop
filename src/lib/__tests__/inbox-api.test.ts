@@ -5,6 +5,7 @@ import { join } from 'path';
 import { advanceCard, createCard, holdsSlot, proposeCard } from '../engine.js';
 import type { Card } from '../cards.js';
 import { buildInbox } from '../inbox.js';
+import { editCard } from '../story-control.js';
 import { closeIndex } from '../index/index.js';
 import { createApp } from '../server.js';
 
@@ -75,6 +76,25 @@ describe('inbox-shaped card queries', () => {
     const second = await (await app.request(`/api/inbox?limit=2&cursor=${first.needsYou.nextCursor}`)).json();
     expect(ids(second.needsYou.cards)).toEqual(['c-3']);
     expect(second.needsYou.nextCursor).toBeNull();
+  });
+
+  it('/api/inbox returns needsYou in pick order, a bug first even over a higher priority, for the page to render as given', async () => {
+    editCard(dir, 'c-3', 'owner', { bug: true });
+    editCard(dir, 'c-1', 'owner', { priority: 'P1' });
+    const { app } = createApp(dir);
+    const body = await (await app.request('/api/inbox')).json();
+    expect(ids(body.needsYou.cards)).toEqual(['c-3', 'c-1', 'c-2']);
+  });
+
+  it('/api/initiatives returns initiatives by score, highest first and unscored last, for the table to render as given', async () => {
+    mkdirSync(join(dir, '.codeloop/wiki/initiatives'), { recursive: true });
+    mkdirSync(join(dir, '.codeloop/wiki/features'), { recursive: true });
+    for (const id of ['a-none', 'b-slow', 'c-fast']) writeFileSync(join(dir, `.codeloop/wiki/initiatives/${id}.md`), `---\ntitle: ${id}\nstatus: active\n---\nWe believe ${id}.\n`);
+    writeFileSync(join(dir, '.codeloop/wiki/features/slow.md'), '---\ntitle: Slow\ninitiative: b-slow\nrice: { reach: 2, impact: 2, confidence: 5, effort: 4 }\n---\nSlow.\n');
+    writeFileSync(join(dir, '.codeloop/wiki/features/fast.md'), '---\ntitle: Fast\ninitiative: c-fast\nrice: { reach: 8, impact: 9, confidence: 10, effort: 2 }\n---\nFast.\n');
+    const { app } = createApp(dir);
+    const body = await (await app.request('/api/initiatives')).json();
+    expect(ids(body.initiatives)).toEqual(['c-fast', 'b-slow', 'a-none']);
   });
 
   it('/api/cards carries the inbox summary but not needs_you unless include=inbox', async () => {

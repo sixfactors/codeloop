@@ -394,10 +394,12 @@ export class ProjectIndex {
   };
 
   initiatives = {
-    /** Each with `score`: the sum of its features' scores. */
+    /** Each with `score`: the sum of its features' scores. Highest score first, unscored last, then by title: the table renders this order as given. */
     list: async (): Promise<IndexedInitiative[]> => {
       await this.ready;
-      return [...this.initiativesById.values()].map(i => this.scoreInitiative(i));
+      return [...this.initiativesById.values()]
+        .map(i => this.scoreInitiative(i))
+        .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || a.title.localeCompare(b.title));
     },
     get: async (id: string): Promise<IndexedInitiative | undefined> => {
       await this.ready;
