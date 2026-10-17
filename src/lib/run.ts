@@ -9,7 +9,7 @@ import { loadConfig } from './config.js';
 import { addQuestions, openQuestions } from './interview.js';
 import { storyState } from './states.js';
 import { progressSince } from './progress.js';
-import { findCard, inLane, NOTHING_CHANGED, readCards, safeName, type Card } from './cards.js';
+import { findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
@@ -151,7 +151,8 @@ function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent:
   return undefined;
 }
 
-const ASKS_FOR_START = new Set(['reject', 'returned', 'agent-start', 'doctor-start', 'unstick']);
+// A move or reopen into the stage is the owner asking for the stage to be worked again.
+const ASKS_FOR_START = new Set(['reject', 'returned', 'agent-start', 'doctor-start', 'unstick', 'move', 'reopen']);
 
 // null when the card needs no agent: its stage has no command to check the work with, or the check passes already.
 // `stuck`: the start was refused on unchanged work after a failed check and the card was parked
@@ -167,7 +168,10 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
   // A rejection, or a return from the next stage's entry gate, asks for the work to be done again,
   // so the agent is started with the note even though the check still passes. Once per note.
   // A doctor-start or an owner's unstick asks for one more start on unchanged work.
-  const asked = card.events.filter(e => e.stage === stage.id && ASKS_FOR_START.has(e.action)).at(-1);
+  // Only asks since the card entered the stage: an agent start from an earlier visit says nothing
+  // about this one. The entry event itself is kept, as a move, reopen or return is an ask.
+  const entry = stageEntryIndex(card.events, stage.id);
+  const asked = card.events.slice(Math.max(entry, 0)).filter(e => e.stage === stage.id && ASKS_FOR_START.has(e.action)).at(-1);
   const redo = asked?.action === 'reject' || asked?.action === 'returned';
   // A start on the head commit and stage work of the last one repeats that run; orch runs stop on
   // the same rule in breaker(). Outside git there is no head to compare.

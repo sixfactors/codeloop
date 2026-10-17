@@ -9,7 +9,8 @@ import { readCards, stuckReason } from '../cards.js';
 import { advanceCard, approveCard, createCard } from '../engine.js';
 import { journeyOf, storyLiveLine } from '../journey.js';
 import { LEGACY_NOTICE } from '../paths.js';
-import { doctorTick } from '../run.js';
+import { doctorTick, runDueWithAgent } from '../run.js';
+import { moveCard } from '../story-control.js';
 
 let dir: string;
 const entry = process.argv[1];
@@ -94,6 +95,26 @@ describe('an agent restart on a check that writes into the repo', () => {
     expect(starts()).toBe(1);
     expect(card().gate).toBe('stuck');
     expect(stuckReason(card())).toBe('the agent ran and changed nothing; a person needs to look');
+  });
+});
+
+describe('an agent start after the owner moves a story back', () => {
+  it('starts the agent on the stage it came back to, though an agent once failed there on the same work', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n  - id: ship\n    done: { cmd: "exit 1" }\n');
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+    await runDueWithAgent(dir, { name: 'fake' }, later(1), { card: 'c-1' });
+    expect(starts()).toBe(1);
+    expect(card().gate).toBeUndefined();
+    moveCard(dir, 'c-1', 'ship', 'owner');
+    moveCard(dir, 'c-1', 'draft', 'owner', { note: 'redo the draft' });
+    await runDueWithAgent(dir, { name: 'fake' }, later(2), { card: 'c-1' });
+    expect(card().gate).toBeUndefined();
+    expect(card().events.filter(e => e.action === 'agent-start' && e.stage === 'draft')).toHaveLength(2);
   });
 });
 
