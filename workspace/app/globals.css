@@ -88,7 +88,7 @@
   --sidebar-accent-foreground: oklch(0.2671 0.0196 98.939);
   --sidebar-border: oklch(0.8847 0.0069 97.3627);
   --sidebar-ring: oklch(0.6171 0.1375 39.0427);
-  /* Status tones the copied chanl-admin components expect. One idea per hue: violet = an agent
+  /* Status tones the copied components expect. One idea per hue: violet = an agent
      acted, green = healthy, amber = needs a person, red = failed (destructive above). */
   --success: oklch(0.596 0.145 163.2);
   --success-foreground: oklch(0.985 0 0);

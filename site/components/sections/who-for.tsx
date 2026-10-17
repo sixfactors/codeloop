@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-// Copied from chanl-site/src/components/sections/features-tabs.tsx: text and a vertical tab list
+// Copied from a private project's src/components/sections/features-tabs.tsx: text and a vertical tab list
 // on the left, the active tab's image on the right, the image under the tab on small screens.
 // Radix Tabs and motion are replaced by buttons and plain state.
 const PERSONAS = [

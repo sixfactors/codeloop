@@ -130,9 +130,9 @@ pre code {
 .doc hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
 .doc .planned { display: inline-block; border: 1px solid var(--primary); color: var(--primary); border-radius: 999px; padding: 0 0.6em; font-size: 0.75rem; font-family: var(--font-mono); vertical-align: middle; }
 
-/* Section rhythm and the page container, copied from chanl-site/src/app/globals.css so the
+/* Section rhythm and the page container, copied from a private project's src/app/globals.css so the
    sections copied from there keep their spacing. The container's 1rem side gutter is the
-   phone-width rule; chanl-site uses 1.5rem. */
+   phone-width rule; a private project uses 1.5rem. */
 @layer components {
   .section-padding {
     @apply py-16 md:py-20 lg:py-24;

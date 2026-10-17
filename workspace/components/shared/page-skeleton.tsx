@@ -1,4 +1,4 @@
-// Copied from chanl-admin components/shared/page-skeleton.tsx. StatCardGrid (from the chanl design
+// Copied from a private project's components/shared/page-skeleton.tsx. StatCardGrid (from the private project's design
 // system package) is replaced by the same responsive grid inline; a `columns` prop is added so the
 // board can show ghost columns instead of a table.
 

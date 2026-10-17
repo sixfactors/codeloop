@@ -2,7 +2,7 @@
 
 The multi-screen board for one codeloop project: board, inbox, roadmap, wiki, artifacts, card,
 evidence, stats, settings. Next 15 app router, static export, Tailwind 4, shadcn/ui (Base UI
-style), TanStack Query, SSE from `/api/events`. Design: `chanl-platform/docs/plans/codeloop/2026-10-07-workspace-app.md`.
+style), TanStack Query, SSE from `/api/events`. Design: owner design notes: workspace app.
 
 ## Run it
 

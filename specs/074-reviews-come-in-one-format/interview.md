@@ -10,7 +10,7 @@ answer:
 recommended: Given a PR, when the review stage runs, then review.md is that table and nothing else, and the done-check becomes `check review`, failing on any `block` finding without a verdict.
 answer: 
 
-## Q4 Riskiest assumption: lifting `pr-reviewer` verbatim drags chanl rules into a generic plugin.
+## Q4 Riskiest assumption: lifting `pr-reviewer` verbatim drags the private project's rules into a generic plugin.
 recommended: The review plugin carries format and severity only; stack rules come from the specialist plugin's rules.md (c-078, c-080).
 answer: 
 

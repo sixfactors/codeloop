@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/shared/empty-state.tsx. Only change: Button's link form uses
+// Copied from a private project's components/shared/empty-state.tsx. Only change: Button's link form uses
 // base-ui's `render` prop instead of Radix `asChild`.
 
 import { type LucideIcon } from 'lucide-react';

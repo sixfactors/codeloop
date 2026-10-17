@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/shared/detail-sheet.tsx. Changes: TooltipTrigger uses
+// Copied from a private project's components/shared/detail-sheet.tsx. Changes: TooltipTrigger uses
 // base-ui's `render`; the sheet is full-width on phones and `sm:max-w-2xl` up (the ui/sheet default
 // caps at sm:max-w-sm, so the width class is passed through); corner radius per the design contract
 // (sheets 24 → rounded-l-2xl).

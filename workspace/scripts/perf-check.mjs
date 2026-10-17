@@ -4,7 +4,7 @@
 //   zero full page loads across N wiki navigations by link, p95 navigation under 100 ms, JS heap
 //   growth under 20 MB. Prints a table and exits 1 when a budget is missed.
 //
-//   CODELOOP_URL=http://127.0.0.1:4040 CODELOOP_TOKEN=… PLAYWRIGHT_DIR=../../chanl-v2/chanl-platform node scripts/perf-check.mjs [--n 200] [--shots dir]
+//   CODELOOP_URL=http://127.0.0.1:4040 CODELOOP_TOKEN=… PLAYWRIGHT_DIR=<a project with playwright installed> node scripts/perf-check.mjs [--n 200] [--shots dir]
 //
 // CODELOOP_TOKEN is the `?token=` from the URL `codeloop serve` printed; the first page load carries
 // it so the tab is the owner's. Playwright is not a dependency of this package; PLAYWRIGHT_DIR
@@ -20,7 +20,7 @@ const withToken = (path) => `${BASE}${path}${TOKEN ? `${path.includes('?') ? '&'
 const N = Number(args.n ?? 200);
 const SHOTS = args.shots ? resolve(String(args.shots)) : null;
 const BUDGET = { fullLoads: 0, p95ms: 100, heapMb: 20 };
-const require = createRequire(resolve(process.env.PLAYWRIGHT_DIR ?? '/Users/deangrover/Projects/chanl-v2/chanl-platform', 'package.json'));
+const require = createRequire(resolve(process.env.PLAYWRIGHT_DIR ?? process.cwd(), 'package.json'));
 const { chromium } = require('playwright');
 
 const pct = (xs, p) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : 0; };

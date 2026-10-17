@@ -2,7 +2,7 @@
 
 verdict: approve
 sha: ebc8c2f
-reviewer: chanl-platform orchestrator session (Dean's request via codelooper, 2026-10-16)
+reviewer: a private project orchestrator session (Dean's request via codelooper, 2026-10-16)
 
 ## What was read
 

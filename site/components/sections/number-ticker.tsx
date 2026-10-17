@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-// Copied from chanl-site/src/components/magicui/number-ticker.tsx. motion/react is not a
+// Copied from a private project's src/components/magicui/number-ticker.tsx. motion/react is not a
 // dependency here, so the spring is a requestAnimationFrame ease-out; the in-view trigger is an
 // IntersectionObserver. The server renders the final value so the number is right without JS.
 export function NumberTicker({ value, className }: { value: number; className?: string }) {

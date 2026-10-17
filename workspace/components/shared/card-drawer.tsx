@@ -1,6 +1,6 @@
 'use client';
 
-// The board's card sheet (design contract §6): DetailSheet from chanl-admin with j/k navigation
+// The board's card sheet (design contract §6): DetailSheet from a private project with j/k navigation
 // across the cards currently shown on the board.
 
 import { useMemo } from 'react';

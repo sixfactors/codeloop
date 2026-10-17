@@ -7,10 +7,10 @@ recommended: In order: plugin `detect`, then an adopted skill whose name or desc
 answer: In order: plugin `detect`, then an adopted skill whose name or description matches the stage id, then generic; print the table and post one inbox question only when two skills match.
 
 ## Q3 Acceptance: what proves it?
-recommended: Given chanl-platform with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body.
-answer: Given chanl-platform with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body.
+recommended: Given a private project with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body.
+answer: Given a private project with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body.
 
-## Q4 Riskiest assumption: adopted skills assume chanl make targets and break elsewhere.
+## Q4 Riskiest assumption: adopted skills assume the private project's make targets and break elsewhere.
 recommended: Accept it; init is per repo, the brief prints the skill verbatim, and the test command comes from package.json or the Makefile.
 answer: Accept it; init is per repo, the brief prints the skill verbatim, and the test command comes from package.json or the Makefile.
 

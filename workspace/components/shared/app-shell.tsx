@@ -1,6 +1,6 @@
 'use client';
 
-// The shell, after chanl-admin components/app-sidebar.tsx (masthead · grouped nav · secondary group
+// The shell, after a private project's components/app-sidebar.tsx (masthead · grouped nav · secondary group
 // pinned to the bottom · footer) and app-sidebar-condensed.tsx (CountBadge with muted / attention
 // tones). Changes: Logo → a terminal glyph with the product name, NavUser → an owner / read-only
 // footer with the theme toggle, nav config inline (no feature flags, no app switcher), base-ui
@@ -292,7 +292,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </SidebarHeader>
 
-        {/* 12px between groups, matching the chanl-admin rail. */}
+        {/* 12px between groups, matching the source rail. */}
         <SidebarContent className="gap-0 [&>[data-sidebar=group]:not(:first-child)]:pt-0.5">
           {atHubHome ? (
             <HubNavGroups pathname={pathname} projects={hubProjects.data} />

@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from chanl-admin components/shared/search-and-filter.tsx, which composes a search Input,
+// Copied from a private project's components/shared/search-and-filter.tsx, which composes a search Input,
 // one DataTableFacetedFilter per facet and a Reset button (the DataTableToolbar layout). Change:
 // filtering is done by the caller through `value` / `onChange` instead of an internal TanStack
 // table, and the search box debounces 300 ms per the design contract (the raw text is kept so the

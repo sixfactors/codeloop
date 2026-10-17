@@ -7,8 +7,8 @@ recommended: `mock: /mocks/<nnn>` in spec.md; `serve` links it and the local gat
 answer: `mock: /mocks/<nnn>` in spec.md; `serve` links it and the local gate note carries a screenshot.
 
 ## Q3 Acceptance: what proves it?
-recommended: Given chanl-admin, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold.
-answer: Given chanl-admin, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold.
+recommended: Given a private project, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold.
+answer: Given a private project, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold.
 
 ## Q4 Riskiest assumption: mock routes ship to prod.
 recommended: The `/mocks` route group is gated by `NEXT_PUBLIC_MOCKS=1` and the deploy check fails if it is set in prod env.

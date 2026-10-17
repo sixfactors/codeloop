@@ -14,7 +14,7 @@ import { PageTail } from '@/components/sections/page-tail';
 import { Footer } from '@/components/footer';
 
 // Order: hero, a runnable proof, the problem, three steps, a day with one card, what is in the
-// package, the comparison line, who it is for, proof numbers, questions, install. Sections are copies of chanl-site/src/components/sections with strings inlined.
+// package, the comparison line, who it is for, proof numbers, questions, install. Sections are copies of a private project's src/components/sections with strings inlined.
 export default function Home() {
   return (
     <>
