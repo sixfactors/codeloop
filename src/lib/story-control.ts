@@ -95,13 +95,11 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   const lane = loadLane(projectDir, before.lane);
   const from = stageIndex(lane, before.stage);
   const target = stageIndex(lane, stage);
-  // A move to the stage it is at would clear a gate wait with no approval on record, so the wait is
-  // cleared only by approve (or reject), which the engine records as the owner's decision.
-  if (target === from) {
-    if (before.gate === 'stuck') throw new RefusalError(`${before.id} is stuck at ${stage}; \`codeloop approve ${before.id}\` retries it`);
-    if (before.gate) throw new RefusalError(`${before.id} is waiting at the ${before.gate} gate at ${stage}; \`codeloop approve ${before.id}\` or \`codeloop reject ${before.id} "<why>"\` decides it`);
-    throw new RefusalError(`${before.id} is already at ${stage}`);
-  }
+  // Any move drops the gate a card waits at with no approval on record, so the wait is cleared only
+  // by approve (or reject), which the engine records as the owner's decision.
+  if (before.gate === 'stuck') throw new RefusalError(`${before.id} is stuck at ${before.stage}; \`codeloop approve ${before.id}\` retries it, \`codeloop reject ${before.id} "<why>"\` parks it`);
+  if (before.gate) throw new RefusalError(`${before.id} is waiting at the ${before.gate} gate at ${before.stage}; \`codeloop approve ${before.id}\` or \`codeloop reject ${before.id} "<why>"\` decides it`);
+  if (target === from) throw new RefusalError(`${before.id} is already at ${stage}`);
   const passed = target < from ? lane.stages.slice(target, from).filter(s => s.gate).map(s => s.gate!.name) : [];
   if (passed.length && !opts.note?.trim()) throw new RefusalError(`moving ${before.id} back to ${stage} undoes the ${passed.join(' and ')} gate: say why in the note`);
   const now = opts.now ?? clock();

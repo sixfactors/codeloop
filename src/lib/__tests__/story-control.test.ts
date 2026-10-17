@@ -89,16 +89,19 @@ describe('move', () => {
 });
 
 describe('the session that holds the card', () => {
-  it('moves its own card on, and the move clears a gate the card was waiting at', () => {
+  it('moves its own card on, and is refused a forward move while the card waits at a gate', () => {
     const saved = process.env.CLAUDE_CODE_SESSION_ID;
     process.env.CLAUDE_CODE_SESSION_ID = 'me';
     try {
       createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
-      const file = readCards(dir);
-      writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
       setActiveCard(dir, 'c-1', 'me');
       moveCard(dir, 'c-1', 'build', 'owner', { note: 'resized by mistake' });
-      expect([card('c-1').stage, card('c-1').gate, card('c-1').awaiting]).toEqual(['build', undefined, undefined]);
+      expect(card('c-1').stage).toBe('build');
+      const file = readCards(dir);
+      writeCards(dir, file, file.cards.map(c => ({ ...c, gate: 'spec', awaiting: 'owner' })));
+      const events = card('c-1').events.length;
+      expect(() => moveCard(dir, 'c-1', 'ship', 'owner', { note: 'skip it' })).toThrow(/waiting at the spec gate .*approve c-1/);
+      expect([card('c-1').stage, card('c-1').gate, card('c-1').events.length]).toEqual(['build', 'spec', events]);
     } finally {
       if (saved === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
       else process.env.CLAUDE_CODE_SESSION_ID = saved;
