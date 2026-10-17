@@ -25,7 +25,7 @@ import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
 import { openQuestions } from './interview.js';
-import { loadLane } from './lane.js';
+import { carriedStages, loadLane, type Stage } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
 import { waitUnderCeiling, type MemoryProbe } from './memory.js';
@@ -65,6 +65,12 @@ export interface OrchTurn {
   mode?: Mode;
   builderKind?: 'agent' | 'session' | 'person';
   findings: string[];
+  /** A carried turn: every stage the one agent was briefed for, in order (`carry:` in the lane). */
+  carried?: string[];
+  /** The stages a carried turn moved, each through its own check. */
+  moved?: string[];
+  /** The agent's time limit for this turn, when a carry raised it above the preset's. */
+  timeoutMinutes?: number;
   /** Set when the hand-back gated was recorded before the turn started. */
   note?: string;
   log?: string;
@@ -185,14 +191,50 @@ function saveOrch(projectDir: string, record: OrchRecord): void {
 }
 
 /** The brief an orchestrated builder gets: the stage brief, the last gate's findings, then the rules and the hand-back line. */
-export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[], mode: Mode = 'worktree'): string {
+export function orchBrief(projectDir: string, card: Card, worktree: string, branch: string, findings: string[], mode: Mode = 'worktree', carried: Stage[] = []): string {
   const footer = readFileSync(mode === 'tree' ? FOOTER_TREE : FOOTER, 'utf-8')
     .replaceAll('{{card}}', card.id)
     .replaceAll('{{worktree}}', worktree)
     .replaceAll('{{branch}}', branch)
     .replaceAll('{{project}}', projectDir);
   const feedback = findings.length ? ['## Latest gate findings', '', `Latest gate findings: the last turn did not pass the gate.`, '', ...findings.map(f => `- ${f}`), ''].join('\n') : '';
-  return `${buildBrief(projectDir, card).trimEnd()}\n\n${feedback}${feedback ? '\n' : ''}${footer}`;
+  return `${(carried.length > 1 ? carryBrief(projectDir, card, carried) : buildBrief(projectDir, card)).trimEnd()}\n\n${feedback}${feedback ? '\n' : ''}${footer}`;
+}
+
+/**
+ * One brief for a carried turn: what the turn covers and where it must stop, then each stage's own
+ * brief (skill, output and check) in lane order. The engine still runs each stage's check after
+ * the hand-back; the agent only writes the stages.
+ */
+function carryBrief(projectDir: string, card: Card, carried: Stage[]): string {
+  const ids = carried.map(s => s.id);
+  const lines = [
+    `# Carried turn: ${card.id} ${ids.join(', ')}`,
+    '',
+    `This turn carries ${ids.length} stages in one agent run: ${ids.join(' then ')}. Write each stage's output in order, so that each stage's check below passes. Do not run \`codeloop next\` yourself: after your hand-back the engine runs each stage's check in order and records each stage on its own.`,
+    '',
+    'Stop and hand back as soon as one of these happens:',
+    '',
+    '- you have written interview questions for the owner: the stages after them wait for the answers, and the next turn starts from them;',
+    `- a stage's check would not pass and you cannot make it pass;`,
+    `- you reach the end of ${ids.at(-1)}${carried.at(-1)?.gate ? `, where the ${carried.at(-1)!.gate!.name} gate asks the ${carried.at(-1)!.gate!.approver}` : ''}. Write nothing for any stage after it.`,
+    '',
+    'Hand back once, with the line at the end of this brief.',
+    '',
+  ];
+  for (const stage of carried) lines.push(buildBrief(projectDir, { ...card, stage: stage.id }).trimEnd(), '');
+  return lines.join('\n');
+}
+
+/** `orch.carry_max_minutes` (default 120): the most a carried turn's time limit may grow to. */
+export const DEFAULT_CARRY_MAX_MINUTES = 120;
+
+/** A carried turn's time limit: the agent's own limit once per carried stage, capped, and never below one stage's. */
+export function carryTimeoutMinutes(projectDir: string, perStage: number, stages: number): number {
+  const orch = (loadConfig(projectDir) as { orch?: { carry_max_minutes?: unknown } }).orch;
+  const v = orch && typeof orch === 'object' ? orch.carry_max_minutes : undefined;
+  const cap = typeof v === 'number' && v > 0 ? v : DEFAULT_CARRY_MAX_MINUTES;
+  return Math.max(perStage, Math.min(perStage * Math.max(stages, 1), cap));
 }
 
 
@@ -249,8 +291,10 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   }
   let mergeFailed = false;
   let crashed = false;
+  let asked = false;
   // A stage whose check waits on a person's answers is waiting, not failing: nothing to gate yet.
-  const open = openQuestions(projectDir, card);
+  // A carried turn gates and advances the stages before the questions first (advanceCarried).
+  const open = turn.carried ? [] : openQuestions(projectDir, card);
   if (open.length) {
     turn.note = `waiting for answers: ${open.map(q => `Q${q.n}`).join(', ')} on ${card.id}`;
     turn.outcome = 'questions';
@@ -274,14 +318,16 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []), ...(turn.mode === 'tree' ? ['fix forward with a new commit on the branch; nothing was reset or reverted'] : []));
     else if (turn.mode === 'tree') {
       // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
-      const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
+      const adv = advanceCarried(projectDir, card.id, turn);
       turn.advance = adv.outcome;
-      if (adv.outcome === 'check-error') {
+      if (adv.questions) {
+        asked = true;
+      } else if (adv.outcome === 'check-error') {
         crashed = true;
-        turn.findings.push(`stage check crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+        turn.findings.push(`stage check${adv.at}crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
       } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
         turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-        turn.findings.push(`stage check failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+        turn.findings.push(`stage check${adv.at}failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
       } else {
         turn.outcome = 'merged';
         const after = postMerge(projectDir, card.id, turn.stage, hb.head);
@@ -296,14 +342,16 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
       try {
         const merged = mergeStory(projectDir, card.id);
         turn.merge = { sha: merged.sha, mode: merged.mode };
-        const adv = advanceCard(projectDir, card.id, { unattended: true, force: true });
+        const adv = advanceCarried(projectDir, card.id, turn);
         turn.advance = adv.outcome;
-        if (adv.outcome === 'check-error') {
+        if (adv.questions) {
+          asked = true;
+        } else if (adv.outcome === 'check-error') {
           crashed = true;
-          turn.findings.push(`stage check crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+          turn.findings.push(`stage check${adv.at}crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
         } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-          turn.findings.push(`stage check failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+          turn.findings.push(`stage check${adv.at}failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
         } else {
           turn.outcome = 'merged';
           // 6b. after the merge: what a person otherwise runs by hand on the main tree.
@@ -322,7 +370,10 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
     }
   }
 
-  if (!turn.findings.length) turn.outcome = 'merged';
+  if (asked) {
+    turn.outcome = 'questions';
+    turn.note = `waiting for answers: ${openQuestions(projectDir, findCard(readCards(projectDir).cards, card.id)).map(q => `Q${q.n}`).join(', ')} on ${card.id}${turn.moved?.length ? ` after ${turn.moved.join(', ')}` : ''}`;
+  } else if (!turn.findings.length) turn.outcome = 'merged';
   else if (crashed) turn.outcome = 'check-error';
   else if (mergeFailed) turn.outcome = 'merge-failed';
   else if (!turn.advance) turn.outcome = countFailure(projectDir, card.id, turn.findings.join('; '));
@@ -332,8 +383,35 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
   // The builder has handed back (or never will): its files are free for the next story.
   dropLease(projectDir, card.id);
   // 7. report
-  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}` });
+  appendActivity(projectDir, card.id, { kind: 'orch', stage: turn.stage, n: turn.n, outcome: turn.outcome, text: turn.findings.length ? turn.findings.join('; ') : asked ? turn.note : `merged ${turn.merge?.sha.slice(0, 8) ?? ''}${turn.moved && turn.moved.length > 1 ? `; moved ${turn.moved.join(', ')}` : ''}` });
   return turn;
+}
+
+/**
+ * After the gate (and the merge), the engine's own advance for each stage the turn carried, in
+ * order: each stage moves only through its own check, and the turn ends at the first gate, failed
+ * check, or open question. Every carried stage the agent reached gets its own agent-run event,
+ * pointing at the turn's one log. A turn with no carry advances its one stage.
+ */
+function advanceCarried(projectDir: string, id: string, turn: OrchTurn): { outcome: Outcome; output?: string; at: string; questions?: boolean } {
+  const stages = turn.carried ?? [turn.stage];
+  turn.moved = [];
+  let last: { outcome: Outcome; output?: string } = { outcome: 'moved' };
+  for (const [i, stageId] of stages.entries()) {
+    const card = findCard(readCards(projectDir).cards, id);
+    if (card.stage !== stageId || card.gate) break;
+    if (i > 0) {
+      recordEvent(projectDir, id, () => ({ action: 'agent-run', agent: turn.agent, log: turn.log ?? '', note: `carried in turn ${turn.n} from ${turn.stage}` }));
+      // The questions this turn asked wait for the owner: no stage after them is checked on a guess.
+      if (openQuestions(projectDir, card).length) return { outcome: 'parked', at: ` on ${stageId} `, questions: true };
+    }
+    const adv = advanceCard(projectDir, id, { unattended: true, force: true });
+    last = adv;
+    if (adv.outcome !== 'moved' && adv.outcome !== 'parked' && adv.outcome !== 'done') return { ...adv, at: stages.length > 1 ? ` on ${stageId} ` : ' ' };
+    turn.moved.push(stageId);
+    if (adv.outcome !== 'moved') break;
+  }
+  return { ...last, at: ' ' };
 }
 
 const TAIL_BYTES = 4096;
@@ -551,7 +629,13 @@ async function placeAndBrief(projectDir: string, cardRef: string, opts: OrchOpti
   // 2. brief
   const brief = join(projectDir, briefPath(card));
   mkdirSync(dirname(brief), { recursive: true });
-  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried, mode);
+  const carry = carriedStages(lane, lane.stages.find(s => s.id === card.stage) ?? lane.stages[0], card);
+  if (carry.length > 1) turn.carried = carry.map(s => s.id);
+  if (agent && carry.length > 1) {
+    turn.timeoutMinutes = carryTimeoutMinutes(projectDir, agent.timeoutMinutes, carry.length);
+    agent = { ...agent, timeoutMinutes: turn.timeoutMinutes };
+  }
+  const briefText = orchBrief(projectDir, card, wt.path, wt.branch, carried, mode, carry);
   writeFileSync(brief, briefText);
 
   // The brief goes to a session's or the person's outbox; an agent is started by the caller, unlocked.
