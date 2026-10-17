@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- `codeloop orch batch [cards...]` builds up to five trivial or S stories at build in one agent turn in the main tree, only stories whose plans list different files; features may mix. Each story keeps its own lease, agent-start and agent-run, hand-back, gate, checks and approvals, and its page names the batch and the stories built with it. A story that fails leaves the batch with the failure named on it and builds alone next, while the others move on.
 - A stage the review pass writes is a draft that never passes its own check: changed files are listed as sources to confirm instead of cited, no verdict is written, tasks from merged commits stay unticked, and each of those is a gap in the inbox question.
 - A stuck story's Move it button targets the same step the review pass places it at (the build step, not the one after it), and both read the same rule for shipped work, so a commit touching only CHANGELOG.md or shape/ no longer offers a move.
 - `PUT /api/cards/<id>/summary` needs a server started with `--owner`, like place and close, and records the writer from the server, never from a `by` in the body.

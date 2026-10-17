@@ -10,12 +10,12 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 -->
 
 - [x] T001 [US4] [api] Form a batch: trivial and S stories at build whose planned files do not overlap, at most five, features mixed, the rest left for the next batch, in src/lib/orch-isolation.ts
-- [ ] T002 [US1] [api] One brief listing each batched story's tasks, planned files and commit trailer, with a lease taken per story, in src/lib/orch.ts
-- [ ] T003 [US1] [api] One hand-back per batched story from the same turn, each with its own head and proof, in src/lib/handback.ts
-- [ ] T004 [US2] [api] Settle each batched story on its own hand-back, its own trailered commits and its own scope, and advance each through its own check, in src/lib/orch.ts
-- [ ] T005 [US3] [api] A failing story leaves the batch: its lease is dropped, the failure is named on it, it gets its own next turn, and the others still advance, in src/lib/orch.ts
-- [ ] T006 [US5] [api] An activity line on each batched story naming the batch and the stories built with it; approvals stay per story, in src/lib/orch.ts
-- [ ] T007 [US2] [test] One test per failure mode uc-314-01 to uc-314-07 in src/lib/__tests__/orch-batch.test.ts, each seen failing once with the fix reverted
+- [x] T002 [US1] [api] One brief listing each batched story's tasks, planned files and commit trailer, with a lease taken per story, in src/lib/orch.ts
+- [x] T003 [US1] [api] One hand-back per batched story from the same turn, each with its own head and proof, in src/lib/handback.ts
+- [x] T004 [US2] [api] Settle each batched story on its own hand-back, its own trailered commits and its own scope, and advance each through its own check, in src/lib/orch.ts
+- [x] T005 [US3] [api] A failing story leaves the batch: its lease is dropped, the failure is named on it, it gets its own next turn, and the others still advance, in src/lib/orch.ts
+- [x] T006 [US5] [api] An activity line on each batched story naming the batch and the stories built with it; approvals stay per story, in src/lib/orch.ts
+- [x] T007 [US2] [test] One test per failure mode uc-314-01 to uc-314-07 in src/lib/__tests__/orch-batch.test.ts, each seen failing once with the fix reverted
 
 ## Rubric
 

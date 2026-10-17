@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { briefPath, resolveAgent } from '../lib/agent.js';
 import { findCard, readCards, RefusalError } from '../lib/cards.js';
 import { loadLane } from '../lib/lane.js';
-import { orchInbox, orchReport, orchResume, orchRun, orchStatus, parseBuilder, type OrchTurn } from '../lib/orch.js';
+import { orchBatch, orchInbox, orchReport, orchResume, orchRun, orchStatus, parseBuilder, type OrchTurn } from '../lib/orch.js';
 import { projectRoot } from '../lib/project-root.js';
 import { reportLines, reviewPass } from '../lib/review-pass.js';
 import { guard } from './guard.js';
@@ -84,6 +84,18 @@ orchCommand
   .description('Finish a briefed turn: gate, merge and advance once its hand-back exists')
   .action(guard(async (id: string) => {
     console.log(turnLine(orchResume(projectRoot(), id)));
+  }));
+
+orchCommand
+  .command('batch [cards...]')
+  .description('Build up to five trivial or S stories at build in one agent turn, each judged on its own; with no cards, the ready ones that plan different files')
+  .option('--agent <name>', 'Agent preset under agents: in .codeloop/config.yaml')
+  .action(guard(async (cards: string[], opts: { agent?: string }) => {
+    const result = await orchBatch(projectRoot(), { ...(cards.length ? { cards } : {}), ...(opts.agent ? { agent: opts.agent } : {}) });
+    if (result.batch) console.log(`  batch ${result.batch.id}: ${result.batch.cards.join(', ')}`);
+    result.turns.forEach((t, i) => console.log(`  ${result.batch!.cards[i]}${turnLine(t)}`));
+    for (const l of result.left) console.log(chalk.dim(`  waits: ${l.why}`));
+    if (!result.batch) console.log('  no batch started');
   }));
 
 orchCommand

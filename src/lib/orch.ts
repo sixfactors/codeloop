@@ -30,7 +30,9 @@ import { builderIdle, NUDGE_PREFIX } from './stall.js';
 import { checkEnv } from './shell.js';
 import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
-import { dropLease, holdsLease, isolation, placeTurn, takeLease, treeRange, type Mode } from './orch-isolation.js';
+import { dropBatch, dropLease, formBatch, holdsLease, isolation, maxBuilders, placeTurn, runningBuilders, takeBatch, takeLease, treeRange, type Batch, type BatchPlan, type Mode } from './orch-isolation.js';
+import { planFiles } from './plan-scope.js';
+import { readTasks } from './spec.js';
 import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
 import { LockedError, withRunLock, withRunLockSync } from './run-lock.js';
 import { Budget } from './budget.js';
@@ -69,6 +71,8 @@ export interface OrchTurn {
   carried?: string[];
   /** The stages a carried turn moved, each through its own check. */
   moved?: string[];
+  /** Set when this story was built in one agent turn with other small stories. */
+  batch?: Batch;
   /** The agent's time limit for this turn, when a carry raised it above the preset's. */
   timeoutMinutes?: number;
   /** Set when the hand-back gated was recorded before the turn started. */
@@ -873,4 +877,108 @@ export function orchView(projectDir: string, cardRef: string): OrchView {
     return { n: t.n, builder: builderLabel(t), ...(handback ? { handback } : {}), ...(gate ? { gate } : {}) };
   });
   return { record, report: orchReport(projectDir, cardRef), details };
+}
+
+export interface OrchBatchResult {
+  batch?: Batch;
+  /** One turn per batched story, each settled on its own hand-back. */
+  turns: OrchTurn[];
+  left: BatchPlan['left'];
+}
+
+/** The brief one builder gets for a batch: per story its tasks, planned files and commit trailer, then each hand-back line. */
+export function batchBrief(projectDir: string, batch: Batch, branch: string): string {
+  const cards = readCards(projectDir).cards;
+  const lines = [
+    `# Batch ${batch.id}: ${batch.cards.join(', ')}`,
+    '',
+    `You build ${batch.cards.length} small stories in this one turn, in the main tree at ${projectDir} on ${branch}. Each story is judged on its own: its own commits, its own planned files, its own checks and its own hand-back. Keep their work apart:`,
+    '',
+    '- Commit each story\'s work separately, touching only that story\'s planned files, with that story\'s `Card:` trailer. Never put two stories\' work in one commit.',
+    '- Hand back each story with its own line below once its work is committed, including a story you could not finish (say what blocked it).',
+    '- One story failing does not stop the others: finish and hand back the rest.',
+    '- Never run `git push`, `git merge`, `git rebase`, `git reset`, `git revert` or `git stash`, and do not run `codeloop next` or `codeloop approve`.',
+    '',
+  ];
+  for (const id of batch.cards) {
+    const card = findCard(cards, id);
+    const tasks = card.spec ? readTasks(projectDir, card.spec).tasks.filter(t => !t.done) : [];
+    lines.push(
+      `## ${card.id} ${card.title}`,
+      '',
+      `Size ${card.size ?? 'M'}${card.feature ? `, feature ${card.feature}` : ''}. Commit trailer: \`Card: ${card.id}\`.`,
+      '',
+      'Planned files (touch nothing else for this story):',
+      '',
+      ...(planFiles(projectDir, card) ?? []).map(f => `- ${f}`),
+      '',
+      ...(tasks.length ? ['Tasks:', '', ...tasks.map(t => `- ${t.id} ${t.text}`), ''] : []),
+      'Hand-back line:',
+      '',
+      `    codeloop card handback ${card.id} --branch ${branch} --head "$(git rev-parse HEAD)" --proof "<proof command for ${card.id}>" --left "<what is left>" --blocked "<what blocked you, or empty>"`,
+      '',
+    );
+  }
+  return lines.join('\n');
+}
+
+/**
+ * One agent turn that builds up to five small stories at build (orch-isolation formBatch), in the
+ * main tree. Each story keeps its own lease, agent-start and agent-run, turn record, gate, checks
+ * and approvals; only the agent run is shared. A story that fails leaves the batch: its lease is
+ * dropped, the failure is named on it, and its next turn builds it alone, while the others move on.
+ */
+export async function orchBatch(projectDir: string, opts: OrchOptions & { cards?: string[] } = {}): Promise<OrchBatchResult> {
+  refuseWhileOff(projectDir);
+  if (isolation(projectDir) === 'worktree') throw new RefusalError('a batch builds in the main tree; orch.isolation is worktree');
+  const placed = await withRunLock(projectDir, 'orch batch placement', () => {
+    const plan = formBatch(projectDir, opts.cards);
+    if (plan.cards.length === 0) return { plan };
+    const running = runningBuilders(projectDir);
+    if (running.length >= maxBuilders(projectDir)) return { plan: { cards: [], left: [...plan.cards.map(card => ({ card, why: `${running.length} builder(s) already running (${running.join(', ')}); orch.max_builders is ${maxBuilders(projectDir)}` })), ...plan.left] } };
+    const lane = loadLane(projectDir, findCard(readCards(projectDir).cards, plan.cards[0]).lane);
+    const agent = resolveAgent(projectDir, parseBuilder(opts.builder, opts.agent).kind === 'agent' ? opts.agent : undefined, lane.agent);
+    if (isUnavailable(projectDir, agent.name)) throw new AgentRefusal(`agent ${agent.name} is marked unavailable (${agentStatus(projectDir, agent.name).unavailable!.reason}); fix it, then run \`codeloop agent clear ${agent.name}\``, 'unavailable');
+    const batch: Batch = { id: `b-${clock().getTime().toString(36)}`, cards: plan.cards };
+    const branch = currentBranch(projectDir);
+    takeBatch(projectDir, batch);
+    const at = new Date().toISOString();
+    const turns = batch.cards.map(id => {
+      const record = readOrch(projectDir, id);
+      const card = findCard(readCards(projectDir).cards, id);
+      const turn: OrchTurn = { n: record.turns.length + 1, stage: card.stage, startedAt: at, agent: agent.name, builderKind: 'agent', worktree: projectDir, branch, outcome: 'failed', findings: [], mode: 'tree', batch, note: `built in batch ${batch.id}` };
+      return { record, turn };
+    });
+    const brief = join(projectDir, ORCH_DIR, 'batches', `${batch.id}.md`);
+    writeFileSync(brief, batchBrief(projectDir, batch, branch));
+    return { plan, batch, agent: { ...agent, timeoutMinutes: carryTimeoutMinutes(projectDir, agent.timeoutMinutes, batch.cards.length) }, turns, brief };
+  }, opts.lockWaitMs);
+  if (!placed.batch) return { turns: [], left: placed.plan.left };
+  const { batch, agent, turns, brief } = placed as Required<typeof placed>;
+  try {
+    await waitUnderCeiling(projectDir, opts.memory);
+    const log = `${AGENT_RUNS_DIR}/batch-${batch.id}.log`;
+    for (const { record, turn } of turns) {
+      turn.log = log;
+      recordEvent(projectDir, record.card, () => ({ action: 'agent-start', agent: agent.name, log, note: `batch ${batch.id}: ${batch.cards.join(', ')}` }));
+    }
+    const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: projectDir, env: { CODELOOP_BATCH: batch.cards.join(' '), CODELOOP_PROJECT_DIR: projectDir } });
+    const started = Date.parse(turns[0].turn.startedAt);
+    const handedBack = turns.some(({ record }) => listHandbacks(projectDir, record.card).some(h => Date.parse(h.at) >= started));
+    noteAgentRun(projectDir, agent.name, { durationMs: ran.durationMs, handedBack, exit: ran.exit });
+    for (const { record } of turns) recordEvent(projectDir, record.card, () => ({ action: 'agent-run', agent: agent.name, exit: ran.exit, durationMs: ran.durationMs, log, note: `batch ${batch.id}` }));
+    const noHandback = ran.timedOut ? `no hand-back (the batch agent timed out after ${agent.timeoutMinutes} minutes)` : `no hand-back (the batch agent exited ${ran.exit})`;
+    const settled = await withRunLock(projectDir, `orch batch ${batch.id} gate`, () => turns.map(({ record, turn }) => {
+      const done = settle(projectDir, record, turn, noHandback);
+      const others = batch.cards.filter(c => c !== record.card);
+      appendActivity(projectDir, record.card, { kind: 'orch-batch', stage: turn.stage, n: turn.n, batch: batch.id, text: `built in batch ${batch.id} with ${others.join(', ') || 'no other story'}; judged on its own commits, checks and approvals` });
+      if (done.outcome !== 'merged') appendActivity(projectDir, record.card, { kind: 'orch-batch', stage: turn.stage, n: turn.n, batch: batch.id, outcome: done.outcome, text: `left batch ${batch.id}: ${done.findings.join('; ') || done.outcome}; its next turn builds it alone` });
+      return done;
+    }), opts.lockWaitMs);
+    return { batch, turns: settled, left: placed.plan.left };
+  } finally {
+    dropBatch(projectDir, batch.id);
+    // Every story's lease goes with its builder, settled or not.
+    for (const id of batch.cards) dropLease(projectDir, id);
+  }
 }
