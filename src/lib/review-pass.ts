@@ -20,7 +20,7 @@ import { fileURLToPath } from 'url';
 import { Budget } from './budget.js';
 import { DONE, inLane, readCards, type Card } from './cards.js';
 import { clock } from './clock.js';
-import { commitFiles, storyCommits, storyCommitTimes, type StoryCommit } from './diff-budget.js';
+import { commitFiles, storyCommits, storyCommitTimes, trunkState, type StoryCommit } from './diff-budget.js';
 import { closeCard, placeCard, RefusalError, recordEvent, reviewCloseRefusal, reviewMoveRefusal } from './engine.js';
 import { addQuestions, readQuestions } from './interview.js';
 import { loadLane, stageApplies, substitute, type Lane, type Stage } from './lane.js';
@@ -68,6 +68,8 @@ export interface ReviewReport {
   read: number;
   /** The budget reason when the pass stopped before reading every story it meant to. */
   stopped?: string;
+  /** Why what the pass read as merged may be wrong: a missing trunk, or one behind HEAD. */
+  warning?: string;
 }
 
 interface ReviewState {
@@ -319,6 +321,9 @@ function changedSince(projectDir: string, card: Card, at: number | undefined): b
 export function reviewPass(projectDir: string, opts: { now?: Date; all?: boolean; budget?: Budget; dryRun?: boolean; skip?: Set<string> } = {}): ReviewReport {
   const report: ReviewReport = { fixed: [], asked: [], unclear: [], read: 0 };
   if (readOff(projectDir)) return report;
+  const trunk = trunkState(projectDir);
+  if (trunk?.missing) report.warning = `trunk ${trunk.trunk} (git.trunk) has no branch, so nothing reads as merged`;
+  else if (trunk?.behind) report.warning = `trunk ${trunk.trunk} is ${trunk.behind} ${trunk.behind === 1 ? 'commit' : 'commits'} behind HEAD; merged work may read as unmerged`;
   const now = opts.now ?? clock();
   const budget = opts.budget ?? Budget.for(projectDir);
   const state = readReviewState(projectDir);
@@ -362,6 +367,7 @@ export function reportLines(report: ReviewReport): string[] {
   const section = (title: string, lines: ReviewLine[]) => [title, ...(lines.length ? lines.map(l => `  ${l.id} ${l.verb}: ${l.note} (evidence: ${l.evidence})`) : ['  none'])];
   return [
     `review pass: read ${report.read} ${report.read === 1 ? 'story' : 'stories'}${report.stopped ? `, stopped: ${report.stopped}` : ''}`,
+    ...(report.warning ? [`warning: ${report.warning}`] : []),
     ...section('fixed', report.fixed),
     ...section('asked', report.asked),
     ...section('could not tell', report.unclear),

@@ -138,6 +138,28 @@ describe('the review pass', () => {
     expect(report.fixed).toEqual([]);
   });
 
+  it('a configured trunk with no branch reads nothing as merged, and the report says why', () => {
+    write('.codeloop/config.yaml', 'git:\n  trunk: trunk-x\n');
+    commit('c-1', ['src/a.ts']);
+    board([card('c-1', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } })]);
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-1').stage).toBe('research');
+    expect(report.fixed).toEqual([]);
+    expect(reportLines(report)[1]).toBe('warning: trunk trunk-x (git.trunk) has no branch, so nothing reads as merged');
+  });
+
+  it('a trunk behind HEAD is named in the report instead of a clean one', () => {
+    git(['checkout', '-q', '-b', 'side']);
+    commit('c-1', ['src/a.ts']);
+    board([card('c-1', { stage: 'build' })]);
+
+    const report = reviewPass(dir, { all: true, dryRun: true });
+
+    expect(reportLines(report)[1]).toBe('warning: trunk main is 1 commit behind HEAD; merged work may read as unmerged');
+  });
+
   it('uc-307-02: docs-only and mock-only commits are not merged work', () => {
     commit('c-5', ['docs/notes.md', 'workspace/app/mocks/c-5/page.tsx', 'specs/c-5/research.md', '.codeloop/wiki/x.md']);
     board([card('c-5', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } })]);

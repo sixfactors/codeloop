@@ -97,13 +97,30 @@ function scan(projectDir: string, cardId: string, all: boolean, ref?: string): S
 /** When each commit carrying the card's trailer landed, without the branch and trunk lookups storyCommits adds. */
 export const storyCommitTimes = (projectDir: string, cardId: string): number[] => scan(projectDir, cardId, true).map(c => c.at);
 
+const configuredTrunk = (projectDir: string) => (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
+
+/**
+ * The configured trunk against the checkout: `missing` when no local branch has its name, and
+ * `behind` the commits HEAD has that the trunk does not. Undefined outside a git repo.
+ */
+export function trunkState(projectDir: string): { trunk: string; missing: boolean; behind: number } | undefined {
+  const graph = commitGraph(projectDir);
+  if (!graph) return undefined;
+  const trunk = configuredTrunk(projectDir);
+  if (!graph.tips.has(trunk)) return { trunk, missing: true, behind: 0 };
+  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk));
+  const onHead = reachableFrom(graph, 'head', graph.head);
+  let behind = 0;
+  for (let i = 0; i < onHead.length; i++) if (onHead[i] === 1 && onTrunk[i] !== 1) behind++;
+  return { trunk, missing: false, behind };
+}
+
 export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
   const graph = commitGraph(projectDir);
   if (!graph) return [];
-  const configured = (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
-  const trunk = graph.tips.has(configured) ? configured : 'HEAD';
-  const trunkTip = trunk === 'HEAD' ? graph.head : graph.tips.get(trunk);
-  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, trunkTip);
+  const trunk = configuredTrunk(projectDir);
+  // A trunk with no branch merges nothing: reading HEAD in its place would count whatever is checked out as merged.
+  const onTrunk = graph.tips.has(trunk) ? reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk)) : new Uint8Array(graph.index.size);
   const branches = [...graph.tips].filter(([name]) => name !== trunk).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   return (graph.byCard.get(cardId) ?? []).map(c => {
     const i = graph.index.get(c.sha)!;
