@@ -13,7 +13,7 @@ import { newSpec } from '../spec.js';
 let dir: string;
 const lane = (cmd: string, output = 'out.md') => {
   mkdirSync(join(dir, '.codeloop/lanes'), { recursive: true });
-  writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market\nversion: 1\nmetric: { name: m, source: cards }\nretries: 2\nstages:\n  - id: draft\n    output: ${output}\n    done: { cmd: "${cmd}" }\n`);
+  writeFileSync(join(dir, '.codeloop/lanes/market.yaml'), `id: market\nversion: 1\nmetric: { name: m, source: cards }\nretries: 2\nstages:\n  - id: draft\n${output ? `    output: ${output}\n` : ''}    done: { cmd: "${cmd}" }\n`);
 };
 const fails = () => readCards(dir).cards[0].events.filter(e => e.action === 'fail').length;
 const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe' });
@@ -123,6 +123,18 @@ describe('a check with no work behind it', () => {
     expect(card.retries.draft ?? 0).toBe(0);
     expect(card.gate).toBeUndefined();
     expect(fails()).toBe(3);
+  });
+
+  it('spends no retry on a stage with no output until a story commit is behind it, though the check writes into the tree', () => {
+    lane('echo x >> checks.log; exit 1', '');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    for (let i = 0; i < 3; i++) expect(advanceCard(dir, 'c-1').outcome).toBe('failed');
+    expect(readCards(dir).cards[0].retries.draft ?? 0).toBe(0);
+    createCard(dir, { lane: 'market', title: 'u', id: 'c-2' });
+    git('commit', '-q', '--allow-empty', '-m', 'work on the story', '-m', 'Card: c-2');
+    expect(advanceCard(dir, 'c-2').card.retries.draft).toBe(1);
   });
 
   it('counts an agent run that left the output missing, so a story with real attempts still goes stuck', async () => {

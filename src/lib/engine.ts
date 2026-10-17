@@ -18,6 +18,7 @@ export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { pathInPlan, planFiles } from './plan-scope.js';
 import { skipUnchangedRerun } from './rerun-skip.js';
+import { storyCommitTimes } from './diff-budget.js';
 import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 // Domain logic for the shape workflow's on_done.queue: parses the approved breakdown and makes the
@@ -682,16 +683,26 @@ export function workFingerprint(projectDir: string, card: Card, stage: Stage, ou
  * line was written, HEAD moved by a commit on this card, or the output changed. A missing output,
  * or one still the template, is no work, so a check before the folder exists, on the template, or
  * in a sweep spends no retry.
- * With no earlier failure and no agent or work line, only an untouched output is no work.
+ * A stage with no output file is judged by agent runs, work lines and this card's commits only:
+ * the working tree also changes under a check that writes files, and that is not work.
  */
-function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; headWork: (from: string, to: string) => boolean }): boolean {
+function workTried(card: Card, stage: Stage, opts: { workLines: boolean; fingerprint: string; head?: string; untouched: boolean; headWork: (from: string, to: string) => boolean; committedSince: (at: number) => boolean }): boolean {
   const events = card.events ?? [];
   const lastFail = events.map(e => e.stage === stage.id && e.action === 'fail').lastIndexOf(true);
   if (opts.workLines || events.slice(lastFail + 1).some(e => e.stage === stage.id && e.action === 'agent-run')) return true;
-  if (lastFail < 0) return !opts.untouched;
+  if (lastFail < 0) return (stage.output !== undefined && !opts.untouched) || opts.committedSince(stageEnteredAt(card, stage.id));
   const head = events[lastFail].head;
   if (opts.head && head && opts.head !== head && opts.headWork(head, opts.head)) return true;
-  return !opts.untouched && card.failures?.[stage.id] !== opts.fingerprint;
+  return stage.output !== undefined && !opts.untouched && card.failures?.[stage.id] !== opts.fingerprint;
+}
+
+/** When the card came into the stage, as epoch ms: the last move into it, or its creation. */
+function stageEnteredAt(card: Card, stage: string): number {
+  for (const e of [...(card.events ?? [])].reverse()) {
+    if (e.action === 'advance' && /^to (\S+)/.exec(e.note ?? '')?.[1] === stage) return Date.parse(e.at);
+    if (['place', 'promote', 'unpark', 'returned'].includes(e.action) && e.stage === stage) return Date.parse(e.at);
+  }
+  return Date.parse(card.createdAt);
 }
 
 const TRAILER = /^(?:Card|Feature):[ \t]*(\S+)[ \t]*$/gm;
@@ -798,7 +809,7 @@ export function advanceCard(projectDir: string, ref: string, opts: { event?: str
       card.failures = { ...before.failures, [stage.id]: fingerprint };
       // Only a failure with work behind it counts toward the cap; any other is recorded and costs nothing.
       const head = headCommit(projectDir);
-      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, headWork: (from, to) => commitsWorkOn(projectDir, before, from, to) });
+      const counted = workTried(before, stage, { workLines, fingerprint, head, untouched: untouchedOutput(projectDir, card, stage) !== undefined, headWork: (from, to) => commitsWorkOn(projectDir, before, from, to), committedSince: at => storyCommitTimes(projectDir, before.id).some(t => t >= Math.floor(at / 1000) * 1000) });
       const failures = (card.retries[stage.id] ?? 0) + (counted ? 1 : 0);
       card.retries[stage.id] = failures;
       card.events.push({ ...event(now, 'engine', 'fail', stage.id, output), ...(head ? { head } : {}) });

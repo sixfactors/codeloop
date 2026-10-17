@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { appendActivity } from '../activity.js';
 import { runAgent } from '../agent.js';
 import { readCards } from '../cards.js';
 import { advanceCard, createCard } from '../engine.js';
@@ -40,6 +41,8 @@ describe('an agent restart', () => {
     git('add', '-A');
     git('commit', '-q', '-m', 'base');
     createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+    // A person's edit before the first check, so that failure counts and the story reads failing.
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'src/a.ts' });
     advanceCard(dir, 'c-1');
   });
 
@@ -92,7 +95,7 @@ describe('a check no story work can fix', () => {
     const r = advanceCard(dir, 'c-1');
     expect(r.outcome).toBe('failed');
     expect(r.output).toBe('2 of 4 tasks open');
-    expect(card().retries.draft).toBe(1);
+    expect(card().events.filter(e => e.action === 'fail')).toHaveLength(1);
   });
 });
 
