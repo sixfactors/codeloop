@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop artifact lineage: c-321 <- base -->
+<title>c-321 Codeloop v2 implementation plan</title>
+<style>
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }
+
+
+/* Design-page additions: diagrams scroll inside their own frame; prose keeps a reading width. */
+/* Grid items default to min-width auto, which lets a wide table push the page wider than the phone; cap them and let a table scroll inside its section instead. */
+.shell > * { min-width: 0; }
+section.contract { overflow-x: auto; }
+.shell p, .shell li { max-width: 72ch; }
+section.contract ul, section.contract ol { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.diagram { overflow-x: auto; border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); padding: var(--space-3); }
+.diagram svg { display: block; width: 800px; max-width: none; height: auto; font-family: inherit; }
+.diagram svg text { fill: var(--text); font-size: 13px; }
+.diagram svg text.small { font-size: 11px; fill: var(--muted); }
+.diagram svg text.head { font-weight: 600; }
+.diagram svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.diagram svg .box.git { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.diagram svg .box.cloud { fill: var(--surface); stroke: var(--warn); stroke-width: 1.5; }
+.diagram svg .box.pub { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.diagram svg .lane { fill: none; stroke: var(--border); stroke-dasharray: 4 4; }
+.diagram svg .arrow { stroke: var(--muted); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+.diagram svg .arrow.two { marker-start: url(#ahs); }
+.diagram svg #ah path, .diagram svg #ahs path { fill: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); }
+.key .chip.git { border-color: var(--accent); color: var(--accent); }
+.key .chip.cloud { border-color: var(--warn); color: var(--warn); }
+.key .chip.pub { border-color: var(--ok); color: var(--ok); }
+pre.tree { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-2); border: var(--line) solid var(--border); border-radius: var(--radius-card); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: 1.45; }
+pre.mermaid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+.lead { font-size: var(--text-lg); }
+td.yes { color: var(--ok); } td.no { color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); }
+.q h4 { font-size: var(--text-base); }
+.q p { font-size: var(--text-sm); }
+.status { color: var(--muted); font-size: var(--text-sm); }
+
+.story { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px 16px; margin: 14px 0; }
+.story h4 { margin: 0 0 4px; font-size: 1rem; }
+.story .sid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: .85rem; }
+.story pre.tasks { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: .82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.story .label { font-weight: 600; margin: 10px 0 4px; }
+.story ul { margin: 4px 0 4px 18px; padding: 0; }
+.story table { margin-top: 4px; }
+.epic-head { margin-top: 28px; }
+.tablewrap { overflow-x: auto; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); padding: 0 4px; border-radius: 4px; }
+ol.steps li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Codeloop v2 implementation plan</h1>
+    <p class="meta">c-321 · codeloop · v2 · implementation plan</p>
+    <p class="scope">How v2.0 is built, tested, moved onto real boards and switched on, story by story, without touching what the production project runs until v2 has proven itself.</p>
+    <p class="status">Status: plan for the owner's review, written 17 October 2026. Planning only: no code is written until the owner approves the stories. Built from the Codeloop Cloud architecture v2 page (c-321-system-design.html, beside this page), the day-one release agreed by the production project's orchestrator and the owner, and cards c-321, c-322, c-324, c-325, c-326, c-327 and c-328.</p>
+  </header>
+
+  <section class="contract">
+    <h3>Goal</h3>
+    <p>Codeloop v2.0 moves the board out of the shared cards.json file into a store that only the local hub writes, makes the command line, the hooks and the agents clients of that hub, gives agents an MCP link over HTTP for stories and search, and adds review findings on the story, approve with conditions, priority that can pause work, and live agent presence. That is steps 1 to 3 of the architecture page, the day-one release, with nothing hosted. It ships in four phases: freeze v1 as a packed release, build v2 beside it under its own command name and home, run codeloop's own board on it, then switch the production project with a rehearsed rollback. The production project keeps running the exact v1 it runs today until v2 has run codeloop's board for ten working days and matched v1 nightly on a read-only copy of the production project's board.</p>
+    <p class="label"><strong>Out of scope for v2.0</strong></p>
+    <ul>
+      <li>Story documents in the store (architecture step 4). Research, spec, plan, tasks and evidence stay files in the spec folder; questions move into the store because gates need them.</li>
+      <li>Codeloop Cloud as the record and one identity with the Connect page (steps 5 and 6, card c-322).</li>
+      <li>The named-agent cast, the constitution, and delegated approvals by a named orchestrator (step 7, card c-326 and the second half of c-327). The event field for "on behalf of" exists from S1.6, so delegation needs no migration later.</li>
+      <li>Public publishing (step 8, card c-323).</li>
+      <li>Soft locks on files, provisional writes while the server is down, the web board's visual redesign, a hook file for Codex, links between projects.</li>
+      <li>Importing review files kept in other repositories. Findings start fresh in v2.</li>
+    </ul>
+  </section>
+
+  <section class="contract">
+    <h3>Epics and stories</h3>
+    <p>Five epics, 30 stories: 28 new cards to propose (one parent card for the isolation and cutover epics, 27 stories), and three cards already on the board placed as stories (c-324, c-327, c-328). c-321 and c-325 become the parents of steps 1 and 2. c-321's current title and research describe per-story folders in git, which the architecture's version 2 dropped, so the owner should retitle it "The hub owns the board's record, imported from today's board" or close it once its children are approved. Every story is S or M by the story standard, has at most eight tasks in codeloop's task format, one to five acceptance lines, and its failure modes with one test each.</p>
+    <div class="tablewrap"><table><thead><tr><th>Epic</th><th>Name</th><th>Parent card</th><th>Feature</th><th>Outcome</th><th>Days</th></tr></thead><tbody><tr><td>E0</td><td>v1 frozen, v2 isolated</td><td>P0 (new)</td><td>install-and-import</td><td>The production project runs a packed v1 release that nothing in the checkout can change, and v2 runs beside it under its own name, home, port and schedule tag.</td><td>4.5</td></tr><tr><td>E1</td><td>The hub owns the record</td><td>c-321</td><td>loop-self-repair, install-and-import</td><td>Every board read and write goes through the Store; the record is one SQLite file only the hub writes; every command is an API client; import and export move a board in and out with a report that proves nothing was lost.</td><td>24</td></tr><tr><td>E2</td><td>The stories MCP and search</td><td>c-325</td><td>loop-self-repair</td><td>Agents reach the board through the hub's MCP over HTTP: the stories actions of the day-one release, search, resources, roles per action, and hooks answered by the hub.</td><td>10</td></tr><tr><td>E3</td><td>Reviews, approve with conditions, priority, presence</td><td>c-328, c-327, c-324, c-325</td><td>reviews-and-proof, loop-self-repair, value-ranked-board</td><td>Findings live on the story and close by commit, one owner action approves with the recommended answers, a P1 arriving asks before it parks a P2, and the board shows which agent works each story.</td><td>6</td></tr><tr><td>E4</td><td>Side by side, dogfood, cutover</td><td>P0 (new)</td><td>install-and-import</td><td>Parity between v1 and v2 is checked nightly, rollback is one rehearsed script, codeloop's own board runs on v2, then the production project switches.</td><td>6</td></tr></tbody></table></div>
+    <h3 class="epic-head">E0. v1 frozen, v2 isolated</h3><p>The production project runs a packed v1 release that nothing in the checkout can change, and v2 runs beside it under its own name, home, port and schedule tag.</p><div class="story" id="S0.1">
+  <h4>A board moved to v2 refuses writes from v1</h4>
+  <p class="sid">S0.1 · card to propose · parent P0 · feature install-and-import · persona founder · size S, 0.5 days · needs nothing; lands on main before the freeze so it is inside the frozen build</p>
+  <p>As a founder, I can have v1 refuse every board write in a project whose .codeloop/moved.json says the record moved to v2, naming the command to use instead, while reads and hooks keep working, so that nobody updates a stale copy of the board after a switch.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a project with .codeloop/moved.json, when any v1 command that writes the board runs, then it exits 2 with "this board moved to codeloop v2; use &lt;command from the marker&gt;" and cards.json is unchanged.</li><li>US2 Given the same project, when a v1 read command runs, then it prints the board as before, with one line saying the board moved.</li><li>US3 Given the same project, when a v1 guard hook runs, then it allows the edit or command and prints the moved line, so a session started before the switch is never blocked by a stale lease.</li><li>US4 Given a project with no moved.json, when v1 runs, then its output is unchanged.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Refuse in writeCards when moved.json exists, with the command named in the marker, in src/lib/cards.ts
+- [ ] T002 [US1] [api] Refuse wiki captures and question writes the same way, in src/lib/wiki.ts and src/lib/store/file.ts
+- [ ] T003 [US2] [api] Print the moved line once per read command, from src/index.ts
+- [ ] T004 [US3] [api] Guard hooks pass through on a moved board, in src/commands/guard-hooks.ts
+- [ ] T005 [US1,US3] [test] One test per write path and per hook verb, in src/lib/__tests__/moved-board.test.ts
+- [ ] T006 [US4] [test] e2e-founder-loop.sh output with no marker equals the last green run</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The stop hook's wiki capture writes through a path that skips writeCards</td><td>Run the stop hook on a moved board; the wiki folder hash is unchanged.</td></tr><tr><td>A hook keeps enforcing a lease from the stale cards.json and blocks an agent</td><td>guard edit on a moved board with a lease held by another story exits 0.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S0.2">
+  <h4>The production project runs a frozen v1 that new builds cannot change</h4>
+  <p class="sid">S0.2 · card to propose · parent P0 · feature install-and-import · persona founder · size S, 1 day · needs S0.1 merged; the in-flight branch merged to main</p>
+  <p>As a founder, I can install codeloop 1.0.0 globally from a tarball packed from a clean export of the tag v1.0.0 on main, replacing the npm link into the checkout, with the hub and hook helper restarted from it, so that a build in the checkout never changes what the production project's hooks, cron run and MCP execute.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given main tagged v1.0.0, when release-pack.sh runs, then a tarball and its sha256 land in ~/.codeloop/releases, built from git archive of the tag, never from the working tree.</li><li>US2 Given the tarball is installed, when readlink -f on the global codeloop runs, then it resolves inside the global node_modules folder, and the package folder there is a real directory, not a link.</li><li>US3 Given the checkout is rebuilt at another version, when codeloop --version runs in the production project, then it prints 1.0.0.</li><li>US4 Given the freeze, when the production project's hooks, cron line and MCP start, then each runs the frozen build, and no codeloop process runs a script from the checkout.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [docs] Set package.json to 1.0.0 on main and tag v1.0.0 at the freeze commit
+- [ ] T002 [US1] [api] scripts/release-pack.sh: git archive the tag into a scratch folder, npm ci, npm run build:all, npm pack into ~/.codeloop/releases, write the sha256
+- [ ] T003 [US2] [api] scripts/release-install.sh: stop the hub and hook helper, npm rm -g the link, npm i -g the tarball after checking its sha256
+- [ ] T004 [US4] [api] After install, restart the hub from the installed build and list processes with codeloop ps
+- [ ] T005 [US2,US3] [test] scripts/check-frozen.sh: the readlink and real-directory checks, the version, and the cron line's binary resolving to the installed package
+- [ ] T006 [US4] [test] In the production project: guard session exits 0 and card list --json counts the same cards as before the freeze
+- [ ] T007 [docs] Workers' instructions: board commands in the checkout use codeloop from now on, never node dist/index.js, in CLAUDE.md</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The pack picks up uncommitted edits from the working tree</td><td>release-pack.sh run with a dirty tree still produces a tarball whose gitHead equals the tag's sha, checked by check-frozen.sh.</td></tr><tr><td>A hub or hook helper started from the link keeps serving old code</td><td>check-frozen.sh fails while any codeloop process's script path is inside the checkout.</td></tr><tr><td>npm writes the bin to a path other than the one the cron line names</td><td>check-frozen.sh resolves the binary named in the cron line and requires the installed package.</td></tr><tr><td>The stray tarball in the repository root gets installed</td><td>release-install.sh refuses a tarball outside ~/.codeloop/releases or without its sha256 file.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S0.3">
+  <h4>v2 runs beside v1 under its own name, home and port</h4>
+  <p class="sid">S0.3 · card to propose · parent P0 · feature install-and-import · persona builder · size M, 2 days · needs S0.2; this is the first v2 code in the checkout</p>
+  <p>As a builder, I can run the checkout's build as codeloop-next, with its state under its own home, its own hub port, hook socket, schedule tag and MCP name, refusing any v1 board unless asked to read a copy, so that developing v2 can never write to the record, hub or schedule that v1 uses.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given codeloop-next, when it runs any command, then its state lives under ~/.codeloop-next/v2 and it opens no file under ~/.codeloop.</li><li>US2 Given a v1 hub on its port, when codeloop-next starts a hub, then it listens on its own port and refuses to take over a hub record v1 wrote.</li><li>US3 Given a project with a v1 board and no project.json, when a codeloop-next command runs there, then it exits 2 naming import, and nothing in the project changes.</li><li>US4 Given codeloop-next installs a schedule, when crontab is listed, then its line carries the codeloop-next tag and the v1 lines are unchanged byte for byte.</li><li>US5 Given the checkout's dist run directly with node, when no channel file is present, then it behaves as codeloop-next.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1,US5] [api] src/lib/channel.ts: stable only when dist/channel.json says so; next defaults the home to ~/.codeloop-next and refuses a CODELOOP_HOME equal to the v1 home
+- [ ] T002 [US1] [api] Every v2 state path under &lt;home&gt;/v2, in src/lib/hub-registry.ts, src/lib/hub-state.ts and src/lib/hookd.ts
+- [ ] T003 [US2] [api] major and channel in hub.json; refuse a hub record without major 2; default ports 4060 stable, 4070 next, in src/lib/hub-state.ts
+- [ ] T004 [US3] [api] Refuse a project with cards.json and no project.json, except import --shadow, in src/lib/project-root.ts
+- [ ] T005 [US4] [api] Schedule lines tagged by channel; lines with another tag are never edited, in src/lib/schedule.ts
+- [ ] T006 [US1] [api] scripts/next-install.sh: write the codeloop-next shim beside the global codeloop, setting CODELOOP_HOME, CODELOOP_BIN and the channel
+- [ ] T007 [US1,US2,US3,US4,US5] [test] One test per line in src/lib/__tests__/channel.test.ts, each with a temporary HOME holding a v1 home and a v1 project</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A tree build run as node dist/index.js uses the v1 home</td><td>The US5 test runs dist/index.js with no channel file and a v1 home present; the v1 home hash is unchanged.</td></tr><tr><td>The hook script's fallback calls v1 instead of codeloop-next</td><td>Under the shim, codeloop-hook with no hub falls back to a binary whose --version is the next version.</td></tr><tr><td>A done check inside a v2 run calls v1 through PATH</td><td>A lane check that prints codeloop --version under codeloop-next prints the next version.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S0.4">
+  <h4>One check proves a v2 session left v1 untouched</h4>
+  <p class="sid">S0.4 · card to propose · parent P0 · feature install-and-import · persona founder · size S, 1 day · needs S0.2</p>
+  <p>As a founder, I can run one command before and after any v2 test, rehearsal or dogfood session that compares everything v1 and the production project depend on, allowing only the appends v1 itself makes, so that I can trust that v2 work has not changed what the production project runs.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a snapshot taken before a session, when v1-untouched.sh compare runs after it, then it exits 0 when nothing v2 could damage changed, and lists each changed path otherwise.</li><li>US2 Given v1 appended events to the production project's board during the session, when the compare runs, then it passes, because every card's events at the snapshot are a prefix of its events now.</li><li>US3 Given the test suite, when any test writes under the real home, then the suite fails naming the test file.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [test] scripts/v1-untouched.sh snapshot: hash the v1 home's projects.json, hub.json fields, the global binary's resolved path, the codeloop-tagged crontab lines, and the production project's hook and MCP settings
+- [ ] T002 [US2] [test] For the production project's board, following its cards.json link: per card, the event count and the hash of its events, compared as a prefix
+- [ ] T003 [US3] [test] vitest.global-setup.ts points HOME and CODELOOP_HOME at a temporary folder and fails the run when the real home's v1 files changed
+- [ ] T004 [US1] [test] Make the compare fail once on a fixture copy and keep the failure output in the story</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A normal v1 write during the session reads as damage</td><td>A fixture where v1 appends one event passes the compare.</td></tr><tr><td>A v2 write that drops an old event passes because the board version grew</td><td>Removing one old event from a fixture fails the compare.</td></tr><tr><td>The compare hashes the link, not its target, and misses a change</td><td>Changing the link target's content fails the compare.</td></tr></tbody></table></div>
+  
+</div><h3 class="epic-head">E1. The hub owns the record</h3><p>Every board read and write goes through the Store; the record is one SQLite file only the hub writes; every command is an API client; import and export move a board in and out with a report that proves nothing was lost.</p><div class="story" id="S1.1">
+  <h4>Lanes, initiatives, epics and features are read through the storage layer</h4>
+  <p class="sid">S1.1 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S0.3</p>
+  <p>As a builder, I can have every lane, initiative, epic and feature read go through the Store interface (src/lib/store) instead of reading files directly, so that a second driver can serve them without touching the engine.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the file driver, when the suite and e2e-founder-loop.sh run, then both pass and no lane, initiative, epic or feature file is read outside src/lib/store.</li><li>US2 Given the memory driver holding a lane that exists on no disk, when the engine advances a card, then it uses that lane.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] loadLane callers in src/lib/engine.ts, src/lib/run.ts and src/lib/flow.ts onto store.lanes
+- [ ] T002 [US1] [api] The same for src/lib/proposals.ts, src/lib/agent.ts and src/commands/lane.ts
+- [ ] T003 [US1] [api] Initiatives, epics and features in src/lib/features.ts and src/lib/journey.ts onto their repos
+- [ ] T004 [US1] [test] src/lib/__tests__/store-only.test.ts fails on any of these file reads outside src/lib/store
+- [ ] T005 [US2] [test] Advance a card with the memory driver and a lane held only in memory</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A cached lane read misses a lane promote</td><td>Promote, then advance in the same process: the card runs the new lane version.</td></tr><tr><td>Lane versions change meaning from the declared number to a hash</td><td>lane promote with a stale expected version raises ConflictError.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.2">
+  <h4>Wiki pages and questions are read and written through the storage layer</h4>
+  <p class="sid">S1.2 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.1</p>
+  <p>As a builder, I can have wiki capture, inject, lint and learn, and ask and answer, read and write only through store.pages and store.questions, so that pages and questions can move into the hub's store with nothing else changing.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the file driver, when wiki capture, inject, lint, learn, ask and answer run, then they go only through the store and their output is unchanged.</li><li>US2 Given two processes capture the same title at once, when both finish, then the page's frequency rose by two.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/wiki.ts and src/lib/wiki-rules.ts onto store.pages
+- [ ] T002 [US1] [api] src/lib/interview.ts, src/lib/rubric.ts and src/lib/review-pass.ts onto store.questions and store.pages
+- [ ] T003 [US1] [api] Page and question reads in src/lib/mcp.ts and src/lib/services.ts
+- [ ] T004 [US2] [test] Two concurrent captures through the store, in src/lib/__tests__/wiki-store.test.ts
+- [ ] T005 [US1] [test] The store-only lint covers wiki and question file access</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A capture is lost when two run at once</td><td>The US2 test.</td></tr><tr><td>Lint reads text the store reformats and flags pages it passed before</td><td>wiki lint output on a copy of codeloop's wiki is byte-equal before and after.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.3">
+  <h4>The engine moves cards only through the storage layer</h4>
+  <p class="sid">S1.3 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.2</p>
+  <p>As a builder, I can have create, propose, advance, approve, reject, park and resume read and write cards only through store.cards inside store.tx, so that the engine works the same on any driver.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the file driver, when every engine action runs, then it goes only through store.cards inside store.tx, and e2e-founder-loop.sh passes.</li><li>US2 Given two writers from the same read, when both write, then the second gets ConflictError.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/engine.ts (45 call sites) onto store.cards inside store.tx
+- [ ] T002 [US1] [api] src/lib/flow.ts, src/lib/story-control.ts, src/lib/gate.ts, src/lib/handback.ts and src/lib/story.ts
+- [ ] T003 [US2] [test] The writeCards conflict test re-run through store.cards on the file and memory drivers
+- [ ] T004 [US1] [test] The store-only lint covers these files; e2e-founder-loop.sh and demo-founder-week.sh green</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A read outside the transaction and a write inside it lose an update</td><td>The US2 test.</td></tr><tr><td>Side effects of writeCards, such as the index refresh, stop firing</td><td>After a store write, store.events() yields the change and the board index shows it.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.4">
+  <h4>Orchestrated runs and worktrees move cards through the storage layer</h4>
+  <p class="sid">S1.4 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.3</p>
+  <p>As a builder, I can have orch, run --agent, the doctor tick and worktrees read and write cards only through the store, keeping the agent-start rules in one compare-and-swap write, so that agent runs see the same record as every other client.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the file driver, when orch, run --agent and the doctor tick run, then they go only through the store and e2e-orch-full-lane.sh passes.</li><li>US2 Given two run --agent processes on one card, when both try to start its stage, then one agent starts.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/orch.ts (26 call sites) onto store.cards
+- [ ] T002 [US1] [api] src/lib/run.ts, src/lib/runs.ts and src/lib/stall.ts
+- [ ] T003 [US1] [api] src/lib/worktree.ts and src/lib/orch-isolation.ts
+- [ ] T004 [US2] [test] Two concurrent run --agent processes start one agent, through the store
+- [ ] T005 [US1] [test] e2e-orch-full-lane.sh green; the store-only lint covers these files</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Two agents start on one stage</td><td>The US2 test.</td></tr><tr><td>A worktree reads its own checkout's file instead of the main record</td><td>An orch turn in a worktree sees a card created in the main tree after the worktree was made.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.5">
+  <h4>Every other part of codeloop reads the board through the storage layer</h4>
+  <p class="sid">S1.5 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.4</p>
+  <p>As a builder, I can have services, guard hooks, mocks, artifacts, specs, checks, verify, the index, the watcher and the one-call readers go through the store, with a lint that keeps it so, so that no file outside the store knows where the board lives.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the store-only lint, when it runs, then no file outside src/lib/store calls readCards or writeCards or names the cards.json path.</li><li>US2 Given the file driver, when the full suite and every e2e script run, then all pass with output unchanged.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/services.ts and src/commands/guard-hooks.ts
+- [ ] T002 [US1] [api] src/lib/mock.ts, src/lib/artifact.ts, src/lib/spec.ts, src/lib/shape.ts and src/lib/scope-creep.ts
+- [ ] T003 [US1] [api] src/lib/index/index.ts, src/watch/triggers.ts, src/commands/verify.ts and src/commands/check.ts
+- [ ] T004 [US1] [api] The files with one or two call sites: inbox, health, live-walk, mock-gallery, selfcheck, stuck-explanation, story-progress, verify, wiki-rules, proposals, lane
+- [ ] T005 [US1] [api] layout-move and migrate-features: removed with the location settings in S1.7, or moved onto the store
+- [ ] T006 [US1] [test] The lint covers all of src; watch it fail once on an added readCards call
+- [ ] T007 [US2] [test] Every e2e script green</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The hook path gets slower, and hooks run on every tool call</td><td>bench.mjs guard edit p95 stays within 10% of the figure recorded before S1.1.</td></tr><tr><td>A file reads cards.json by path without readCards</td><td>The lint also fails on the cards.json path outside src/lib/store.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.6">
+  <h4>The board's record lives in one SQLite file the hub owns</h4>
+  <p class="sid">S1.6 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S0.3; runs in parallel with S1.1 to S1.5, it needs only the Store interface</p>
+  <p>As a builder, I can keep each project's board in &lt;codeloop home&gt;/v2/projects/&lt;project id&gt;/codeloop.db through a SQLite driver on node:sqlite that passes the same repo contract as the file and memory drivers, so that the record no longer lives in a shared file every process rewrites.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the SQLite driver, when repo-contract.test.ts runs, then every case passes as on the file and memory drivers.</li><li>US2 Given a story with events, when its state is read, then it equals the replay of its add-only events.</li><li>US3 Given two writes from the same read, when both commit, then the second gets ConflictError.</li><li>US4 Given a store from an older schema, when the hub opens it, then pending migrations run once and are recorded.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/store/sqlite.ts: tables for stories, events, pages, questions and config, WAL mode
+- [ ] T002 [US2] [api] Add-only events with a random event id and an on_behalf_of field kept empty until delegation; story state written with each event
+- [ ] T003 [US3] [api] A version counter per row; put with expectVersion inside a transaction
+- [ ] T004 [US4] [api] A migrations table, with runMigrations from src/lib/store/migrations
+- [ ] T005 [US1] [api] registerDriver for sqlite; openStore picks it for v2 projects
+- [ ] T006 [US1] [test] repo-contract.test.ts runs against the SQLite driver
+- [ ] T007 [US2] [test] Replay check over a copy of codeloop's 203 cards</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A crash mid-write leaves the store damaged</td><td>Kill the hub with SIGKILL during a write loop, reopen: the contract passes and the last committed write is there.</td></tr><tr><td>Stored state and replayed state drift apart</td><td>The US2 test, run on every write in the suite.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.7">
+  <h4>Every story keeps its key and gets a permanent internal id</h4>
+  <p class="sid">S1.7 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.6</p>
+  <p>As a builder, I can have each story carry a random internal id used by every reference, plus a short key the hub assigns from the project's prefix and counter, with the store found through a random id in .codeloop/project.json, so that keys never clash and the store location settings go away.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a new story, when it is created, then it has a random id and the next key for the project's prefix, and the key never changes.</li><li>US2 Given fifty creates at once, when all finish, then the fifty keys differ.</li><li>US3 Given a clone or worktree of the same repository, when a command runs there, then it opens the same store through project.json.</li><li>US4 Given config.yaml still sets store.home, store.layout or store.move, when v2 reads it, then it ignores them with one line naming the setting as removed.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] id and key fields in src/lib/store/schema.ts; key shape: one to five letters, a hyphen, one to six digits
+- [ ] T002 [US1,US2] [api] Prefix and counter on the project row, taken inside the create transaction
+- [ ] T003 [US3] [api] .codeloop/project.json written by init and import; the store path derived from it in src/lib/store-home.ts
+- [ ] T004 [US4] [api] Remove store.home, store.layout and store.move from src/lib/config.ts and src/lib/layout-move.ts
+- [ ] T005 [US2] [test] Fifty concurrent creates
+- [ ] T006 [US3] [test] A worktree and a second clone open the same store</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Deleting the newest story frees its key for reuse</td><td>Create, delete, create: the second story gets the next number.</td></tr><tr><td>project.json copied into another repository makes two repositories share a board</td><td>The store records the repository's first commit; a mismatch refuses with a sentence naming both.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.8">
+  <h4>Import today's board and wiki into v2 with nothing lost</h4>
+  <p class="sid">S1.8 · card to propose · parent c-321 · feature install-and-import · persona dev · size M, 2 days · needs S1.7</p>
+  <p>As a dev, I can run codeloop import in a v1 project and get every story, event, question and wiki page into the v2 store with its old key, with a report that compares counts, keys and hashes and fails on any difference, so that moving to v2 cannot silently lose part of the board.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a copy of codeloop's board (203 cards, 1791 events, 98 wiki pages on 17 October), when import runs, then the report shows equal counts, the same key set, matching event hashes per card, and the counter past the highest number.</li><li>US2 Given a cards.json that is a link into the v1 home, when import runs, then it reads the link's target and the v1 home is unchanged.</li><li>US3 Given import --shadow, when it runs, then nothing in the project is written and the store is marked as a shadow copy.</li><li>US4 Given any difference, when the report runs, then import exits 1, lists the first twenty differences, and writes neither project.json nor moved.json.</li><li>US5 Given import ran once, when it runs again on the same board, then nothing is duplicated.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/v1-import.ts: cards.json (following a link), interview.md questions and .codeloop/wiki pages; lanes, config.yaml, specs and evidence stay files
+- [ ] T002 [US5] [api] Event ids derived from story key, position, time and kind, so a re-import matches instead of adding
+- [ ] T003 [US1,US4] [api] src/lib/migration-report.ts: counts, key set, per-card canonical JSON hash, per-card event hash, per-page byte hash, priority and stage tallies
+- [ ] T004 [US4] [api] project.json and moved.json written only after the report passes
+- [ ] T005 [US3] [api] --shadow keeps the copy under a shadow id derived from the project path
+- [ ] T006 [US1] [test] Import copies of codeloop's board and the production project's (181 cards, 1460 events, 134 pages) and assert both reports
+- [ ] T007 [US4] [test] Fixtures missing one event, one page and one key each fail the report
+- [ ] T008 [US2] [test] A linked cards.json is read and the v1 home hash is unchanged</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A card field v2 does not know is dropped</td><td>A fixture card with an unknown field round-trips through import and export.</td></tr><tr><td>v1 rewrites the board while import reads it</td><td>A rename of cards.json during the read still yields a whole board whose version the report names.</td></tr><tr><td>moved.json is written before the report passes, leaving v1 refusing a board v2 did not take</td><td>The US4 test asserts no moved.json.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.9">
+  <h4>Export the v2 board back to v1 with nothing lost</h4>
+  <p class="sid">S1.9 · card to propose · parent c-321 · feature install-and-import · persona dev · size M, 2 days · needs S1.8</p>
+  <p>As a dev, I can run codeloop export and get v1's cards.json, wiki pages and interview files back, plus a markdown folder per story, with v2-only records kept beside them in v2-only.json, so that going back to v1, or committing the board to git, is always possible.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a store imported from a v1 board with no v2 writes, when export --format v1 runs, then cards.json, the wiki and the interview files equal the originals, ignoring key order and the version counter.</li><li>US2 Given v2 wrote reviews, findings, conditions and agent records, when export --format v1 runs, then cards.json holds only v1 fields, those records go to v2-only.json by story key, and an approve with conditions appears as v1 answer and approve events.</li><li>US3 Given the hub is not running, when export runs, then it reads the store file read-only and succeeds.</li><li>US4 Given export finishes, when its report runs against the store, then any difference exits 1.</li><li>US5 Given export with no format, when it runs, then it writes one markdown folder per story under .codeloop/export.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/v1-export.ts: v1 card shapes, wiki pages and interview.md files, the version set past the last v1 version
+- [ ] T002 [US2] [api] Map v2-only event kinds onto v1 kinds and write v2-only.json
+- [ ] T003 [US3] [api] Open the SQLite file read-only when no hub answers
+- [ ] T004 [US4] [api] Reuse the migration report against the store
+- [ ] T005 [US5] [api] Markdown per story: story, events, questions, findings
+- [ ] T006 [US1] [test] Round trip on copies of both boards: v1 cards.json to import to export equals the original
+- [ ] T007 [US2] [test] A store with one of each v2-only record exports and re-imports with nothing lost</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The frozen v1 misreads the exported board</td><td>The frozen tarball runs card list --json on the export and matches the original board's output.</td></tr><tr><td>A v1 process holding an old read overwrites the export</td><td>That process's write gets a conflict, because the export's version is higher.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.10">
+  <h4>Only the hub writes the board, started on demand by any command</h4>
+  <p class="sid">S1.10 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.6</p>
+  <p>As a builder, I can have the hub as the one writer of the store: the first command that finds none starts it, a stale pid or a taken port is replaced, a crash on boot prints the log's last lines, and nothing writes around it, so that two processes can never write the record at once.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given no hub, when a command runs, then a hub starts in the background, the command waits for its health route and succeeds.</li><li>US2 Given a stale pid in hub.json, when a command runs, then a new hub replaces it; given the port is taken, the next free port is used.</li><li>US3 Given a hub that crashes on boot, when a command runs, then it prints the last twenty log lines, exits non-zero, and the store is unchanged.</li><li>US4 Given the idle time passes with no request, when the hub checks, then it stops itself.</li><li>US5 Given any process other than the hub, when it opens the store, then it can only read.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/hub-start.ts: start on demand and wait for health, from src/lib/hub-state.ts
+- [ ] T002 [US2] [api] Stale pid and taken port
+- [ ] T003 [US3] [api] The boot failure path with the log tail
+- [ ] T004 [US4] [api] Idle stop
+- [ ] T005 [US5] [api] The store opened read-only outside the hub process
+- [ ] T006 [US1,US2,US3,US4] [test] One test each with a stand-in hub
+- [ ] T007 [US5] [test] A second process's write attempt fails</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Ten commands at once start ten hubs</td><td>Ten parallel commands with no hub running leave one hub process.</td></tr><tr><td>The hub answers health but its writes hang</td><td>A write that takes over 10 seconds prints "hub not answering" and exits non-zero.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.11">
+  <h4>Commands that change a story go through the hub</h4>
+  <p class="sid">S1.11 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.5, S1.10</p>
+  <p>As a builder, I can have card, start, next, approve, reject, ask, answer, run, orch and doctor send their writes to the hub's API through the SDK's http transport, refusing with "server not available" when the hub cannot start, so that the command line holds no write path of its own.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a running hub, when each write command runs, then its write is one API call and its output is unchanged.</li><li>US2 Given the hub cannot start, when a write command runs, then it prints "server not available", exits non-zero, and nothing is written.</li><li>US3 Given an agent run, when it calls a write command, then the role sent is agent and owner-only commands refuse as in v1.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [sdk] One createClient in src/sdk that uses the http transport against the hub for every command
+- [ ] T002 [US1] [api] card, start, next, approve and reject onto the client
+- [ ] T003 [US1] [api] ask, answer, run, orch and doctor onto the client, adding the API routes they lack in src/lib/server.ts with the board server's four write rules
+- [ ] T004 [US2] [sdk] The "server not available" refusal in src/sdk/http.ts
+- [ ] T005 [US3] [api] The role from resolveRole sent with each request and checked by the server
+- [ ] T006 [US1] [test] e2e-founder-loop.sh green with the hub as the only writer
+- [ ] T007 [US2] [test] Block the hub from starting, run approve, assert the exit code and an unchanged store</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A command keeps a hidden local write path</td><td>The import lint in S1.12 fails on any command importing the engine or the store.</td></tr><tr><td>An agent sends role owner in the request</td><td>The server takes the role from the agent-run marker, not from the request body.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S1.12">
+  <h4>Every remaining command reads and writes through the hub</h4>
+  <p class="sid">S1.12 · card to propose · parent c-321 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.11</p>
+  <p>As a builder, I can have wiki, lane, feature, epic, initiative, inbox, stats, spec, task, check, verify, mock, artifact, render and pack call the hub's API, with export and doctor the only commands that read the store without it, so that the hub is the one door and every check sees the same record.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a running hub, when each remaining command runs, then it calls the API and its output is unchanged.</li><li>US2 Given the hub is down and cannot start, when export or doctor runs, then it reads the store read-only and succeeds; every other command says "server not available".</li><li>US3 Given the import lint, when it runs, then no file in src/commands imports the store or the engine.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] wiki, lane, feature, epic and initiative commands
+- [ ] T002 [US1] [api] inbox, stats, spec, task and check commands
+- [ ] T003 [US1] [api] verify, mock, artifact, render and pack commands
+- [ ] T004 [US1] [api] The API routes these need, in src/lib/server.ts
+- [ ] T005 [US2] [api] The read-only fallback for export and doctor
+- [ ] T006 [US3] [test] The import lint over src/commands
+- [ ] T007 [US1] [test] Every e2e script green on codeloop-next</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A done check runs while the hub is down and wrongly fails a card</td><td>A check run with the hub stopped starts it and passes.</td></tr><tr><td>Every command now pays an HTTP round trip</td><td>bench.mjs: card show p95 under 300 ms with a warm hub.</td></tr></tbody></table></div>
+  
+</div><h3 class="epic-head">E2. The stories MCP and search</h3><p>Agents reach the board through the hub's MCP over HTTP: the stories actions of the day-one release, search, resources, roles per action, and hooks answered by the hub.</p><div class="story" id="S2.1">
+  <h4>Agents reach the board through the hub's MCP link</h4>
+  <p class="sid">S2.1 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.10</p>
+  <p>As a builder, I can connect Claude Code, Cursor or Codex to the hub's MCP URL over HTTP with the hub token, stateless as MCP 2026-07-28 asks, with codeloop mcp kept as a stdio bridge to the same server, so that no agent needs to launch the command line to reach the board.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a running hub, when an agent's MCP config names the hub's URL and token, then tools/list returns the tools the caller's role allows.</li><li>US2 Given an MCP config that still runs codeloop mcp over stdio, when the agent calls a tool, then the call is relayed to the hub and the answer is the same.</li><li>US3 Given a request without the token or with a host other than localhost, when it reaches the MCP route, then it is refused and nothing is read.</li><li>US4 Given server/discover, when an agent calls it, then it gets the server name, version and specification version.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/mcp-http.ts: a stateless streamable HTTP MCP route on the hub
+- [ ] T002 [US1] [api] tools/list filtered by the caller's role
+- [ ] T003 [US2] [api] codeloop mcp becomes a stdio-to-HTTP bridge, in src/lib/mcp.ts
+- [ ] T004 [US3] [api] The token check and the board server's localhost rules on the route
+- [ ] T005 [US4] [api] server/discover
+- [ ] T006 [US1] [test] A real MCP client over HTTP lists and calls a tool
+- [ ] T007 [US2] [test] the production project's .mcp.json, unchanged, works against the hub
+- [ ] T008 [docs] The Connect your agents snippets for the hub, in docs/</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A client keeps a cached stdio config after the switch</td><td>The US2 test with the v1 config file as it is today.</td></tr><tr><td>A web page in the owner's browser calls the localhost MCP</td><td>A request with another Host header is refused.</td></tr><tr><td>A client on specification 2025-11-25 sends initialize</td><td>initialize gets a compatible answer or a protocol error that names the supported version.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S2.2">
+  <h4>Agents show, note, tick tasks and hand back stories through MCP</h4>
+  <p class="sid">S2.2 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size M, 2 days · needs S2.1</p>
+  <p>As a builder, I can use the stories tool's get, brief, list, next_up, note, task_done and handback actions, each with its own input schema, an output schema and structured results, with next_up ordered by the critical mark, then priority, then value, so that agents stop parsing command-line text.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the stories tool, when an agent calls it with no action, then it lists the actions its role allows and their fields.</li><li>US2 Given a valid call to each action, when it runs, then structuredContent validates against the outputSchema and the same JSON comes as text.</li><li>US3 Given a story in the wrong stage or a missing field, when the agent calls, then the result has isError true and one sentence saying what to do.</li><li>US4 Given stories at P1 to P4 and one critical, when next_up runs, then the critical one comes first, then by priority, then by value.</li><li>US5 Given task_done on a task id, when it runs, then tasks.md shows the task ticked and the event names the agent.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] src/lib/mcp-tools/stories.ts with a JSON Schema oneOf keyed on action
+- [ ] T002 [US2] [api] outputSchema per action, structuredContent plus the same JSON as text
+- [ ] T003 [US3] [api] Protocol errors for malformed calls, isError results for anything the agent can correct
+- [ ] T004 [US4] [api] next_up through the existing pick order
+- [ ] T005 [US5] [api] task_done and handback through the services the API routes call
+- [ ] T006 [US2] [test] Each action's example input and result validate against their schemas
+- [ ] T007 [US3,US4] [test] One test per error kind and the next_up order</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>An action needs a field its schema marks optional</td><td>For each action, each required field left out gives isError naming the field.</td></tr><tr><td>An MCP hand-back loses proofs a command-line hand-back keeps</td><td>The same hand-back through MCP and through the command line writes equal events.</td></tr><tr><td>Priorities imported from v1 are misread</td><td>next_up over the imported codeloop board equals v1's pick order.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S2.3">
+  <h4>Owner-only actions refuse an agent and name who can act</h4>
+  <p class="sid">S2.3 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size S, 1 day · needs S2.1</p>
+  <p>As a builder, I can be refused, as an agent, on approve, answer, promote and delete, with a result naming the role that can act and what to do instead, checked per action on the server, so that no tool argument lets an agent decide for the owner.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given an MCP call, when it asks to approve, answer, promote or delete, then the result has isError true and names the owner role and the alternative, such as questions.ask.</li><li>US2 Given a role field in the tool input, when the server checks the role, then it ignores the field.</li><li>US3 Given the hub's owner token used in an MCP config, when an MCP call asks to approve, then it is still refused, because MCP callers act as members in v2.0.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] A role table per action in src/lib/mcp-tools/roles.ts
+- [ ] T002 [US2,US3] [api] The MCP route caps every caller at member; owner actions stay on the command line and the board
+- [ ] T003 [US1] [test] One test per row of the role table, generated from it
+- [ ] T004 [US2,US3] [test] A forged role field and an owner token over MCP are both refused</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>An agent holding the hub's owner token approves its own gate</td><td>The US3 test.</td></tr><tr><td>A new action is added without a role row</td><td>The table test fails on any action missing from the table.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S2.4">
+  <h4>Agents search stories, wiki pages and decisions in one call</h4>
+  <p class="sid">S2.4 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size M, 2 days · needs S2.1</p>
+  <p>As a builder, I can call search with a query and optional kinds, and get ranked hits as resource links with a title and a one-line excerpt across stories, wiki pages, decisions and questions, and spec files while they are still files, so that an agent finds what was decided before it starts.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the imported codeloop board, when search runs for words from a story title, a wiki page and a decision page, then each appears as a resource_link with a codeloop URI, title and excerpt.</li><li>US2 Given kinds limited to wiki, when search runs, then only wiki hits return.</li><li>US3 Given more hits than one page holds, when search runs, then the results page with an opaque cursor.</li><li>US4 Given a wiki page just written, when search runs a second later, then it finds the page.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] An FTS5 index in the store over stories, notes, pages and questions; spec files through the project index in src/lib/index
+- [ ] T002 [US1] [api] src/lib/mcp-tools/search.ts returning resource_link items
+- [ ] T003 [US2,US3] [api] Kind filter and cursor paging
+- [ ] T004 [US4] [api] The index updated in the write transaction; spec files on the watcher
+- [ ] T005 [US1] [api] The same search as GET /api/search and codeloop search
+- [ ] T006 [US1] [test] Three known terms over the imported codeloop board
+- [ ] T007 [US3,US4] [test] Paging and freshness</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The index drifts from the record</td><td>An index rebuilt from scratch equals the incrementally updated one.</td></tr><tr><td>A deleted story is still found</td><td>Delete a story, search its title: no hit.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S2.5">
+  <h4>Agents browse stories and pages as MCP resources</h4>
+  <p class="sid">S2.5 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size S, 1 day · needs S2.4</p>
+  <p>As a builder, I can list resource templates such as codeloop://story/{key} and codeloop://wiki/{path}, complete keys and paths, read them, and subscribe to a story to hear when it changes, so that a client with a resource picker browses the board with no tool call, and a board hears changes as they land.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given resources/templates/list, when an agent calls it, then it gets the story, document, wiki and decision templates.</li><li>US2 Given a partial key, when completion runs, then matching story keys return.</li><li>US3 Given a subscription to a story, when another client notes it, then the subscriber hears of it through subscriptions/listen.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Resource templates and resources/read in src/lib/mcp-http.ts
+- [ ] T002 [US2] [api] completion for story keys and wiki paths
+- [ ] T003 [US3] [api] subscriptions/listen fed by store.events()
+- [ ] T004 [US1,US2,US3] [test] One test each</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A subscription outlives its client</td><td>Closing the stream frees its listener; the listener count returns to zero.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S2.6">
+  <h4>Hooks answer from the hub with no separate helper</h4>
+  <p class="sid">S2.6 · card to propose · parent c-325 · feature loop-self-repair · persona builder · size M, 2 days · needs S1.10</p>
+  <p>As a builder, I can have the guard hooks call the hub, the hook helper folded into it, the hook commands keeping their v1 shapes, and edits refused when the hub cannot answer, so that one process holds the lease and the board, and hook settings written for v1 keep working.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the production project's hook settings as they are today (guard session, edit, bash, prompt, stop, release, and wiki capture --quiet), when each hook runs against v2, then it answers as v1 did on the same inputs.</li><li>US2 Given the hub is down, when the edit hook runs, then it starts the hub, waits up to five seconds, and refuses the edit if the hub still does not answer.</li><li>US3 Given a warm hub, when the edit hook runs, then its p95 is within the figure bench.mjs records for v1.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Guard verbs as hub routes; bin/codeloop-hook talks to the hub
+- [ ] T002 [US1] [api] Remove src/lib/hookd.ts and its socket
+- [ ] T003 [US2] [api] Start-and-wait in bin/codeloop-hook, failing closed
+- [ ] T004 [US1] [test] Replay a recorded set of hook inputs through v1 and v2 and compare the answers
+- [ ] T005 [US3] [test] bench.mjs for guard edit against the v1 figure
+- [ ] T006 [US2] [test] Hub blocked from starting: edit refused, bash allowed for owner commands as in v1</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A slow hub stalls every agent tool call</td><td>The US3 bench.</td></tr><tr><td>A codeloop off pause is ignored by the new path</td><td>After codeloop off, the edit hook exits 0 without calling the hub.</td></tr></tbody></table></div>
+  
+</div><h3 class="epic-head">E3. Reviews, approve with conditions, priority, presence</h3><p>Findings live on the story and close by commit, one owner action approves with the recommended answers, a P1 arriving asks before it parks a P2, and the board shows which agent works each story.</p><div class="story" id="c-328">
+  <h4>Review findings live on the story, reach its agent, and close by commit</h4>
+  <p class="sid">c-328 · card c-328 · parent already on the board · feature reviews-and-proof · persona team · size M, 2 days · needs S2.2</p>
+  <p>As a team, I can see a story's review findings (severity, file and line, owner, status) on the story itself, routed to its agent and closed by the commit that fixes them, so that no finding is lost in a side file or routed by hand.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a reviewer writes a review with a verdict and findings through the reviews tool, when the story is read, then each finding shows its severity, file and line, owner and status.</li><li>US2 Given open findings, when the story's agent asks for its brief, then the findings are in it.</li><li>US3 Given a commit with a Finding trailer naming a finding's id, when the hub sees the commit, then the finding is fixed with that sha.</li><li>US4 Given a member waives a finding with a note, when the story is read, then it shows waived with the note.</li><li>US5 Given an open critical finding, when the owner approves the review gate, then the approval is refused naming the finding, unless it was waived.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Review and Finding records in src/lib/store/schema.ts and the SQLite driver
+- [ ] T002 [US1,US4] [api] The reviews tool (write, list, get, waive_finding) and its API routes, in src/lib/mcp-tools/reviews.ts
+- [ ] T003 [US2] [api] Open findings in the brief, in src/lib/agent.ts
+- [ ] T004 [US3] [api] The Finding trailer read by src/lib/commit-graph.ts when the commit hook reports a commit
+- [ ] T005 [US5] [api] The review gate refuses with an open critical finding
+- [ ] T006 [US1] [ui] Findings on the story page, with status
+- [ ] T007 [US1,US3] [test] Review, commit, closed, end to end through the real commit hook
+- [ ] T008 [US2,US4,US5] [test] One test each</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A trailer naming another story's finding closes it</td><td>The finding stays open and the commit event notes the mismatch.</td></tr><tr><td>The same commit is seen twice, by the hook and the watcher</td><td>The finding is fixed once, with one event.</td></tr></tbody></table></div>
+  <p class="muted">Review tick files kept in another repository are not imported; findings start fresh in v2.</p>
+</div><div class="story" id="c-327">
+  <h4>I approve a gate and accept the agent's recommended answers in one action</h4>
+  <p class="sid">c-327 · card c-327 · parent already on the board · feature loop-self-repair · persona founder · size S, 1 day · needs S1.11, S2.3</p>
+  <p>As a founder, I can approve a gate with conditions, accepting the agent's recommended answers to its open questions in the same action, so that clearing my reviews takes one step, not one per question.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a gate with open questions that each carry a recommendation, when the owner approves with conditions, then each recommendation is recorded as the owner's answer and the gate is approved, in one transaction.</li><li>US2 Given a question with no recommendation, when the owner approves with conditions, then it is refused naming the question, and nothing is recorded.</li><li>US3 Given the owner answered one question first, when the owner approves with conditions, then that answer stands and only the rest take the recommendation.</li><li>US4 Given an agent, when it asks for approve_with_conditions, then it is refused naming the owner role.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] approveWithConditions in src/lib/engine.ts: answers and approval in one store transaction
+- [ ] T002 [US1] [api] codeloop approve --accept-recommended, the decisions action and the API route
+- [ ] T003 [US2,US3] [api] The refusal and the already-answered rule
+- [ ] T004 [US1] [ui] An approve with conditions button on the gate, listing the answers it will accept
+- [ ] T005 [US1,US2,US3,US4] [test] One test each</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Answers are recorded but the approval fails</td><td>A gate whose check fails leaves no answers recorded.</td></tr><tr><td>An export to v1 loses the conditions</td><td>S1.9's US2 test covers it: the answers appear as v1 answer events.</td></tr></tbody></table></div>
+  <p class="muted">The delegation half of this card (an orchestrator approving on the owner's behalf, revocable) is step 7, not v2.0. The on_behalf_of field exists from S1.6, so it needs no migration.</p>
+</div><div class="story" id="c-324">
+  <h4>A P1 arriving can pause a running P2, parking it with a note</h4>
+  <p class="sid">c-324 · card c-324 · parent already on the board · feature value-ranked-board · persona founder · size S, 1 day · needs S2.2, open question 1</p>
+  <p>As a founder, I can have urgent work pause lower-priority work in flight, with the paused story parked and a note saying why, so that agents always work on what matters most.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a builder working a P2, when a P1 arrives, then the owner is asked once whether to park the P2 for the P1, with park and wait as options, and the P2 keeps running meanwhile.</li><li>US2 Given the owner chooses park, when the builder next checks in, then its uncommitted work is handed back, the P2 is parked with a note naming the P1, and the P1 is next.</li><li>US3 Given the owner chooses wait, when the P2 finishes, then the P1 is next.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Detect a P1 arriving while a P2 is held, in the pick in src/lib/run.ts
+- [ ] T002 [US1] [api] Ask through questions.ask with the two options and a recommendation
+- [ ] T003 [US2] [api] Park after hand-back of uncommitted work, reusing park and handback
+- [ ] T004 [US3] [api] Wait keeps the P1 first in next_up
+- [ ] T005 [US1,US2,US3] [test] One test each</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The paused builder's uncommitted work is lost</td><td>A dirty tree is handed back as a patch on the story before the park.</td></tr><tr><td>The owner is asked again on every tick</td><td>One question per P1 and P2 pair, however many ticks run.</td></tr></tbody></table></div>
+  <p class="muted">Written for option (b) of open question 1. Option (a) removes the question and parks after the hand-back; option (c) removes this card from v2.0.</p>
+</div><div class="story" id="S3.1">
+  <h4>The board shows which agent works each story, where, and how recently</h4>
+  <p class="sid">S3.1 · card to propose · parent c-325 · feature loop-self-repair · persona founder · size M, 2 days · needs S2.5, S2.6</p>
+  <p>As a founder, I can see on the board and through the agents tool each agent's kind, person, machine, story, branch, state and last activity, kept current by the agents and their hooks, and marked stalled when they stop reporting, so that I know who is doing what without asking.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given an agent registered and reporting, when the board opens, then its story reads like "Claude Code, started by the owner on this laptop, on branch feat/sync, working, last seen 3 minutes ago".</li><li>US2 Given an agent stops reporting past the stall limit, when the board refreshes, then its state is stalled.</li><li>US3 Given an agent releases, when the board refreshes, then the story shows no current agent and the agent stays in its history.</li><li>US4 Given v1 session files and leases at import, when import runs, then each becomes an agent record in state working with its files held.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] Agent records in the store; the agents tool: register, heartbeat, release, update, list, get
+- [ ] T002 [US1] [api] The session hook registers the agent and the edit hook reports activity, so agents that never call the tool still show
+- [ ] T003 [US2] [api] The stall check sets the state from last activity, in src/lib/stall.ts
+- [ ] T004 [US4] [api] Session files and leases imported in src/lib/v1-import.ts
+- [ ] T005 [US1] [ui] The presence line on the story row and page, updated from the subscription stream
+- [ ] T006 [US1,US2,US3] [test] One test each, through the hooks and the tool
+- [ ] T007 [US4] [test] Import of a fixture with two live sessions</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A report on every edit floods the store</td><td>Reports from one agent coalesce to one write per 30 seconds.</td></tr><tr><td>A machine's clock marks a working agent stalled</td><td>Last activity is stamped with the hub's clock on receipt.</td></tr></tbody></table></div>
+  
+</div><h3 class="epic-head">E4. Side by side, dogfood, cutover</h3><p>Parity between v1 and v2 is checked nightly, rollback is one rehearsed script, codeloop's own board runs on v2, then the production project switches.</p><div class="story" id="S4.1">
+  <h4>v1 and v2 give the same answers on the same board</h4>
+  <p class="sid">S4.1 · card to propose · parent P0 · feature install-and-import · persona founder · size M, 2 days · needs S1.9, S1.12</p>
+  <p>As a founder, I can run one parity script that copies a board, asks v1 and v2 the same read questions, replays the same writes on both, and diffs the results, and run it nightly on read-only copies of codeloop's and the production project's boards, so that I know v2 behaves like v1 before anything real moves.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a copy of a v1 project, when parity.sh runs, then the frozen v1 and codeloop-next after import give the same card list, card show, inbox, brief and stats output, after normalising times and internal ids.</li><li>US2 Given a fixed script of writes (propose, approve, advance, ask, answer, reject, note, park), when it replays on both, then v2's v1-format export equals v1's cards.json, ignoring times and the version counter.</li><li>US3 Given the nightly job, when it runs, then it shadow-imports both boards, runs parity, appends one line to the parity log, and changes nothing in either project.</li><li>US4 Given a difference planted in v2, when parity runs, then it fails and shows the diff.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [test] scripts/parity.sh: copy a project and a home into a scratch folder, run both binaries, normalise, diff
+- [ ] T002 [US2] [test] The write script, built from demo-founder-week.sh's steps
+- [ ] T003 [US3] [test] A codeloop-next schedule line running parity on shadow imports nightly, with v1-untouched.sh around it
+- [ ] T004 [US4] [test] Plant a dropped event and keep the failure output
+- [ ] T005 [US1] [docs] What parity compares and the named list of fields it ignores, in docs/v2-parity.md</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Normalising hides a real difference</td><td>A change to a field not on the ignore list fails parity.</td></tr><tr><td>The nightly job writes into the production project</td><td>v1-untouched.sh compare after each nightly run; a failure stops the job.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S4.2">
+  <h4>Switch a project from v2 back to v1 in minutes without losing work</h4>
+  <p class="sid">S4.2 · card to propose · parent P0 · feature install-and-import · persona founder · size M, 2 days · needs S1.9</p>
+  <p>As a founder, I can run one rollback script that exports the v2 record to v1 files, checks the counts, restores them into the project through its cards.json link, then reinstalls the frozen v1 and restores the hook, MCP and schedule settings and the v1 hub registration, so that trying v2 on a real project is safe.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given a copy of a project on v2 with new work done on v2, when rollback runs, then v1's card list shows every story, event and page v2 held, and v2-only records are in v2-only.json.</li><li>US2 Given the hub cannot start, when rollback runs, then it exports from the store file read-only, or from the last continuous export when the file cannot be read, and says which.</li><li>US3 Given rollback finished, when v1 runs in the project, then moved.json and project.json are gone, the settings are the ones saved at the switch, the schedule line is v1's, and v1 1.0.0 is installed.</li><li>US4 Given two rehearsals on copies, when each is timed, then each completes in under ten minutes.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] scripts/rollback-v1.sh &lt;project&gt;: park, export, verify, restore data, then binary, settings, schedule and registry, in that order
+- [ ] T002 [US2] [api] Continuous v1-format export after each write, 30-second debounce, while a project is in its watch period
+- [ ] T003 [US1] [api] Restore through the cards.json link when there is one
+- [ ] T004 [US3] [api] Settings restored from the copies the switch script saved
+- [ ] T005 [US1,US3] [test] Rehearsal on a copy of codeloop's board after two days of v2 writes
+- [ ] T006 [US4] [test] Two timed rehearsals on a copy of the production project with a copied home</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>The binary goes back to v1 before the data, and v1 starts on a stale board</td><td>The script refuses to reinstall before the export's report passes.</td></tr><tr><td>A write lands on v2 between the export and the switch back</td><td>The park step stops writes; a write during the park is refused.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S4.3">
+  <h4>Codeloop's own board runs on v2</h4>
+  <p class="sid">S4.3 · card to propose · parent P0 · feature install-and-import · persona founder · size S, 1 day · needs S4.1, S4.2</p>
+  <p>As a founder, I can switch the codeloop repository to codeloop-next in one coordinated step: every worker parked, the board imported with its report passing, the hook and MCP settings naming codeloop-next, the project removed from the v1 hub, and a daily export committed, so that v2 is used every day on a real board before the production project depends on it.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given every worker parked and parity green, when the switch script runs, then the import report passes, moved.json and project.json are committed, and codeloop board writes in the repository refuse with the moved line.</li><li>US2 Given the switch, when a worker starts a session in the repository, then its hooks and MCP reach codeloop-next, and the v1 hub no longer lists the project.</li><li>US3 Given a day passes, when the daily export runs, then .codeloop/export holds the v1-format board and the markdown folders, committed by path.</li><li>US4 Given ten working days on v2, when the soak ends, then the soak log shows no lost record in the nightly round trip and parity.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] scripts/switch-to-v2.sh &lt;project&gt; --channel next|stable: park check, off, import, settings saved and rewritten, registry removal, on
+- [ ] T002 [US2] [docs] Workers' instructions: board commands in this repository use codeloop-next, in CLAUDE.md
+- [ ] T003 [US3] [api] The daily export job
+- [ ] T004 [US1,US2] [test] The switch rehearsed on a copy, then run for real, with v1-untouched.sh compare passing for the production project
+- [ ] T005 [US4] [test] The soak log: one line a day with parity, round trip, hook refusals and hub restarts</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>A worker not parked writes cards.json during the switch</td><td>A v1 write in the window either lands before the import and is counted, or is refused after moved.json.</td></tr><tr><td>A session started before the switch still runs v1 hooks</td><td>S0.1 makes v1 hooks pass through on a moved board; the switch script lists sessions to restart.</td></tr></tbody></table></div>
+  
+</div><div class="story" id="S4.4">
+  <h4>The production project moves to v2 once the bar is met</h4>
+  <p class="sid">S4.4 · card to propose · parent P0 · feature install-and-import · persona founder · size S, 1 day · needs every v2.0 story, S4.3's soak, five green nightly parity runs on the production project's copy</p>
+  <p>As a founder, I can switch the production project to the packed v2.0.0 release only when every entry condition holds, with the owner approving the gate, a snapshot first, the same switch script, and a five-day watch with continuous export and the rollback ready, so that the project my agents run every day changes once, to something proven.</p>
+  <p class="label">Acceptance</p><ul><li>US1 Given the entry checklist, when any item is missing, then the switch script refuses and names it.</li><li>US2 Given the switch runs, when it finishes, then the global codeloop is the v2.0.0 tarball, the import report passes, and the production project's hooks, MCP and schedule work on v2.</li><li>US3 Given the watch week, when a trigger fires, then rollback runs and v1 is back within ten minutes.</li><li>US4 Given five days with no trigger, when the watch ends, then continuous export stops and the owner is asked whether to remove cards.json from git.</li></ul>
+  <p class="label">Tasks</p><pre class="tasks">- [ ] T001 [US1] [api] The entry checklist in the switch script, read from the soak log, the parity log and the rehearsal records
+- [ ] T002 [US2] [api] release-pack.sh for v2.0.0 with dist/channel.json set to stable, installed over the frozen v1
+- [ ] T003 [US2] [api] A snapshot of the production project's .codeloop and the v1 home into ~/.codeloop/releases with its sha256 before anything changes
+- [ ] T004 [US3] [api] Watch triggers checked by the nightly job and a hook-refusal counter
+- [ ] T005 [US2] [test] Smoke after the switch: the production project's orchestrator's daily commands, guard session, and a card count equal to the report
+- [ ] T006 [US4] [docs] The switch and watch record, added to this plan</pre>
+  <p class="label">Failure modes</p><div class="tablewrap"><table><thead><tr><th>Failure mode</th><th>The one test</th></tr></thead><tbody><tr><td>Other projects on the machine get v2 at the global switch</td><td>A v1 fixture project after the switch is refused with "on v1, import" and is unchanged.</td></tr><tr><td>The switch starts while a scheduled run is mid-flight</td><td>The script waits for the run lock before it parks.</td></tr><tr><td>v2 stable shares the default home with v1 and touches v1 files</td><td>v2 keeps its state under ~/.codeloop/v2; v1-untouched.sh compare passes after the install.</td></tr></tbody></table></div>
+  
+</div>
+    <h3 class="epic-head">After v2.0, placed but not yet split</h3>
+    <div class="tablewrap"><table><thead><tr><th>Step</th><th>Card</th><th>What it adds</th><th>Rough size</th></tr></thead><tbody><tr><td>4. Story documents in the store</td><td>child of c-321, to propose at v2.0</td><td>Research, spec, plan, tasks and evidence written and read through the documents tool; the edit lease read from the stored plan; export writes them as markdown</td><td>8 days, four stories</td></tr><tr><td>5. Codeloop Cloud as the record</td><td>c-322</td><td>A MongoDB driver passing the same repo contract; codeloop link; the same board on a second machine and at the hosted URL; writes refused with "server not available" when it cannot be reached</td><td>15 days</td></tr><tr><td>6. One identity and the Connect page</td><td>c-322</td><td>Protobox sign-up, codeloop login by device code, roles from the workspace, agents connected with their person's sign-in</td><td>8 days</td></tr><tr><td>7. Named agents, the constitution, delegation</td><td>c-326, c-327 second half</td><td>A default cast handed to every tool through the MCP, the constitution read first, an orchestrator approving on the owner's behalf and revocable</td><td>8 days</td></tr><tr><td>8. Public publishing</td><td>c-323</td><td>A filtered public view per project, read-only</td><td>8 days</td></tr></tbody></table></div>
+    <p class="muted">These are split into stories when v2.0 has shipped, so they are planned on what v2.0 taught.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Order and dependencies</h3>
+    <p>Each step leaves something usable on its own. Nothing of v2 lands in the checkout before the freeze, because anything on main before then would be inside the frozen v1.</p>
+    <div class="tablewrap"><table><thead><tr><th>Step</th><th>Stories, in order</th><th>Needs</th><th>Usable on its own because</th></tr></thead><tbody><tr><td>0. Freeze and isolate</td><td>S0.1, then S0.2, then S0.3 and S0.4 in parallel</td><td>The in-flight branch merged to main</td><td>The production project is protected from every later build even if v2 stopped here</td></tr><tr><td>1. The hub owns the record</td><td>S1.1, S1.2, S1.3, S1.4, S1.5 in the store README's order (lanes, pages and questions, cards last); S1.6, S1.7, S1.8, S1.9, S1.10 in parallel with them; then S1.11 and S1.12</td><td>Step 0</td><td>codeloop-next runs a whole board on SQLite with import and export, on test boards and shadow copies</td></tr><tr><td>Prepare the switch</td><td>S4.1 and S4.2</td><td>S1.9 and S1.12</td><td>Parity and rollback are checked on copies, before any real board moves</td></tr><tr><td>Dogfood</td><td>S4.3, then a soak of ten working days</td><td>S4.1, S4.2</td><td>Codeloop's own board runs on v2 while steps 2 and 3 are built on it</td></tr><tr><td>2. The stories MCP and search</td><td>S2.1, then S2.2, S2.3 and S2.4; S2.5 after S2.4; S2.6 any time after S1.10</td><td>S1.10</td><td>Agents on codeloop's board use the MCP in place of the command-line skill</td></tr><tr><td>3. Reviews, conditions, priority, presence</td><td>c-328 after S2.2; c-327 after S1.11 and S2.3; c-324 after S2.2 and open question 1; S3.1 after S2.5 and S2.6</td><td>Step 2's tools</td><td>Each card is a feature the owner uses daily on codeloop's board as it lands</td></tr><tr><td>Switch the production project</td><td>S4.4, then a five-day watch</td><td>Every v2.0 story, the soak, five green nightly parity runs</td><td>The production project is on v2.0 with rollback ready</td></tr></tbody></table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Test strategy</h3>
+    <p>Tests are written from each story's failure list, one test per failure mode, and each is seen failing once before it is trusted: revert the change, watch the test fail for the stated reason, restore. Tests drive the real seams: the real commit hook, the real hub over HTTP, a real MCP client, the frozen v1 tarball.</p>
+    <div class="tablewrap"><table><thead><tr><th>Layer</th><th>What runs</th><th>When</th></tr></thead><tbody><tr><td>Unit and failure-mode tests</td><td>Vitest, one file per story, from its failure table</td><td>Every change</td></tr><tr><td>Store contract</td><td>repo-contract.test.ts against the memory, file and SQLite drivers; a repo that passes behaves the same on each</td><td>Every change under src/lib/store</td></tr><tr><td>Store-only and import lints</td><td>No file outside src/lib/store touches the board files; no command imports the engine or the store</td><td>Every change, from S1.1 and S1.12</td></tr><tr><td>MCP schemas</td><td>Each action's example input and result validated against its inputSchema and outputSchema; each correctable error returns isError</td><td>Every change under the MCP tools</td></tr><tr><td>End to end, both binaries</td><td>e2e-founder-loop.sh, demo-founder-week.sh and e2e-orch-full-lane.sh taking the binary from CODELOOP_BIN: once against the frozen v1 tarball, which must stay green, and once against codeloop-next</td><td>Before each story is handed back</td></tr><tr><td>Side by side (S4.1)</td><td>parity.sh: the same read commands on v1 and v2 over one board copy, and the same write script replayed on both, compared after normalising a named list of fields</td><td>Each story in step 1 onward, and nightly</td></tr><tr><td>Round trip</td><td>v1 cards.json to import to export equals the original, on copies of codeloop's and the production project's boards</td><td>Every change to import or export, and nightly</td></tr><tr><td>Isolation (S0.4)</td><td>v1-untouched.sh snapshot before and compare after every v2 test run, rehearsal, nightly job and dogfood day; the suite runs with HOME in a temporary folder</td><td>Always</td></tr><tr><td>Real agent</td><td>e2e-agent-real.sh with Claude Code connected to the hub's MCP over HTTP</td><td>Before the dogfood switch and before S4.4</td></tr><tr><td>Speed</td><td>bench.mjs: guard edit p95 within 10% of v1, card show p95 under 300 ms with a warm hub</td><td>S1.5, S1.12, S2.6</td></tr></tbody></table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Data migration</h3>
+    <p><strong>What moves into the store.</strong> Stories with every field and event, questions and answers (today in each spec folder's interview.md), and the wiki pages under .codeloop/wiki, including epics, features, initiatives, decisions and competitor pages. From S3.1, v1 session files and leases become agent records.</p>
+    <p><strong>What stays a file in v2.0.</strong> Lanes, config.yaml, the skills index, spec folders (research, spec, plan, tasks), evidence, mocks and artifacts. v2 reads them where they are. Story documents move in step 4.</p>
+    <p><strong>Import.</strong> codeloop import reads cards.json, following a link when there is one (the production project's cards.json is a link into the v1 home). Each story keeps its key as its key and gets a new random id; the project prefix is c and the counter is set past the highest number. Event ids are derived from the story key, the event's position, time and kind, so importing the same board twice matches instead of adding, which is what lets the nightly shadow import run on a live board. project.json and moved.json are written only after the report passes. --shadow writes nothing in the project.</p>
+    <p><strong>Export back.</strong> codeloop export --format v1 writes cards.json in v1's shapes, the wiki pages and interview files. Records only v2 has (reviews, findings, conditions, agents) go to v2-only.json keyed by story key, and v2-only events are written as the v1 events that mean the same: an approve with conditions becomes one answer event per accepted recommendation and an approve. v1 reads cards.json with a plain JSON parse and no schema check (src/lib/cards.ts:315), so it would tolerate extra fields, but export still writes only v1 fields so the file looks exactly like one v1 wrote. The export's version is set past the last v1 version, so a v1 process holding an older read gets a conflict instead of overwriting. Export runs with the hub down by reading the store file read-only.</p>
+    <p><strong>Verification.</strong> Import and export print the same report and exit 1 on any difference, listing the first twenty.</p>
+    <div class="tablewrap"><table><thead><tr><th>Check</th><th>How</th></tr></thead><tbody><tr><td>Story count and key set</td><td>Equal sets of keys; the counter past the highest number</td></tr><tr><td>Fields</td><td>Per story, a sha256 of its canonical JSON, keys sorted, v2-only fields removed</td></tr><tr><td>Events</td><td>Per story, the event count and a sha256 of the event list in order</td></tr><tr><td>Questions</td><td>Count per story, answered count, recommended-answer count</td></tr><tr><td>Wiki</td><td>Page count and a sha256 of each page's bytes</td></tr><tr><td>Tallies</td><td>Stories per stage, per gate, per priority and per lane</td></tr><tr><td>Replay</td><td>Each story's stored state equals the replay of its events</td></tr></tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Board, 17 October 2026</th><th>Cards</th><th>Events</th><th>Wiki pages</th></tr></thead><tbody><tr><td>codeloop</td><td>203</td><td>1791</td><td>98</td></tr><tr><td>the production project</td><td>181</td><td>1460</td><td>134</td></tr></tbody></table></div>
+    <p class="muted">These are the counts the S1.8 test asserts on copies taken that day. The switch scripts take fresh counts at switch time and compare against those.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Isolation and cutover</h3>
+    <p><strong>What is shared today.</strong> The global codeloop is an npm link to the codeloop checkout/dist, so every build in the checkout changes what the production project runs at once. One v1 home, ~/.codeloop, holds the hub registry with both projects, one hub.json (port 4050, token, pid), one hook socket, and the production project's board itself, because the production project's cards.json is a link into the v1 home. The production project's hook settings, .mcp.json and .cursor/mcp.json name the bare command codeloop, and the production project's crontab line names the global binary by its absolute path, with a temporary shim folder first on PATH. Workers in the checkout run board commands as node dist/index.js, which is v1 today and becomes v2 the day v2 work starts. Each of these is handled below.</p>
+
+    <p class="label"><strong>Phase A, freeze v1 (S0.1, S0.2)</strong></p>
+    <ol class="steps">
+      <li>S0.1, the moved-board refusal, lands on main first, so the frozen build already knows how to step aside.</li>
+      <li>The in-flight branch merges to main. main gets version 1.0.0 and the tag v1.0.0 at a named sha; that sha is the freeze.</li>
+      <li>release-pack.sh exports the tag with git archive into a scratch folder, runs npm ci and npm run build:all there, and packs into ~/.codeloop/releases with a sha256 beside it. The working tree is never packed. The stray tarball in the repository root is not used.</li>
+      <li>release-install.sh stops the v1 hub and hook helper, removes the npm link, installs the tarball globally after checking its sha256, and restarts the hub from the installed build. npm writes the same bin path the cron line names, so the cron line keeps working unchanged.</li>
+      <li>check-frozen.sh proves it: readlink on the global codeloop resolves inside the global node_modules, the package folder is a real directory, codeloop --version prints 1.0.0, no codeloop process runs a script from the checkout, and in the production project guard session exits 0 and the card count is unchanged.</li>
+      <li>From this moment every worker runs board commands in the checkout as codeloop, the frozen v1, never node dist/index.js. codelooper's instructions and CLAUDE.md change the same day.</li>
+    </ol>
+
+    <p class="label"><strong>Phase B, v2 development beside v1 (S0.3, S0.4)</strong></p>
+    <div class="tablewrap"><table><thead><tr><th>Shared thing</th><th>v1 (frozen)</th><th>v2 development (codeloop-next)</th><th>v2 stable (after the switch)</th></tr></thead><tbody><tr><td>Command</td><td>codeloop, the 1.0.0 tarball</td><td>codeloop-next, a shim beside codeloop that runs the checkout's bin/codeloop</td><td>codeloop, the 2.0.0 tarball</td></tr><tr><td>Home and state</td><td>~/.codeloop, as today</td><td>~/.codeloop-next/v2</td><td>~/.codeloop/v2, leaving every v1 file in ~/.codeloop alone</td></tr><tr><td>Hub port and record</td><td>4050, hub.json without a major</td><td>4070, hub.json with major 2 and channel next</td><td>4060, major 2, channel stable</td></tr><tr><td>Hook socket</td><td>state/hookd.sock under the v1 home</td><td>none: hooks answer from the hub (S2.6)</td><td>none</td></tr><tr><td>Schedule lines</td><td>tagged codeloop:</td><td>tagged codeloop-next:</td><td>tagged codeloop-v2:</td></tr><tr><td>MCP name in configs</td><td>codeloop, stdio</td><td>codeloop-next, the hub URL</td><td>codeloop, stdio bridge or the hub URL</td></tr><tr><td>A v1 board</td><td>its own</td><td>refused, except import --shadow, which reads a copy</td><td>refused until imported</td></tr></tbody></table></div>
+    <p>The channel is decided by the build, not by memory: a build is stable only when release-pack.sh wrote dist/channel.json saying so. A plain build in the checkout is always next, so node dist/index.js behaves as codeloop-next and cannot open the v1 home. v2 refuses a hub.json written by v1, refuses a CODELOOP_HOME equal to the v1 home on the next channel, and never edits a schedule line it did not write. v1-untouched.sh runs before and after every v2 session and nightly; the test suite runs with HOME in a temporary folder and fails if the real home's v1 files change.</p>
+
+    <p class="label"><strong>Phase C, codeloop's own board on v2 (S4.1, S4.2, S4.3)</strong></p>
+    <p>Entry: step 1 done, parity green on a copy of codeloop's board, rollback rehearsed on a copy. Then, in one coordinated step announced by codelooper: every worker parks (codeloop ps shows no agent), codeloop off, switch-to-v2.sh imports the board with the report passing, commits project.json and moved.json, saves and rewrites the repository's hook and MCP settings to codeloop-next, removes the project from the v1 hub registry so the v1 board is not shown stale, then codeloop-next on. Every worker restarts its session so the new MCP config loads. From then on a daily export of the board and its markdown is committed by path, and the soak log gets one line a day. Steps 2 and 3 are built while this runs. The soak lasts ten working days with no lost record in the nightly round trip and parity.</p>
+
+    <p class="label"><strong>Phase D, the production project switches (S4.4)</strong></p>
+    <p>Entry checklist, all required, checked by the switch script: every v2.0 story shipped; the soak complete; five consecutive green nightly parity runs on a shadow copy of the production project's board; two rollback rehearsals on copies, each under ten minutes; the owner approves the gate on S4.4. The switch runs at a quiet time, outside the hourly scheduled run:</p>
+    <ol class="steps">
+      <li>Park the production project's orchestrator and its agents; wait for the run lock; codeloop off.</li>
+      <li>Snapshot the production project's .codeloop and the v1 home into ~/.codeloop/releases with a sha256.</li>
+      <li>Remove the v1 schedule line with codeloop schedule remove, never by editing crontab.</li>
+      <li>Install the v2.0.0 tarball globally, packed by the same release script with the stable channel.</li>
+      <li>codeloop import in the production project: report passes, or the script stops and runs the rollback.</li>
+      <li>Restore settings: the hook commands keep their v1 shapes and need no change; .mcp.json keeps working through the stdio bridge. codeloop schedule install writes v2's line.</li>
+      <li>Smoke: the production project's orchestrator's daily commands, guard session, a card count equal to the report. codeloop on.</li>
+    </ol>
+    <p>The watch lasts five working days, with a v1-format export written after each change (30-second debounce) so a rollback loses at most that much. Triggers for rollback: any lost or changed record in the nightly round trip; hooks refusing edits v1 would allow for 15 minutes; the production project's orchestrator blocked by codeloop for 30 minutes; the owner says so.</p>
+
+    <p class="label"><strong>Rollback (S4.2), data first, then the binary</strong></p>
+    <ol class="steps">
+      <li>Park and codeloop off, so nothing writes during the rollback.</li>
+      <li>Export the v2 record with export --format v1: from the hub, from the store file read-only when the hub is down, or from the continuous export when the file cannot be read. The script says which.</li>
+      <li>Verify the export against the store with the migration report. The script stops here on any difference.</li>
+      <li>Restore into the project: cards.json through its link, wiki pages, interview files; remove moved.json and project.json; commit the restored files by path.</li>
+      <li>Stop the v2 hub; reinstall the frozen 1.0.0 tarball after checking its sha256.</li>
+      <li>Restore the hook and MCP settings saved at the switch; codeloop schedule install writes v1's line; re-register the project with the v1 hub.</li>
+      <li>Smoke: v1's card count equals the export's; guard session exits 0; codeloop on.</li>
+    </ol>
+    <p>Target: under ten minutes, rehearsed twice on a copy of the production project with a copied home before the switch. The same script with --channel next rolls codeloop's own board back to v1 if the dogfood fails.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Risks</h3>
+    <ul>
+      <li><strong>Step 1 is larger than the architecture page says.</strong> 214 direct readCards and writeCards calls in 47 files, the work of dropped card c-320, come back as S1.1 to S1.5. Step 1 is sized at 24 days here, against three to four weeks on the architecture page. Bounded by cutting it along the store README's order so each story lands and passes alone.</li>
+      <li><strong>v2 work touches v1's home or the production project's board by mistake.</strong> The channel comes from the build, the next channel has its own home and port, v2 refuses v1 boards and v1 hub records, and v1-untouched.sh runs around every session.</li>
+      <li><strong>A worker runs node dist/index.js on codeloop's board after the freeze.</strong> That is v2, and it refuses a v1 board with a sentence naming codeloop. Instructions change on freeze day.</li>
+      <li><strong>A long-lived v1 process keeps running code from the checkout.</strong> The freeze stops the hub and hook helper and check-frozen.sh fails while any codeloop process runs a script from the checkout.</li>
+      <li><strong>Import loses part of a board without anyone noticing.</strong> The report compares keys, hashes and events and fails on any difference; the round trip and parity run nightly on shadow copies of both boards for weeks before the production project moves.</li>
+      <li><strong>The hub becomes a single point of failure for every command and hook.</strong> Start on demand, takeover of a stale pid, the log tail on a crash, and read-only export and doctor with the hub down. The dogfood soak counts hub restarts and hook refusals.</li>
+      <li><strong>MCP callers act as members in v2.0, so an orchestrator cannot approve over MCP.</strong> The production project's orchestrator keeps approving through the command line, as in v1, until delegation arrives in step 7. Open question 3.</li>
+      <li><strong>A v1 bug that must be fixed while v2 is built.</strong> main moves on with v2, so a v1 fix needs a separate line. Open question 4.</li>
+      <li><strong>Two hubs after the switch.</strong> The production project on the stable hub, codeloop's own board on the next hub. Each hub page shows its channel and links the other.</li>
+      <li><strong>The calendar.</strong> The soak and the watch add about three weeks after the code is done, by design.</li>
+    </ul>
+  </section>
+
+  <section class="contract">
+    <h3>Sizes in days</h3>
+    <p>Builder days for one builder, by the story standard (S is hours to a day, M one to two days). Total 50.5 builder days. With one builder about 11 weeks to the switch including the watch; with two builders working the parallel tracks in step 1 and steps 2 and 3, about 7 to 8 weeks, set mostly by the ten-day soak and the five-day watch.</p>
+    <div class="tablewrap"><table><thead><tr><th>Epic</th><th>Days</th></tr></thead><tbody><tr><td>E0. v1 frozen, v2 isolated</td><td>4.5</td></tr><tr><td>E1. The hub owns the record</td><td>24</td></tr><tr><td>E2. The stories MCP and search</td><td>10</td></tr><tr><td>E3. Reviews, approve with conditions, priority, presence</td><td>6</td></tr><tr><td>E4. Side by side, dogfood, cutover</td><td>6</td></tr><tr><td>Soak, codeloop on v2 (calendar, overlaps steps 2 and 3)</td><td>10 working days</td></tr><tr><td>Watch, the production project on v2 (calendar)</td><td>5 working days</td></tr></tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Story</th><th>Card</th><th>Title</th><th>Size</th><th>Days</th></tr></thead><tbody><tr><td>S0.1</td><td>to propose</td><td>A board moved to v2 refuses writes from v1</td><td>S</td><td>0.5</td></tr><tr><td>S0.2</td><td>to propose</td><td>The production project runs a frozen v1 that new builds cannot change</td><td>S</td><td>1</td></tr><tr><td>S0.3</td><td>to propose</td><td>v2 runs beside v1 under its own name, home and port</td><td>M</td><td>2</td></tr><tr><td>S0.4</td><td>to propose</td><td>One check proves a v2 session left v1 untouched</td><td>S</td><td>1</td></tr><tr><td>S1.1</td><td>to propose</td><td>Lanes, initiatives, epics and features are read through the storage layer</td><td>M</td><td>2</td></tr><tr><td>S1.2</td><td>to propose</td><td>Wiki pages and questions are read and written through the storage layer</td><td>M</td><td>2</td></tr><tr><td>S1.3</td><td>to propose</td><td>The engine moves cards only through the storage layer</td><td>M</td><td>2</td></tr><tr><td>S1.4</td><td>to propose</td><td>Orchestrated runs and worktrees move cards through the storage layer</td><td>M</td><td>2</td></tr><tr><td>S1.5</td><td>to propose</td><td>Every other part of codeloop reads the board through the storage layer</td><td>M</td><td>2</td></tr><tr><td>S1.6</td><td>to propose</td><td>The board's record lives in one SQLite file the hub owns</td><td>M</td><td>2</td></tr><tr><td>S1.7</td><td>to propose</td><td>Every story keeps its key and gets a permanent internal id</td><td>M</td><td>2</td></tr><tr><td>S1.8</td><td>to propose</td><td>Import today's board and wiki into v2 with nothing lost</td><td>M</td><td>2</td></tr><tr><td>S1.9</td><td>to propose</td><td>Export the v2 board back to v1 with nothing lost</td><td>M</td><td>2</td></tr><tr><td>S1.10</td><td>to propose</td><td>Only the hub writes the board, started on demand by any command</td><td>M</td><td>2</td></tr><tr><td>S1.11</td><td>to propose</td><td>Commands that change a story go through the hub</td><td>M</td><td>2</td></tr><tr><td>S1.12</td><td>to propose</td><td>Every remaining command reads and writes through the hub</td><td>M</td><td>2</td></tr><tr><td>S2.1</td><td>to propose</td><td>Agents reach the board through the hub's MCP link</td><td>M</td><td>2</td></tr><tr><td>S2.2</td><td>to propose</td><td>Agents show, note, tick tasks and hand back stories through MCP</td><td>M</td><td>2</td></tr><tr><td>S2.3</td><td>to propose</td><td>Owner-only actions refuse an agent and name who can act</td><td>S</td><td>1</td></tr><tr><td>S2.4</td><td>to propose</td><td>Agents search stories, wiki pages and decisions in one call</td><td>M</td><td>2</td></tr><tr><td>S2.5</td><td>to propose</td><td>Agents browse stories and pages as MCP resources</td><td>S</td><td>1</td></tr><tr><td>S2.6</td><td>to propose</td><td>Hooks answer from the hub with no separate helper</td><td>M</td><td>2</td></tr><tr><td>c-328</td><td>c-328</td><td>Review findings live on the story, reach its agent, and close by commit</td><td>M</td><td>2</td></tr><tr><td>c-327</td><td>c-327</td><td>I approve a gate and accept the agent's recommended answers in one action</td><td>S</td><td>1</td></tr><tr><td>c-324</td><td>c-324</td><td>A P1 arriving can pause a running P2, parking it with a note</td><td>S</td><td>1</td></tr><tr><td>S3.1</td><td>to propose</td><td>The board shows which agent works each story, where, and how recently</td><td>M</td><td>2</td></tr><tr><td>S4.1</td><td>to propose</td><td>v1 and v2 give the same answers on the same board</td><td>M</td><td>2</td></tr><tr><td>S4.2</td><td>to propose</td><td>Switch a project from v2 back to v1 in minutes without losing work</td><td>M</td><td>2</td></tr><tr><td>S4.3</td><td>to propose</td><td>Codeloop's own board runs on v2</td><td>S</td><td>1</td></tr><tr><td>S4.4</td><td>to propose</td><td>The production project moves to v2 once the bar is met</td><td>S</td><td>1</td></tr></tbody></table></div>
+  </section>
+
+  <section class="contract">
+    <h3>Open questions for the owner</h3>
+    <div class="q"><h4>1. When a P1 arrives, what happens to a P2 a builder is working on?</h4>
+      <p>Options: (a) park it automatically after the builder hands back its uncommitted work; (b) ask the owner first; (c) no pause, the P1 waits for a free builder. Recommendation: (b) for v2.0, as c-324 is written; move to (a) once hand-back on pause has run without loss on codeloop's board.</p></div>
+    <div class="q"><h4>2. Is ten working days on codeloop's board, plus five green nightly copies of the production project's board, the bar for switching the production project?</h4>
+      <p>Recommendation: yes. Shorter misses the bugs that show only after a week of real agents; longer delays the production project without adding coverage the nightly copy does not already give.</p></div>
+    <div class="q"><h4>3. Should the production project's orchestrator keep approving through the command line in v2.0, with delegation and its "on behalf of" record left to step 7?</h4>
+      <p>Recommendation: yes. MCP callers act as members in v2.0, so nothing an agent sends over MCP can approve. The command-line path is how it approves today, so the switch changes nothing for it; the event field for delegation exists from the start.</p></div>
+    <div class="q"><h4>4. If v1 needs a fix while v2 is built, where is it made?</h4>
+      <p>Options: (a) no v1 fixes, work around until the switch; (b) a release/v1 branch from the v1.0.0 tag, edited only by the release script in a throwaway clone under ~/.codeloop/releases, packed as 1.0.1. Recommendation: (b), for data loss or a blocked the production project only. It is a second checkout, so it needs your yes under the one-tree rule.</p></div>
+    <div class="q"><h4>5. Does the production project switch at v2.0, or wait for story documents in the store (step 4)?</h4>
+      <p>Recommendation: switch at v2.0. Documents stay files in v2.0 exactly as v1 keeps them, so waiting adds two weeks of risk on the old file and nothing the production project needs on day one.</p></div>
+    <p class="muted">Still open on the architecture page and not needed for v2.0: where checks such as size budget measure by default.</p>
+  </section>
+</div>
+</body>
+</html>
