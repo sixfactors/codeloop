@@ -4,8 +4,8 @@ scope:
   - src/lib/engine.ts
   - src/lib/run.ts
   - workspace/components/story
-freq: 25
-severity: critical
+freq: 1
+severity: warning
 cards:
   - c-136
   - c-307
@@ -29,3 +29,5 @@ There were three causes:
 - **The page explains the check, not the story.** It prints the raw check output and offers "Approve: unstick", which reruns the same check on the same empty file, so the story fails again. It never says that no agent has run, or that the code shipped in 9ade47c.
 
 A stuck explanation should answer three things: whether any work was tried, what already shipped under this id, and which action will change the outcome (place it, skip the stage, or let it run).
+
+A related trap: the verify health score counts every critical gotcha page in the repo (`health.ts:133`). It is not limited to the story being verified. Writing this page as critical dropped c-302's score from 88 to 75 and failed its verify, although c-302 never touched the page.
