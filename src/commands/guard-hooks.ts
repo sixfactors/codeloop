@@ -183,10 +183,17 @@ export function ownerAction(command: string): RegExpExecArray | null {
 // when the command acts as the owner; as an agent or reviewer it is a report the owner confirms, and
 // `card propose --bug` always is, so neither asks.
 const BUG_FLAG = /\bcodeloop\s+(?:cards?\s+(?:new|edit)|start)\b[^;&|\n]*\s--(?:no-)?bug\b/;
-function directBugFlag(command: string): RegExpExecArray | null {
+async function directBugFlag(command: string): Promise<RegExpExecArray | null> {
   const hit = BUG_FLAG.exec(command);
-  if (!hit || /--as[ =](agent|reviewer)\b/.test(command.slice(hit.index).split(/[;&|\n]/)[0])) return null;
-  return (process.env.CODELOOP_ROLE ?? (process.env.CODELOOP_AGENT_RUN ? 'agent' : 'owner')) === 'owner' ? hit : null;
+  if (!hit) return null;
+  // The role the command will act as, read the way the engine reads it; a role it refuses sets nothing.
+  const flag = /--as[ =](\S+)/.exec(command.slice(hit.index).split(/[;&|\n]/)[0])?.[1];
+  const { resolveRole } = await import('../lib/engine.js');
+  try {
+    return resolveRole(flag) === 'owner' ? hit : null;
+  } catch {
+    return null;
+  }
 }
 
 guardCommand
@@ -535,7 +542,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
   const moved = await gateCrossingMove(command);
-  const hit = moved ? [moved] : ownerAction(command) ?? directBugFlag(command);
+  const hit = moved ? [moved] : ownerAction(command) ?? (await directBugFlag(command));
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.

@@ -346,7 +346,13 @@ stages:
       // Inside an agent run the same --bug is only a report the owner confirms.
       process.env.CODELOOP_AGENT_RUN = 'builder';
       expect(await asks('codeloop card new build "Fix the login crash" --bug')).toBe(false);
+      // In an assistant's shell the default role is agent, so a plain --bug is a report too; as the owner it asks.
+      delete process.env.CODELOOP_AGENT_RUN;
+      process.env.CLAUDE_CODE_SESSION_ID = 'session-1';
+      expect(await asks('codeloop card edit c-1 --bug')).toBe(false);
+      expect(await asks('codeloop card edit c-1 --bug --as owner')).toBe(true);
     } finally {
+      delete process.env.CLAUDE_CODE_SESSION_ID;
       for (const [key, value] of [['CODELOOP_PROJECT_DIR', env.dir], ['CODELOOP_AGENT_RUN', env.run], ['CODELOOP_ROLE', env.role]] as const) {
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;
