@@ -72,7 +72,7 @@ beforeEach(() => {
   git(['config', 'user.email', 't@example.com']);
   git(['config', 'user.name', 'T']);
   write('.codeloop/lanes/build.yaml', LANE);
-  write('.codeloop/config.yaml', 'git:\n  trunk: main\nmock:\n  target: app\n  app_dir: workspace/app\n');
+  write('.codeloop/config.yaml', 'git:\n  trunk: main\nmock:\n  target: app\n  app_dir: workspace/app\ndoctor:\n  review: on\n');
   commit('c-0', ['README.md'], 'chore: start');
 });
 
@@ -173,6 +173,14 @@ describe('the review pass', () => {
 
     expect(find('c-8').stage).toBe('spec');
     expect(report.fixed[0].note).toMatch(/could not ask about \d+ gaps: .*limit is 5/);
+  });
+
+  it('the unattended doctor runs no review pass until doctor.review is on', async () => {
+    write('.codeloop/config.yaml', 'git:\n  trunk: main\n');
+    commit('c-1', ['src/a.ts']);
+    board([card('c-1', { stage: 'build' })]);
+    await doctorTick(dir, new Date(), { noChecks: true });
+    expect(readReviewState(dir)).toBeUndefined();
   });
 
   it('uc-307-05: the pass before each pick reads only stories changed since the last pass', async () => {

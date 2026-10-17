@@ -478,6 +478,13 @@ export function scaffoldStartCap(projectDir: string): number {
   return typeof cap === 'number' && cap >= 0 ? Math.floor(cap) : 0;
 }
 
+/** `doctor.review: on` in config.yaml lets the unattended doctor run the review pass; off by default so a project opts in after a supervised `orch run --review --dry-run`. */
+export function doctorReviewEnabled(projectDir: string): boolean {
+  const doctor = (loadConfig(projectDir) as { doctor?: { review?: unknown } }).doctor;
+  const v = doctor && typeof doctor === 'object' ? doctor.review : undefined;
+  return v === true || v === 'on';
+}
+
 /** On unless `.codeloop/config.yaml` sets `monitor: off`. */
 export function monitorEnabled(projectDir: string): boolean {
   const value = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
@@ -504,7 +511,7 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
   const checkMs = opts.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
   // The review pass first, on the stories changed since the last one, so what follows sees the
   // board it repaired. It keeps its own budget: its fixes are not agent turns.
-  const review = reviewPass(projectDir, { now, dryRun: dry, skip: opts.skip });
+  const review = doctorReviewEnabled(projectDir) ? reviewPass(projectDir, { now, dryRun: dry, skip: opts.skip }) : { fixed: [], asked: [], unclear: [] };
   for (const l of [...review.fixed, ...review.asked, ...review.unclear]) log({ id: l.id, action: 'review', note: `review pass ${l.verb}: ${l.note} (evidence: ${l.evidence})` });
   // A builder holding a card with a quiet stream gets one request for a hand-back per stall.
   for (const b of stalledBuilders(projectDir, now.getTime())) {
