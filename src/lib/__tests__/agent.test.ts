@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { spawnSync } from 'child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { buildBrief, loadAgents, resolveAgent, runAgent } from '../agent.js';
@@ -8,7 +8,7 @@ import { findCard, readCards, type Card } from '../cards.js';
 import { advanceCard, approveCard, createCard, recordEvent, rejectCard } from '../engine.js';
 import { nextHint } from '../flow.js';
 import { planRun, runDue, runDueWithAgent } from '../run.js';
-import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus } from '../schedule.js';
+import { everyToCron, installSchedule, removeSchedule, scheduleLine, scheduleStatus, writeScheduleScript } from '../schedule.js';
 import { applyAgentsConfig } from '../scaffold.js';
 import { capture } from '../wiki.js';
 import { runCli } from '../../__tests__/cli.js';
@@ -398,10 +398,23 @@ describe('schedule', () => {
     expect(() => everyToCron('soon')).toThrow(/--cron/);
   });
 
-  it('writes a line that runs `run --agent` in this repo and logs to state/run.log', () => {
-    expect(line('*/30 * * * *')).toBe(
-      `*/30 * * * * cd '${dir}' && PATH='/usr/bin:/bin' '${process.execPath}' '/opt/codeloop/dist/index.js' run --agent fake >> .codeloop/state/run.log 2>&1 # codeloop:${dir}`,
-    );
+  it('writes a short line whose script runs `run --agent` in this repo with the installing PATH, logging to state/run.log', () => {
+    // cron drops a line over 1000 characters; an inline PATH alone can be that long.
+    const longPath = Array.from({ length: 60 }, (_, i) => `/opt/tool-${i}/bin`).join(':');
+    const entry = join(dir, 'entry.mjs');
+    write('entry.mjs', "import { writeFileSync } from 'fs';\nwriteFileSync('ran.json', JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2), path: process.env.PATH }));\n");
+    const schedule = { cron: '*/30 * * * *', agent: 'fake', entry, path: longPath };
+    const cronLine = scheduleLine(dir, schedule);
+    expect(cronLine.length).toBeLessThan(200);
+    expect(cronLine).toMatch(new RegExp(`^\\*/30 \\* \\* \\* \\* '[^']+\\.sh' # codeloop:`));
+
+    const script = writeScheduleScript(dir, schedule);
+    expect(cronLine).toContain(script);
+    mkdirSync(join(dir, '.codeloop/state'), { recursive: true });
+    const ran = spawnSync('/bin/sh', [script], { cwd: tmpdir(), encoding: 'utf-8', env: { PATH: '/usr/bin:/bin' } });
+    expect(ran.status).toBe(0);
+    const seen = JSON.parse(readFileSync(join(dir, 'ran.json'), 'utf-8'));
+    expect(seen).toEqual({ cwd: realpathSync(dir), args: ['run', '--agent', 'fake'], path: longPath });
   });
 
   it('install keeps other crontab entries and replaces its own; remove takes only its own', () => {

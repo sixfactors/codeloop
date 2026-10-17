@@ -1,9 +1,11 @@
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'fs';
+import { createHash } from 'crypto';
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, sep } from 'path';
 import { RefusalError } from './cards.js';
 import { cronError } from './cron.js';
+import { codeloopHome } from './hub-registry.js';
 import { readOff } from './off.js';
 
 export const RUN_LOG = '.codeloop/state/run.log';
@@ -20,21 +22,51 @@ export function everyToCron(every: string): string {
   throw new RefusalError(`--every "${every}" is not an interval cron can run (5m, 10m, 15m, 20m, 30m, 1h, 2h, 3h, 4h, 6h, 12h, 24h); use --cron for anything else`);
 }
 
+export interface ScheduleOptions {
+  cron: string;
+  agent?: string | true;
+  entry?: string;
+  path?: string;
+}
+
+/** The script a project's crontab line runs, one per project under the codeloop home. */
+export function scheduleScriptPath(projectDir: string): string {
+  return join(codeloopHome(), 'schedules', `run-${createHash('sha1').update(projectDir).digest('hex').slice(0, 10)}.sh`);
+}
+
 /**
- * One crontab line. cron starts with a bare PATH, so the PATH of the installing shell is written
- * into the line: the agent command (claude, codex) has to be found at 3am too.
+ * What the crontab line runs. cron starts with a bare PATH, so the PATH of the installing shell is
+ * written here: the agent command (claude, codex) has to be found at 3am too. It lives in a script
+ * because cron drops a line over 1000 characters, and a PATH alone often is.
  */
-export function scheduleLine(
-  projectDir: string,
-  opts: { cron: string; agent?: string | true; entry?: string; path?: string },
-): string {
-  const problem = cronError(opts.cron);
-  if (problem) throw new RefusalError(problem);
+export function scheduleScript(projectDir: string, opts: Omit<ScheduleOptions, 'cron'>): string {
   const entry = opts.entry ?? process.argv[1];
   const run = opts.agent ? ` --agent${opts.agent === true ? '' : ` ${opts.agent}`}` : '';
-  const command = `cd ${quote(projectDir)} && PATH=${quote(opts.path ?? process.env.PATH ?? '')} ${quote(process.execPath)} ${quote(entry)} run${run} >> ${RUN_LOG} 2>&1`;
+  return [
+    '#!/bin/sh',
+    `# Written by \`codeloop schedule install\` for ${projectDir}; install again to change it.`,
+    `cd ${quote(projectDir)} || exit 1`,
+    `PATH=${quote(opts.path ?? process.env.PATH ?? '')}`,
+    'export PATH',
+    `exec ${quote(process.execPath)} ${quote(entry)} run${run} >> ${RUN_LOG} 2>&1`,
+    '',
+  ].join('\n');
+}
+
+/** Writes the script `scheduleLine` points at; install calls it before the crontab line goes in. */
+export function writeScheduleScript(projectDir: string, opts: Omit<ScheduleOptions, 'cron'>): string {
+  const path = scheduleScriptPath(projectDir);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, scheduleScript(projectDir, opts), { mode: 0o755 });
+  return path;
+}
+
+/** One crontab line: the cron expression, the project's schedule script, and the marker that finds it again. */
+export function scheduleLine(projectDir: string, opts: ScheduleOptions): string {
+  const problem = cronError(opts.cron);
+  if (problem) throw new RefusalError(problem);
   // cron reads an unescaped % as the end of the command.
-  return `${opts.cron} ${command.replaceAll('%', '\\%')} ${marker(projectDir)}`;
+  return `${opts.cron} ${quote(scheduleScriptPath(projectDir)).replaceAll('%', '\\%')} ${marker(projectDir)}`;
 }
 
 function readTable(crontab: string): string[] {
@@ -86,7 +118,9 @@ export function ensureMonitorSchedule(projectDir: string, opts: { crontab?: stri
   const crontab = opts.crontab ?? 'crontab';
   try {
     if (scheduleStatus(projectDir, crontab).line) return undefined;
-    installSchedule(projectDir, scheduleLine(projectDir, { cron: everyToCron('1h'), agent: true, ...(opts.entry ? { entry: opts.entry } : {}) }), crontab);
+    const schedule = { cron: everyToCron('1h'), agent: true as const, ...(opts.entry ? { entry: opts.entry } : {}) };
+    writeScheduleScript(projectDir, schedule);
+    installSchedule(projectDir, scheduleLine(projectDir, schedule), crontab);
     return 'codeloop monitor: installed an hourly `codeloop run --agent` in your crontab (doctor tick included); `codeloop schedule remove` or `monitor: off` in config.yaml stops it';
   } catch (e) {
     return `codeloop monitor: not scheduled (${e instanceof Error ? e.message : String(e)}); \`codeloop schedule install --every 1h\` sets it up`;

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { loadAgents, resolveAgent } from '../lib/agent.js';
 import { RefusalError } from '../lib/cards.js';
-import { everyToCron, installSchedule, removeSchedule, RUN_LOG, scheduleLine, scheduleStatus } from '../lib/schedule.js';
+import { everyToCron, installSchedule, removeSchedule, RUN_LOG, scheduleLine, scheduleScript, scheduleStatus, writeScheduleScript } from '../lib/schedule.js';
 import { guard } from './guard.js';
 
 // CODELOOP_CRONTAB names a stand-in for crontab(1), so tests never touch the real table.
@@ -20,13 +20,17 @@ scheduleCommand
     const projectDir = process.cwd();
     const configured = Object.keys(loadAgents(projectDir).agents).length > 0;
     if (opts.agent || configured) resolveAgent(projectDir, opts.agent);
-    const line = scheduleLine(projectDir, { cron: opts.cron ?? everyToCron(opts.every), agent: opts.agent ?? (configured || undefined) });
+    const schedule = { cron: opts.cron ?? everyToCron(opts.every), agent: opts.agent ?? (configured || undefined) };
+    const line = scheduleLine(projectDir, schedule);
     if (opts.print) {
       console.log(line);
+      console.log(scheduleScript(projectDir, schedule).trimEnd().split('\n').map(l => `  ${l}`).join('\n'));
       return;
     }
+    const script = writeScheduleScript(projectDir, schedule);
     installSchedule(projectDir, line, crontab());
     console.log(`  installed: ${line}`);
+    console.log(`  runs ${script}`);
     if (!configured) console.log('  no agent is configured, so the schedule only checks and advances cards; add `agents:` to .codeloop/config.yaml and install again');
     console.log(`  output goes to ${RUN_LOG}; \`codeloop schedule status\` shows the last run`);
   }));
