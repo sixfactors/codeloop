@@ -2,7 +2,8 @@ import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { orchCommand } from '../../commands/orch.js';
 import { readCards, type Card } from '../cards.js';
 import { placeCard } from '../engine.js';
 import { readQuestions } from '../interview.js';
@@ -195,5 +196,32 @@ describe('the review pass', () => {
     expect(second.asked).toEqual([]);
     expect(reviewQuestions('c-2')).toHaveLength(1);
     expect(existsSync(join(dir, 'specs/c-2/interview.md'))).toBe(true);
+  });
+
+  it('US5: `orch run --review` prints fixed, asked and could-not-tell, each line naming its evidence', async () => {
+    const placed = commit('c-1', ['src/a.ts']);
+    const asked = commit('c-2', ['src/b.ts']);
+    git(['checkout', '-q', '-b', 'side']);
+    const side = commit('c-6', ['src/f.ts']);
+    git(['checkout', '-q', 'main']);
+    board([
+      card('c-1', { gate: 'stuck', awaiting: 'owner' }),
+      card('c-2', { stage: 'spec', gate: 'spec', awaiting: 'owner' }),
+      card('c-6', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } }),
+    ]);
+    const printed: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((line: string) => void printed.push(line));
+    process.env.CODELOOP_PROJECT_DIR = dir;
+    try {
+      await orchCommand.parseAsync(['run', '--review'], { from: 'user' });
+    } finally {
+      delete process.env.CODELOOP_PROJECT_DIR;
+      log.mockRestore();
+    }
+    const text = printed.map(l => l.trim()).join('\n');
+    expect(printed[0]).toBe('  review pass: read 3 stories');
+    expect(text).toMatch(new RegExp(`fixed\\nc-1 place: .*\\(evidence: ${placed.slice(0, 8)}\\)`));
+    expect(text).toMatch(new RegExp(`asked\\nc-2 ask: .*\\(evidence: ${asked.slice(0, 8)}\\)`));
+    expect(text).toMatch(new RegExp(`could not tell\\nc-6 unclear: its work is on side and not merged.*\\(evidence: ${side.slice(0, 8)}\\)`));
   });
 });
