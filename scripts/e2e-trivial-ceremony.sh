@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 export CODELOOP_HOME="${CODELOOP_HOME:-$(mktemp -d)}"
-# A trivial card goes create -> build -> verify -> done and writes no research.md or spec.md.
+# A trivial card goes create -> build -> verify -> done, records the four ceremony stages as skipped,
+# and writes no research.md or spec.md.
 #   npm run build && bash scripts/e2e-trivial-ceremony.sh
 set -eu
 
@@ -24,10 +25,10 @@ codeloop init --tools claude --starter generic > /dev/null
 # on the ceremony stages and makes every other check pass.
 node -e "
 const y=require('fs');
-const stages=['research','interview','mock','spec','build','verify'].map(id=>'  - id: '+id+(['build','verify'].includes(id)?'':'\n    when: \"size >= S\"')+'\n    done: { cmd: \"true\" }').join('\n');
+const stages=['research','interview','mock','spec','build','verify'].map(id=>'  - id: '+id+(['build','verify'].includes(id)?'':'\n    when: \"size >= M\"')+'\n    done: { cmd: \"true\" }').join('\n');
 y.writeFileSync('.codeloop/lanes/quick.yaml','id: quick\nversion: 1\nmetric: { name: cycle_time_hours, source: cards }\nstages:\n'+stages+'\n');
 "
-grep -q 'when: "size >= S"' "$ROOT/templates/lanes/build.yaml" || { echo "FAIL  shipped build lane has no when: lines"; exit 1; }
+grep -q 'when: "size >= M"' "$ROOT/templates/lanes/build.yaml" || { echo "FAIL  shipped build lane has no when: lines"; exit 1; }
 
 codeloop card new quick "Fix the typo in the README" --size trivial --force --id c-001 > /dev/null
 codeloop card advance c-001 > /dev/null
@@ -36,7 +37,7 @@ codeloop card advance c-001 > /dev/null
 node -e "
 const c=JSON.parse(require('fs').readFileSync('.codeloop/cards.json','utf8')).cards[0];
 const seq=c.events.map(e=>e.action+':'+e.stage).join(' ');
-if (seq!=='create:build advance:build advance:verify') { console.error('events: '+seq); process.exit(1); }
+if (seq!=='create:build skip:research skip:interview skip:mock skip:spec advance:build advance:verify') { console.error('events: '+seq); process.exit(1); }
 if (c.stage!=='done') { console.error('stage: '+c.stage); process.exit(1); }
 "
 for f in research.md spec.md; do
