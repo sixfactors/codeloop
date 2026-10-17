@@ -18,7 +18,7 @@ agents:
     max_runs_per_day: 50
 
 git:
-  trunk: feat/cli-lanes-gates-agent-runs
+  trunk: main
 
 # In-app mocks: the workspace is a Next.js app whose pages live under workspace/app.
 mock:
