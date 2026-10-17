@@ -8,16 +8,17 @@ import { loadLanes, substitute, type Lane } from './lane.js';
 import { openQuestions } from './interview.js';
 import { findMock } from './mock.js';
 import { cloudCopies } from './wiki.js';
-import { lastActivityAt } from './activity.js';
+import { lastActivityAt, readAllActivity } from './activity.js';
 import { progressSince } from './progress.js';
 import { storyState } from './states.js';
+import { explanationText, stuckExplanation, type StuckExplanation } from './stuck-explanation.js';
 
 export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 
 export interface Inbox {
   summary: string;
   /** Started work waiting on a person: stage gates and stuck. Proposals are in `backlog`. */
-  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string }[];
+  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
   failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
   /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
@@ -71,6 +72,10 @@ export interface InboxInput {
   scoreOf?: (card: Card) => { band: Band; score?: number; feature?: string };
   /** `score` (the default): score descending, then oldest parked first. `age`: oldest parked first. */
   sort?: 'score' | 'age';
+  /** A stuck story's explanation; its text becomes the item's last check. */
+  explain?: (card: Card) => StuckExplanation | undefined;
+  /** When a check of the story's current stage last passed, from its activity. */
+  passedAt?: (card: Card) => number | undefined;
 }
 
 export function readInboxSeen(projectDir: string): string {
@@ -95,20 +100,31 @@ export function buildInbox(projectDir: string, now: Date = clock(), opts: { sort
         return { band, ...(score === undefined ? {} : { score }), ...(feature ? { feature } : {}) };
       },
       sort: opts.sort,
+      explain: card => stuckExplanation(projectDir, card),
+      passedAt: card => lastPassAt(projectDir, card),
     },
     now,
   );
+}
+
+/** When a check of the card's current stage last passed, from its activity stream. */
+export function lastPassAt(projectDir: string, card: Card): number | undefined {
+  const line = readAllActivity(projectDir, card.id).filter(l => l.kind === 'check' && l.pass === true && l.stage === card.stage).at(-1);
+  return line ? Date.parse(line.at) : undefined;
 }
 
 export type NeedsYouItem = Inbox['needs_you'][number];
 export type LaneNumbers = Inbox['numbers'][number];
 
 /** One parked card as the inbox lists it: what to read, what the last check said, and how long it has waited. */
-export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, scored: { band: Band; score?: number; feature?: string } = { band: 'P4' }): NeedsYouItem {
+export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, scored: { band: Band; score?: number; feature?: string } = { band: 'P4' }, explain?: (card: Card) => StuckExplanation | undefined): NeedsYouItem {
+  const stuck = c.gate === 'stuck' ? explain?.(c) : undefined;
   const stage = lanes.find(l => l.id === c.lane)?.stages.find(s => s.id === c.stage);
   const parkedAt = c.events.filter(e => e.action === 'park' || e.action === 'stuck').at(-1);
   const last_check = c.stage === PROPOSED
     ? 'not started: a proposal'
+    : stuck
+    ? explanationText(stuck)
     : c.gate === 'stuck'
     ? `failed: ${c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1)?.note?.split('\n').at(-1) ?? ''}`
     : stage?.gate?.outward ? 'not run yet (public step, approve first)' : 'passed';
@@ -118,6 +134,7 @@ export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, s
     ...(mock ? { mock } : {}),
     ...(c.source ? { source: c.source } : {}),
     last_check, since: parkedAt?.at ?? c.updatedAt, last_event: c.events.at(-1),
+    ...(stuck ? { stuck } : {}),
   };
 }
 
@@ -165,10 +182,24 @@ export function backlogOf(cards: Card[]): Inbox['backlog'] {
   return { count: proposed.length, ...(proposed[0] ? { oldest: proposed[0] } : {}) };
 }
 
-/** Cards whose current stage has failed at least once and are not yet stuck. */
-export function failingOf(cards: Card[], lastActivity?: (id: string) => number | undefined, now = Date.now(), progressAt?: (card: Card) => number | undefined): Inbox['failing'] {
+/**
+ * True when a check of the card's current stage passed after its last failure there: a `result:
+ * pass` event (verify writes one without moving the story) or a passing check line in its activity.
+ * The failure then leaves the failing list; the story's history keeps it.
+ */
+export function passedSinceFail(c: Card, passedAt?: (card: Card) => number | undefined): boolean {
+  const events = c.events ?? [];
+  const fail = events.map((e, i) => (e.action === 'fail' && e.stage === c.stage ? i : -1)).filter(i => i >= 0).at(-1);
+  if (fail === undefined) return false;
+  if (events.slice(fail + 1).some(e => e.stage === c.stage && /\bresult: pass\b/.test(e.note ?? ''))) return true;
+  const passed = passedAt?.(c);
+  return passed !== undefined && passed > Date.parse(events[fail].at);
+}
+
+/** Cards whose current stage has failed at least once and are not yet stuck, unless a later check there passed. */
+export function failingOf(cards: Card[], lastActivity?: (id: string) => number | undefined, now = Date.now(), progressAt?: (card: Card) => number | undefined, passedAt?: (card: Card) => number | undefined): Inbox['failing'] {
   return cards
-    .filter(c => isFailing(c, lastActivity, now))
+    .filter(c => isFailing(c, lastActivity, now) && !passedSinceFail(c, passedAt))
     .map(c => {
       const fail = c.events.filter(e => e.action === 'fail' && e.stage === c.stage).at(-1);
       const moved = progressAt?.(c);
@@ -186,15 +217,15 @@ export function failingOf(cards: Card[], lastActivity?: (id: string) => number |
     .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
 }
 
-export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, lastActivity, progressAt, scoreOf = () => ({ band: 'P4' }), sort = 'score' }: InboxInput, now: Date = clock()): Inbox {
+export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, openOf, lastActivity, progressAt, scoreOf = () => ({ band: 'P4' }), sort = 'score', explain, passedAt }: InboxInput, now: Date = clock()): Inbox {
   // Proposals wait in the backlog; only started work at a gate or stuck counts as waiting on you.
   const parked = cards.filter(c => c.gate && c.stage !== PROPOSED).map(c => {
-    const item = needsYouItem(c, lanes, mockOf(c.id), scoreOf(c));
+    const item = needsYouItem(c, lanes, mockOf(c.id), scoreOf(c), explain);
     const moved = c.gate === 'stuck' ? progressAt?.(c) : undefined;
     return moved ? { ...item, moving_since: new Date(moved).toISOString() } : item;
   });
   const waiting = sort === 'score' ? byScoreThenOldest(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
-  const failing = failingOf(cards, lastActivity, now.getTime(), progressAt);
+  const failing = failingOf(cards, lastActivity, now.getTime(), progressAt, passedAt);
   const backlog = backlogOf(cards);
 
   return {

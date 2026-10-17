@@ -6,7 +6,8 @@ import { ACTIVITY_DIR, lastActivityAt, readActivity, type ActivityEntry } from '
 import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
 import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
-import { backlogOf, failingOf, inboxSummary, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
+import { stuckExplanation } from '../stuck-explanation.js';
+import { backlogOf, failingOf, inboxSummary, lastPassAt, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
 import { pickSpecDir } from '../spec.js';
 import type { Lane } from '../lane.js';
@@ -93,7 +94,7 @@ export interface Paged<T> {
 export type Facets = Record<CardFilterKey, { value: string; count: number }[]>;
 
 /** A card in one of the inbox's lists: the indexed card plus what the inbox says about it. */
-export type InboxCard = IndexedCard & Partial<Pick<NeedsYouItem, 'read' | 'last_check' | 'since' | 'last_event'>> & { first?: string };
+export type InboxCard = IndexedCard & Partial<Pick<NeedsYouItem, 'read' | 'last_check' | 'since' | 'last_event' | 'stuck'>> & { first?: string };
 
 export type IndexedFeature = Feature & Scored;
 export type IndexedEpic = Epic & { score: number };
@@ -309,13 +310,13 @@ export class ProjectIndex {
         // Proposals wait in the backlog; only started work at a gate or stuck is waiting on you.
         const needsYou: InboxCard[] = order(
           this.filterCards({ ...narrow, gate: 'waiting' }).filter(mine).filter(c => c.stage !== PROPOSED).map(c => {
-            const { id: _id, title: _t, lane: _l, stage: _s, gate: _g, awaiting: _a, mock: _m, source: _src, ...rest } = needsYouItem(this.withEvents(c), lanes, this.mockByCard.get(c.id), { band: c.band, ...(c.score === undefined ? {} : { score: c.score }), ...(c.feature ? { feature: c.feature } : {}) });
+            const { id: _id, title: _t, lane: _l, stage: _s, gate: _g, awaiting: _a, mock: _m, source: _src, ...rest } = needsYouItem(this.withEvents(c), lanes, this.mockByCard.get(c.id), { band: c.band, ...(c.score === undefined ? {} : { score: c.score }), ...(c.feature ? { feature: c.feature } : {}) }, card => stuckExplanation(this.projectDir, card));
             return { ...c, ...rest };
           }),
         );
         const all = [...this.cardsById.values()].map(c => this.withEvents(c));
         const scoped = Object.keys(narrow).length ? all.filter(c => this.filterCards(narrow).some(n => n.id === c.id)) : all;
-        const failingRows = failingOf(scoped, id => lastActivityAt(this.projectDir, id)).filter(f => mine(this.cardsById.get(f.id)!));
+        const failingRows = failingOf(scoped, id => lastActivityAt(this.projectDir, id), undefined, undefined, card => lastPassAt(this.projectDir, card)).filter(f => mine(this.cardsById.get(f.id)!));
         const failing: InboxCard[] = failingRows.map(f => {
           const c = this.cardsById.get(f.id)!;
           return { ...c, last_check: f.last_check, since: f.since };

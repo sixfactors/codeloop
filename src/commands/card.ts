@@ -203,9 +203,9 @@ cardCommand
   .description('Show a card, its current stage brief and its events')
   .option('--json', 'JSON output')
   .action(guard(async (id: string, opts: { json?: boolean }) => {
-    const { card, brief: stage, hint, tasks, evidenceFiles, commits, phaseTime } = await client().cards.show(id);
+    const { card, brief: stage, hint, tasks, evidenceFiles, commits, phaseTime, stuck } = await client().cards.show(id);
     if (opts.json) {
-      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits, phaseTime }, null, 2));
+      console.log(JSON.stringify({ ...card, brief: stage, tasks, evidenceFiles, commits, phaseTime, ...(stuck ? { stuck } : {}) }, null, 2));
       return;
     }
     console.log(line(card));
@@ -223,6 +223,13 @@ cardCommand
       if (stage.done) console.log(`  check:  ${stage.done}`);
       for (const note of stage.notes) console.log(`  note:   ${note}`);
       for (const f of stage.feedback) console.log(chalk.yellow(f.kind === 'rejected' ? `  rejected: ${f.note}` : `  returned from ${f.from}: ${f.note}`));
+    }
+    if (stuck) {
+      // The same explanation the story page and the inbox show.
+      console.log(chalk.yellow(`  what you must do: ${stuck.action}`));
+      console.log(`  work tried: ${stuck.tried}`);
+      console.log(`  shipped:    ${stuck.shipped}`);
+      if (stuck.error) console.log(chalk.dim(`  the error (last line): ${stuck.error.split('\n').filter(Boolean).at(-1)}`));
     }
     if (phaseTime) console.log(chalk.dim(`  ${phaseTime.text}`));
     const moving = card.display?.moving;
