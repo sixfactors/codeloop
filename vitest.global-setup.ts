@@ -8,6 +8,6 @@ import { join } from 'path';
 // allowed here (`npm run build` is where those fail); a module that does not load is not.
 export default function setup(): void {
   const build = spawnSync(process.execPath, ['scripts/build-safe.mjs', '--out', '.test-dist', '--allow-type-errors'], { encoding: 'utf-8' });
-  if (build.status !== 0) console.error(`${build.stderr.trim()}\ntests run against the previous .test-dist`);
-  if (!existsSync(join('.test-dist', 'index.js'))) throw new Error('.test-dist/index.js was not built; run `node scripts/build-safe.mjs --out .test-dist` to see why');
+  // A stale .test-dist would test yesterday's code and pass, so a build that fails stops the run.
+  if (build.status !== 0 || !existsSync(join('.test-dist', 'index.js'))) throw new Error(`.test-dist was not built:\n${build.stderr.trim()}`);
 }

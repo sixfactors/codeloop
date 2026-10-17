@@ -101,8 +101,8 @@ if (DIST !== REAL_DIST) {
   for (const name of CARRIED) if (existsSync(join(REAL_DIST, name))) symlinkSync(join(REAL_DIST, name), join(out, name));
 } else if (existsSync(DIST)) {
   for (const name of CARRIED) if (existsSync(join(DIST, name))) renameSync(join(DIST, name), join(out, name));
-  renameSync(DIST, old);
 }
+if (existsSync(DIST)) renameSync(DIST, old);
 try {
   renameSync(out, DIST);
 } catch (e) {
