@@ -1,5 +1,5 @@
 {
-  "version": 1753,
+  "version": 1758,
   "cards": [
     {
       "id": "CL-001",
@@ -1513,8 +1513,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Proposals come out as c-NNN next to CL-NNN cards; role flag is inconsistent across commands.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:card propose takes --id; inbox and card show take --as",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:card propose takes --id; inbox and card show take --as",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1524,7 +1524,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:21.579Z",
@@ -1545,8 +1545,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Backgrounded start loses the token; only the parent terminal sees it.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:serve --bg writes its URL and token to .codeloop/serve.json",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:serve --bg writes its URL and token to .codeloop/serve.json",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1556,7 +1556,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:21.708Z",
@@ -1577,8 +1577,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Dead artifact from the pre-lane model.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:init stops writing tasks/todo.md",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:init stops writing tasks/todo.md",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1588,7 +1588,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:21.832Z",
@@ -1609,8 +1609,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Protobox has /spec and /ctrl; adopt indexed 56 skills and the lanes ignored all of them.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Lanes use adopted skills: init maps each stage to a matching adopted skill before falling back to the bundled one",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Lanes use adopted skills: init maps each stage to a matching adopted skill before falling back to the bundled one",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1620,7 +1620,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:21.955Z",
@@ -1641,8 +1641,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "npm test is hardcoded; Protobox is pnpm.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Build done-check detects the package manager and test command",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Build done-check detects the package manager and test command",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1652,7 +1652,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.078Z",
@@ -1673,8 +1673,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Our process picks by RICE from Next up; codeloop takes file order.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Cards carry rice; run and the board sort by it",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Cards carry rice; run and the board sort by it",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1684,7 +1684,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.205Z",
@@ -1705,8 +1705,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Our process derives live from the prod ref; codeloop wants a hand-written prod.md.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Cards carry owner, branch, pr; run reconciles from git and GitHub: PR merged ends review, merge reachable from prodRef derives live",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Cards carry owner, branch, pr; run reconciles from git and GitHub: PR merged ends review, merge reachable from prodRef derives live",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1716,7 +1716,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.333Z",
@@ -1737,8 +1737,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Our rule says prototype as a real page; codeloop draws standalone HTML.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Mock stage accepts a route in the app; check mock renders the named screens from a URL",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Mock stage accepts a route in the app; check mock renders the named screens from a URL",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1748,7 +1748,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.460Z",
@@ -1769,8 +1769,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Ours ships docs and site with major cards; the build lane has no docs or site step.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Spec carries docs: and site: lines; review done-check requires them changed or marked none",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Spec carries docs: and site: lines; review done-check requires them changed or marked none",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1780,7 +1780,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.588Z",
@@ -1801,8 +1801,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "spec check says split the card and stops.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:card split writes children with epic:; the board nests them",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:card split writes children with epic:; the board nests them",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1812,7 +1812,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.712Z",
@@ -1833,8 +1833,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Ours posts evidence in chat and #all-6fs before a gate.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md:Gate notifications to Slack or a webhook with the evidence link",
+      "source": "owner design notes: dogfood gaps",
+      "dedupe": "build:owner design notes: dogfood gaps:Gate notifications to Slack or a webhook with the evidence link",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1844,7 +1844,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-dogfood-gaps.md"
+          "note": "owner design notes: dogfood gaps"
         },
         {
           "at": "2026-10-07T17:53:22.835Z",
@@ -1865,8 +1865,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Core stays small; plugins carry rules, skill, patterns, gotchas, checks, spines.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A1 Plugin loader: plugin.yaml shape, four kinds, detect, load order repo/home/npm/catalog",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A1 Plugin loader: plugin.yaml shape, four kinds, detect, load order repo/home/npm/catalog",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1876,7 +1876,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.162Z",
@@ -1897,8 +1897,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Adopt indexed 56 Protobox skills and the lanes ignored them; npm test hardcoded.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A2 init maps each build stage to the matching specialist or adopted skill; detects package manager and test command",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A2 init maps each build stage to the matching specialist or adopted skill; detects package manager and test command",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1908,7 +1908,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.284Z",
@@ -1929,8 +1929,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Trivial cards skip research, mock, spec; epics run every thinking stage.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A3 Size-adaptive lanes: investigate stage sets size, stages carry when:",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A3 Size-adaptive lanes: investigate stage sets size, stages carry when:",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1940,7 +1940,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.402Z",
@@ -1961,8 +1961,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Our process picks by RICE; codeloop takes file order.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A4 Card model: rice, owner, branch, pr, epic, size; run and the board sort by rice",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A4 Card model: rice, owner, branch, pr, epic, size; run and the board sort by rice",
       "retries": {},
       "evidence": [],
       "events": [
@@ -1972,7 +1972,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.559Z",
@@ -1993,8 +1993,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Live is derived, never hand-written.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A5 Reconcile from git and GitHub: PR merged ends review; merge reachable from prodRef derives live",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A5 Reconcile from git and GitHub: PR merged ends review; merge reachable from prodRef derives live",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2004,7 +2004,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.683Z",
@@ -2025,8 +2025,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Found dogfooding on 10-07.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A6 Backlog column; card propose --id; --as on every command; serve --bg writes .codeloop/serve.json",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A6 Backlog column; card propose --id; --as on every command; serve --bg writes .codeloop/serve.json",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2036,7 +2036,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.819Z",
@@ -2057,8 +2057,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "spec check says split and stops.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A7 card split writes children with epic:; the board nests them",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A7 card split writes children with epic:; the board nests them",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2068,7 +2068,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:27.944Z",
@@ -2089,8 +2089,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Files in plan, deps named, no task-less file, tests do not drop. No extra features.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A8 check diff, spec check --strict, Not-building section required",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A8 check diff, spec check --strict, Not-building section required",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2100,7 +2100,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.074Z",
@@ -2121,8 +2121,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Rule with a check blocks; without one advises.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A9 Executable rules: check: on rules.md entries, run at build and review",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A9 Executable rules: check: on rules.md entries, run at build and review",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2132,7 +2132,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.205Z",
@@ -2153,8 +2153,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Self-feeding queue from real review output.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A10 Review triage: verdict and evidence per finding; deferred become cards; unnecessary removes code",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A10 Review triage: verdict and evidence per finding; deferred become cards; unnecessary removes code",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2164,7 +2164,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.333Z",
@@ -2185,8 +2185,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Neither competitor reports cost; BMAD users ask for it.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A11 Cost and autonomy per card from agent runs; stats, board, site",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A11 Cost and autonomy per card from agent runs; stats, board, site",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2196,7 +2196,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.461Z",
@@ -2217,8 +2217,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Board details live in the wiki and survive the card.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A12 Wiki pane in serve; engine-written card pages; gate notes become decisions",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A12 Wiki pane in serve; engine-written card pages; gate notes become decisions",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2228,7 +2228,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.596Z",
@@ -2249,8 +2249,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Ours posts evidence before every gate.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A13 Gate notifications to Slack or a webhook with the evidence link",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A13 Gate notifications to Slack or a webhook with the evidence link",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2260,7 +2260,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.728Z",
@@ -2281,8 +2281,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Three known engine limits.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A14 Replay eval at each card SHA; run --due ignores pre-existing tags; adopt merges the index",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A14 Replay eval at each card SHA; run --due ignores pre-existing tags; adopt merges the index",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2292,7 +2292,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.853Z",
@@ -2313,8 +2313,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "BMAD ships as plain Agent Skills.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A15 Agent Skills layout for npx skills add; plugins and lanes installable from the Protobox catalog",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A15 Agent Skills layout for npx skills add; plugins and lanes installable from the Protobox catalog",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2324,7 +2324,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:28.977Z",
@@ -2345,8 +2345,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "BMAD import reads a file that no longer exists.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A16 Importers: BMAD tickets.toml; Spec Kit clarifications and checklists; fixtures from current versions",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A16 Importers: BMAD tickets.toml; Spec Kit clarifications and checklists; fixtures from current versions",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2356,7 +2356,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.107Z",
@@ -2377,8 +2377,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "README still sells the old loop.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:A17 README matches the lane engine; init stops writing tasks/todo.md",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:A17 README matches the lane engine; init stops writing tasks/todo.md",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2388,7 +2388,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.233Z",
@@ -2409,8 +2409,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Founder answers async; nobody else does this.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B1 interview stage through the inbox: five questions, recommended answers, written back to the spec",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:B1 interview stage through the inbox: five questions, recommended answers, written back to the spec",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2420,7 +2420,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.363Z",
@@ -2441,8 +2441,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "BMAD thinking pieces as checked stages.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B2 whys, options, premortem, scope-cut stages with checks",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:B2 whys, options, premortem, scope-cut stages with checks",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2452,7 +2452,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.493Z",
@@ -2473,8 +2473,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Research that creates specs.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:B3 codeloop research <card>: competitor wiki + web + screenshots, research.md, draft spec",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:B3 codeloop research <card>: competitor wiki + web + screenshots, research.md, draft spec",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2484,7 +2484,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.628Z",
@@ -2505,8 +2505,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From ui-mock-artifacts and design-graph.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C1 ui-mock plugin: mock is a route in the app; screen inventory spine; ui-spec-compare check",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C1 ui-mock plugin: mock is a route in the app; screen inventory spine; ui-spec-compare check",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2516,7 +2516,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.761Z",
@@ -2536,9 +2536,9 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "dropped",
-      "description": "How chanl-admin was built.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C2 ui-shadcn plugin: frontend-apps rules as checks: tokens, weights, registry first, components/shared",
+      "description": "How a private project was built.",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C2 ui-shadcn plugin: frontend-apps rules as checks: tokens, weights, registry first, components/shared",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2548,7 +2548,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:29.892Z",
@@ -2568,9 +2568,9 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "dropped",
-      "description": "From landing-copy and chanl-site.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C3 marketing-site plugin: section templates, StoryBrand, copy rules; spec carries docs: and site:",
+      "description": "From landing-copy and a private project.",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C3 marketing-site plugin: section templates, StoryBrand, copy rules; spec carries docs: and site:",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2580,7 +2580,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.029Z",
@@ -2601,8 +2601,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From backend-services, api-contracts, nestjs-coder, ARCHITECTURE-DOCS.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C4 backend-nestjs plugin: DTO, envelope, swagger, scoping checks; spines ERD, contracts, data flows with file-to-doc mapping",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C4 backend-nestjs plugin: DTO, envelope, swagger, scoping checks; spines ERD, contracts, data flows with file-to-doc mapping",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2612,7 +2612,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.159Z",
@@ -2633,8 +2633,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Dogfood on sherpa-backend.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C5 backend-fastapi plugin: same spines and stage in Python; proves the interface on two languages",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C5 backend-fastapi plugin: same spines and stage in Python; proves the interface on two languages",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2644,7 +2644,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.295Z",
@@ -2665,8 +2665,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From sdk-cli rules and process.md.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C6 sdk-cli plugin: SDK exposes the change and the CLI shows it, as the pre-gate check",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C6 sdk-cli plugin: SDK exposes the change and the CLI shows it, as the pre-gate check",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2676,7 +2676,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.426Z",
@@ -2697,8 +2697,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From usecase, test-writer, e2e-testing.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C7 qa plugin: use cases per layer, UI runner, --mutate",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C7 qa plugin: use cases per layer, UI runner, --mutate",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2708,7 +2708,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.557Z",
@@ -2729,8 +2729,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From deployer, prod-smoke-test, deploy-guard.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C8 deploy plugin: deploy guard, smoke test, Fly and Vercel integrations, GitHub Environment gate",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C8 deploy plugin: deploy guard, smoke test, Fly and Vercel integrations, GitHub Environment gate",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2740,7 +2740,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.685Z",
@@ -2761,8 +2761,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "From pr-reviewer, service-reviewer, code-quality-check.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:C9 review plugin: PR and service review in the triage format",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:C9 review plugin: PR and service review in the triage format",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2772,7 +2772,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.813Z",
@@ -2793,8 +2793,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "Hosted tier is a demo until this.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:D1 Publish the plugin and lane catalog to Protobox prod; page writes on hosted servers",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:D1 Publish the plugin and lane catalog to Protobox prod; page writes on hosted servers",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2804,7 +2804,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:30.943Z",
@@ -2825,8 +2825,8 @@
       "laneVersion": 1,
       "stage": "dropped",
       "description": "--as owner is a flag, not auth.",
-      "source": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md",
-      "dedupe": "build:chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md:D2 Sign-in and real roles for the hosted board",
+      "source": "owner design notes: core vs plugins",
+      "dedupe": "build:owner design notes: core vs plugins:D2 Sign-in and real roles for the hosted board",
       "retries": {},
       "evidence": [],
       "events": [
@@ -2836,7 +2836,7 @@
           "human": true,
           "action": "propose",
           "stage": "proposed",
-          "note": "chanl-platform/docs/plans/codeloop/2026-10-07-core-vs-plugins.md"
+          "note": "owner design notes: core vs plugins"
         },
         {
           "at": "2026-10-07T18:01:31.072Z",
@@ -6925,7 +6925,7 @@
           "human": true,
           "action": "answer",
           "stage": "proposed",
-          "note": "Q3: Given chanl-platform with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body."
+          "note": "Q3: Given a private project with `.claude/skills/usecase` and `nestjs-coder`, when `codeloop init`, then build.yaml's build stage names nestjs-coder, verify names usecase, `done:` uses `make usecase-test`, and `brief` prints the adopted skill's body."
         },
         {
           "at": "2026-10-11T22:34:10.928Z",
@@ -7094,7 +7094,7 @@
           "human": true,
           "action": "answer",
           "stage": "proposed",
-          "note": "Q3: Given chanl-admin, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold."
+          "note": "Q3: Given a private project, when the mock stage runs for a card, then `app/mocks/<nnn>/page.tsx` exists importing only `components/shared` and `components/ui`, and the build done-check runs ui-spec-compare between the mock route and the built route with divergence under the threshold."
         },
         {
           "at": "2026-10-11T22:31:38.377Z",
@@ -7187,7 +7187,7 @@
           "human": true,
           "action": "answer",
           "stage": "proposed",
-          "note": "Q3: Given a diff adding `color: #333`, when the build done-check runs, then it fails naming file:line and rule; the existing chanl-admin tree reports N violations as a number in the wiki, not a failure."
+          "note": "Q3: Given a diff adding `color: #333`, when the build done-check runs, then it fails naming file:line and rule; the existing a private project tree reports N violations as a number in the wiki, not a failure."
         },
         {
           "at": "2026-10-11T22:33:10.666Z",
@@ -7203,7 +7203,7 @@
           "human": true,
           "action": "answer",
           "stage": "proposed",
-          "note": "Q5: Copy the rules; move chanl paths into plugin config (`shared_dir`, `ui_dir`)."
+          "note": "Q5: Copy the rules; move a private project's paths into plugin config (`shared_dir`, `ui_dir`)."
         }
       ],
       "createdAt": "2026-10-07T18:01:33.904Z",
@@ -7946,7 +7946,7 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "proposed",
-      "description": "Shape workflow: brief, interview, breakdown with check breakdown, rank, owner approves, stories queued in build. Spec: chanl-platform docs/plans/codeloop/2026-10-09-shape-workflow.md",
+      "description": "Shape workflow: brief, interview, breakdown with check breakdown, rank, owner approves, stories queued in build. Spec: owner design notes: shape workflow",
       "source": "docs/plans/codeloop/2026-10-09-shape-workflow.md",
       "dedupe": "build:docs/plans/codeloop/2026-10-09-shape-workflow.md:Turn a problem into an epic of shippable stories",
       "gate": "proposal",
@@ -8578,7 +8578,7 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "proposed",
-      "description": "spec: chanl-platform docs/plans/codeloop/2026-10-11-invisible-codeloop.md; spec written, start at spec; absorbs c-058 fast lane",
+      "description": "spec: owner design notes: invisible codeloop; spec written, start at spec; absorbs c-058 fast lane",
       "gate": "proposal",
       "awaiting": "owner",
       "retries": {},
@@ -8942,7 +8942,7 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "proposed",
-      "description": "plan: chanl-platform docs/plans/codeloop/2026-10-11-story-carries-its-proof.md; ops-ai found 3 of 5 accepted commits defective",
+      "description": "plan: owner design notes: story carries its proof; ops-ai found 3 of 5 accepted commits defective",
       "gate": "proposal",
       "awaiting": "owner",
       "retries": {},
@@ -8972,7 +8972,7 @@
       "lane": "build",
       "laneVersion": 1,
       "stage": "proposed",
-      "description": "plan: chanl-platform docs/plans/codeloop/2026-10-11-jira-features.md (automation, notifications, watchers, mentions)",
+      "description": "plan: owner design notes: jira features (automation, notifications, watchers, mentions)",
       "gate": "proposal",
       "awaiting": "owner",
       "retries": {},
@@ -14038,7 +14038,7 @@
       "lane": "build",
       "laneVersion": 2,
       "stage": "build",
-      "description": "[services] Activity stream per story: .codeloop/state/activity/<card>.jsonl from guard hooks, headless runs, checks and commits; session labels. Spec: chanl-platform docs/plans/codeloop/2026-10-14-story-journey-devex.md step 1. Worktree feat/engine-activity-stream.",
+      "description": "[services] Activity stream per story: .codeloop/state/activity/<card>.jsonl from guard hooks, headless runs, checks and commits; session labels. Spec: owner design notes: story journey devex step 1. Worktree feat/engine-activity-stream.",
       "retries": {
         "research": 1
       },
@@ -19364,8 +19364,8 @@
       "title": "Each story's state and history live in its own folder in git, beside its plan",
       "story": {
         "as": "founder",
-        "can": "run many agents on one board without anyone committing each other's changes",
-        "so": "the shared board file stops causing conflicts"
+        "can": "find every story's state, history, plan and evidence together in its own folder in the project's .codeloop, kept in git, in one layout codeloop decides for every project",
+        "so": "nothing is lost, split across places, or swept into someone else's commit"
       },
       "persona": "founder",
       "size": "M",
@@ -19406,10 +19406,18 @@
           "action": "spec",
           "stage": "research",
           "note": "specs/321-each-story-s-state-and-history-live-in-i"
+        },
+        {
+          "at": "2026-10-17T18:59:27.989Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "research",
+          "note": "story"
         }
       ],
       "createdAt": "2026-10-17T18:13:53.914Z",
-      "updatedAt": "2026-10-17T18:49:08.206Z",
+      "updatedAt": "2026-10-17T18:59:27.989Z",
       "spec": "specs/321-each-story-s-state-and-history-live-in-i"
     },
     {
@@ -19495,6 +19503,99 @@
       "createdAt": "2026-10-17T18:22:41.588Z",
       "updatedAt": "2026-10-17T18:29:33.271Z",
       "spec": "specs/323-visitors-can-browse-codeloop-s-own-board"
+    },
+    {
+      "id": "c-324",
+      "title": "A P1 arriving can pause a running P2, parking it with a note",
+      "story": {
+        "as": "founder",
+        "can": "have urgent work pause lower-priority work in flight, with the paused story parked and a note saying why",
+        "so": "agents always work on what matters most"
+      },
+      "persona": "founder",
+      "size": "S",
+      "feature": "value-ranked-board",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Requested by the ops-ai orchestrator 10-17 for the owner. Open question for the owner: pause automatically, or ask first? What happens to the paused agent's uncommitted work?",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T18:55:46.906Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-17T18:55:46.906Z",
+      "updatedAt": "2026-10-17T18:55:46.906Z"
+    },
+    {
+      "id": "c-325",
+      "title": "Agents in any tool use codeloop through one MCP link with structured results",
+      "story": {
+        "as": "builder",
+        "can": "connect to codeloop's board through the hub's MCP link, call about twelve tools that return structured data, and be refused owner-only actions",
+        "so": "no shell parsing or CLI launch problems stand between an agent and the board"
+      },
+      "persona": "builder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Owner approved 10-17, after the per-story folders story. Today: stdio MCP with 14 tools (src/lib/mcp.ts) and an HTTP API with 82 routes (server.ts). Add: MCP served by the hub over HTTP; handback, note, priority, doctor tools; JSON results; caller roles so approve and answer refuse agents; CLI stays the offline fallback on the same core library.",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T18:57:27.639Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-17T18:57:27.639Z",
+      "updatedAt": "2026-10-17T18:57:27.639Z"
+    },
+    {
+      "id": "c-326",
+      "title": "Agents are named templates handed to every tool, and every agent reads the project constitution first",
+      "story": {
+        "as": "team",
+        "can": "pick from a default cast of named agents (role, skills, steps, tool and MCP access), fork or rename them, and have Codeloop hand them to every agent tool through the MCP, each reading the project constitution first",
+        "so": "I can see at a glance who is doing what and change how every agent works from one place"
+      },
+      "persona": "team",
+      "size": "M",
+      "feature": "hosted-board",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Owner approved 10-17, under Codeloop Cloud, after the server and MCP work. Borrow BMAD's named roles (Mary the analyst, John the PM, Winston the architect ...) and Spec Kit's constitution, clarify and analyze steps. Today: 17 step skills rendered as faceless agent files by codeloop render.",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T19:42:21.474Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-17T19:42:21.474Z",
+      "updatedAt": "2026-10-17T19:42:21.474Z"
     }
   ]
 }
