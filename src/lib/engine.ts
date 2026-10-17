@@ -1,6 +1,7 @@
 import { evidenceOf, LEGACY_NOTICE, usecasesOf } from './paths.js';
 import { specPath, workDir } from './project-root.js';
 import { spawnSync } from 'child_process';
+import { scrubOutput } from './scrub.js';
 import { checkEnv } from './shell.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
@@ -219,12 +220,13 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   const raw = `${run.stdout ?? ''}${run.stderr ?? ''}`;
   // The legacy-layout notice is printed by every codeloop command the check runs; it says nothing about the story.
   const text = raw.split('\n').filter(l => l.trimEnd() !== LEGACY_NOTICE).join('\n');
-  const output = tail(text);
+  // The output becomes an event note in cards.json, which is tracked.
+  const output = scrubOutput(tail(text));
   // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
   if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
   const passed = run.status === 0;
   if (checkCrashed(run.status, raw)) return { passed, output, crashed: output };
-  const fault = passed ? undefined : toolFault(card, raw, text, work);
+  const fault = passed ? undefined : toolFault(card, raw, text, work && scrubOutput(work));
   return { passed, output, ...(fault ? { crashed: fault } : {}) };
 }
 

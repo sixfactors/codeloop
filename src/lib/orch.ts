@@ -27,6 +27,7 @@ import { loadConfig } from './config.js';
 import { INTERVIEW, openQuestions } from './interview.js';
 import { carriedStages, loadLane, type Stage } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
+import { scrubOutput } from './scrub.js';
 import { checkEnv } from './shell.js';
 import { waitUnderCeiling, type MemoryProbe } from './memory.js';
 import { ensureStoryWorktree, mergeStory } from './worktree.js';
@@ -245,9 +246,10 @@ export function carryTimeoutMinutes(projectDir: string, perStage: number, stages
 
 /** The engine's `check-error` event, written once per distinct tail: a crashed check spends no retry. */
 function checkError(projectDir: string, id: string, stage: string, tail: string): void {
+  const note = scrubOutput(tail);
   const last = findCard(readCards(projectDir).cards, id).events.filter(e => e.stage === stage).at(-1);
-  if (last?.action === 'check-error' && last.note === tail) return;
-  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note: tail }));
+  if (last?.action === 'check-error' && last.note === note) return;
+  recordEvent(projectDir, id, () => ({ action: 'check-error', stage, note }));
 }
 
 /** A failed turn costs a retry, the same way a failed check does; the lane's last retry parks the story stuck. */

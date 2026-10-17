@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execFileSync } from 'child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { createServer } from 'http';
 import type { AddressInfo } from 'net';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readCards, type Card } from '../cards.js';
@@ -116,6 +116,19 @@ describe('verify', () => {
     const card = readCards(dir).cards[0];
     expect(card.evidence).toEqual(['evidence/001/verify.md']);
     expect(card.events.at(-1)).toMatchObject({ action: 'verify', stage: 'verify' });
+  });
+
+  it('writes evidence with no home folder, temp folder or terminal codes in the output', async () => {
+    useCase('uc-1', 'US1', 'cli: { run: "printf \'\\\\033[31m%s\\\\033[0m %s\\\\n\' \\"$HOME/x\\" \\"$(pwd -P)\\"" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+
+    await verify(dir, '001');
+
+    const text = readFileSync(join(dir, 'evidence/001/uc-1.json'), 'utf-8');
+    expect(text).not.toContain(homedir());
+    expect(text).not.toContain(realpathSync(tmpdir()));
+    expect(text).not.toContain('\\u001b');
+    expect(JSON.parse(text).layers[0].output).toMatch(/^~\/x <temp dir>\/codeloop-verify-/);
   });
 
   it('fails an api use case whose status differs from the expected one', async () => {

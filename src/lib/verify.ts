@@ -12,6 +12,7 @@ import { loadConfig } from './config.js';
 import { annotateCard, RefusalError, resizeTrivial } from './engine.js';
 import { cardNumber } from './lane.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
+import { scrubOutput } from './scrub.js';
 import { checkEnv } from './shell.js';
 import { readAcceptance, resolveSpecDir } from './spec.js';
 
@@ -217,7 +218,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
     // A use case with nothing runnable (ui only, or empty) must not count as a pass.
     const pass = layers.length > 0 && layers.every(l => l.pass);
     result.cases.push({ id: uc.id, accept: uc.accept, pass, layers });
-    writeFileSync(join(out, `${uc.id}.json`), JSON.stringify({ id: uc.id, accept: uc.accept, failure_mode: uc.failure_mode, sha, env: opts.env ?? 'local', workspace, pass, layers }, null, 2) + '\n');
+    writeFileSync(join(out, `${uc.id}.json`), JSON.stringify({ id: uc.id, accept: uc.accept, failure_mode: uc.failure_mode, sha, env: opts.env ?? 'local', workspace, pass, layers: layers.map(l => ({ ...l, output: scrubOutput(l.output) })) }, null, 2) + '\n');
   }
   } finally {
     if (exported) exported.dispose();
