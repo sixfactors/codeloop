@@ -128,6 +128,13 @@ export function hubListener(api: NodeHandler, pages: NodeHandler, opts: { anyHos
     if (isApiPath(url)) return api(req, res);
     if (opts.chunks && url.startsWith('/_next/static/')) return opts.chunks(req, res);
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
+    // The sign-in cookie is set on localhost and a browser does not send it to 127.0.0.1, so a page
+    // opened there would render signed out. The API is left alone: the CLI calls it with a token.
+    if (host === '127.0.0.1') {
+      res.writeHead(302, { Location: `http://${(req.headers.host ?? '').replace(/^127\.0\.0\.1/, 'localhost')}${url}` });
+      res.end();
+      return;
+    }
     if (!opts.anyHost && !LOOPBACK.has(host)) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: `this hub answers only on localhost, not ${req.headers.host}` }));

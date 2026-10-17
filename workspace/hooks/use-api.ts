@@ -189,8 +189,8 @@ export const useArtifacts = () => useQuery({ queryKey: QK.artifacts, queryFn: ap
 export const useStats = () => useQuery({ queryKey: QK.stats, queryFn: api.stats, retry: false });
 export const useConfig = (enabled = true) => useQuery({ queryKey: QK.config, queryFn: api.config, retry: false, enabled });
 
-/** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. */
-export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: false, staleTime: 5_000, refetchInterval: 15_000 });
+/** Owner mode, this browser's sign-in state, token validity and the project. Polled: signing in or out in another tab should be noticed here too. Retried, so one dropped check does not show a signed-in owner as read-only. */
+export const useSession = () => useQuery({ queryKey: QK.session, queryFn: api.session, retry: 2, staleTime: 5_000, refetchInterval: 15_000 });
 
 /** Why a write control is disabled; the same text for every one of them, so a reader learns it once. */
 export const SIGN_IN_REASON = 'Sign in to answer and approve.';

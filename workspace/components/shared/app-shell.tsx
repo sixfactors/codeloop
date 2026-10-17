@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import dynamic from 'next/dynamic';
+import { sessionLabel } from '@/lib/session-label';
 import { useBoard, useCanWrite, useConfig, useHome, useInbox, useSession, useSetupStatus } from '@/hooks/use-api';
 import { useProject, useRoutes } from '@/components/providers/project-provider';
 import { routesFor, type Routes } from '@/lib/routes';
@@ -244,7 +245,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // `total`, so the sidebar, the board header and the drawer pager can never disagree.
   const board = useBoard(undefined, !atHubHome);
   const total = board.data?.total ?? 0;
-  const { canWrite } = useCanWrite();
+  const { canWrite, isLoading } = useCanWrite();
   const session = useSession();
   const config = useConfig(!atHubHome);
   const inbox = useInbox({}, !atHubHome);
@@ -326,7 +327,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-medium">{canWrite ? 'Owner' : 'Read only'}</span>
+              <span className="truncate font-medium">{sessionLabel({ canWrite, isLoading })}</span>
               <span className="truncate text-xs text-muted-foreground tabular-nums" data-testid="sidebar-story-count">
                 {atHubHome ? `${knownProjects.length} project${knownProjects.length === 1 ? '' : 's'}` : `${total} stories`}
               </span>

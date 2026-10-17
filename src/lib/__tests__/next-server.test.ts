@@ -98,13 +98,14 @@ describe('the hub\'s listener: /p/<id>/... rewritten for Next, a project id carr
     server = createServer(hubListener(api, pages));
     await new Promise<void>(r => server!.listen(0, '127.0.0.1', r));
     const port = (server.address() as { port: number }).port;
-    const base = `http://127.0.0.1:${port}`;
+    // Page requests name localhost: a 127.0.0.1 page request is redirected (next test).
+    const get = (path: string) => getAs(`localhost:${port}`, port, path);
 
-    await fetch(`${base}/p/acme`);
-    await fetch(`${base}/p/acme/`);
-    await fetch(`${base}/p/acme/cards/c-1`);
-    await fetch(`${base}/`);
-    expect((await fetch(`${base}/api/hub/projects`)).headers.get('content-type')).toContain('json');
+    await get('/p/acme');
+    await get('/p/acme/');
+    await get('/p/acme/cards/c-1');
+    await get('/');
+    expect((await get('/api/hub/projects')).type).toContain('json');
 
     expect(seen).toEqual([
       { url: '/', mode: 'hub', project: 'acme' },
@@ -112,5 +113,47 @@ describe('the hub\'s listener: /p/<id>/... rewritten for Next, a project id carr
       { url: '/cards/c-1', mode: 'hub', project: 'acme' },
       { url: '/', mode: 'hub', project: undefined },
     ]);
+  });
+});
+
+/** A GET to the listener on 127.0.0.1 carrying the given Host header, without following redirects. */
+function getAs(host: string, port: number, path: string): Promise<{ status: number; location?: string; type?: string }> {
+  return new Promise((resolve, reject) => {
+    const req = request({ host: '127.0.0.1', port, path, headers: { host } }, res => {
+      res.resume();
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, location: res.headers.location, type: res.headers['content-type'] }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+describe('the hub sends a 127.0.0.1 page to localhost, where the sign-in cookie lives', () => {
+  it('redirects a page request with path and query kept, and leaves the API and static chunks alone', async () => {
+    const seen: string[] = [];
+    const pages = (req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+      seen.push(req.url ?? '');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<html>page</html>');
+    };
+    const api = (_req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{}');
+    };
+    const chunks = (_req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end('');
+    };
+    server = createServer(hubListener(api, pages, { chunks }));
+    await new Promise<void>(r => server!.listen(0, '127.0.0.1', r));
+    const port = (server.address() as { port: number }).port;
+    const loop = `127.0.0.1:${port}`;
+
+    expect(await getAs(loop, port, '/p/acme/cards/c-1?tab=log')).toMatchObject({ status: 302, location: `http://localhost:${port}/p/acme/cards/c-1?tab=log` });
+    expect(seen).toEqual([]);
+    expect((await getAs(loop, port, '/api/hub/session')).status).toBe(200);
+    expect((await getAs(loop, port, '/_next/static/x.js')).status).toBe(200);
+    expect((await getAs(`localhost:${port}`, port, '/p/acme/')).status).toBe(200);
+    expect(seen).toEqual(['/']);
   });
 });

@@ -40,9 +40,14 @@ export function removeHubState(): void {
   if (existsSync(file)) unlinkSync(file);
 }
 
+/**
+ * The address codeloop prints for the hub. A loopback hub is named `localhost`, the name people
+ * type: the sign-in cookie belongs to the hostname that set it, so a link on 127.0.0.1 would open
+ * signed out for someone signed in on localhost.
+ */
 export const hubUrl = (state: Pick<HubState, 'host' | 'port'>): string => {
   const loopback = ['127.0.0.1', 'localhost', '::1'].includes(state.host);
-  return `http://${loopback ? '127.0.0.1' : state.host}:${state.port}`;
+  return `http://${loopback ? 'localhost' : state.host}:${state.port}`;
 };
 
 /**

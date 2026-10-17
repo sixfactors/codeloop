@@ -111,7 +111,7 @@ export async function runHubForeground(port: number, host: string, opts: { open?
   process.env.CODELOOP_PORT = String(port);
   process.env.CODELOOP_API_INTERNAL = `http://127.0.0.1:${port}`;
 
-  const hub = createHubApp({ token, sessionSecret });
+  const hub = createHubApp({ token, sessionSecret, port });
   const workspaceBuild = findWorkspaceBuild(PACKAGE_ROOT);
   const pages = workspaceBuild ? await loadNext(workspaceBuild, { hostname: host, port }) : undefined;
   if (!pages) {
