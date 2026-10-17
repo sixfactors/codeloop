@@ -454,6 +454,12 @@ td.yes { color: var(--ok); } td.no { color: var(--muted); }
     <h3>Local and cloud, the same server</h3>
     <p>The same server runs in two versions. With open source, the command line, the web board and agents talk to a local server, the hub on your machine, or one nearby on your network. With Codeloop Cloud they talk to a remote server hosted on Protobox; the same Cloud server can also be hosted on-prem, with Cloud's features. Linking a project adds sharing and takes nothing away. Neither version prescribes a process. Steps (lanes) stay configurable per team in both; in Cloud they are shared across the workspace together with its named agents.</p>
     <table>
+      <tr><th>Environment</th><th>Where it runs</th><th>Who talks to it</th><th>Record</th></tr>
+      <tr><td>local hub</td><td>Your machine, or a server nearby on your network</td><td>The command line, web board, hooks and agents on that machine or network</td><td>SQLite in the codeloop home</td></tr>
+      <tr><td>Codeloop Cloud</td><td>Protobox, or on-prem with Cloud's features</td><td>Every member's command line, agents and browser, over https</td><td>MongoDB</td></tr>
+      <tr><td>public view</td><td>The Cloud server, read-only</td><td>Anyone, with no sign-in. Later</td><td>Read through the privacy filter</td></tr>
+    </table>
+    <table>
       <tr><th>Feature</th><th>Hub, open source</th><th>Codeloop Cloud</th></tr>
       <tr><td>Visibility and context</td><td>Who works what, where, and the context each agent gets, for one machine</td><td>The same across every member's machine, one board</td></tr>
       <tr><td>Your process</td><td>Any: BMAD, Spec Kit, custom, or codeloop's lanes and gates, which are optional</td><td>Same; lanes and gates shared across the workspace, with its named agents</td></tr>
