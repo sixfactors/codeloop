@@ -19,6 +19,7 @@ import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
+import { reviewPass } from './review-pass.js';
 import { startOrch, waitingOrchCards } from './orch.js';
 import { placeTurn } from './orch-isolation.js';
 import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
@@ -463,7 +464,7 @@ function startDue(projectDir: string, file: string, now: Date, filter: RunFilter
 
 export interface DoctorAction {
   id: string;
-  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check' | 'orch-retry';
+  action: 'split-nudge' | 'agent-started' | 'agent-not-started' | 'suggest-park' | 'nudge-builder' | 'rerun-check' | 'orch-retry' | 'review';
   note: string;
 }
 
@@ -501,6 +502,10 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     opts.onAction?.(a);
   };
   const checkMs = opts.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
+  // The review pass first, on the stories changed since the last one, so what follows sees the
+  // board it repaired. It keeps its own budget: its fixes are not agent turns.
+  const review = reviewPass(projectDir, { now, dryRun: dry, skip: opts.skip });
+  for (const l of [...review.fixed, ...review.asked, ...review.unclear]) log({ id: l.id, action: 'review', note: `review pass ${l.verb}: ${l.note} (evidence: ${l.evidence})` });
   // A builder holding a card with a quiet stream gets one request for a hand-back per stall.
   for (const b of stalledBuilders(projectDir, now.getTime())) {
     if (builderIdle(projectDir, b.card, now.getTime()).nudged) continue;

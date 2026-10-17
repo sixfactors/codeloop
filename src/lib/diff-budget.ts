@@ -138,6 +138,11 @@ function numstatOf(projectDir: string, wanted: string[], sha: string): [string, 
   return numstats.get(key(sha)) ?? [];
 }
 
+/** The paths each commit touched, with no exclusions, read in one batched git call. */
+export function commitFiles(projectDir: string, shas: string[]): Map<string, string[]> {
+  return new Map(shas.map(sha => [sha, numstatOf(projectDir, shas, sha).map(([path]) => path)]));
+}
+
 /** Each file the card's commits touched (budget exclusions applied) with its added+deleted lines, and how many commits carried the card's trailer. */
 export function storyFiles(projectDir: string, cardId: string, opts: { branches?: boolean; ref?: string } = {}): { files: Map<string, number>; commits: number } {
   const shas = scan(projectDir, cardId, Boolean(opts.branches), opts.ref).map(c => c.sha);
