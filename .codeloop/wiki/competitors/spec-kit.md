@@ -17,3 +17,5 @@ changelog: https://github.com/github/spec-kit/releases
 - c-313 A small story runs its early stages in one agent turn: The person runs specify, clarify, plan and tasks one after another in the same agent chat, so the early phases share one session; nothing checks a phase before the next starts | https://github.com/github/spec-kit
 
 - c-314 Several small stories build together in one turn: One implement run works one feature's task list; several small features mean several runs | https://github.com/github/spec-kit
+
+- c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No hosted board: artifacts are files under the project's `.specify/` folder, visible to the public only when the repository itself is public | https://github.com/github/spec-kit
