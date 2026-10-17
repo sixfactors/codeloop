@@ -305,10 +305,13 @@ describe('run --agent', () => {
     createCard(dir, { lane: 'build', title: 'a', id: 'c-001' });
     createCard(dir, { lane: 'build', title: 'b', id: 'c-002' });
     lane('build', TWO_STAGES, 'wip: 1\n');
+    // Only a story an agent is working on holds a slot: c-001 has a run in flight from another process.
+    recordEvent(dir, 'c-001', () => ({ action: 'agent-start', agent: 'fake', log: 'x.log' }));
 
     const limited = await run();
-    expect(limited.agents!.map(a => a.started)).toEqual([true, false]);
-    expect(limited.agents![1].reason).toMatch(/lane build works on 1 card at a time \(wip\)/);
+    expect(limited.agents!.map(a => a.started)).toEqual([false, false]);
+    expect(limited.agents![1].reason).toMatch(/lane build works on 1 card at a time .*c-001 \(draft, agent fake on draft\).*\(wip\)/);
+    recordEvent(dir, 'c-001', () => ({ action: 'agent-run', agent: 'fake', exit: 0, log: 'x.log' }));
 
     createCard(dir, { lane: 'market', title: 'c', id: 'c-003' });
     write('out/c-003.md', 'draft');

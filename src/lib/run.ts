@@ -12,7 +12,7 @@ import { progressSince } from './progress.js';
 import { CHECK_CRASHED, findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, holdsSlot, loadEngineConfig, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, laneFullRefusal, loadEngineConfig, slotHolders, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
@@ -139,10 +139,13 @@ function running(card: Card, agent: AgentConfig, now: Date): boolean {
 }
 
 /** Why no agent may start for this card now, from the board as given. `planned` counts starts a dry run has already listed. */
-function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0): string | undefined {
-  // A trivial card holds no wip slot, so it is never limited on wip and never counts ahead of one that does.
-  const ahead = cards.filter(c => c.lane === lane.id && holdsSlot(c)).findIndex(c => c.id === card.id);
-  if (lane.wip !== undefined && card.size !== 'trivial' && ahead >= lane.wip) return `lane ${lane.id} works on ${plural(lane.wip, 'card', 'cards')} at a time (wip); this one waits its turn`;
+function limit(projectDir: string, cards: Card[], card: Card, lane: Lane, agent: AgentConfig, now: Date, planned = 0, plannedInLane = 0): string | undefined {
+  // Only stories an agent is working on hold a slot (engine.slotHolders); a trivial card never
+  // needs one. A dry run counts the starts it already listed in this lane as working.
+  if (lane.wip !== undefined && card.size !== 'trivial') {
+    const holding = slotHolders(projectDir, cards, lane.id, now).filter(h => h.card.id !== card.id);
+    if (holding.length + plannedInLane >= lane.wip) return `${laneFullRefusal(lane, holding)} (wip); this one waits its turn`;
+  }
   const { gatesPerDay } = loadEngineConfig(projectDir);
   const parked = waitingOnOwner(cards);
   if (gatesPerDay !== undefined && parked >= gatesPerDay) return `${plural(parked, 'card is', 'cards are')} waiting on you (capacity.gates_per_day is ${gatesPerDay}); clear the inbox first`;
@@ -369,6 +372,7 @@ async function runDueLocked(projectDir: string, wanted: AgentWanted, now: Date, 
 export function planRun(projectDir: string, wanted: AgentWanted | null, now: Date = clock(), filter: RunFilter = {}): string[] {
   const { cards } = readCards(projectDir);
   let planned = 0;
+  const plannedIn: Record<string, number> = {};
   return active(projectDir, filter).map(card => {
     const lane = loadLane(projectDir, card.lane);
     const stage = lane.stages.find(s => s.id === card.stage);
@@ -378,9 +382,10 @@ export function planRun(projectDir: string, wanted: AgentWanted | null, now: Dat
       ? `${stage.id} is a public step that has not been approved`
       : running(card, agent, now)
         ? `agent ${agent.name} is still running on ${stage.id} from an earlier run`
-        : limit(projectDir, cards, card, lane, agent, now, planned);
+        : limit(projectDir, cards, card, lane, agent, now, planned, plannedIn[lane.id] ?? 0);
     if (reason) return `${card.id}: would not start agent ${agent.name} on ${stage.id}: ${reason}`;
     planned++;
+    if (card.size !== 'trivial') plannedIn[lane.id] = (plannedIn[lane.id] ?? 0) + 1;
     return `${card.id}: would start agent ${agent.name} on ${stage.id} unless its check already passes: ${agent.cmd.replaceAll('{brief}', shellQuote(join(projectDir, briefPath(card))))}`;
   });
 }

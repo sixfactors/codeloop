@@ -11,7 +11,8 @@ import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
-import { currentSession } from './active-card.js';
+import { activeSessions, currentSession } from './active-card.js';
+import { builderIdle } from './stall.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, enter, findCard, gateRefusal, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
@@ -460,30 +461,75 @@ export function proposeCard(
   }
 }
 
-/**
- * Refuses when `adding` more cards would put the lane over its wip, naming the cards that hold the
- * slots and the commands that free one, so the refusal is a way forward rather than a dead end.
- */
-/** In the lane and not waiting on a person: the stories a lane's wip counts. */
+/** In the lane and not waiting on a person: the stories a lane's wip can count. */
 export const workable = (c: Card) => inLane(c) && !c.gate;
 
 /**
- * Holds one of the lane's wip slots. A trivial story does not: it skips research and spec and runs
- * in one sitting, so making it wait behind M stories turns a small ask into a refusal.
+ * Can hold one of the lane's wip slots. A trivial story cannot: it skips research and spec and runs
+ * in one sitting, so making it wait behind M stories turns a small ask into a refusal. Whether it
+ * holds one now depends on an agent working on it (`slotHolders`).
  */
 export const holdsSlot = (c: Card) => workable(c) && c.size !== 'trivial';
 
-export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string): void {
-  if (lane.wip === undefined || size === 'trivial') return;
-  // Only stories an agent can work hold a slot: one waiting at a gate or stuck is waiting on the
-  // person, and that queue has its own cap (capacity.gates_per_day).
-  const holding = cards.filter(c => c.lane === lane.id && holdsSlot(c) && !freeing.includes(c.id));
-  if (holding.length + adding <= lane.wip) return;
-  const list = holding.map(c => `${c.id} (${c.stage}${c.gate ? `, ${c.gate}` : ''}) ${c.title}`).join('; ');
-  throw new RefusalError(
+const DEFAULT_AGENT_TIMEOUT_MINUTES = 20;
+
+function agentTimeoutMs(projectDir: string, agent: string | undefined): number {
+  const agents = (loadConfig(projectDir) as { agents?: Record<string, unknown> }).agents;
+  const preset = agent && agents && typeof agents[agent] === 'object' ? (agents[agent] as { timeout_minutes?: unknown }) : undefined;
+  const minutes = Number(preset?.timeout_minutes ?? DEFAULT_AGENT_TIMEOUT_MINUTES);
+  return (Number.isFinite(minutes) && minutes > 0 ? minutes : DEFAULT_AGENT_TIMEOUT_MINUTES) * 60_000 + 60_000;
+}
+
+/**
+ * Why an agent is working on the story now, or undefined. Either an agent run is in flight on its
+ * current stage (an agent-start with no agent-run after it, younger than that agent's timeout), or
+ * a builder session holds the story and wrote to its activity within `monitor.stall_minutes`.
+ * A story with neither is waiting, whatever stage it is on.
+ */
+export function workingOn(projectDir: string, card: Card, now: Date = clock()): string | undefined {
+  const last = card.events.filter(e => e.stage === card.stage && (e.action === 'agent-start' || e.action === 'agent-run')).at(-1);
+  if (last?.action === 'agent-start' && now.getTime() - Date.parse(last.at) < agentTimeoutMs(projectDir, last.agent)) return `agent ${last.agent ?? 'run'} on ${card.stage}`;
+  const session = activeSessions(projectDir).find(s => s.card === card.id);
+  if (!session) return undefined;
+  const idle = builderIdle(projectDir, card.id, now.getTime());
+  if (idle.lastAt === undefined || idle.stalled) return undefined;
+  return `${session.session.startsWith('orch-') ? 'an orchestrated builder' : `session ${session.label ?? session.session}`} active ${idle.idleMinutes} min ago`;
+}
+
+/**
+ * The stories holding one of the lane's wip slots now: they can hold one (`holdsSlot`) and an agent
+ * is working on them (`workingOn`). Stories parked at the owner's gates, waiting for answers, for a
+ * lease or for their next turn hold none.
+ */
+export function slotHolders(projectDir: string, cards: Card[], laneId: string, now: Date = clock()): { card: Card; why: string }[] {
+  return cards.flatMap(c => {
+    if (c.lane !== laneId || !holdsSlot(c)) return [];
+    const why = workingOn(projectDir, c, now);
+    return why ? [{ card: c, why }] : [];
+  });
+}
+
+/** The refusal every start path gives on a full lane, naming the stories that hold the slots and why. */
+export function laneFullRefusal(lane: { id: string; wip?: number }, holding: { card: Card; why: string }[], adding = 1): string {
+  const list = holding.map(h => `${h.card.id} (${h.card.stage}, ${h.why}) ${h.card.title}`).join('; ');
+  return (
     `lane ${lane.id} works on ${lane.wip} card${lane.wip === 1 ? '' : 's'} at a time${adding > 1 ? `, this needs ${adding} slots,` : ''} and ${holding.length} ${holding.length === 1 ? 'holds a slot' : 'hold the slots'}: ${list || 'none'}. ` +
-      `Free one with \`codeloop card done <id>\` or \`codeloop card drop <id> "<why>"\`, or raise \`wip\` in .codeloop/lanes/${lane.id}.yaml.`,
+    `A slot frees when that agent hands back or goes quiet, or with \`codeloop card done <id>\` or \`codeloop card drop <id> "<why>"\`; or raise \`wip\` in .codeloop/lanes/${lane.id}.yaml.`
   );
+}
+
+/**
+ * Refuses when `adding` more cards would put the lane over its wip. With `projectDir`, only stories
+ * an agent is working on count (`slotHolders`). Without it every story in the lane and not at a gate
+ * counts; only the split path still calls it that way.
+ */
+export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string, projectDir?: string): void {
+  if (lane.wip === undefined || size === 'trivial') return;
+  const holding = projectDir
+    ? slotHolders(projectDir, cards, lane.id).filter(h => !freeing.includes(h.card.id))
+    : cards.filter(c => c.lane === lane.id && holdsSlot(c) && !freeing.includes(c.id)).map(card => ({ card, why: 'in the lane' }));
+  if (holding.length + adding <= lane.wip) return;
+  throw new RefusalError(laneFullRefusal(lane, holding, adding));
 }
 
 /**
@@ -609,6 +655,8 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
     const problem = storySizeProblem(projectDir, before);
     if (problem) throw new RefusalError(problem);
   }
+  // The review pass settles a story already being worked; every other placement is a start.
+  if (!opts.review) assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
   const now = opts.now ?? clock();
   const note = opts.note ?? `started at ${stage}: work already under way`;
   const card: Card = { ...enter(before, stage), events: [...before.events, opts.review ? event(now, 'orchestrator', 'place', stage, reviewNote(note, opts.review)) : event(now, role, 'place', stage, note)], updatedAt: now.toISOString() };
@@ -629,7 +677,7 @@ export function createCard(
   if (config.gatesPerDay !== undefined && parked >= config.gatesPerDay) {
     throw new RefusalError(`${parked} ${parked === 1 ? 'card is' : 'cards are'} waiting on you (capacity.gates_per_day is ${config.gatesPerDay}); clear the inbox before starting new work`);
   }
-  assertRoomInLane(file.cards, lane, 1, [], input.fields?.size);
+  assertRoomInLane(file.cards, lane, 1, [], input.fields?.size, projectDir);
 
   const card = newCard(file.cards, lane, input.title, input.id ?? nextCardId(file.cards), input.now ?? clock(), input.role ?? 'agent', input.note, input.fields);
   writeCards(projectDir, file, [...file.cards, card]);
@@ -688,8 +736,7 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
       if (opts.lane && c.lane !== opts.lane) return false;
       if (c.after && file.cards.find(p => p.id === c.after)?.stage !== DONE) return false;
       const lane = loadLane(projectDir, c.lane);
-      const active = file.cards.filter(x => x.lane === c.lane && holdsSlot(x)).length;
-      return lane.wip === undefined || c.size === 'trivial' || active < lane.wip;
+      return lane.wip === undefined || c.size === 'trivial' || slotHolders(projectDir, file.cards, c.lane, now).length < lane.wip;
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
@@ -1028,8 +1075,10 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   const { gate, awaiting: _awaiting, ...rest } = before;
   const card: Card = { ...rest, retries: { ...before.retries }, updatedAt: now.toISOString() };
   if (before.stage === PROPOSED) {
-    // Not subject to wip: the owner chose this card. A run still works a lane `wip` cards at a time.
+    // The lane's wip applies here as on every other start: approving a proposal into a lane whose
+    // slots are all being worked on would start one more story than the lane allows.
     const lane = loadLane(projectDir, before.lane);
+    assertRoomInLane(file.cards, lane, 1, [before.id], before.size, projectDir);
     const back = before.parked_from && lane.stages.some(s => s.id === before.parked_from) ? before.parked_from : undefined;
     card.stage = back ?? firstStage(lane, card).id;
     delete card.parked_from;

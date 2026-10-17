@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { readCards } from '../cards.js';
-import { advanceCard, createCard, resizeTrivial } from '../engine.js';
+import { advanceCard, createCard, recordEvent, resizeTrivial } from '../engine.js';
 import { lintLane, parseLane } from '../lane.js';
 import { evaluateRubric } from '../rubric.js';
 import { computeStats } from '../stats.js';
@@ -91,6 +91,7 @@ describe('wip', () => {
   it('a full lane still takes a trivial story, which holds no slot', () => {
     writeFileSync(join(dir, '.codeloop/lanes/build.yaml'), LANE.replace('stages:', 'wip: 1\nstages:'));
     createCard(dir, { lane: 'build', title: 'big', id: 'c-1', fields: { size: 'M' } });
+    recordEvent(dir, 'c-1', () => ({ action: 'agent-start', agent: 'fake', log: 'x.log' }));
     expect(() => createCard(dir, { lane: 'build', title: 'another big', id: 'c-2', fields: { size: 'M' } })).toThrow(/works on 1 card/);
     expect(createCard(dir, { lane: 'build', title: 'draw the page', id: 'c-3', fields: { size: 'trivial' } }).stage).toBe('build');
     expect(createCard(dir, { lane: 'build', title: 'fix a typo', id: 'c-4', fields: { size: 'trivial' } }).stage).toBe('build');
