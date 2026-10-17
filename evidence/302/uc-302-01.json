@@ -2,15 +2,15 @@
   "id": "uc-302-01",
   "accept": "US1",
   "failure_mode": "a grown trivial story is re-sized to S, which runs no gate, and goes straight on",
-  "sha": "796ba1b2b2650bce8290e80b3cc3453f5ced9107",
+  "sha": "50648276e60ae6f3047925d697b916c606a55ac3",
   "env": "local",
-  "workspace": "export of 796ba1b",
+  "workspace": "export of 5064827",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/trivial-ceremony.test.ts\n\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-oCHDqp/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/trivial-ceremony.test.ts \u001b[2m(\u001b[22m\u001b[2m9 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 55\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:13:08\n\u001b[2m   Duration \u001b[22m 2.58s\u001b[2m (transform 161ms, setup 6ms, import 230ms, tests 55ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n> @protoboxai/codeloop@0.5.0 test\n> vitest run src/lib/__tests__/trivial-ceremony.test.ts\n\n\n RUN  v4.0.18 <temp dir>/codeloop-verify-yMiIYb/head\n\n ✓ src/lib/__tests__/trivial-ceremony.test.ts (9 tests) 58ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  00:48:54\n   Duration  2.75s (transform 166ms, setup 6ms, import 222ms, tests 58ms, environment 0ms)\n\n\nexit 0"
     }
   ]
 }
