@@ -139,6 +139,17 @@ describe('the review pass', () => {
     expect(research).toMatch(/^verdict: build$/m);
   });
 
+  it('uc-307-03: a stage file someone started is never replaced', () => {
+    commit('c-7', ['src/g.ts']);
+    board([card('c-7', { gate: 'stuck', awaiting: 'owner' })]);
+    write('specs/c-7/research.md', '# Research\n\nPartial notes, no verdict yet.\n');
+
+    reviewPass(dir, { all: true });
+
+    expect(find('c-7').stage).toBe('spec');
+    expect(readFileSync(join(dir, 'specs/c-7/research.md'), 'utf-8')).toBe('# Research\n\nPartial notes, no verdict yet.\n');
+  });
+
   it('uc-307-04: each gap the review step finds becomes an inbox question with a recommended answer', () => {
     commit('c-1', ['src/a.ts']);
     board([card('c-1', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } })]);
@@ -151,6 +162,17 @@ describe('the review pass', () => {
     expect(q.question).toContain('interview: the questions it would ask');
     expect(q.recommended).not.toBe('');
     expect(q.answer).toBe('');
+  });
+
+  it('uc-307-04: a full interview still lets the place land, and the report says the gaps were not asked', () => {
+    commit('c-8', ['src/h.ts']);
+    board([card('c-8', { gate: 'stuck', awaiting: 'owner' })]);
+    write('specs/c-8/interview.md', [1, 2, 3, 4, 5].map(n => `## Q${n} Question ${n}?\nrecommended: yes\nanswer:\n`).join('\n'));
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-8').stage).toBe('spec');
+    expect(report.fixed[0].note).toMatch(/could not ask about \d+ gaps: .*limit is 5/);
   });
 
   it('uc-307-05: the pass before each pick reads only stories changed since the last pass', async () => {

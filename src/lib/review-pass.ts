@@ -26,7 +26,7 @@ import { withLock } from './lock.js';
 import { mockAppDir, mockTarget } from './mock.js';
 import { readOff } from './off.js';
 import { specPath } from './project-root.js';
-import { stageScaffold } from './stage-scaffold.js';
+import { untouchedOutput } from './stage-scaffold.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -169,7 +169,8 @@ export function planFix(projectDir: string, card: Card, cards: Card[] = readCard
     target = i;
   }
   const codeId = lane.stages[code].id;
-  const unwritten = (from: number, to: number) => lane.stages.slice(from, to).filter(s => stageApplies(s, card) && stageScaffold(projectDir, card, s)).map(s => s.id);
+  // Only a missing file or the untouched template is written; a file someone started is never replaced.
+  const unwritten = (from: number, to: number) => lane.stages.slice(from, to).filter(s => stageApplies(s, card) && untouchedOutput(projectDir, card, s)).map(s => s.id);
   if (target > cur) {
     const to = lane.stages[target].id;
     const gate = target < code ? `; the ${lane.stages[target].gate?.name ?? to} gate at ${to} comes before ${codeId}` : '';
@@ -236,7 +237,7 @@ export function stageText(projectDir: string, card: Card, stage: Stage, work: Me
 // --- applying ----------------------------------------------------------------------------------
 
 /** Writes each stage, records one event per file, then asks one question naming every gap. */
-function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], plan: Plan, now: Date): { wrote: string[]; gaps: string[] } {
+function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], plan: Plan, now: Date): { wrote: string[]; gaps: string[]; refused?: string } {
   const work = mergedWork(projectDir, card);
   const wrote: string[] = [];
   const gaps: string[] = [];
@@ -256,13 +257,18 @@ function writeStages(projectDir: string, card: Card, lane: Lane, ids: string[], 
     recordEvent(projectDir, card.id, () => ({ action: 'review-write', actor: 'orchestrator', stage: id, note: `review pass: wrote ${path} from the merged work (commits ${shas(plan.commits)})` }), now);
     for (const section of emptySections(text)) gaps.push(`${id}: ${section}`);
   }
-  if (gaps.length) {
-    const key = `gaps in ${ids.join(', ')}`;
-    if (!asked(projectDir, card, key)) {
+  let refused: string | undefined;
+  const key = `gaps in ${ids.join(', ')}`;
+  if (gaps.length && !asked(projectDir, card, key)) {
+    // The files are written either way; a full interview only means the gaps are reported, not asked.
+    try {
       addQuestions(projectDir, card.id, [{ question: question(key, `The review pass wrote ${wrote.length ? wrote.join(', ') : 'these stages'} from the merged work (${shas(plan.commits)}) and could not fill ${gaps.join('; ')}. What should they say?`), recommended: `Nothing more: the merged work (${shas(plan.commits)}) already answers them` }], 'agent');
+    } catch (e) {
+      if (!(e instanceof RefusalError)) throw e;
+      refused = e.message;
     }
   }
-  return { wrote, gaps };
+  return { wrote, gaps, ...(refused ? { refused } : {}) };
 }
 
 /** Applies one plan. Returns the report line and where it belongs, or undefined when it was already asked. */
@@ -286,9 +292,9 @@ export function applyFix(projectDir: string, plan: Plan, now: Date = clock()): {
       const why = reviewMoveRefusal(lane, card, lane.stages.findIndex(s => s.id === plan.to));
       if (why) return { section: 'unclear', line: line(`could not place: ${why}`, 'unclear') };
     }
-    const { wrote, gaps } = writeStages(projectDir, card, lane, plan.write ?? [], plan, now);
+    const { wrote, gaps, refused } = writeStages(projectDir, card, lane, plan.write ?? [], plan, now);
     if (plan.verb === 'place') placeCard(projectDir, card.id, plan.to!, 'agent', { review: { commits: plan.commits }, note: plan.note, now });
-    const extra = [wrote.length ? `wrote ${wrote.join(', ')}` : '', gaps.length ? `asked about ${gaps.length} gap${gaps.length === 1 ? '' : 's'}` : ''].filter(Boolean).join('; ');
+    const extra = [wrote.length ? `wrote ${wrote.join(', ')}` : '', gaps.length ? (refused ? `could not ask about ${gaps.length} gap${gaps.length === 1 ? '' : 's'}: ${refused}` : `asked about ${gaps.length} gap${gaps.length === 1 ? '' : 's'}`) : ''].filter(Boolean).join('; ');
     return { section: 'fixed', line: line(extra ? `${plan.note}; ${extra}` : plan.note) };
   } catch (e) {
     if (!(e instanceof RefusalError)) throw e;
