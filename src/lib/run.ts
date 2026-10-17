@@ -135,7 +135,9 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 // An agent-start with no agent-run after it, younger than the timeout: another run is in the middle of this stage.
 function running(card: Card, agent: AgentConfig, now: Date): boolean {
   const last = card.events.filter(e => e.stage === card.stage && (e.action === 'agent-start' || e.action === 'agent-run')).at(-1);
-  return last?.action === 'agent-start' && now.getTime() - new Date(last.at).getTime() < agent.timeoutMinutes * 60_000 + 60_000;
+  // A carried or batched turn records its own, longer limit on the agent-start.
+  const minutes = typeof last?.timeoutMinutes === 'number' && last.timeoutMinutes > 0 ? last.timeoutMinutes : agent.timeoutMinutes;
+  return last?.action === 'agent-start' && now.getTime() - new Date(last.at).getTime() < minutes * 60_000 + 60_000;
 }
 
 /** Why no agent may start for this card now, from the board as given. `planned` counts starts a dry run has already listed. */

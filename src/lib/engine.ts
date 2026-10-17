@@ -12,7 +12,7 @@ import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { activeSessions, currentSession } from './active-card.js';
-import { builderIdle } from './stall.js';
+import { builderIdle, stallMinutes } from './stall.js';
 import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, enter, findCard, gateRefusal, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
@@ -506,7 +506,8 @@ export const holdsSlot = (c: Card) => workable(c) && c.size !== 'trivial';
 
 const DEFAULT_AGENT_TIMEOUT_MINUTES = 20;
 
-function agentTimeoutMs(projectDir: string, agent: string | undefined): number {
+function agentTimeoutMs(projectDir: string, agent: string | undefined, turnMinutes?: number): number {
+  if (typeof turnMinutes === 'number' && turnMinutes > 0) return turnMinutes * 60_000 + 60_000;
   const agents = (loadConfig(projectDir) as { agents?: Record<string, unknown> }).agents;
   const preset = agent && agents && typeof agents[agent] === 'object' ? (agents[agent] as { timeout_minutes?: unknown }) : undefined;
   const minutes = Number(preset?.timeout_minutes ?? DEFAULT_AGENT_TIMEOUT_MINUTES);
@@ -521,11 +522,17 @@ function agentTimeoutMs(projectDir: string, agent: string | undefined): number {
  */
 export function workingOn(projectDir: string, card: Card, now: Date = clock()): string | undefined {
   const last = card.events.filter(e => e.stage === card.stage && (e.action === 'agent-start' || e.action === 'agent-run')).at(-1);
-  if (last?.action === 'agent-start' && now.getTime() - Date.parse(last.at) < agentTimeoutMs(projectDir, last.agent)) return `agent ${last.agent ?? 'run'} on ${card.stage}`;
+  if (last?.action === 'agent-start' && now.getTime() - Date.parse(last.at) < agentTimeoutMs(projectDir, last.agent, last.timeoutMinutes)) return `agent ${last.agent ?? 'run'} on ${card.stage}`;
   const session = activeSessions(projectDir).find(s => s.card === card.id);
   if (!session) return undefined;
   const idle = builderIdle(projectDir, card.id, now.getTime());
-  if (idle.lastAt === undefined || idle.stalled) return undefined;
+  // A batch takes its leases under the placement lock and writes the agent-starts after it drops,
+  // so a lease with no activity yet holds the slot while it is younger than stall_minutes.
+  if (idle.lastAt === undefined) {
+    const age = now.getTime() - Date.parse(session.startedAt);
+    return session.session.startsWith('orch-') && age < stallMinutes(projectDir) * 60_000 ? `lease taken ${Math.floor(age / 60_000)} min ago` : undefined;
+  }
+  if (idle.stalled) return undefined;
   return `${session.session.startsWith('orch-') ? 'an orchestrated builder' : `session ${session.label ?? session.session}`} active ${idle.idleMinutes} min ago`;
 }
 

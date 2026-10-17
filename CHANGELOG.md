@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- An orchestrator lease with no activity yet holds its story's lane slot for `monitor.stall_minutes`, so a start running beside `codeloop orch batch` cannot over-fill the lane before the batch's agent starts are written. A carried or batched turn holds its slot, and counts as still running for the scheduler, for its own time limit (up to `orch.carry_max_minutes`) instead of the agent's preset.
 - `codeloop wiki capture` keeps any INDEX.md section it did not generate word for word, and lists each `wiki.sections` folder in the Topics table and in its own section built from the pages there. A decision made from research whose options are lettered (`A. ...`) takes its title from the option text instead of the letter, so no `decisions/a.md` page appears.
 - A carried turn that starts at interview and asks questions waits for the answers (outcome questions) instead of running the questions check on them, spending a retry and reporting failed.
 - `codeloop card move` on a queued story counts only stories an agent is working on against the lane's wip, like every other start path; idle stories in the lane no longer refuse it.

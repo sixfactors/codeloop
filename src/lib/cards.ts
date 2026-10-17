@@ -27,6 +27,8 @@ export interface CardEvent {
   exit?: number | null;
   durationMs?: number;
   log?: string;
+  /** On agent-start: the turn's own time limit in minutes, which a carried or batched turn raises above the agent's preset. */
+  timeoutMinutes?: number;
 }
 
 /** The reason a story parks stuck when its agent would be restarted on unchanged work after a failed check. */

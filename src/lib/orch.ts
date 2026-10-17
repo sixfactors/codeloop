@@ -553,7 +553,7 @@ async function orchTurnSteps(projectDir: string, cardRef: string, opts: OrchOpti
   recordEvent(projectDir, card.id, (_cards, current) => {
     const k = current.events.filter(e => e.action === 'agent-start' && e.stage === card.stage).length + 1;
     log = `${AGENT_RUNS_DIR}/${card.id}-${safeName(card.stage, 'stage id')}-${k}.log`;
-    return { action: 'agent-start', agent: agent.name, log };
+    return { action: 'agent-start', agent: agent.name, log, timeoutMinutes: agent.timeoutMinutes };
   });
   turn.log = log;
   const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: wt.path, env: mode === 'tree' ? { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir } : { CODELOOP_CARD: card.id, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: wt.path } });
@@ -969,7 +969,7 @@ export async function orchBatch(projectDir: string, opts: OrchOptions & { cards?
     const log = `${AGENT_RUNS_DIR}/batch-${batch.id}.log`;
     for (const { record, turn } of turns) {
       turn.log = log;
-      recordEvent(projectDir, record.card, () => ({ action: 'agent-start', agent: agent.name, log, note: `batch ${batch.id}: ${batch.cards.join(', ')}` }));
+      recordEvent(projectDir, record.card, () => ({ action: 'agent-start', agent: agent.name, log, timeoutMinutes: agent.timeoutMinutes, note: `batch ${batch.id}: ${batch.cards.join(', ')}` }));
     }
     const ran = await runAgent(projectDir, agent, brief, join(projectDir, log), { cwd: projectDir, env: { CODELOOP_BATCH: batch.cards.join(' '), CODELOOP_PROJECT_DIR: projectDir } });
     const started = Date.parse(turns[0].turn.startedAt);

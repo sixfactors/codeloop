@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { setActiveCard } from '../active-card.js';
 import { appendActivity } from '../activity.js';
 import { resolveAgent } from '../agent.js';
 import { approveCard, createCard, placeCard, proposeCard, recordEvent } from '../engine.js';
+import { takeBatch } from '../orch-isolation.js';
 import { planRun } from '../run.js';
 
 // The owner's rule for the lane limit: only stories an agent is working on hold a slot. A story
@@ -80,5 +81,22 @@ describe('the lane limit counts only stories an agent is working on', () => {
     createCard(dir, { lane: 'build', title: 'Fix a typo', id: 'c-001', fields: { size: 'trivial' } });
     inFlight('c-001');
     expect(createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-002' }).stage).toBe('one');
+  });
+
+  it('a batch lease taken before its agent-start holds the slot, until stall_minutes pass with no activity', () => {
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    takeBatch(dir, { id: 'b-1', cards: ['c-001'] });
+    expect(() => createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' })).toThrow(/c-001 \(one, lease taken 0 min ago\)/);
+    const lease = join(dir, '.codeloop/state/active/orch-c-001.json');
+    const old = new Date(Date.now() - 45 * 60_000).toISOString();
+    writeFileSync(lease, JSON.stringify({ ...JSON.parse(readFileSync(lease, 'utf-8')), startedAt: old, updatedAt: old }));
+    expect(createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' }).stage).toBe('one');
+  });
+
+  it('a carried or batched turn holds its slot for its own time limit, not the agent preset', () => {
+    createCard(dir, { lane: 'build', title: 'See my todos sorted by date', id: 'c-001' });
+    recordEvent(dir, 'c-001', () => ({ action: 'agent-start', agent: 'fake', log: 'x.log', timeoutMinutes: 20 }), new Date(Date.now() - 10 * 60_000));
+    expect(planRun(dir, resolveAgent(dir)).find(l => l.startsWith('c-001'))).toMatch(/still running on one/);
+    expect(() => createCard(dir, { lane: 'build', title: 'Export my todos as a file', id: 'c-002' })).toThrow(/c-001 \(one, agent fake on one\)/);
   });
 });
