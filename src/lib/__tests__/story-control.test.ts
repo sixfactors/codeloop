@@ -22,6 +22,24 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 const card = (id: string) => readCards(dir).cards.find(c => c.id === id)!;
 
+describe('place', () => {
+  it('is refused at a gate and lands the card with a clean slate at its new stage', () => {
+    createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });
+    const set = (extra: object) => { const file = readCards(dir); writeCards(dir, file, file.cards.map(c => ({ ...c, ...extra }))); };
+    set({ gate: 'stuck', awaiting: 'owner' });
+    expect(() => placeCard(dir, 'c-1', 'build', 'owner')).toThrow('c-1 is stuck at draft; `codeloop approve c-1` retries it, `codeloop reject c-1 "<why>"` parks it');
+    set({ gate: 'spec', awaiting: 'owner' });
+    expect(() => placeCard(dir, 'c-1', 'build', 'owner')).toThrow('c-1 is waiting at the spec gate at draft; `codeloop approve c-1` or `codeloop reject c-1 "<why>"` decides it');
+    expect(card('c-1')).toMatchObject({ stage: 'draft', gate: 'spec' });
+    const { gate: _g, awaiting: _a, ...clean } = card('c-1');
+    writeCards(dir, readCards(dir), [{ ...clean, retries: { build: 2 }, failures: { build: 'old' } }]);
+    placeCard(dir, 'c-1', 'build', 'owner');
+    expect(card('c-1').stage).toBe('build');
+    expect(card('c-1').retries.build).toBeUndefined();
+    expect(card('c-1').failures?.build).toBeUndefined();
+  });
+});
+
 describe('reopen', () => {
   it('returns a done card to the first stage with the gate and failure marks cleared', () => {
     createCard(dir, { lane: 'build', title: 'I ship it', id: 'c-1' });

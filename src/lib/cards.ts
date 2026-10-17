@@ -48,6 +48,24 @@ export function stuckReason(card: Pick<Card, 'stage' | 'retries' | 'events'>): s
   return n > 0 ? failedTimes(n) : first || 'the check failed';
 }
 
+/** A card on `stage` with a clean slate there: no gate, no retries, no failure fingerprint. */
+export function enter(card: Card, stage: string): Card {
+  const { gate: _gate, awaiting: _awaiting, parked_from: _from, ...rest } = card;
+  const { [stage]: _retries, ...retries } = card.retries ?? {};
+  const { [stage]: _failure, ...failures } = card.failures ?? {};
+  return { ...rest, stage, retries, ...(card.failures ? { failures } : {}) };
+}
+
+/**
+ * Why a card waiting at a gate cannot be moved or placed, or undefined when it waits at none. Any
+ * move would drop the gate with no decision on record; approve or reject is that decision.
+ */
+export function gateRefusal(card: Pick<Card, 'id' | 'stage' | 'gate'>): string | undefined {
+  if (card.gate === 'stuck') return `${card.id} is stuck at ${card.stage}; \`codeloop approve ${card.id}\` retries it, \`codeloop reject ${card.id} "<why>"\` parks it`;
+  if (card.gate) return `${card.id} is waiting at the ${card.gate} gate at ${card.stage}; \`codeloop approve ${card.id}\` or \`codeloop reject ${card.id} "<why>"\` decides it`;
+  return undefined;
+}
+
 const ENTERS = new Set(['place', 'promote', 'unpark', 'returned', 'move', 'reopen']);
 
 /** Index of the event that brought the card into `stage` last (an advance into it, or a placement, promotion, return or move to it); -1 when it has been there since it was made. */

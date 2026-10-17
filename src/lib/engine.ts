@@ -12,7 +12,7 @@ import { clock } from './clock.js';
 import { loadConfig } from './config.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { currentSession } from './active-card.js';
-import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, findCard, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
+import { cardKey, CARD_ID, ConflictError, DONE, DROPPED, enter, findCard, gateRefusal, inLane, nextCardId, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, failedTimes, NOTHING_CHANGED, stageEntryIndex, writeCards, type Card, type CardEvent, type CardExtras, type Size, type StoryFields } from './cards.js';
 
 export { RefusalError };
 import { firstStage, loadLane, loadLanes, nextStage, skippedStages, skipReason, stageApplies, substitute, type Lane, type Stage } from './lane.js';
@@ -560,12 +560,15 @@ export function placeCard(projectDir: string, id: string, stage: string, role: R
   const before = findCard(file.cards, id);
   const lane = loadLane(projectDir, before.lane);
   if (!lane.stages.some(s => s.id === stage)) throw new RefusalError(`lane ${lane.id} has no stage "${stage}" (stages: ${lane.stages.map(s => s.id).join(', ')})`);
+  // An approval or a stuck count belongs to the stage it was given at; placing past it would carry it to the new one.
+  const waiting = gateRefusal(before);
+  if (waiting) throw new RefusalError(waiting);
   if (stage === SPLIT_BEFORE_STAGE) {
     const problem = storySizeProblem(projectDir, before);
     if (problem) throw new RefusalError(problem);
   }
   const now = opts.now ?? clock();
-  const card: Card = { ...before, stage, events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
+  const card: Card = { ...enter(before, stage), events: [...before.events, event(now, role, 'place', stage, opts.note ?? `started at ${stage}: work already under way`)], updatedAt: now.toISOString() };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
   return card;
 }

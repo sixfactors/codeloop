@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { activeSessions, currentSession } from './active-card.js';
-import { DONE, DROPPED, PROPOSAL_GATE, PROPOSED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
+import { DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
 import { assertRoomInLane, type Role } from './engine.js';
 import { loadLane, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
@@ -47,14 +47,6 @@ const event = (now: Date, role: Role, action: string, stage: string | undefined,
   ...(note ? { note } : {}),
 });
 
-/** A card on `stage` with a clean slate there: no gate, no retries, no failure fingerprint. */
-function enter(card: Card, stage: string): Card {
-  const { gate: _gate, awaiting: _awaiting, parked_from: _from, ...rest } = card;
-  const { [stage]: _retries, ...retries } = card.retries ?? {};
-  const { [stage]: _failure, ...failures } = card.failures ?? {};
-  return { ...rest, stage, retries, ...(card.failures ? { failures } : {}) };
-}
-
 /**
  * Brings a done or dropped card back. The default target is the lane's first stage; `backlog` parks
  * it as a proposal so it waits for approval and holds no lane slot.
@@ -97,8 +89,8 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   const target = stageIndex(lane, stage);
   // Any move drops the gate a card waits at with no approval on record, so the wait is cleared only
   // by approve (or reject), which the engine records as the owner's decision.
-  if (before.gate === 'stuck') throw new RefusalError(`${before.id} is stuck at ${before.stage}; \`codeloop approve ${before.id}\` retries it, \`codeloop reject ${before.id} "<why>"\` parks it`);
-  if (before.gate) throw new RefusalError(`${before.id} is waiting at the ${before.gate} gate at ${before.stage}; \`codeloop approve ${before.id}\` or \`codeloop reject ${before.id} "<why>"\` decides it`);
+  const waiting = gateRefusal(before);
+  if (waiting) throw new RefusalError(waiting);
   if (target === from) throw new RefusalError(`${before.id} is already at ${stage}`);
   const passed = target < from ? lane.stages.slice(target, from).filter(s => s.gate).map(s => s.gate!.name) : [];
   if (passed.length && !opts.note?.trim()) throw new RefusalError(`moving ${before.id} back to ${stage} undoes the ${passed.join(' and ')} gate: say why in the note`);
