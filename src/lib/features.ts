@@ -69,17 +69,41 @@ export function chainOf(card: Pick<Card, 'feature' | 'effort' | 'initiative' | '
 
 export const featureMap = (features: Feature[]): Map<string, Feature & Scored> => new Map(scoreFeatures(features).map(f => [f.id, f]));
 
-/** Score descending, unscored last; ties by `since` ascending, so the oldest parked card comes first. */
-export function byScoreThenOldest<T extends { score?: number; since?: string; createdAt?: string }>(items: T[]): T[] {
-  const at = (i: T) => i.since ?? i.createdAt ?? '';
-  return [...items].sort((a, b) => {
-    if (a.score !== b.score) {
-      if (a.score === undefined) return 1;
-      if (b.score === undefined) return -1;
-      return b.score - a.score;
-    }
-    return at(a) < at(b) ? -1 : at(a) > at(b) ? 1 : 0;
-  });
+/**
+ * The one order every pick uses (next_up, `codeloop next`'s candidates, the inbox, the scheduler, the
+ * orchestrator's retries, batch forming and the board's columns): a story flagged as a critical bug
+ * first; then its priority, where an explicit card priority (`card edit --priority`) wins over the
+ * band its feature's RICE score gives (no feature means P4); then the RICE score, highest first and
+ * unscored last; then age, oldest first (`since` when the item has one, else `createdAt`).
+ */
+export function pickOrder(a: PickRanked, b: PickRanked): number {
+  if (Boolean(a.bug) !== Boolean(b.bug)) return a.bug ? -1 : 1;
+  const rank = (i: PickRanked) => BANDS.indexOf((i.priority ?? i.band ?? 'P4') as Band);
+  if (rank(a) !== rank(b)) return rank(a) - rank(b);
+  if (a.score !== b.score) {
+    if (a.score === undefined) return 1;
+    if (b.score === undefined) return -1;
+    return b.score - a.score;
+  }
+  const at = (i: PickRanked) => i.since ?? i.createdAt ?? '';
+  return at(a) < at(b) ? -1 : at(a) > at(b) ? 1 : 0;
+}
+
+export interface PickRanked {
+  bug?: boolean;
+  priority?: string;
+  band?: string;
+  score?: number;
+  since?: string;
+  createdAt?: string;
+}
+
+export const byPickOrder = <T extends PickRanked>(items: T[]): T[] => [...items].sort(pickOrder);
+
+/** Raw cards in pick order, scored from the feature pages on disk; the cards come back as given, without their chain. */
+export function rankCards<T extends Card>(projectDir: string, cards: T[]): T[] {
+  const features = featureMap(listFeatures(projectDir));
+  return cards.map(c => ({ card: c, ranked: { ...c, ...chainOf(c, features) } })).sort((x, y) => pickOrder(x.ranked, y.ranked)).map(x => x.card);
 }
 
 // ---- pages ----

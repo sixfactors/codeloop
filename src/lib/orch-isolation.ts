@@ -15,6 +15,7 @@ import { loadConfig } from './config.js';
 import { laneFullRefusal, slotHolders } from './engine.js';
 import { loadLane } from './lane.js';
 import { isSharedPath, pathInPlan, planFiles } from './plan-scope.js';
+import { rankCards } from './features.js';
 
 export type Isolation = 'tree' | 'worktree' | 'auto';
 export type Mode = 'tree' | 'worktree';
@@ -102,7 +103,7 @@ export interface BatchPlan {
  */
 export function formBatch(projectDir: string, only?: string[], stage = 'build'): BatchPlan {
   const cards = readCards(projectDir).cards;
-  const pool = only ? only.map(ref => findCard(cards, ref)) : cards.filter(c => inLane(c) && c.stage === stage && !c.gate && BATCH_SIZES.has(c.size ?? 'M'));
+  const pool = rankCards(projectDir, only ? only.map(ref => findCard(cards, ref)) : cards.filter(c => inLane(c) && c.stage === stage && !c.gate && BATCH_SIZES.has(c.size ?? 'M')));
   const picked: { card: Card; files: string[] }[] = [];
   const left: BatchPlan['left'] = [];
   for (const card of pool) {

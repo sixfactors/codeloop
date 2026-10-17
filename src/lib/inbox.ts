@@ -3,7 +3,7 @@ import { dirname, join } from 'path';
 import { DONE, DROPPED, inLane, PROPOSED, readCards, type Card, type CardEvent } from './cards.js';
 import { clock } from './clock.js';
 import { holdsSlot } from './engine.js';
-import { byScoreThenOldest, chainOf, featureMap, listFeatures, type Band } from './features.js';
+import { byPickOrder, chainOf, featureMap, listFeatures, type Band } from './features.js';
 import { loadLanes, substitute, type Lane } from './lane.js';
 import { openQuestions } from './interview.js';
 import { findMock } from './mock.js';
@@ -18,7 +18,7 @@ export const INBOX_SEEN = '.codeloop/state/inbox-seen.json';
 export interface Inbox {
   summary: string;
   /** Started work waiting on a person: stage gates and stuck. Proposals are in `backlog`. */
-  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
+  needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; priority?: string; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
   failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
   /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
@@ -130,6 +130,7 @@ export function needsYouItem(c: Card, lanes: Lane[], mock: string | undefined, s
     : stage?.gate?.outward ? 'not run yet (public step, approve first)' : 'passed';
   return {
     id: c.id, title: c.title, lane: c.lane, stage: c.stage, gate: c.gate!, awaiting: c.awaiting, ...scored,
+    ...(c.priority ? { priority: c.priority } : {}),
     read: stage?.output ? substitute(stage.output, c) : undefined,
     ...(mock ? { mock } : {}),
     ...(c.source ? { source: c.source } : {}),
@@ -224,7 +225,7 @@ export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, 
     const moved = c.gate === 'stuck' ? progressAt?.(c) : undefined;
     return moved ? { ...item, moving_since: new Date(moved).toISOString() } : item;
   });
-  const waiting = sort === 'score' ? byScoreThenOldest(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+  const waiting = sort === 'score' ? byPickOrder(parked) : [...parked].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
   const failing = failingOf(cards, lastActivity, now.getTime(), progressAt, passedAt);
   const backlog = backlogOf(cards);
 

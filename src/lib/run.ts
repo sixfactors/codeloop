@@ -26,6 +26,7 @@ import { isUnavailable, noteAgentRun, startsToday } from './agent-ledger.js';
 import { Budget } from './budget.js';
 import { stageScaffold } from './stage-scaffold.js';
 import { LockedError, withRunLock } from './run-lock.js';
+import { rankCards } from './features.js';
 
 export const LAST_RUN = '.codeloop/state/last-run.json';
 const FIRST_RUN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
@@ -128,7 +129,7 @@ function active(projectDir: string, filter: RunFilter = {}): Card[] {
   const { cards } = readCards(projectDir);
   if (filter.lane && !loadLanes(projectDir).some(l => l.id === filter.lane)) throw new RefusalError(`lane "${filter.lane}" not found`);
   const only = filter.card ? findCard(cards, filter.card).id : undefined;
-  return cards.filter(c => inLane(c) && !c.gate && (!filter.lane || c.lane === filter.lane) && (!only || c.id === only));
+  return rankCards(projectDir, cards.filter(c => inLane(c) && !c.gate && (!filter.lane || c.lane === filter.lane) && (!only || c.id === only)));
 }
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 

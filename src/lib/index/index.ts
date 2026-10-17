@@ -5,7 +5,7 @@ import MiniSearch from 'minisearch';
 import { ACTIVITY_DIR, lastActivityAt, readActivity, type ActivityEntry } from '../activity.js';
 import { cardKey, CARDS_PATH, DONE, DROPPED, PROPOSED, readCards, RefusalError, type Card, type CardEvent } from '../cards.js';
 import type { Role } from '../engine.js';
-import { byScoreThenOldest, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
+import { byPickOrder, chainOf, featureMap, scoreFeatures, sumScores, type Band, type CardChain, type Scored } from '../features.js';
 import { stuckExplanation } from '../stuck-explanation.js';
 import { backlogOf, failingOf, inboxSummary, lastPassAt, laneNumbers, needsYouItem, shippedWithin, type Inbox, type LaneNumbers, type NeedsYouItem } from '../inbox.js';
 import { parseQuestions, type Question } from '../interview.js';
@@ -305,7 +305,7 @@ export class ProjectIndex {
       const sort = q.sort ?? 'score';
       const key = `${this.versions.cards}|${this.versions.lanes}|${this.versions.features}|${since}|${JSON.stringify(narrow)}|${q.needsMe ?? ''}|${sort}`;
       if (!this.inboxCache || this.inboxCache.key !== key) {
-        const order = <T extends InboxCard>(items: T[]) => (sort === 'score' ? byScoreThenOldest(items) : [...items].sort((a, b) => ((a.since ?? a.updatedAt) < (b.since ?? b.updatedAt) ? -1 : 1)));
+        const order = <T extends InboxCard>(items: T[]) => (sort === 'score' ? byPickOrder(items) : [...items].sort((a, b) => ((a.since ?? a.updatedAt) < (b.since ?? b.updatedAt) ? -1 : 1)));
         const mine = (c: IndexedCard) => !q.needsMe || this.needsRole(c, q.needsMe);
         // Proposals wait in the backlog; only started work at a gate or stuck is waiting on you.
         const needsYou: InboxCard[] = order(
@@ -751,7 +751,7 @@ export class ProjectIndex {
     if (filter.questions === 'open') items = items.filter(c => c.openQuestions > 0);
     if (filter.shippedSince !== undefined) items = items.filter(c => c.stage === DONE && c.updatedAt > filter.shippedSince!);
     if (filter.needsMe) items = items.filter(c => this.needsRole(c, filter.needsMe!));
-    if (filter.sort === 'score') items = byScoreThenOldest(items);
+    if (filter.sort === 'score') items = byPickOrder(items);
     return items;
   }
 

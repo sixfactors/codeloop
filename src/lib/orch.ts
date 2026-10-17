@@ -36,6 +36,7 @@ import { readTasks } from './spec.js';
 import { AgentRefusal, agentStatus, isUnavailable, noteAgentRun, quickExitMs, startsToday } from './agent-ledger.js';
 import { LockedError, withRunLock, withRunLockSync } from './run-lock.js';
 import { Budget } from './budget.js';
+import { rankCards } from './features.js';
 
 export const ORCH_DIR = '.codeloop/state/orch';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -760,16 +761,17 @@ export function waitingOrchCards(projectDir: string): string[] {
   const dir = join(projectDir, ORCH_DIR);
   if (!existsSync(dir)) return [];
   const cards = readCards(projectDir).cards;
-  return readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
+  const waiting = readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
     try {
       const rec = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as OrchRecord;
       const last = rec.turns.at(-1);
       const card = cards.find(c => c.id === rec.card);
-      return card && !card.gate && card.stage !== DONE && (last?.outcome === 'waiting-lease' || last?.outcome === 'queued') ? [card.id] : [];
+      return card && !card.gate && card.stage !== DONE && (last?.outcome === 'waiting-lease' || last?.outcome === 'queued') ? [card] : [];
     } catch {
       return [];
     }
   });
+  return rankCards(projectDir, waiting).map(c => c.id);
 }
 
 export function orchStatus(projectDir: string): OrchStatusRow[] {

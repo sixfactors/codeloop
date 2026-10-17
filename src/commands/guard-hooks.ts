@@ -132,16 +132,15 @@ export const guardFailed = (verb: 'edit' | 'bash', e: unknown): string =>
   chalk.red(`codeloop: the ${verb === 'bash' ? 'shell' : 'edit'} guard failed (${e instanceof Error ? e.message : String(e)}), so the ${verb === 'bash' ? 'command' : 'edit'} is refused until it can check`);
 export const editGuardFailed = (e: unknown): string => guardFailed('edit', e);
 
-// Open stories by priority band, then score, then age: what a session with nothing active should pick from.
+// Open stories in pick order (features.ts pickOrder): what a session with nothing active should pick from.
 async function candidates(projectDir: string, limit: number): Promise<{ id: string; title: string; stage: string; band?: string }[]> {
-  const order: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
   const { inLane } = await cardsLib();
   const { listCards } = await servicesLib();
+  const { byPickOrder } = await import('../lib/features.js');
   const open = (await listCards(projectDir)).filter(c => inLane(c as unknown as Card) && !c.gate);
-  return open
-    .sort((a, b) => (order[a.band ?? ''] ?? 9) - (order[b.band ?? ''] ?? 9) || (b.score ?? 0) - (a.score ?? 0) || a.createdAt.localeCompare(b.createdAt))
+  return byPickOrder(open)
     .slice(0, limit)
-    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.band }));
+    .map(c => ({ id: c.id, title: c.title, stage: c.stage, band: c.priority ?? c.band }));
 }
 
 function candidateLines(list: { id: string; title: string; stage: string; band?: string }[]): string[] {

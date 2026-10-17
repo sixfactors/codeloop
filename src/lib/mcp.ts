@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { DONE, findCard, inLane, readCards } from './cards.js';
 import { RefusalError, runCheck } from './engine.js';
+import { rankCards } from './features.js';
 import { MAX_QUESTIONS } from './interview.js';
 import { loadLane, substitute } from './lane.js';
 import * as services from './services.js';
@@ -29,7 +30,7 @@ function card(projectDir: string, id: string) {
 }
 
 /** Same services as the CLI and the SDK local transport. The role comes from CODELOOP_ROLE in the server's environment, never from a tool argument. */
-export async function serveMcp(projectDir: string): Promise<void> {
+export function createMcpServer(projectDir: string): McpServer {
   const server = new McpServer({ name: 'codeloop', version: '0.2.0' });
   const id = { id: z.string().describe('Card id, e.g. c-001') };
 
@@ -48,8 +49,8 @@ export async function serveMcp(projectDir: string): Promise<void> {
     }) as never);
 
   tool('inbox', 'Gates waiting on a person, failing checks, backlog count, what shipped, and numbers per lane.', {}, () => services.inboxReport(projectDir));
-  tool('next_up', 'Cards an agent can work now: unfinished and not waiting at a gate, oldest first.', {}, () =>
-    readCards(projectDir).cards.filter(c => inLane(c) && !c.gate).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(c => card(projectDir, c.id)));
+  tool('next_up', 'Cards an agent can work now: unfinished and not waiting at a gate, critical bugs first, then by priority, RICE score and age.', {}, () =>
+    rankCards(projectDir, readCards(projectDir).cards.filter(c => inLane(c) && !c.gate)).map(c => card(projectDir, c.id)));
   tool('get_card', 'A card with its current stage brief: skill, output path, done check, notes, earlier rejections.', id, a => card(projectDir, a.id));
   tool('advance', "Run the current stage's done check and move the card if it passes.", id, a => {
     const r = services.advance(projectDir, a.id);
@@ -88,5 +89,9 @@ export async function serveMcp(projectDir: string): Promise<void> {
     return { id: proposed.id, lane: proposed.lane, created };
   });
 
-  await server.connect(new StdioServerTransport());
+  return server;
+}
+
+export async function serveMcp(projectDir: string): Promise<void> {
+  await createMcpServer(projectDir).connect(new StdioServerTransport());
 }
