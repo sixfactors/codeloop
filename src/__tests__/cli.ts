@@ -1,7 +1,7 @@
 import { spawnSync, type SpawnSyncOptions, type SpawnSyncReturns } from 'child_process';
 import { resolve } from 'path';
 
-export const CLI = resolve('dist/index.js');
+export const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 
 /**
  * Runs the built CLI to completion and returns spawnSync's result. The 60 s limit kills a child

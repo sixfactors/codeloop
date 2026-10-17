@@ -17,3 +17,4 @@ workspace/out/
 .vitest-monitor-fixture/
 .dist-build-*
 .dist-build.lock
+.test-dist/

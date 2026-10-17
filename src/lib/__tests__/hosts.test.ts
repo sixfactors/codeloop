@@ -102,7 +102,7 @@ describe('board server', () => {
 describe('mcp server', () => {
   async function session(calls: { method: string; params?: unknown }[], env: NodeJS.ProcessEnv = {}): Promise<any[]> {
     const { CODELOOP_ROLE: _role, ...clean } = process.env;
-    const child = spawn(process.execPath, [join(ROOT, 'dist/index.js'), 'mcp'], { cwd: dir, env: { ...clean, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(process.env.CODELOOP_TEST_DIST ?? join(ROOT, 'dist'), 'index.js'), 'mcp'], { cwd: dir, env: { ...clean, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
     const responses = new Map<number, any>();
     let buffer = '';
     const done = new Promise<void>((resolve, reject) => {

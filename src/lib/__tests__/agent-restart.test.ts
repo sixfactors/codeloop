@@ -25,7 +25,7 @@ const later = (h = 2) => new Date(Date.now() + h * 3_600_000);
 const starts = () => card().events.filter(e => e.action === 'agent-start').length;
 
 beforeEach(() => {
-  process.argv[1] = resolve('dist/index.js');
+  process.argv[1] = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
   dir = mkdtempSync(join(tmpdir(), 'codeloop-restart-'));
 });
 afterEach(() => {

@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 // Scoped away from the real ~/.codeloop, and off the port range this session was told to leave
 // alone (4040/4096): everything the hub binds to in this file lives in 4300-4399.
 const PORT = 4312;

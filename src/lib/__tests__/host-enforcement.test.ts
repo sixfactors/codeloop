@@ -10,7 +10,7 @@ import { guardSignal, WARNINGS_PATH } from '../../watch/guard.js';
 import { runCli } from '../../__tests__/cli.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-const CLI = join(ROOT, 'dist/index.js');
+const CLI = join(process.env.CODELOOP_TEST_DIST ?? join(ROOT, 'dist'), 'index.js');
 let dir: string;
 
 function write(path: string, text: string): void {

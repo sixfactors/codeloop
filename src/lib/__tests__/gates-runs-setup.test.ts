@@ -16,7 +16,7 @@ import * as services from '../services.js';
 import { computeStats } from '../stats.js';
 import { runCli } from '../../__tests__/cli.js';
 
-const CLI = resolve('dist/index.js');
+const CLI = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
 const TOKEN = 'test-token';
 let dir: string;
 

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mainTreeOf } from '../project-root.js';
 import { ensureStoreLinks, moveStore, storeItems, userStoreDir } from '../store-home.js';
 
-const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
+const CLI = join(process.env.CODELOOP_TEST_DIST ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist'), 'index.js');
 const GIT = 'git -c user.email=a@b -c user.name=t';
 
 let root: string;

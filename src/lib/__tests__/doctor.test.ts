@@ -17,7 +17,7 @@ const card = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 
 
 beforeEach(() => {
   // The agent's check calls `codeloop`; point the shim it runs through at the built CLI.
-  process.argv[1] = resolve('dist/index.js');
+  process.argv[1] = resolve(process.env.CODELOOP_TEST_DIST ?? 'dist', 'index.js');
   dir = mkdtempSync(join(tmpdir(), 'codeloop-doctor-'));
   write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: draft\n    done: { cmd: "test -f out/{id}.md" }\n  - id: ship\n    done: { cmd: "false" }\n');
   // A stand-in agent: writes the stage output the check looks for.

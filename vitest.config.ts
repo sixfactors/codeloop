@@ -1,6 +1,9 @@
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig } from 'vitest/config';
+
+const TEST_DIST = fileURLToPath(new URL('./.test-dist', import.meta.url));
 
 export default defineConfig({
   test: {
@@ -19,7 +22,9 @@ export default defineConfig({
     // Every CLI the tests spawn inherits this, so `init` and `serve` register throwaway projects in a
     // temp registry, never in the person's ~/.codeloop/projects.json.
     // Session ids are cleared so a test run inside an agent session behaves like one outside it.
-    env: { CODELOOP_HOME: join(tmpdir(), `codeloop-test-home-${process.pid}`), CLAUDE_CODE_SESSION_ID: '', CURSOR_SESSION_ID: '' },
+    // The CLI tests spawn is built into .test-dist by the global setup, never into dist, which is the
+    // linked global codeloop other projects run while a test suite is going.
+    env: { CODELOOP_HOME: join(tmpdir(), `codeloop-test-home-${process.pid}`), CLAUDE_CODE_SESSION_ID: '', CURSOR_SESSION_ID: '', CODELOOP_TEST_DIST: TEST_DIST },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
