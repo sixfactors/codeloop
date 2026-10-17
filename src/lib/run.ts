@@ -188,6 +188,9 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
     failedNow = check && check.crashed === undefined ? check.output : undefined;
     crashedNow = check?.crashed;
   }
+  // The start records the work as the check left it: a report file the check creates on its first
+  // run would otherwise read as new work on the next tick and start the agent again.
+  const startWork = head && !redo && !judged ? workFingerprint(projectDir, card, stage) : work;
   if (same) {
     // Nothing new can follow on its own, so the story waits for a person instead of being checked
     // and refused on every tick.
@@ -213,7 +216,7 @@ async function agentStep(projectDir: string, id: string, agent: AgentConfig, now
       if (reason) throw new RefusalError(reason);
       const n = current.events.filter(e => e.action === 'agent-start' && e.stage === stage.id).length + 1;
       log = logFile ?? `${AGENT_RUNS_DIR}/${id}-${safeName(stage.id, 'stage id')}-${n}.log`;
-      return { action: 'agent-start', agent: agent.name, log, ...(head ? { head, fingerprint: work } : {}) };
+      return { action: 'agent-start', agent: agent.name, log, ...(head ? { head, fingerprint: startWork } : {}) };
     }, now);
   } catch (e) {
     if (!(e instanceof RefusalError)) throw e;

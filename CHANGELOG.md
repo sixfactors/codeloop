@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A no-op agent on a stage whose check writes a report file into the repo (junit.xml) is started once, not twice: the start records the work as its own check left it.
 - A story's health delta counts only the critical gotchas scoped to the files its own commits changed, so a gotcha another story adds elsewhere no longer lowers it.
 - The edit guard refuses an edit (exit 2) when its own check throws, on the hook daemon and the CLI alike; before, a throw such as a malformed card in cards.json exited 1 and let the edit through.
 - A story whose recorded spec folder is missing finds the one folder with its number, uses it, and records it on the card, so the spec page shows what the builder wrote.

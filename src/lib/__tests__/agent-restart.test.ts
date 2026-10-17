@@ -96,6 +96,23 @@ describe('an agent restart on a check that writes into the repo', () => {
     expect(card().gate).toBe('stuck');
     expect(stuckReason(card())).toBe('the agent ran and changed nothing; a person needs to look');
   });
+
+  it('parks on unchanged work when the report file first appears in the check run just before the start', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "date +%s%N >> junit.xml; echo 2 of 4 tasks open; exit 1" }\n');
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+    // No check has run yet, so junit.xml is created by the check of the first start.
+    expect(existsSync(join(dir, 'junit.xml'))).toBe(false);
+    for (let h = 1; h < 4; h++) await runDueWithAgent(dir, { name: 'fake' }, later(h), { card: 'c-1' });
+    expect(existsSync(join(dir, 'junit.xml'))).toBe(true);
+    expect(starts()).toBe(1);
+    expect(card().gate).toBe('stuck');
+    expect(stuckReason(card())).toBe('the agent ran and changed nothing; a person needs to look');
+  });
 });
 
 describe('an agent restart after the agent added a file it did not commit', () => {
