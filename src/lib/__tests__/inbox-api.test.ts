@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { advanceCard, createCard, proposeCard } from '../engine.js';
+import { advanceCard, createCard, holdsSlot, proposeCard } from '../engine.js';
+import type { Card } from '../cards.js';
 import { buildInbox } from '../inbox.js';
 import { closeIndex } from '../index/index.js';
 import { createApp } from '../server.js';
@@ -93,6 +94,14 @@ describe('inbox-shaped card queries', () => {
     const body = await (await app.request('/api/inbox')).json();
     // c-4, c-5 and c-8 are active; c-1..c-3 are parked at the copy gate.
     expect(body.perLane).toEqual([expect.objectContaining({ lane: 'market', active: 3, holding: 2, parked: 3 })]);
+  });
+
+  it("the workspace's fallback perLane holding counts the same cards as the server's wip rule", async () => {
+    const { deriveInbox } = await import('../../../workspace/lib/cards.js');
+    const at = (id: string, stage: string, extra: Partial<Card> = {}) => ({ id, title: id, lane: 'market', stage, laneVersion: 1, retries: {}, evidence: [], events: [], createdAt: '', updatedAt: '', ...extra }) as Card;
+    const cards = [at('q', 'queued'), at('l', 'live'), at('r', 'released'), at('d', 'draft'), at('t', 'draft', { size: 'trivial' }), at('g', 'draft', { gate: 'copy', awaiting: 'owner' })];
+    expect(cards.filter(holdsSlot).map(c => c.id)).toEqual(['l', 'r', 'd']);
+    expect(deriveInbox(cards, [], new Date(0)).perLane).toEqual([expect.objectContaining({ lane: 'market', holding: 3 })]);
   });
 
   it('a proposal does not count as waiting on you; failing means two failed checks and an hour quiet, not one', async () => {
