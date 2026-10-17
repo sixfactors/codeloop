@@ -24,12 +24,13 @@ export const DEFAULT_BUDGET: Record<Size, Budget> = {
 // well-documented small story look large.
 const EXCLUDED = [/^evidence\//, /^specs\//, /^\.codeloop\//, /^CHANGELOG\.md$/];
 
-// A page or write-up under docs/ is read, not reviewed line by line, and one page runs to hundreds of
+// A Markdown page under docs/ is read, not reviewed line by line, and one page runs to hundreds of
 // lines, so it counts as a file and at one tenth of its lines: a one-page story stays trivial, and a
-// 10,000-line page still breaks the trivial budget.
-const PROSE = /^docs\/.+\.(md|mdx|html)$/;
+// 10,000-line page still breaks the trivial budget. An .html or .mdx page can carry scripts or JSX
+// that are reviewed like code, so it counts in full.
+const PROSE = /^docs\/.+\.md$/;
 const PROSE_SHARE = 10;
-const PROSE_NOTE = ' (pages under docs/ count at one tenth of their lines)';
+const PROSE_NOTE = ' (Markdown pages under docs/ count at one tenth of their lines)';
 
 function git(cwd: string, args: string[]): string {
   const run = spawnSync('git', args, { cwd, encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024 });
