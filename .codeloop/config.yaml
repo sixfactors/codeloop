@@ -14,7 +14,7 @@ agents:
     max_runs_per_day: 50
   claude:
     cmd: "claude -p --permission-mode acceptEdits < {brief}"
-    timeout_minutes: 10
+    timeout_minutes: 40
     max_runs_per_day: 50
 
 git:
