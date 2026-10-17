@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { followLink } from './store-home.js';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { appendActivity, MIRRORED_EVENTS } from './activity.js';
 import { CloudConflictError, writeCloudBoard } from './cloud.js';
 import { withLock } from './lock.js';
@@ -108,9 +108,14 @@ export interface CardExtras {
   after?: string;
   /** The stage a queued card enters when promoted; split children resume at their parent's stage. */
   start_stage?: string;
-  /** The git worktree this story builds in, and its branch (`ensureStoryWorktree`). */
+  /** The git worktree this story builds in, relative to the project, and its branch (`ensureStoryWorktree`). Read it with `worktreeOf`. */
   worktree?: string;
   branch?: string;
+}
+
+/** The story's worktree as an absolute path. Boards written before it was stored relative hold an absolute path, which resolve() keeps. */
+export function worktreeOf(projectDir: string, card: Pick<Card, 'worktree'>): string | undefined {
+  return card.worktree ? resolve(projectDir, card.worktree) : undefined;
 }
 
 /** One line of a story's summary, with who wrote it, at which step and when. */

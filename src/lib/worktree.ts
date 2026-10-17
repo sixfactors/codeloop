@@ -6,10 +6,10 @@
 import { evidenceOf, shapeDir, specsDir } from './paths.js';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
-import { basename, dirname, join } from 'path';
+import { basename, dirname, join, relative, resolve } from 'path';
 import { appendActivity } from './activity.js';
 import { currentSession } from './active-card.js';
-import { cardKey, findCard, readCards, RefusalError, writeCards, type Card } from './cards.js';
+import { cardKey, findCard, readCards, RefusalError, worktreeOf, writeCards, type Card } from './cards.js';
 import { loadConfig } from './config.js';
 import { recordEvent } from './engine.js';
 import { listGates } from './gate.js';
@@ -91,7 +91,9 @@ function trunkOf(projectDir: string, given?: string): string {
 function setFields(projectDir: string, id: string, fields: Pick<Card, 'worktree' | 'branch'>): void {
   const file = readCards(projectDir);
   const card = findCard(file.cards, id);
-  const next = { ...card, ...fields, updatedAt: new Date().toISOString() };
+  // Stored relative: cards.json is tracked, and an absolute path names the machine it was made on.
+  const stored = fields.worktree === undefined ? {} : { worktree: relative(projectDir, fields.worktree) };
+  const next = { ...card, ...fields, ...stored, updatedAt: new Date().toISOString() };
   for (const k of Object.keys(next) as (keyof Card)[]) if (next[k] === undefined) delete next[k];
   writeCards(projectDir, file, file.cards.map(c => (c.id === card.id ? next : c)));
 }
@@ -101,12 +103,12 @@ export function ensureStoryWorktree(projectDir: string, cardRef: string, opts: W
   const trunk = trunkOf(projectDir, opts.trunk);
   const scope = slugify(opts.scope ?? card.feature ?? card.lane) || 'story';
   const branch = card.branch ?? `feat/${`${scope}-${slugify(card.title) || card.id.toLowerCase()}`.slice(0, 40).replace(/-+$/, "")}`;
-  const path = card.worktree ?? join(dirname(projectDir), `${basename(projectDir)}-wt-${card.id.toLowerCase()}`);
+  const path = worktreeOf(projectDir, card) ?? join(dirname(projectDir), `${basename(projectDir)}-wt-${card.id.toLowerCase()}`);
 
   if (existsSync(path)) {
     const onBranch = git(path, ['rev-parse', '--abbrev-ref', 'HEAD']);
     if (!onBranch.ok || onBranch.out !== branch) throw new RefusalError(`${path} exists but is not the worktree on ${branch}`);
-    if (card.worktree !== path || card.branch !== branch) setFields(projectDir, card.id, { worktree: path, branch });
+    if (card.worktree !== relative(projectDir, path) || card.branch !== branch) setFields(projectDir, card.id, { worktree: path, branch });
     return { card: card.id, path, branch, trunk, created: false };
   }
 
@@ -196,8 +198,9 @@ export function mergeStory(projectDir: string, cardRef: string, opts: Pick<Workt
 /** Removes the story's worktree directory once it has merged. The branch stays. */
 export function removeStoryWorktree(projectDir: string, cardRef: string): void {
   const card = findCard(readCards(projectDir).cards, cardRef);
-  if (!card.worktree) return;
-  if (existsSync(card.worktree)) must(projectDir, ['worktree', 'remove', card.worktree], 'cannot remove the worktree');
+  const path = worktreeOf(projectDir, card);
+  if (!path) return;
+  if (existsSync(path)) must(projectDir, ['worktree', 'remove', path], 'cannot remove the worktree');
   setFields(projectDir, card.id, { worktree: undefined, branch: card.branch });
 }
 
@@ -237,7 +240,7 @@ export function pruneWorktrees(projectDir: string, opts: { dryRun?: boolean } = 
       continue;
     }
     if (!opts.dryRun) must(projectDir, ['worktree', 'remove', path], `cannot remove ${path}`);
-    for (const card of readCards(projectDir).cards.filter(c => c.worktree === path)) setFields(projectDir, card.id, { worktree: undefined, branch: card.branch });
+    for (const card of readCards(projectDir).cards.filter(c => worktreeOf(projectDir, c) === resolve(path))) setFields(projectDir, card.id, { worktree: undefined, branch: card.branch });
     out.push({ path, branch, removed: !opts.dryRun, why: `${branch} is merged into ${trunk} and the tree is clean` });
   }
   return out;

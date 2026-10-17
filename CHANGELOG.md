@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A story's worktree is stored in cards.json relative to the project (`../repo-wt-c-012`), not as an absolute path. Boards that hold an absolute path still work, and the next `card worktree` rewrites it.
 - `POST /api/wiki/outline` needs a server started with `--owner` and no longer takes `force`, so the board cannot rewrite hand-edited outline pages; `codeloop wiki init --from-repo --write --force` still can.
 - Tool output written into tracked files (verify evidence, gate records, check notes on a story) shows the home folder as `~` and the temp folder as `<temp dir>`, with terminal colour and cursor codes removed.
 - Security: the stdio MCP server's `answer` tool recorded an owner's answer for any caller, so an agent could answer the owner's questions. `answer` now needs `CODELOOP_ROLE=owner`, `approve` and `reject` need owner or reviewer, and all three refuse inside an agent run. Answering (one question or all) refuses the agent role on every path. A board server started inside `codeloop run --agent` refuses approve, reject, answer, park, place, move, reopen, edit and close even with `--owner`.

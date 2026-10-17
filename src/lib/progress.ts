@@ -9,7 +9,7 @@ import { evidenceOf } from './paths.js';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { readAllActivity } from './activity.js';
-import { cardKey, type Card } from './cards.js';
+import { cardKey, worktreeOf, type Card } from './cards.js';
 import { storyCommitTimes } from './diff-budget.js';
 import { readTasks, type Task } from './spec.js';
 
@@ -22,7 +22,7 @@ export interface EvidenceFile {
 
 /** The roots a story's files can sit in: the main tree and its own worktree. */
 function roots(projectDir: string, card: Card): string[] {
-  return [projectDir, ...(card.worktree && existsSync(card.worktree) ? [card.worktree] : [])];
+  return [projectDir, ...[worktreeOf(projectDir, card)].filter((p): p is string => !!p && existsSync(p))];
 }
 
 /** The current tasks.md list: id, done, layer and text, from whichever tree holds the newer file. */

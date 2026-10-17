@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
-import type { Card } from './cards.js';
+import { worktreeOf, type Card } from './cards.js';
 import { loadConfig } from './config.js';
 import { specPath } from './project-root.js';
 
@@ -20,7 +20,7 @@ export const countTaskLines = (projectDir: string, card: Card): number => taskLi
 function taskLines(projectDir: string, card: Card): string[] {
   if (!card.spec) return [];
   let best: { file: string; mtime: number } | undefined;
-  for (const root of [projectDir, ...(card.worktree && existsSync(card.worktree) ? [card.worktree] : [])]) {
+  for (const root of [projectDir, ...[worktreeOf(projectDir, card)].filter((p): p is string => !!p && existsSync(p))]) {
     const file = root === projectDir ? specPath(projectDir, card.spec, 'tasks.md') : join(root, card.spec, 'tasks.md');
     try {
       const mtime = statSync(file).mtimeMs;

@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { appendActivity, readAllActivity } from './activity.js';
-import { cardKey, type Card } from './cards.js';
+import { cardKey, worktreeOf, type Card } from './cards.js';
 import { usecasesOf } from './paths.js';
 import { progressSince } from './progress.js';
 
@@ -35,7 +35,7 @@ function lastFailAt(card: Card, stage: string): number | undefined {
 /** Newest change to anything the stage check can see, after `since`; undefined when none. */
 function changedAfter(projectDir: string, card: Card, since: number): number | undefined {
   let newest = progressSince(projectDir, card) ?? 0;
-  const roots = [projectDir, ...(card.worktree && existsSync(card.worktree) ? [card.worktree] : [])];
+  const roots = [projectDir, ...[worktreeOf(projectDir, card)].filter((p): p is string => !!p && existsSync(p))];
   for (const root of roots) {
     if (card.spec) newest = Math.max(newest, newestUnder(join(root, card.spec)));
     newest = Math.max(newest, newestUnder(join(root, usecasesOf(projectDir, cardKey(card)))));
