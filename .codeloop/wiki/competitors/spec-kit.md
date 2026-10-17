@@ -11,3 +11,5 @@ changelog: https://github.com/github/spec-kit/releases
 - c-307 The orchestrator reviews every story and fixes what is wrong before it picks the next one: No board review: each feature's spec, plan and tasks are run in order by the person; nothing re-reads open features and fixes their state | https://github.com/github/spec-kit
 
 - c-308 A stuck story says why in plain words and which action will move it: No stuck state: a command that fails reports in the agent chat, and the person decides whether to rerun it; nothing says whether work was tried | https://github.com/github/spec-kit
+
+- c-311 Every story opens with what is needed, what is done and what I must do: No per-feature summary: the spec, plan and tasks files are read in full, and progress is the ticked task list | https://github.com/github/spec-kit
