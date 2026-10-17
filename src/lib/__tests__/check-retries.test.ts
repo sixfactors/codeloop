@@ -223,4 +223,16 @@ describe('a stuck story parked and approved back', () => {
     expect(next.card.retries.draft).toBe(1);
     expect(next.card.gate).toBeUndefined();
   });
+
+  it('says the reject recorded a note only when one was given', () => {
+    advanceCard(dir, 'c-1');
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'out.md' });
+    advanceCard(dir, 'c-1');
+    expect(reject(dir, 'c-1', 'owner', '').summary).toBe('c-1 parked from draft');
+    approveCard(dir, 'c-1', 'owner');
+    advanceCard(dir, 'c-1');
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'out.md' });
+    expect(advanceCard(dir, 'c-1').outcome).toBe('stuck');
+    expect(reject(dir, 'c-1', 'owner', 'needs a person').summary).toBe('c-1 parked from draft; note recorded');
+  });
 });
