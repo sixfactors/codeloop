@@ -16,13 +16,14 @@ const mcpRole = () => services.resolveRole(process.env.CODELOOP_ROLE ?? 'agent')
 
 /**
  * The role for an owner-only tool (the CLI's owner verbs: approve, reject, answer), refused for an
- * agent the way the CLI refuses them: inside an agent run whatever CODELOOP_ROLE says, and for any
- * server not started with a person's role. `allowed` is owner, plus reviewer for gate decisions.
+ * agent the way the CLI refuses them: always inside an agent run, whatever CODELOOP_ROLE says, and
+ * for a role not in `allowed`. Approve and reject leave the role to the engine, which refuses any
+ * role but the one the gate awaits.
  */
-function personRole(what: string, allowed: Role[]): Role {
+function personRole(what: string, allowed?: Role[]): Role {
   if (process.env.CODELOOP_AGENT_RUN) throw new RefusalError(`this process was started by \`codeloop run --agent\` and acts as agent; ${what} is the owner's decision`);
   const role = mcpRole();
-  if (!allowed.includes(role)) throw new RefusalError(`${what} is the owner's decision; this MCP server acts as ${role} (CODELOOP_ROLE=${allowed.join(' or ')} lets a person's server do it)`);
+  if (allowed && !allowed.includes(role)) throw new RefusalError(`${what} is the owner's decision; this MCP server acts as ${role} (CODELOOP_ROLE=${allowed.join(' or ')} lets a person's server do it)`);
   return role;
 }
 
@@ -69,11 +70,11 @@ export function createMcpServer(projectDir: string): McpServer {
     return { outcome: r.result.outcome, stage: r.result.card.stage, gate: r.result.card.gate, awaiting: r.result.card.awaiting, output: r.result.output, started: r.result.started.map(s => s.id) };
   });
   tool('approve', 'Approve the gate a card is waiting at, then advance it once. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string().optional() }, a => {
-    const r = services.approve(projectDir, a.id, personRole('approving a gate', ['owner', 'reviewer']), a.note);
+    const r = services.approve(projectDir, a.id, personRole('approving a gate'), a.note);
     return { approved: r.gate, stage: (r.advanced?.card ?? r.card).stage, outcome: r.advanced?.outcome };
   });
   tool('reject', 'Reject the gate with a note. Refused unless the server runs with CODELOOP_ROLE=owner or reviewer.', { ...id, note: z.string() }, a => {
-    const r = services.reject(projectDir, a.id, personRole('rejecting a gate', ['owner', 'reviewer']), a.note);
+    const r = services.reject(projectDir, a.id, personRole('rejecting a gate'), a.note);
     return { id: r.card.id, stage: r.card.stage, gate: r.gate, summary: r.summary };
   });
   tool('task_done', 'Tick a task in the card spec folder.', { ...id, task: z.string().describe('Task id, e.g. T003') }, a => {
