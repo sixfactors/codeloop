@@ -76,6 +76,10 @@ describe('the stuck explanation', () => {
     expect(moved.gate).toBeUndefined();
     expect(moved.events.slice(-2).map(x => x.action)).toEqual(['unstick', 'place']);
     // Stuck at the gated step itself: moving on would skip its approval, so there is no move.
+    // A written output is the work that makes the failure count. Without it the count would rest on
+    // whether the commit above fell in the same clock second as the place, since git log --since
+    // reads whole seconds.
+    writeFileSync(join(dir, 'tasks.md'), 'a first task list');
     advanceCard(dir, 'c-1');
     expect(card()).toMatchObject({ stage: 'spec', gate: 'stuck' });
     expect(explain().buttons).not.toContain('move');
@@ -92,7 +96,7 @@ stages:
     output: "{spec}/tasks.md"
     done: { cmd: "exit 1" }
   - id: data-model
-    output: "{spec}/data-model.md"
+    output: data-model.md
     done: { cmd: "exit 1" }
   - id: build
     done: { cmd: "echo task check; exit 1" }
@@ -102,6 +106,7 @@ stages:
     commit('CHANGELOG.md', 'docs: changelog');
     commit('shape/board.md', 'docs: shape');
     placeCard(dir, 'c-1', 'data-model', 'owner');
+    writeFileSync(join(dir, 'data-model.md'), 'a first draft');
     advanceCard(dir, 'c-1');
     expect(card()).toMatchObject({ stage: 'data-model', gate: 'stuck' });
     expect(explain().buttons).not.toContain('move');
