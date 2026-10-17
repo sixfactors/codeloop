@@ -44,6 +44,8 @@ afterEach(() => {
 describe('owner-only tools and routes', () => {
   it('refuse an agent: the MCP answer, approve and reject tools, and the board routes inside an agent run', async () => {
     expect(findCard(readCards(dir).cards, 'c-001')).toMatchObject({ stage: 'spec', gate: 'spec', awaiting: 'owner' });
+    // As owner, so the engine's role check would let approve and reject through: only the agent-run guard refuses them.
+    process.env.CODELOOP_ROLE = 'owner';
 
     const [a, b] = InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test', version: '1' });
@@ -52,7 +54,7 @@ describe('owner-only tools and routes', () => {
     for (const [name, args] of [['answer', { id: 'c-001', n: 1, accept: true }], ['approve', { id: 'c-001' }], ['reject', { id: 'c-001', note: 'no' }]] as const) {
       const res = await call(name, args);
       expect(res.isError, `${name}: ${res.content[0].text}`).toBe(true);
-      expect(res.content[0].text).toMatch(/owner/);
+      expect(res.content[0].text).toMatch(/started by `codeloop run --agent`/);
     }
     await client.close();
     expect(readQuestions(dir, findCard(readCards(dir).cards, 'c-001'))[0].answer ?? '').toBe('');

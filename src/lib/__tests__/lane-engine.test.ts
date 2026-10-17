@@ -192,6 +192,13 @@ describe('lint', () => {
     const errors = lintLane(parseLane('id: x\nversion: 1\nmetric: { name: m, source: s }\nstages:\n  - id: draft\n    skill: blog\n'));
     expect(errors).toEqual(['lane x stage draft: no done check (cmd or event)']);
   });
+
+  it('accepts only owner or reviewer as the role a gate awaits', () => {
+    const lane = (approver: string) => parseLane(`id: x\nversion: 1\nmetric: { name: m, source: s }\nstages:\n  - id: draft\n    done: { cmd: "true" }\n    gate: { name: copy, approver: ${approver} }\n`);
+    expect(lintLane(lane('agent'))).toEqual(['lane x stage draft: gate has no approver (owner or reviewer)']);
+    expect(lintLane(lane('owner'))).toEqual([]);
+    expect(lintLane(lane('reviewer'))).toEqual([]);
+  });
 });
 
 describe('run --due', () => {
