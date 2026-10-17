@@ -98,6 +98,26 @@ describe('an agent restart on a check that writes into the repo', () => {
   });
 });
 
+describe('an agent restart after the agent added a file it did not commit', () => {
+  it('starts the agent again instead of parking it as nothing changed', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 5\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n');
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "touch src/new.ts"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'src/a.ts' });
+    advanceCard(dir, 'c-1');
+    await doctorTick(dir, later(2));
+    expect(starts()).toBe(1);
+    expect(existsSync(join(dir, 'src/new.ts'))).toBe(true);
+    await doctorTick(dir, later(3));
+    expect(starts()).toBe(2);
+    expect(card().gate).toBeUndefined();
+  });
+});
+
 describe('an agent start after the owner moves a story back', () => {
   it('starts the agent on the stage it came back to, though an agent once failed there on the same work', async () => {
     write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "echo 2 of 4 tasks open; exit 1" }\n  - id: ship\n    done: { cmd: "exit 1" }\n');

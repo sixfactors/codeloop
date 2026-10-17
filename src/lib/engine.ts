@@ -93,16 +93,18 @@ function event(now: Date, role: Role | 'engine', action: string, stage?: string,
 }
 
 /**
- * HEAD, the changed tracked files and their changes. Untracked files are left out: a check that
- * writes a report or a log into the repo would otherwise change the work on every run. `.codeloop/`
- * is left out too, as the engine writes there on every attempt. null outside a git repo.
+ * HEAD, the changed tracked files and their changes, and the names of untracked files. An untracked
+ * file counts by name only: a new file is new work, while a check rewriting its report or log in
+ * the repo on every run keeps the same names. `.codeloop/` is left out, as the engine writes there
+ * on every attempt. null outside a git repo.
  */
 function treeState(projectDir: string): string | null {
   const git = (args: string[]) => spawnSync('git', [...args, '--', '.', ':(exclude).codeloop'], { cwd: projectDir, encoding: 'utf-8' });
   const status = git(['status', '--porcelain', '--untracked-files=no']);
   if (status.status !== 0) return null;
   const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectDir, encoding: 'utf-8' }).stdout;
-  return [head, status.stdout, git(['diff', 'HEAD']).stdout].join('\n');
+  const untracked = git(['ls-files', '--others', '--exclude-standard']).stdout.split('\n').filter(Boolean).sort();
+  return [head, status.stdout, git(['diff', 'HEAD']).stdout, ...untracked].join('\n');
 }
 
 function tail(text: string): string {
