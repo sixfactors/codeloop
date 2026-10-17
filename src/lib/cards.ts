@@ -285,7 +285,7 @@ function mirrorEvents(projectDir: string, before: Card[], after: Card[]): void {
       if (!MIRRORED_EVENTS.has(e.action)) continue;
       // The card's own `edit` (an owner changing its fields) is `story-edit` in the stream: activity's
       // `edit` is an agent editing a file, which renders by its path and counts as work.
-      appendActivity(projectDir, card.id, { at: e.at, kind: e.action === 'edit' ? 'story-edit' : e.action, actor: e.actor, ...(e.stage ? { stage: e.stage } : {}), ...(e.note ? { text: e.note } : {}) });
+      appendActivity(projectDir, card.id, { at: e.at, kind: e.action === 'edit' ? 'story-edit' : e.action, actor: e.actor, ...(e.stage ? { stage: e.stage } : {}), ...(e.note ? { text: e.note } : {}), ...(e.action === 'agent-run' && e.durationMs ? { durationMs: e.durationMs } : {}) });
     }
   }
 }

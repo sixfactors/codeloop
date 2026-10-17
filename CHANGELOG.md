@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- A story's working time counts its agent runs for as long as they ran and each lone edit as a minute, so a story worked by a headless agent no longer reads working 0m.
 - `verify` on a trivial story over budget says it was parked at a gate only when it was; on a lane with no earlier gate it says the story is re-sized and stays at its stage.
 - The inbox's WIP bar per lane counts only the stories that hold a wip slot, so a trivial story or one parked at a gate no longer fills it; `/api/inbox` returns that count as `perLane[].holding`.
 - The shell guard asks about every `card move` in a compound command, not only the first, spelled `card` or `cards` (as are `card done|drop|approve|reject`), reads options wherever they sit (`card move --note x <id> <stage>`), and asks rather than allows a move it cannot read against the board.
