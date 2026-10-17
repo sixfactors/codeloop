@@ -37,6 +37,14 @@ describe('story control routes', () => {
     expect(((await edited.json()) as { card: { title: string } }).card.title).toBe('A clearer title');
   });
 
+  it('parks a stuck story when the owner rejects it from the panel, with or without a note', async () => {
+    writeFileSync(join(tmpDir, '.codeloop/cards.json'), JSON.stringify({ version: 1, cards: [{ ...card('c-090', 'build'), gate: 'stuck', awaiting: 'owner', retries: { build: 3 } }] }));
+    const res = await make(true)('/api/cards/c-090/reject', 'POST', {});
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { decision: { card: { stage: string; parked_from?: string; gate?: string } } };
+    expect(body.decision.card).toMatchObject({ stage: 'proposed', parked_from: 'build', gate: 'proposal' });
+  });
+
   it('answers 409 when the story forbids the change, and 403 on a read-only board', async () => {
     const call = make(true);
     // Back past the passed spec gate with no note.

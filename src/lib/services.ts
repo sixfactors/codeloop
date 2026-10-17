@@ -245,6 +245,11 @@ export function closeCard(projectDir: string, ref: string, who: Role, outcome: '
 
 export function reject(projectDir: string, ref: string, who: Role, note: string): DecisionReport {
   const before = findCard(readCards(projectDir).cards, ref);
+  // A stuck card has no stage to redo: rejecting it parks it in the owner's inbox, where it was.
+  if (before.gate === 'stuck') {
+    const { card, hint } = parkCard(projectDir, before.id, who, note?.trim() || undefined);
+    return { card, gate: 'stuck', summary: `${card.id} parked from ${card.parked_from}; note recorded`, lines: [hint], exitCode: 0 };
+  }
   const card = rejectCard(projectDir, ref, who, note);
   if (card.stage === DROPPED) return { card, gate: 'proposal', summary: `${card.id} dropped; note recorded`, lines: [], exitCode: 0 };
   const returned = card.stage !== before.stage;
