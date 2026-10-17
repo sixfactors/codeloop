@@ -152,10 +152,33 @@ guardCommand
   .description('SessionStart hook: prints the active story and its brief, or the top open stories by priority when none is active')
   .action(guardSession);
 
+// How a command line starts the CLI: `codeloop`, an absolute or quoted path to its bin, the built
+// entry (`node dist/index.js`), or npx.
+const CLI = String.raw`(?:\bcodeloop|\bnode\s+['"]?(?:\S*\/)?dist\/index\.js|\bnpx\s+(?:@protoboxai\/)?codeloop)['"]?\s+`;
 // Owner actions an assistant must never take in its own shell tool. The hook only fires for the
 // assistant's tool calls, never for a command the person types (a terminal, or `!` in Claude Code).
-// `orch run --review` without --dry-run closes and places stories on the owner's behalf.
-const OWNER_ACTION = /\bcodeloop\s+(approve|reject|answer|cards?\s+(?:done|drop|approve|reject)\b|orch\b(?![^;&|\n]*--dry-run)[^;&|\n]*--review)\b|--as[ =](owner|reviewer)\b/;
+// `orch run --review` without --dry-run closes and places stories on the owner's behalf. `card move`
+// is judged by gateCrossingMove: only a move across a gate asks.
+const OWNER_ACTION = new RegExp(
+  `${CLI}(approve|reject|answer|cards?\\s+(?:done|drop|approve|reject|place|park|reopen|edit)\\b|start\\b[^;&|\\n]*\\s--stage\\b|lanes?\\s+(?:promote|rollback)\\b|orch\\b(?![^;&|\\n]*--dry-run)[^;&|\\n]*--review)\\b|--as[ =](owner|reviewer)\\b`,
+  'g',
+);
+
+/**
+ * The first owner action in the command, or null. A `card edit` whose only options are `--bug` /
+ * `--no-bug` is left to directBugFlag, which asks only when the edit acts as the owner.
+ */
+export function ownerAction(command: string): RegExpExecArray | null {
+  for (const hit of command.matchAll(OWNER_ACTION)) {
+    if (/\bedit\b/.test(hit[1] ?? '')) {
+      // `--as <role>` says who acts, not what changes, so it does not make the edit more than a bug flag.
+      const options = (command.slice(hit.index).split(/[;&|\n]/)[0].match(/\s--?[\w-]+/g) ?? []).filter(o => !/^\s--as$/.test(o));
+      if (options.length > 0 && options.every(o => /^\s--(?:no-)?bug$/.test(o))) continue;
+    }
+    return hit as RegExpExecArray;
+  }
+  return null;
+}
 // `--bug` / `--no-bug` on `card new|edit` or `start` sets the flag every pick reads first, but only
 // when the command acts as the owner; as an agent or reviewer it is a report the owner confirms, and
 // `card propose --bug` always is, so neither asks.
@@ -455,7 +478,7 @@ export async function guardSession(): Promise<void> {
 }
 
 /** Behind `guard bash` and the hook daemon. Each `codeloop card move` up to the next shell separator. */
-const CARD_MOVE = /\bcodeloop\s+cards?\s+move\b[^;&|\n]*/g;
+const CARD_MOVE = new RegExp(`${CLI}cards?\\s+move\\b[^;&|\\n]*`, 'g');
 const WORD = /"([^"]*)"|'([^']*)'|(\S+)/g;
 
 /** The id and stage of one `card move`, with options dropped wherever they sit. `--opt value` drops both. */
@@ -512,7 +535,7 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
   const moved = await gateCrossingMove(command);
-  const hit = moved ? [moved] : OWNER_ACTION.exec(command) ?? directBugFlag(command);
+  const hit = moved ? [moved] : ownerAction(command) ?? directBugFlag(command);
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
     // event it writes is mirrored into the stream then.
