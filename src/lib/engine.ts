@@ -150,6 +150,30 @@ export function reviewMoveRefusal(lane: Lane, card: Card, to: number): string | 
   return folding ? `the ${foldedStage(lane, folding, card)!.gate!.name} gate folded into ${folding.id} lies between; the review pass never moves past a gate` : undefined;
 }
 
+const CHECK_OUTCOMES = new Set(['advance', 'unstick', 'park', 'fail', 'stuck', 'check-error']);
+const passes = (e: CardEvent) => e.action === 'advance' || e.action === 'unstick' || (e.action === 'park' && /after the check passed/.test(e.note ?? ''));
+
+/** The latest check outcome recorded at `stage` after event `since` was a pass. */
+function checkPassed(card: Card, stage: string, since: number): boolean {
+  const last = card.events.filter((e, i) => i > since && e.stage === stage && CHECK_OUTCOMES.has(e.action) && (e.action !== 'park' || passes(e))).at(-1);
+  return !!last && passes(last);
+}
+
+/**
+ * The review pass may close a story only when nothing is left to prove: every gate left approved,
+ * the current stage's check passed since the story entered it, and every later stage passed. An
+ * outward gate is approved on entry, before its stage runs, so an approval alone says nothing
+ * about whether the deploy or check behind it ever worked.
+ */
+export function reviewCloseRefusal(lane: Lane, card: Card): string | undefined {
+  const why = reviewMoveRefusal(lane, card, lane.stages.length);
+  if (why) return why;
+  if (!checkPassed(card, card.stage, stageEntryIndex(card.events, card.stage))) return `${card.id}'s check at ${card.stage} has not passed since it got there; the review pass closes only what passed`;
+  const from = lane.stages.findIndex(s => s.id === card.stage);
+  const left = lane.stages.slice(from + 1).find(s => stageApplies(s, card) && !checkPassed(card, s.id, -1));
+  return left ? `${left.id} comes after ${card.stage} and never passed; the review pass closes only what passed` : undefined;
+}
+
 /** What the review pass passes to placeCard or closeCard: the merged commits its move rests on. */
 export interface ReviewMove {
   commits: string[];
@@ -570,7 +594,7 @@ function reviewClose(projectDir: string, id: string, note: string, review: Revie
   const before = findCard(file.cards, id);
   if (!inLane(before)) throw new RefusalError(`card ${before.id} is ${before.stage}, not in a lane`);
   const lane = loadLane(projectDir, before.lane);
-  const why = reviewMoveRefusal(lane, before, lane.stages.length);
+  const why = reviewCloseRefusal(lane, before);
   if (why) throw new RefusalError(why);
   const now = opts.now ?? clock();
   const { gate: _gate, awaiting: _awaiting, ...rest } = before;

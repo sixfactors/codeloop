@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The review pass closes a story only when its current stage's check passed since it got there and every later stage passed; an approval alone, such as an outward gate approved on entry before the deploy ran, no longer closes it.
 - `codeloop stats` shows agent starts per story by size: how many starts a story took to its first gate (the spec gate for an M story) and from build to done; `--json` lists them per story under `agent_starts`.
 - An `approve` whose move on is refused (a story too big to enter build) leaves the story waiting at its gate, unapproved, and says why; before, the approval was written and the story sat at the stage with no gate.
 - `codeloop orch run --review` without `--dry-run` is refused in a process started by `run --agent`, and the assistant's shell guard asks the person before running it, since it closes and places stories.

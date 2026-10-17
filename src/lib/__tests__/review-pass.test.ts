@@ -58,6 +58,8 @@ stages:
 `;
 
 const approve = (stage: string) => ({ at: at(2), actor: 'owner', human: true, action: 'approve', stage });
+/** The engine's record of a check that passed and parked at the stage's gate. */
+const passed = (stage: string, gate: string) => ({ at: at(3), actor: 'engine', action: 'park', stage, note: `gate ${gate} (after the check passed)` });
 const card = (id: string, extra: Partial<Card> = {}): Card => ({ id, title: `Story ${id}`, lane: 'build', laneVersion: 1, stage: 'research', retries: {}, evidence: [], events: [], createdAt: at(100), updatedAt: at(5), spec: `specs/${id}`, ...extra });
 function board(cards: Card[]): void {
   for (const c of cards) mkdirSync(join(dir, c.spec!), { recursive: true });
@@ -89,7 +91,7 @@ describe('the review pass', () => {
     board([
       card('c-1', { gate: 'stuck', awaiting: 'owner', retries: { research: 3 } }),
       card('c-2', { stage: 'spec', gate: 'spec', awaiting: 'owner' }),
-      card('c-3', { stage: 'verify', events: [approve('verify'), approve('review')] }),
+      card('c-3', { stage: 'review', events: [passed('review', 'pr'), approve('review')] }),
       card('c-4', { stage: 'verify', events: [approve('verify')] }),
     ]);
 
@@ -111,6 +113,28 @@ describe('the review pass', () => {
     expect(report.fixed.map(l => [l.id, l.verb])).toEqual([['c-1', 'place'], ['c-3', 'close']]);
     // The engine refuses the same move from the orchestrator role, whoever plans it.
     expect(() => placeCard(dir, 'c-1', 'build', 'agent', { review: { commits: [sha] } })).toThrow(/spec gate at spec lies between/);
+  });
+
+  it('uc-307-01: an approved gate is not a passed stage, so a story whose check never passed is not closed', () => {
+    write('.codeloop/lanes/build.yaml', `${LANE}  - id: live
+    output: evidence/{nnn}/prod.md
+    done: { cmd: "false" }
+    gate: { name: prod, approver: owner, outward: true }
+`);
+    commit('c-1', ['src/a.ts']);
+    commit('c-2', ['src/b.ts']);
+    board([
+      // At live, approved on entry before the deploy ran, then the check failed: not done.
+      card('c-1', { stage: 'live', events: [approve('live'), { at: at(1), actor: 'engine', action: 'fail', stage: 'live', note: 'no prod.md' }] }),
+      // Approvals written for stages it never reached: review and live never passed.
+      card('c-2', { stage: 'verify', events: [passed('verify', 'local'), approve('verify'), approve('review'), approve('live')] }),
+    ]);
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-1').stage).toBe('live');
+    expect(find('c-2').stage).toBe('verify');
+    expect(report.fixed).toEqual([]);
   });
 
   it('uc-307-02: docs-only and mock-only commits are not merged work', () => {

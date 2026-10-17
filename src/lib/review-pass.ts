@@ -4,7 +4,8 @@
  *
  * - place: move forward toward the stage the merged work shows, stopping at the first gated stage.
  *   Every stage passed over that has an output file gets that file written from the merged work.
- * - close: done, only when every gate left on the lane already has an approval.
+ * - close: done, only when every gate left on the lane already has an approval, the current stage's
+ *   check passed since the story got there, and every later stage passed.
  * - write-stage: the story cannot move (its own stage is gated) and that stage's output was never
  *   written, so it is written from the merged work and the stage's own check decides.
  * - ask: a gate, a split or a drop becomes one inbox question with the recommended answer.
@@ -19,7 +20,7 @@ import { Budget } from './budget.js';
 import { DONE, inLane, readCards, type Card } from './cards.js';
 import { clock } from './clock.js';
 import { commitFiles, storyCommits, storyCommitTimes, type StoryCommit } from './diff-budget.js';
-import { closeCard, placeCard, RefusalError, recordEvent, reviewMoveRefusal } from './engine.js';
+import { closeCard, placeCard, RefusalError, recordEvent, reviewCloseRefusal, reviewMoveRefusal } from './engine.js';
 import { addQuestions, readQuestions } from './interview.js';
 import { loadLane, stageApplies, substitute, type Lane, type Stage } from './lane.js';
 import { withLock } from './lock.js';
@@ -155,9 +156,9 @@ export function planFix(projectDir: string, card: Card, cards: Card[] = readCard
     return undefined;
   }
 
-  // Merged and every gate left approved: done.
-  if (code >= 0 && cur >= code && !work.unmerged.length && !reviewMoveRefusal(lane, card, lane.stages.length)) {
-    return { ...base, commits, verb: 'close', note: `merged and every gate from ${card.stage} on is approved`, evidence };
+  // Merged, every gate left approved and every stage left passed: done.
+  if (code >= 0 && cur >= code && !work.unmerged.length && !reviewCloseRefusal(lane, card)) {
+    return { ...base, commits, verb: 'close', note: `merged, ${card.stage} passed and every gate from ${card.stage} on is approved`, evidence };
   }
   if (code < 0 || cur >= code) return undefined;
 
