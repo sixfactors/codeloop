@@ -320,56 +320,58 @@ function settle(projectDir: string, record: OrchRecord, turn: OrchTurn, noHandba
       turn.findings.push(...gate.findings);
       crashed = true;
     } else if (gate.verdict === 'fail') turn.findings.push(...gate.findings, ...(turn.note ? [turn.note] : []), ...(turn.mode === 'tree' ? ['fix forward with a new commit on the branch; nothing was reset or reverted'] : []));
-    else if (turn.mode === 'tree') {
-      // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
-      const adv = advanceCarried(projectDir, card.id, turn);
-      turn.advance = adv.outcome;
-      if (adv.questions) {
-        asked = true;
-      } else if (adv.outcome === 'check-error') {
-        crashed = true;
-        turn.findings.push(`stage check${adv.at}crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
-      } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
-        turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-        turn.findings.push(`stage check${adv.at}failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
-      } else {
-        turn.outcome = 'merged';
-        const after = postMerge(projectDir, card.id, turn.stage, hb.head);
+    else {
+      // The landed work gets orch.after_merge even when the turn then stops at questions: the merge stands.
+      // A failure parks the story for its owner; false means the turn is not left waiting on answers.
+      const settle = (sha: string): boolean => {
+        const after = postMerge(projectDir, card.id, turn.stage, sha);
         turn.postMerge = after.steps;
-        if (after.failed) {
-          turn.findings.push(after.failed);
-          turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
-        }
-      }
-    } else {
-      // 6. merge, then the engine's own advance
-      try {
-        const merged = mergeStory(projectDir, card.id);
-        turn.merge = { sha: merged.sha, mode: merged.mode };
+        if (!after.failed) return true;
+        turn.findings.push(after.failed);
+        turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
+        return false;
+      };
+      if (turn.mode === 'tree') {
+        // 6. tree mode: the commits are already on the branch, so there is no merge; the engine advances.
         const adv = advanceCarried(projectDir, card.id, turn);
         turn.advance = adv.outcome;
         if (adv.questions) {
-          asked = true;
+          asked = settle(hb.head);
         } else if (adv.outcome === 'check-error') {
           crashed = true;
-          turn.findings.push(`stage check${adv.at}crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+          turn.findings.push(`stage check${adv.at}crashed after the gate: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
         } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
           turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
-          turn.findings.push(`stage check${adv.at}failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+          turn.findings.push(`stage check${adv.at}failed after the gate${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
         } else {
           turn.outcome = 'merged';
-          // 6b. after the merge: what a person otherwise runs by hand on the main tree.
-          const after = postMerge(projectDir, card.id, turn.stage, merged.sha);
-          turn.postMerge = after.steps;
-          if (after.failed) {
-            turn.findings.push(after.failed);
-            turn.outcome = parkAfterMerge(projectDir, card.id, after.failed);
-          }
+          settle(hb.head);
         }
-      } catch (e) {
-        if (!(e instanceof RefusalError)) throw e;
-        turn.findings.push(e.message);
-        mergeFailed = true;
+      } else {
+        // 6. merge, then the engine's own advance
+        try {
+          const merged = mergeStory(projectDir, card.id);
+          turn.merge = { sha: merged.sha, mode: merged.mode };
+          const adv = advanceCarried(projectDir, card.id, turn);
+          turn.advance = adv.outcome;
+          if (adv.questions) {
+            asked = settle(merged.sha);
+          } else if (adv.outcome === 'check-error') {
+            crashed = true;
+            turn.findings.push(`stage check${adv.at}crashed after the merge: ${(adv.output ?? '').split('\n').slice(-3).join(' ').slice(0, 300)}`);
+          } else if (adv.outcome === 'failed' || adv.outcome === 'stuck') {
+            turn.outcome = adv.outcome === 'stuck' ? 'stuck' : 'failed';
+            turn.findings.push(`stage check${adv.at}failed after the merge${adv.output ? `: ${adv.output.split('\n').slice(-3).join(' ').slice(0, 300)}` : ''}`);
+          } else {
+            turn.outcome = 'merged';
+            // 6b. after the merge: what a person otherwise runs by hand on the main tree.
+            settle(merged.sha);
+          }
+        } catch (e) {
+          if (!(e instanceof RefusalError)) throw e;
+          turn.findings.push(e.message);
+          mergeFailed = true;
+        }
       }
     }
   }

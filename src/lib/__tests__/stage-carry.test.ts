@@ -17,7 +17,7 @@ import { newSpec } from '../spec.js';
 // each stage on its own. The builder is a scripted agent that writes some stage files, commits them
 // with the card's trailer and hands back through the real CLI, as orch.test.ts does.
 
-const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'index.js');
+const CLI = join(process.env.CODELOOP_TEST_DIST ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist'), 'index.js');
 const GIT = 'git -c user.email=a@b -c user.name=t';
 
 let root: string;
@@ -108,6 +108,15 @@ describe('a carried turn', () => {
     expect(card().stage).toBe('interview');
     expect(advanced()).toEqual(['research']);
     expect(card().retries).toEqual({});
+  }, 60_000);
+
+  it('a turn that lands research and then asks questions still runs orch.after_merge for the landed work', async () => {
+    project(agent(['research', 'interview', 'mock', 'spec'], { questions: true }));
+    writeFileSync(join(dir, '.codeloop/config.yaml'), `${readFileSync(join(dir, '.codeloop/config.yaml'), 'utf-8')}  after_merge:\n    build: "echo built > .after-merge"\n`);
+    const turn = await orchTurn(dir, 'c-001');
+    expect(turn.outcome).toBe('questions');
+    expect(turn.postMerge?.map(s => [s.name, s.exit])).toEqual([['build', 0]]);
+    expect(existsSync(join(dir, '.after-merge'))).toBe(true);
   }, 60_000);
 
   it('uc-313-03: ends at the first failed stage check, names it on the story and moves no later stage', async () => {
