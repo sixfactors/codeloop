@@ -1,5 +1,5 @@
 ---
-title: A static public snapshot, built by codeloop publish through an
+title: Publish a filtered static snapshot of the board and wiki
 scope:
   - src/lib/server.ts
   - src/lib/scrub.ts
@@ -18,7 +18,7 @@ updated: 2026-10-17
 
 ## Why
 
-assumption: a visitor (the founder or engineer evaluating codeloop) cannot see the loop working on real stories before installing it, because the board exists only on the owner's machine and none of BMAD, Kiro or Spec Kit offers a live example to point at. What would confirm it: ask three people who tried codeloop from docs/trial/trial-guide.md whether a live board would have changed their decision to install, and count site visits that reach the install command with and without a demo link.
+Not yet measured: a visitor (the founder or engineer evaluating codeloop) cannot see the loop working on real stories before installing it, because the board exists only on the owner's machine and none of BMAD, Kiro or Spec Kit offers a live example to point at. What would confirm it: ask three people who tried codeloop from docs/trial/trial-guide.md whether a live board would have changed their decision to install, and count site visits that reach the install command with and without a demo link.
 
 ## Consequences
 
