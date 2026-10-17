@@ -244,7 +244,9 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   if (budget) result.budget = budget;
   if (budget && !budget.pass && card?.size === 'trivial' && opts.record !== false) {
     const moved = resizeTrivial(projectDir, card.id, budget.message);
-    return { ...result, exitCode: 1, problem: `${budget.message}; ${card.id} is re-sized to ${moved.size} and parked at the ${moved.gate ?? moved.stage} gate` };
+    // resizeTrivial parks the card only when a stage before this one has a gate for the new size.
+    const where = moved.gate ? ` and parked at the ${moved.gate} gate` : `; no stage before ${moved.stage} has a gate, so it stays at ${moved.stage}`;
+    return { ...result, exitCode: 1, problem: `${budget.message}; ${card.id} is re-sized to ${moved.size}${where}` };
   }
   if (budget && !budget.pass) return { ...result, exitCode: 1, problem: budget.message };
   if (health) result.health = health;

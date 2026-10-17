@@ -179,6 +179,29 @@ describe('verify checks the diff budget', () => {
   });
 });
 
+describe('a trivial story over budget on a lane with no earlier gate', () => {
+  it('is re-sized and stays at its stage, and the problem does not claim it was parked', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nstages:\n  - id: build\n    done: { cmd: "true" }\n  - id: verify\n    done: { cmd: "true" }\n');
+    useCase('uc-1', 'US1', 'cli: { run: "true" }');
+    useCase('uc-2', 'US2', 'cli: { run: "true" }');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 'fix typo', id: 'c-1', fields: { size: 'trivial' } });
+    for (const f of ['a', 'b', 'c', 'd']) write(`${f}.txt`, 'x');
+    git('add', 'a.txt', 'b.txt', 'c.txt', 'd.txt');
+    git('commit', '-q', '-m', 'feat: four files', '-m', 'Card: c-1');
+
+    const result = await verify(dir, 'c-1');
+
+    expect(result.exitCode).toBe(1);
+    expect(result.problem).toMatch(/c-1 is re-sized to S; no stage before build has a gate, so it stays at build$/);
+    expect(result.problem).not.toMatch(/parked/);
+    expect(readCards(dir).cards[0]).toMatchObject({ size: 'S', stage: 'build' });
+    expect(readCards(dir).cards[0].gate).toBeUndefined();
+  });
+});
+
 describe('verify cannot pass on nothing', () => {
   it('exits 2 when the spec has no acceptance lines, or there are no use cases at all', async () => {
     useCase('uc-1', 'US1', 'cli: { run: "true" }');
