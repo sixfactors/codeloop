@@ -337,8 +337,10 @@ export function runAgent(projectDir: string, agent: AgentConfig, briefFile: stri
     // sits in a synchronous check (a doctor tick's spawnSync), so the agent would outlive its timeout.
     // It is registered like the agent, so it dies with this process and never fires later at a
     // process group id the system has handed to something else.
+    // No `--` before the group id: dash, /bin/sh on Debian and Ubuntu, reads it as a pid and fails
+    // with "Illegal number", so the group lived on to this process's own timer.
     if (child.pid) {
-      watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -- -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
+      watchdog = spawn('/bin/sh', ['-c', `sleep ${timeoutMs / 1000}; kill -KILL -${child.pid} 2>/dev/null`], { detached: true, stdio: 'ignore' });
       watchdog.on('error', () => undefined);
       watchdog.unref();
       untrackWatchdog = trackChild(projectDir, watchdog.pid, `agent ${agent.name} watchdog`, `sleep ${timeoutMs / 1000}; kill the agent's group`);
