@@ -9,7 +9,7 @@
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/Users/deangrover/Projects/codeloop\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/hub.test.ts \u001b[2m(\u001b[22m\u001b[2m9 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 637\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m an SSE subscriber on project A gets no event when project B changes \u001b[33m 363\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:10:21\n\u001b[2m   Duration \u001b[22m 2.86s\u001b[2m (transform 205ms, setup 0ms, import 277ms, tests 637ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 ~/Projects/codeloop\n\n ✓ src/lib/__tests__/hub.test.ts (9 tests) 637ms\n     ✓ an SSE subscriber on project A gets no event when project B changes  363ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  18:10:21\n   Duration  2.86s (transform 205ms, setup 0ms, import 277ms, tests 637ms, environment 0ms)\n\n\nexit 0"
     }
   ]
 }

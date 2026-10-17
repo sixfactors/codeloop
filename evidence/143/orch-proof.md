@@ -30,7 +30,7 @@ Status: evidence, 2026-10-14. Five `codeloop orch run c-143 --builder agent:clau
  "startedAt": "2026-10-14T21:48:11.894Z",
  "agent": "claude-sonnet",
  "builderKind": "agent",
- "worktree": "/Users/deangrover/Projects/codeloop-wt-c-143",
+ "worktree": "~/Projects/codeloop-wt-c-143",
  "branch": "feat/build-i-accept-every-recommended-answer",
  "outcome": "merged",
  "findings": [],

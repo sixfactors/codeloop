@@ -10,7 +10,7 @@
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/private/var/folders/5m/cw0185xj5pv200z46gc79rt00000gn/T/codeloop-verify-YUR6Oz/head\u001b[39m\n\n \u001b[32m✓\u001b[39m src/lib/__tests__/flow.test.ts \u001b[2m(\u001b[22m\u001b[2m18 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[33m16 skipped\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 21\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m16 skipped\u001b[39m\u001b[90m (18)\u001b[39m\n\u001b[2m   Start at \u001b[22m 14:06:10\n\u001b[2m   Duration \u001b[22m 2.07s\u001b[2m (transform 138ms, setup 0ms, import 204ms, tests 21ms, environment 0ms)\u001b[22m\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-YUR6Oz/head\n\n ✓ src/lib/__tests__/flow.test.ts (18 tests | 16 skipped) 21ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 16 skipped (18)\n   Start at  14:06:10\n   Duration  2.07s (transform 138ms, setup 0ms, import 204ms, tests 21ms, environment 0ms)\n\n\nexit 0"
     }
   ]
 }
