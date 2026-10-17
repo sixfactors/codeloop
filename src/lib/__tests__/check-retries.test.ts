@@ -137,13 +137,18 @@ describe('a check with no work behind it', () => {
     expect(advanceCard(dir, 'c-2').card.retries.draft).toBe(1);
   });
 
-  it('counts an agent run that left the output missing, so a story with real attempts still goes stuck', async () => {
+  it('counts an agent run that left the output missing, and parks the story stuck when the next start would change nothing', async () => {
     writeFileSync(join(dir, '.codeloop/config.yaml'), 'agents:\n  default: fake\n  fake: { cmd: "true" }\n');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
     await runDueWithAgent(dir, resolveAgent(dir));
     expect(readCards(dir).cards[0].retries.draft).toBe(1);
     await runDueWithAgent(dir, resolveAgent(dir));
     const card = readCards(dir).cards[0];
-    expect(card.retries.draft).toBe(2);
+    expect(card.retries.draft).toBe(1);
     expect(card.gate).toBe('stuck');
+    expect(card.events.filter(e => e.action === 'stuck').at(-1)?.note).toBe('the agent ran and changed nothing; a person needs to look');
+    expect(card.events.filter(e => e.action === 'agent-start')).toHaveLength(1);
   });
 });
