@@ -136,7 +136,7 @@ printf -- '- [ ] T001 [US1] [api] Export endpoint in src/export.ts\n- [ ] T002 [
 expect 2 "advance past spec refused with an untagged task" codeloop card advance c-001
 expect 0 "spec check names the untagged line" sh -c "codeloop spec check 001 2>&1 | grep -q 'untagged task.*T002'"
 sed -i.bak 's/T002 \[US1\] Wire/T002 [US1] [ui] Wire/' $S/tasks.md && rm $S/tasks.md.bak
-expect 0 "spec check still refuses the template Story, size, metric and done_when lines" sh -c "codeloop spec check 001 2>&1 | grep -q 'size: must be S, M or L'"
+expect 0 "spec check still refuses the template Story, size, metric and done_when lines" sh -c "codeloop spec check 001 2>&1 | grep -q 'size: must be trivial, S, M or L'"
 perl -pi -e 's/^Story: .*/Story: As a founder, I can export every invoice as one CSV, so that I can hand the file to my accountant./; s/^size: .*/size: S/; s/^metric: .*/metric: cycle_time_days/; s/^done_when: .*/done_when: npm test/; s/^- US1 Given <state>.*/- US1 Given ten invoices, when I export, then invoices.csv has ten rows./' $S/spec.md
 expect 0 "spec check passes once every task is tagged" codeloop spec check 001
 expect 0 "task list --layer ui shows only the ui task" sh -c "codeloop task list 001 --layer ui | grep -q T002 && ! codeloop task list 001 --layer ui | grep -q T001"
@@ -258,7 +258,8 @@ json "eval-result.json records the per-card replay" "d.green && d.replayed.some(
 expect 0 "run --due at a due slot names the trigger" sh -c "codeloop run --due --now 2026-10-07T03:31:00 | grep -q 'in nightly (trigger: cron 30 3 \* \* \*)'"
 expect 0 "run --due created one nightly card" test "$(cards_in nightly)" = 1
 expect 0 "run with no flag, again in the same slot" codeloop run --now 2026-10-07T03:45:00
-json "a failing card whose output is unchanged does not use up a retry" "d.retries.capture===1" codeloop card show "$(codeloop card list --json | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.find(c=>c.lane==='nightly').id)")" --json
+# No agent ran and the stage has no output file, so no failure counts toward retries (engine.ts, above workTried).
+json "a failing card whose output is unchanged does not use up a retry" "!d.retries.capture && d.events.some(e=>e.action==='fail') && d.events.filter(e=>e.action==='fail').every(e=>e.counted===false)" codeloop card show "$(codeloop card list --json | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.find(c=>c.lane==='nightly').id)")" --json
 expect 0 "second run created no card" test "$(cards_in nightly)" = 1
 
 # --- git trigger: one card per new HEAD ----------------------------------------------------
@@ -388,7 +389,7 @@ OW_TOKEN=$(sed -n 's/.*API\/SDK token[^:]*: //p' serve-owner.log | head -1)
 expect 0 "serve prints a plain URL (no token) and the API token separately" sh -c "test -n '$OW_TOKEN' && grep -q 'http://127.0.0.1:$OW/' serve-owner.log && ! grep -q '?token=' serve-owner.log"
 # as <token> <origin> <content-type> <wanted status> <url> [method] [body]
 as() { TOKEN="$1" ORIGIN="$2" CTYPE="$3" http "${@:4}"; }
-expect 0 "the board page loads" bash -c "$(declare -f http); http 200 http://127.0.0.1:$RO/ | grep -Eq 'Codeloop (Board|workspace)'"
+expect 0 "the board page loads" bash -c "$(declare -f http); http 200 http://127.0.0.1:$RO/ | grep -Eq 'Codeloop Board|<title>Board · '"
 json "/api/cards returns cards, lanes and the inbox summary" "d.cards.some(c=>c.id==='c-001') && d.lanes.some(l=>l.id==='market') && /waiting on you/.test(d.inbox.summary)" http 200 "http://127.0.0.1:$RO/api/cards"
 
 # --- /api/session: owner reflects how the server was started, tokenValid reflects THIS request's header ---
@@ -637,7 +638,7 @@ expect 0 "lane lint passes with the shipped shape lane and a trivial build lane"
 
 SHAPE=c-001
 expect 0 "shape creates a card from the problem, not a story" sh -c "codeloop shape 'Let a workspace publish a skill pack from the web app' | tee shape.out | grep -q 'created $SHAPE in shape at stage brief'"
-BF=shape/$SHAPE/brief.md
+BF=.codeloop/shape/$SHAPE/brief.md
 expect 1 "check brief fails: the template brief has no sources yet" codeloop check brief $SHAPE
 printf -- '- source: https://a.test/docs — a\n- source: https://b.test/docs — b\n- source: https://c.test/docs — c\n' >> $BF
 expect 0 "check brief passes once three sources are cited" codeloop check brief $SHAPE
@@ -650,7 +651,7 @@ codeloop ask $SHAPE 'Where does it appear?' --recommended 'The workspace catalog
 codeloop answer $SHAPE 1 --accept > /dev/null && codeloop answer $SHAPE 2 --accept > /dev/null && codeloop answer $SHAPE 3 --accept > /dev/null
 expect 0 "next moves interview to breakdown" sh -c "codeloop next $SHAPE | grep -q '$SHAPE moved to breakdown'"
 
-BD=shape/$SHAPE/breakdown.md
+BD=.codeloop/shape/$SHAPE/breakdown.md
 cat > $BD <<'MD'
 # Epic: Publish a skill pack from the web app
 hypothesis: letting a workspace publish a pack grows weekly active packs
