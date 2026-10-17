@@ -79,6 +79,24 @@ describe('an agent restart', () => {
   });
 });
 
+describe('an agent restart on a check that writes into the repo', () => {
+  it('parks on unchanged work though the check rewrote an untracked report file', async () => {
+    write('.codeloop/lanes/build.yaml', 'id: build\nversion: 1\nmetric: { name: m, source: cards }\nretries: 3\nstages:\n  - id: draft\n    done: { cmd: "date +%s%N >> junit.xml; echo 2 of 4 tasks open; exit 1" }\n');
+    write('.codeloop/config.yaml', 'agents:\n  default: fake\n  fake:\n    cmd: "true"\n    timeout_minutes: 1\n    max_runs_per_day: 50\n');
+    write('src/a.ts', 'one');
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    createCard(dir, { lane: 'build', title: 't', id: 'c-1' });
+    appendActivity(dir, 'c-1', { kind: 'edit', file: 'src/a.ts' });
+    advanceCard(dir, 'c-1');
+    for (let h = 2; h < 6; h++) await doctorTick(dir, later(h));
+    expect(starts()).toBe(1);
+    expect(card().gate).toBe('stuck');
+    expect(stuckReason(card())).toBe('the agent ran and changed nothing; a person needs to look');
+  });
+});
+
 describe('a failing story under the retry model', () => {
   const NOTHING = 'the agent ran and changed nothing; a person needs to look';
   beforeEach(() => {
