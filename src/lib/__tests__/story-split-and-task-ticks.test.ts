@@ -99,3 +99,22 @@ describe('Task trailer ticks the board', () => {
     expect(readCards(dir).cards[0].events.filter(e => e.action === 'task')).toHaveLength(1);
   });
 });
+
+describe('a queued split sibling', () => {
+  it('splits, ticks its tasks and moves to build, and every refusal on the way names card move', () => {
+    setup(3);
+    placeCard(dir, 'c-1', 'build', 'owner');
+    const env = { ...process.env, CODELOOP_CARD: '', CODELOOP_ROLE: 'owner' };
+    const cli = (...args: string[]) => runCli(args, { cwd: dir, encoding: 'utf-8', env });
+    const split = cli('card', 'split', 'c-1', 'First half', 'Second half');
+    expect(split.status).toBe(0);
+    const sibling = readCards(dir).cards.find(c => c.title === 'Second half')!;
+    expect(sibling.stage).toBe('queued');
+    write(`${sibling.spec}/tasks.md`, '- [x] T001 [api] one\n- [x] T002 [api] two\n');
+    expect(cli('card', 'reopen', sibling.id).stderr).toMatch(new RegExp(`codeloop card move ${sibling.id} <stage>`));
+    expect(cli('approve', sibling.id).stderr).toMatch(new RegExp(`codeloop card move ${sibling.id} <stage>`));
+    const moved = cli('card', 'move', sibling.id, 'build');
+    expect(moved.status).toBe(0);
+    expect(readCards(dir).cards.find(c => c.id === sibling.id)!.stage).toBe('build');
+  });
+});

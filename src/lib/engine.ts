@@ -1020,6 +1020,7 @@ export function approveCard(projectDir: string, ref: string, role: Role, opts: {
   const file = readCards(projectDir);
   const before = findCard(file.cards, ref);
   const id = before.id;
+  if (!before.gate && before.stage === QUEUED) throw new RefusalError(`card ${id} is queued in Up next, not at a gate; \`codeloop card move ${id} <stage>\` starts it`);
   if (!before.gate) throw new RefusalError(`card ${id} is not waiting at a gate`);
   if (role !== before.awaiting) throw new RefusalError(`gate "${before.gate}" needs ${before.awaiting}; ${role} cannot approve it${role === 'agent' ? `. If you are the ${before.awaiting}, run it yourself in a terminal (or with \`--as ${before.awaiting}\`), or approve it on the board` : ''}`);
 

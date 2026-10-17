@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { activeSessions, currentSession } from './active-card.js';
-import { DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
+import { DONE, DROPPED, enter, gateRefusal, PROPOSAL_GATE, PROPOSED, QUEUED, findCard, inLane, readCards, RefusalError, writeCards, type Card, type CardEvent, type Size } from './cards.js';
 import { assertRoomInLane, type Role } from './engine.js';
 import { loadLane, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
@@ -55,7 +55,7 @@ export function reopenCard(projectDir: string, id: string, role: Role, opts: Opt
   ownerOnly(role, 'reopening a card');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
-  if (before.stage !== DONE && before.stage !== DROPPED) throw new RefusalError(`${before.id} is at ${before.stage}, not done or dropped; use \`codeloop card move\``);
+  if (before.stage !== DONE && before.stage !== DROPPED) throw new RefusalError(`${before.id} is at ${before.stage}, not done or dropped; \`codeloop card move ${before.id} <stage>\` moves it`);
   assertNotHeld(projectDir, before);
   const lane = loadLane(projectDir, before.lane);
   const now = opts.now ?? clock();
@@ -82,7 +82,13 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   ownerOnly(role, 'moving a card between stages');
   const file = readCards(projectDir);
   const before = findCard(file.cards, id);
-  if (!inLane(before)) throw new RefusalError(`${before.id} is ${before.stage}; \`codeloop card reopen\` brings it back first`);
+  // A queued card (a split sibling, a planned story) waits in Up next outside the lane; moving it
+  // starts it at the named stage, as a promotion would once its lane had room.
+  if (before.stage === QUEUED) {
+    assertNotHeld(projectDir, before);
+    return startQueued(projectDir, file, before, stage, role, opts);
+  }
+  if (!inLane(before)) throw new RefusalError(`${before.id} is ${before.stage}; \`codeloop card reopen ${before.id}\` brings it back first`);
   assertNotHeld(projectDir, before);
   const lane = loadLane(projectDir, before.lane);
   const from = stageIndex(lane, before.stage);
@@ -98,6 +104,21 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   const card: Card = {
     ...enter(before, stage),
     events: [...before.events, event(now, role, 'move', stage, opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)],
+    updatedAt: now.toISOString(),
+  };
+  writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
+  return card;
+}
+
+function startQueued(projectDir: string, file: ReturnType<typeof readCards>, before: Card, stage: string, role: Role, opts: Opts): Card {
+  const lane = loadLane(projectDir, before.lane);
+  stageIndex(lane, stage);
+  assertRoomInLane(file.cards, lane, 1, [before.id], before.size);
+  const now = opts.now ?? clock();
+  const card: Card = {
+    ...enter(before, stage),
+    laneVersion: lane.version,
+    events: [...before.events, event(now, role, 'move', stage, opts.note ? `from ${QUEUED}: ${opts.note}` : `from ${QUEUED}`)],
     updatedAt: now.toISOString(),
   };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
