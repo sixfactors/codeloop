@@ -13,3 +13,5 @@ changelog: https://github.com/github/spec-kit/releases
 - c-308 A stuck story says why in plain words and which action will move it: No stuck state: a command that fails reports in the agent chat, and the person decides whether to rerun it; nothing says whether work was tried | https://github.com/github/spec-kit
 
 - c-311 Every story opens with what is needed, what is done and what I must do: No per-feature summary: the spec, plan and tasks files are read in full, and progress is the ticked task list | https://github.com/github/spec-kit
+
+- c-313 A small story runs its early stages in one agent turn: The person runs specify, clarify, plan and tasks one after another in the same agent chat, so the early phases share one session; nothing checks a phase before the next starts | https://github.com/github/spec-kit
