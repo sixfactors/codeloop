@@ -36,7 +36,7 @@ mock: drop
 
 <!-- What this card deliberately leaves out. A task not traceable to an acceptance line fails `spec check --strict`. -->
 - A relayed-by field, the owner's quoted words or a `--relayed` option on owner actions (interview Q1 chose the simpler record).
-- The board-sync commands from the production project's report: starting a queued story in one step, `codeloop bug`, blank fields on `card show`, and `card edit --description`. They are proposed as a sibling story so this one stays within eight tasks.
+- The board-sync commands from the production project's report: starting a queued story in one step, `codeloop bug`, blank fields on `card show`, and `card edit --description`. They are proposed as c-368 so this one stays within eight tasks.
 - Listing docs/plans or any folder outside docs/artifacts.
 - Keeping the index open forever.
 
