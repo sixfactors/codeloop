@@ -6,6 +6,7 @@ what a user can now do, not which files moved. `src/__tests__/changelog.test.ts`
 when package.json names a version this file has no heading for.
 
 ## 0.5.0 (unreleased)
+- The review pass counts a story's work as merged when the trunk's remote-tracking branch has it, not only the local trunk, so a PR merged on GitHub moves its story while the local main is behind. A commit with no `Card:` or `Feature:` trailer counts for the story whose activity recorded it at commit time; a trailer still decides when present.
 - An agent past its timeout is now killed on time on Linux too. The timeout watchdog's `kill -KILL -- -<group>` fails under dash, Debian and Ubuntu's /bin/sh, so the agent ran on until codeloop's own timer fired, which a blocking check delays.
 - A shell started by Claude Code or Cursor acts as the owner, as any terminal does; only a process `codeloop run --agent` starts defaults to agent. The assistant's shell guard asks before `card place|park|reopen|edit`, `start --stage`, `lane promote|rollback`, and owner verbs run as `node dist/index.js`, an absolute bin path or npx.
 - `codeloop projects prune` lists hub registry entries whose project folder no longer exists, and `--write` removes them. It changes nothing without `--write`.
