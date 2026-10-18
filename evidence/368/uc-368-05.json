@@ -2,15 +2,15 @@
   "id": "uc-368-05",
   "accept": "US5",
   "failure_mode": "a parked story still lists as a fresh proposal, or card move passes a stuck gate with no code behind it and becomes a gate bypass",
-  "sha": "0a787a7e95c28d462a24ecef4922490e280e5cb6",
+  "sha": "303640ce9f9c4bebdc299b3d3b19ac0fb4f7e7e2",
   "env": "local",
-  "workspace": "export of 0a787a7",
+  "workspace": "export of 303640c",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-cpTjNc/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 18 skipped) 2083ms\n     ✓ a parked story lists as parked, not as a waiting proposal, and is not a fresh proposal in the inbox  453ms\n     ✓ moves a story stuck at a gate once its code has landed, recording who and why  537ms\n     ✓ keeps refusing when no code has landed, so move is not a gate bypass  301ms\n     ✓ needs a note to pass the gate  503ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 18 skipped (23)\n   Start at  18:59:18\n   Duration  6.24s (transform 403ms, setup 9ms, import 510ms, tests 2.08s, environment 0ms)\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-AbE3Jr/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 18 skipped) 1929ms\n     ✓ a parked story lists as parked, not as a waiting proposal, and is not a fresh proposal in the inbox  426ms\n     ✓ moves a story stuck at a gate once its code has landed, recording who and why  467ms\n     ✓ needs a note to pass the gate  468ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 18 skipped (23)\n   Start at  19:00:11\n   Duration  5.58s (transform 362ms, setup 6ms, import 456ms, tests 1.93s, environment 0ms)\n\n\nexit 0"
     }
   ]
 }

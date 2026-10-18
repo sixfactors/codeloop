@@ -2,15 +2,15 @@
   "id": "uc-368-04",
   "accept": "US4",
   "failure_mode": "a dead run's hold blocks builders for a day, a thinking session loses its hold, or a release by an agent run frees another session's story",
-  "sha": "0a787a7e95c28d462a24ecef4922490e280e5cb6",
+  "sha": "303640ce9f9c4bebdc299b3d3b19ac0fb4f7e7e2",
   "env": "local",
-  "workspace": "export of 0a787a7",
+  "workspace": "export of 303640c",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-cpTjNc/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 17 skipped) 1613ms\n     ✓ an agent run releases only its own hold  304ms\n     ✓ a hold quiet past monitor.stall_minutes stops showing, and the story records hold expired once  458ms\n     ✓ a session that comes back takes its hold again on its next prompt  439ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 17 skipped (23)\n   Start at  18:59:12\n   Duration  6.06s (transform 523ms, setup 8ms, import 668ms, tests 1.61s, environment 0ms)\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-AbE3Jr/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 17 skipped) 1527ms\n     ✓ a hold quiet past monitor.stall_minutes stops showing, and the story records hold expired once  441ms\n     ✓ a session that comes back takes its hold again on its next prompt  412ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 17 skipped (23)\n   Start at  19:00:05\n   Duration  5.22s (transform 356ms, setup 7ms, import 457ms, tests 1.53s, environment 0ms)\n\n\nexit 0"
     }
   ]
 }
