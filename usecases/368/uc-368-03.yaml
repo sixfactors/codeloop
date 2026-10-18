@@ -1,0 +1,5 @@
+id: uc-368-03
+accept: US3
+failure_mode: "card edit --description overwrites an earlier owner decision, or a blank story or description prints nothing so empty looks hidden"
+layers:
+  cli: { run: "npx vitest run src/commands/__tests__/card-one-command.test.ts -t \"card show and card edit --description\"", expect: { exit: 0 } }
