@@ -1,0 +1,16 @@
+{
+  "id": "uc-368-01",
+  "accept": "US1",
+  "failure_mode": "start leaves a queued story not active so its commits carry no card, or an agent run promotes a proposed story and skips the owner's review",
+  "sha": "0a787a7e95c28d462a24ecef4922490e280e5cb6",
+  "env": "local",
+  "workspace": "export of 0a787a7",
+  "pass": true,
+  "layers": [
+    {
+      "layer": "cli",
+      "pass": true,
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-cpTjNc/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 18 skipped) 969ms\n     ✓ honours the stage a split child resumes at and skips stages a trivial story skips  303ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 18 skipped (23)\n   Start at  18:58:54\n   Duration  5.12s (transform 425ms, setup 7ms, import 545ms, tests 969ms, environment 0ms)\n\n\nexit 0"
+    }
+  ]
+}
