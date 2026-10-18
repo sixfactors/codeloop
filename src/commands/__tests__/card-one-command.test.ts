@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, w
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { runCli } from '../../__tests__/cli.js';
+import { createApp } from '../../lib/server.js';
 
 // One test per failure mode in specs/368-*/spec.md. Every case drives the built CLI against a
 // throwaway project, so the command, the engine and the hooks are exercised together.
@@ -275,5 +276,26 @@ describe('park and move', () => {
     landCode();
     expect(cli(['card', 'move', 'c-001', 'build']).status).not.toBe(0);
     expect(byId('c-001').gate).toBe('stuck');
+  });
+});
+
+describe('board routes: the same verbs as the commands', () => {
+  const post = ({ app, token }: ReturnType<typeof createApp>, path: string) =>
+    app.request(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-codeloop-token': token }, body: '{}' });
+
+  it('start and release answer on an owner server, and both are refused on a read-only one', async () => {
+    board(card('c-001', 'queued'), card('c-002', 'build'));
+    hold('other', 'c-002');
+    const readOnly = createApp(dir);
+    expect((await post(readOnly, '/api/cards/c-001/start')).status).toBe(403);
+    expect((await post(readOnly, '/api/cards/c-002/release')).status).toBe(403);
+    expect(byId('c-001').stage).toBe('queued');
+    expect(existsSync(sessionFile('other'))).toBe(true);
+
+    const owner = createApp(dir, undefined, { owner: true });
+    expect((await post(owner, '/api/cards/c-001/start')).status).toBe(200);
+    expect((await post(owner, '/api/cards/c-002/release')).status).toBe(200);
+    expect(byId('c-001').stage).toBe('spec');
+    expect(existsSync(sessionFile('other'))).toBe(false);
   });
 });

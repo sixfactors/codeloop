@@ -267,7 +267,7 @@ export function releaseHold(projectDir: string, ref: string, who: Role): HoldRel
     if (dropSession(projectDir, s.session)) released.push({ session: s.session, label: s.label ?? s.session });
   }
   if (!released.length) return { card, released };
-  recordEvent(projectDir, card.id, () => ({ actor: who, human: who !== 'agent', action: 'release', note: `${who} released ${released.map(r => `${r.label} (session ${r.session})`).join(', ')}'s hold` }));
+  recordEvent(projectDir, card.id, () => ({ actor: who, human: who !== 'agent', action: 'release', note: `${who} released the hold held by ${released.map(r => `${r.label} (session ${r.session})`).join(', ')}` }));
   return { card: findCard(readCards(projectDir).cards, card.id), released };
 }
 
