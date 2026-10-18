@@ -21,8 +21,8 @@ export interface Inbox {
   needs_you: { id: string; title: string; lane: string; stage: string; gate: string; awaiting?: string; band: Band; score?: number; priority?: string; bug?: boolean; feature?: string; read?: string; mock?: string; source?: string; last_check: string; since: string; last_event?: CardEvent; /** ISO time of the newest work on a stuck story since its check failed. */ moving_since?: string; /** A stuck story's explanation, the same one its page and `card show` print. */ stuck?: StuckExplanation }[];
   /** In a lane, not at a gate, with at least one failed check on the current stage. */
   failing: { id: string; title: string; lane: string; stage: string; retries: number; last_check: string; since: string; moving_since?: string }[];
-  /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. */
-  backlog: { count: number; oldest?: { id: string; title: string; since: string; bug_reported_by?: string } };
+  /** Proposals waiting to be promoted or dropped: a count and the oldest title, not every row. `parked` counts cards parked back to the inbox, which keep their stage and are not fresh proposals. */
+  backlog: { count: number; parked?: number; oldest?: { id: string; title: string; since: string; bug_reported_by?: string } };
   /** Wiki pages changed here and in the cloud: merge the cloud version into the local page, then delete it. */
   needs_merge: { path: string; cloud: string }[];
   /** Cards whose interview.md has a question without an answer. */
@@ -161,7 +161,7 @@ export function laneNumbers(cards: Card[], lanes: Lane[]): LaneNumbers[] {
   });
 }
 
-export function inboxSummary(waiting: { since: string }[], shippedThisWeek: number, now: Date, extras: { failing?: number; backlog?: number } = {}): string {
+export function inboxSummary(waiting: { since: string }[], shippedThisWeek: number, now: Date, extras: { failing?: number; backlog?: number; parked?: number } = {}): string {
   const day = 86_400_000;
   const oldest = waiting.length ? Math.floor((now.getTime() - Math.min(...waiting.map(w => new Date(w.since).getTime()))) / day) : 0;
   const parts = [
@@ -170,6 +170,7 @@ export function inboxSummary(waiting: { since: string }[], shippedThisWeek: numb
   ];
   if (extras.failing) parts.push(`${extras.failing} failing`);
   if (extras.backlog) parts.push(`${extras.backlog} in backlog`);
+  if (extras.parked) parts.push(`${extras.parked} parked`);
   return parts.join(', ');
 }
 
@@ -177,11 +178,13 @@ export const shippedWithin = (cards: Card[], now: Date, days = 7) => cards.filte
 
 /** Proposals waiting to be promoted or dropped, oldest first. */
 export function backlogOf(cards: Card[]): Inbox['backlog'] {
-  const proposed = cards
-    .filter(c => c.stage === PROPOSED)
+  const inbox = cards.filter(c => c.stage === PROPOSED);
+  const parked = inbox.filter(c => c.parked_from).length;
+  const proposed = inbox
+    .filter(c => !c.parked_from)
     .map(c => ({ id: c.id, title: c.title, since: c.events.filter(e => e.action === 'propose').at(-1)?.at ?? c.createdAt, ...(c.bug_reported_by ? { bug_reported_by: c.bug_reported_by } : {}) }))
     .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
-  return { count: proposed.length, ...(proposed[0] ? { oldest: proposed[0] } : {}) };
+  return { count: proposed.length, ...(parked ? { parked } : {}), ...(proposed[0] ? { oldest: proposed[0] } : {}) };
 }
 
 /**
@@ -231,7 +234,7 @@ export function computeInbox({ cards, lanes, seen, cloudCopies: merges, mockOf, 
   const backlog = backlogOf(cards);
 
   return {
-    summary: inboxSummary(waiting, shippedWithin(cards, now), now, { failing: failing.length, backlog: backlog.count }),
+    summary: inboxSummary(waiting, shippedWithin(cards, now), now, { failing: failing.length, backlog: backlog.count, parked: backlog.parked }),
     needs_you: waiting,
     failing,
     backlog,

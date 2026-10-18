@@ -17,7 +17,7 @@ import { advanceCard, assertRoomInLane, closeCard as closeCardLib, parkCard as p
 import { loadLane, loadLanes, loadSkillsIndex, substitute } from './lane.js';
 import { findRunningRun, getRun, readRun, startCardRun, streamRun, waitRun, type RunRecord, type RunView } from './runs.js';
 import { defaultSkillDirs, mergeSkillsIndex, scanSkills, type AdoptResult } from './skills.js';
-import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, usesSpec } from './flow.js';
+import { approveFlow, describeAdvance, nextHint, stageBrief, startCard, startStory as startStoryFlow, usesSpec } from './flow.js';
 import { CARD_FILTERS, type CardFilter, type EpicNode, type FeatureNode, type IndexedEpic, type IndexedFeature, type InboxPayload, type InboxQuery, type InitiativeTree, type ProjectIndex } from './index/index.js';
 import { pickOrder, withChain, type Band, type CardChain } from './features.js';
 import { buildInbox, markInboxSeen, readInboxSeen, type Inbox } from './inbox.js';
@@ -25,7 +25,7 @@ import { evaluateRubric, scaffoldRubric, type RubricReport, type RubricResult } 
 import { acceptAllAnswers, addQuestions, openQuestions, readQuestions, writeAnswer, type Question } from './interview.js';
 import { mockHref } from './mock.js';
 import { STATE_LABELS, storyState, type DisplayState, type StoryState } from './states.js';
-import { activeSessions } from './active-card.js';
+import { activeSessions, currentSession, dropSession, heldSessions, LEASE_PREFIX } from './active-card.js';
 import { formatMinutes, lastActivityAt, phaseTime, readActivity, readAllActivity, type ActivityEntry } from './activity.js';
 import { evidenceFiles, progressSince, storyTasks, type EvidenceFile } from './progress.js';
 import { storyCommits, type StoryCommit } from './diff-budget.js';
@@ -235,6 +235,62 @@ export function approve(projectDir: string, ref: string, who: Role, note?: strin
   const summary = `${result.card.id} ${result.gate === 'stuck' ? 'can be retried' : result.gate === 'proposal' ? `promoted to ${result.card.lane}/${result.card.stage}` : `gate ${result.gate} approved`}`;
   const rest = result.advanced ? describeAdvance(projectDir, result.advanced) : { lines: [nextHint(projectDir, result.card)], exitCode: 0 };
   return { card: result.card, gate: result.gate, summary, advanced: result.advanced, ...rest };
+}
+
+/** `codeloop start <id>`: see flow.ts startStory. `from` says which kind of story it was, for the line the command prints. */
+export function startStory(projectDir: string, ref: string, who: Role): { card: Card; hint: string; from: 'queued' | 'proposed' | 'active' } {
+  const { card, from } = startStoryFlow(projectDir, ref, who);
+  return { card, from, hint: nextHint(projectDir, card) };
+}
+
+export interface HoldRelease {
+  card: Card;
+  /** The holds removed, each as a person reads it: "claude on dean-mbp, since 19:01". */
+  released: { session: string; label: string }[];
+}
+
+/**
+ * `card release`: frees the holds on a story, quiet ones too, since a quiet hold comes back the
+ * moment its session prompts. The owner and the orchestrator (any session that is not an agent run)
+ * release any hold; an agent run releases only its own, which is its session or its orchestrator
+ * lease. Each release is an event naming who released whose hold.
+ */
+export function releaseHold(projectDir: string, ref: string, who: Role): HoldRelease {
+  const card = findCard(readCards(projectDir).cards, ref);
+  const own = currentSession();
+  const isOwn = (session: string) => session === own || (session === `${LEASE_PREFIX}${card.id}` && process.env.CODELOOP_CARD === card.id);
+  const holds = activeSessions(projectDir, { includeQuiet: true }).filter(s => s.card === card.id);
+  const others = who === 'agent' ? holds.filter(s => !isOwn(s.session)) : [];
+  if (others.length) throw new RefusalError(`${card.id} is held by ${others.map(s => s.label ?? s.session).join(', ')}; an agent run releases only its own hold, so the owner or the orchestrator releases it`);
+  const released: HoldRelease['released'] = [];
+  for (const s of holds) {
+    if (dropSession(projectDir, s.session)) released.push({ session: s.session, label: s.label ?? s.session });
+  }
+  if (!released.length) return { card, released };
+  recordEvent(projectDir, card.id, () => ({ actor: who, human: who !== 'agent', action: 'release', note: `${who} released ${released.map(r => `${r.label} (session ${r.session})`).join(', ')}'s hold` }));
+  return { card: findCard(readCards(projectDir).cards, card.id), released };
+}
+
+/**
+ * Writes "hold expired" on each story whose holder has been quiet for `monitor.stall_minutes`, once
+ * per quiet spell. Called from the session and prompt hooks rather than from a read, so a board
+ * refresh never writes. `except` is the calling session: it is back, so its hold is not expiring.
+ */
+export function recordExpiredHolds(projectDir: string, opts: { except?: string } = {}): string[] {
+  const quiet = heldSessions(projectDir).filter(h => h.quiet && h.session.session !== opts.except);
+  if (!quiet.length) return [];
+  const now = Date.now();
+  const recorded: string[] = [];
+  for (const h of quiet) {
+    const card = readCards(projectDir).cards.find(c => c.id === h.session.card);
+    if (!card) continue;
+    const marker = `session ${h.session.session}`;
+    if (card.events.some(e => e.action === 'hold-expired' && e.note?.includes(marker) && Date.parse(e.at) >= h.lastSeenMs)) continue;
+    const minutes = Math.floor((now - h.lastSeenMs) / 60_000);
+    recordEvent(projectDir, card.id, () => ({ action: 'hold-expired', human: false, note: `hold expired: ${h.session.label ?? h.session.session} (${marker}) quiet for ${minutes} min` }));
+    recorded.push(card.id);
+  }
+  return recorded;
 }
 
 /** `card park`: back to the owner's inbox, keeping its stage; approving it returns it there. */

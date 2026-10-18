@@ -39,3 +39,16 @@ function overlay(base: Values, over: Values): Values {
 export function loadConfig(projectDir: string): Values {
   return overlay(read(projectDir, CONFIG_FILE), read(projectDir, LOCAL_FILE));
 }
+
+export const DEFAULT_STALL_MINUTES = 30;
+
+/**
+ * `monitor.stall_minutes`: how long a builder may go without a prompt, tool call, file write or
+ * activity line before the monitor calls it stalled and its hold stops counting. Lives here, not
+ * in stall.ts, because active-card.ts reads it and stall.ts imports active-card.ts.
+ */
+export function stallMinutes(projectDir: string): number {
+  const monitor = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
+  const value = monitor && typeof monitor === 'object' ? (monitor as { stall_minutes?: unknown }).stall_minutes : undefined;
+  return typeof value === 'number' && value > 0 ? value : DEFAULT_STALL_MINUTES;
+}

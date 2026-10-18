@@ -235,6 +235,20 @@ export function createApp(
     await refreshCards();
     return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), parked });
   }));
+  app.post(api('/cards/:id/start'), writing(async c => {
+    const refused = notOwner(c, 'start a story');
+    if (refused) return refused;
+    const started = services.startStory(projectDir, c.req.param('id'), 'owner');
+    await refreshCards();
+    return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), started });
+  }));
+  app.post(api('/cards/:id/release'), writing(async c => {
+    const refused = notOwner(c, "release a story's hold");
+    if (refused) return refused;
+    const released = services.releaseHold(projectDir, c.req.param('id'), 'owner');
+    await refreshCards();
+    return c.json({ ...(await services.cardsPayload(index, owner, { includeInbox: true })), released });
+  }));
   app.post(api('/cards/:id/place'), writing(async c => {
     const refused = notOwner(c, 'place a card');
     if (refused) return refused;

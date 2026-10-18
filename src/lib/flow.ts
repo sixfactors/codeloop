@@ -1,5 +1,5 @@
-import { DONE, DROPPED, findCard, PROPOSAL_GATE, PROPOSED, readCards, RefusalError, writeCards, type Card } from './cards.js';
-import { advanceCard, approveCard, createCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
+import { DONE, DROPPED, findCard, inLane, PROPOSAL_GATE, PROPOSED, QUEUED, readCards, RefusalError, writeCards, type Card } from './cards.js';
+import { advanceCard, approveCard, createCard, startQueuedCard, type AdvanceResult, type CardFields, type Role } from './engine.js';
 import { loadLane, substitute, type Lane, type Stage } from './lane.js';
 import { newSpec } from './spec.js';
 import { clock } from './clock.js';
@@ -48,6 +48,26 @@ export function approveFlow(projectDir: string, ref: string, role: Role, note?: 
     }
     throw e;
   }
+}
+
+/**
+ * `codeloop start <id>`: a queued story enters its lane, a proposed one is promoted (the owner's
+ * decision, so an agent run is refused as `approve` refuses it), and a story already in its lane is
+ * returned as it is so the caller can make it the session's active one.
+ */
+export function startStory(projectDir: string, ref: string, role: Role): { card: Card; from: 'queued' | 'proposed' | 'active' } {
+  const before = findCard(readCards(projectDir).cards, ref);
+  if (before.stage === QUEUED) {
+    const started = startQueuedCard(projectDir, before.id, role);
+    if (usesSpec(loadLane(projectDir, started.lane))) newSpec(projectDir, started.id, role);
+    return { card: findCard(readCards(projectDir).cards, before.id), from: 'queued' };
+  }
+  if (before.stage === PROPOSED) {
+    if (role === 'agent') throw new RefusalError(`${before.id} is a proposal: starting it is the owner's promote, which an agent run cannot make. The owner runs \`codeloop start ${before.id}\``);
+    return { card: approveFlow(projectDir, before.id, role).card, from: 'proposed' };
+  }
+  if (!inLane(before)) throw new RefusalError(`${before.id} is ${before.stage}; \`codeloop card reopen ${before.id}\` brings it back first`);
+  return { card: before, from: 'active' };
 }
 
 /** Approving a reported bug's proposal is the owner confirming it: the flag every pick reads is set now. */

@@ -23,6 +23,7 @@ export const COMMANDS: Record<string, [load: () => Promise<Record<string, unknow
   card: [() => import('./commands/card.js'), 'cardCommand'],
   cards: [() => import('./commands/card.js'), 'cardCommand'],
   start: [() => import('./commands/card.js'), 'startCommand'],
+  bug: [() => import('./commands/card.js'), 'bugCommand'],
   next: [() => import('./commands/card.js'), 'nextCommand'],
   approve: [() => import('./commands/card.js'), 'approveCommand'],
   reject: [() => import('./commands/card.js'), 'rejectCommand'],
@@ -95,7 +96,7 @@ export async function lazyProgram(argv: string[]): Promise<Command | undefined> 
     }
     (await import('./commands/guard-hooks.js')).attachCardActivate(mod.cardCommand);
   }
-  if (name === 'start') {
+  if (name === 'start' || name === 'bug') {
     const { onStartActivate } = (await entry[0]()) as unknown as { onStartActivate: (fn: (id: string) => Promise<void>) => void };
     onStartActivate((await import('./commands/guard-hooks.js')).activateCard);
   }

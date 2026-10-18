@@ -128,7 +128,8 @@ export function parseBuilder(text?: string, agent?: string): BuilderSpec {
 }
 
 function findSession(projectDir: string, ref: string): SessionCard {
-  const all = activeSessions(projectDir);
+  // Addressing a session by name does not need it to have prompted lately.
+  const all = activeSessions(projectDir, { includeQuiet: true });
   const hit = all.find(s => s.session === ref) ?? all.find(s => s.session.startsWith(ref) || (s.label ?? '').startsWith(ref));
   if (!hit) throw new RefusalError(`no live session matches "${ref}" under ${ACTIVE_SESSIONS_DIR_HINT}`);
   return hit;

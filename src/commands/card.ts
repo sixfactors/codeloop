@@ -8,7 +8,8 @@ import { guard } from './guard.js';
 const client = () => createLocalClient(projectRoot());
 
 function line(card: Card & { band?: string; score?: number }): string {
-  const state = card.gate ? chalk.yellow(`waiting for you: ${card.gate}`) : card.stage === DONE ? chalk.green('done') : card.stage;
+  // A parked card keeps the proposal gate so approving it brings it back; it is not a fresh proposal, and is listed as what it is.
+  const state = card.gate && card.parked_from ? chalk.yellow(`parked (from ${card.parked_from})`) : card.gate ? chalk.yellow(`waiting for you: ${card.gate}`) : card.stage === DONE ? chalk.green('done') : card.stage;
   // The priority the picks use: the card's own when set, else its feature's RICE band.
   const band = card.priority ?? card.band;
   const rank = band ? chalk.dim(`${band}${card.score === undefined ? '' : ` ${card.score}`}`.padEnd(10)) : '';
@@ -26,6 +27,18 @@ let activateStarted: ((id: string) => Promise<void>) | undefined;
 export function onStartActivate(fn: (id: string) => Promise<void>): void {
   activateStarted = fn;
 }
+
+// A tracker-style id (`c-123`); a title is a sentence, so the two never collide.
+const CARD_REF = /^[A-Za-z]{1,10}-\d{1,6}$/;
+
+/** `codeloop start c-123`: a queued or proposed story starts at its start stage and becomes the active one. */
+const startExisting = async (id: string, opts: { as?: string }) => {
+  const { card, hint, from } = await client().cards.start(id, { as: opts.as });
+  console.log(from === 'active' ? `${card.id} is already at ${card.stage}` : `started ${card.id} at ${card.stage}${from === 'proposed' ? ', promoted from its proposal' : ''}`);
+  if (!activateStarted) throw new Error('start: no activation handler attached');
+  await activateStarted(card.id);
+  print({ lines: [hint], exitCode: 0 });
+};
 
 const start = async (lane: string, title: string, opts: { id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => {
   const { stage, activate, ...rest } = opts;
@@ -228,6 +241,9 @@ cardCommand
     // value of another shape, prints no sentence rather than "As a undefined".
     const st = card.story as { as?: string; can?: string; so?: string } | undefined;
     if (st && typeof st === 'object' && st.as && st.can && st.so) console.log(`  As a ${st.as}, I can ${st.can}, so that ${st.so}.`);
+    // A blank field is said, with the command that fills it, so empty never looks like hidden.
+    if (!(st && typeof st === 'object' && st.as && st.can && st.so)) console.log(chalk.yellow(`  story: not written. codeloop card edit ${card.id} --story "As a <persona>, I can <what>, so that <outcome>"`));
+    if (!card.description?.trim()) console.log(chalk.yellow(`  description: none. codeloop card edit ${card.id} --description "<text>"`));
     const facts = [card.ticket && `ticket ${card.ticket}`, card.split_from && `split from ${card.split_from}`, card.size && `size ${card.size}`, card.points !== undefined && `${card.points} pts`, card.initiative && `initiative ${card.initiative}`, card.epic && `epic ${card.epic}`, card.feature && `feature ${card.feature}`, card.effort !== undefined && `effort ${card.effort}w`, card.metric && `metric ${card.metric}`].filter(Boolean);
     if (facts.length) console.log(chalk.dim(`  ${facts.join(' · ')}`));
     if (card.description) console.log(card.description.split('\n').map(l => `  ${l}`).join('\n'));
@@ -423,19 +439,30 @@ cardCommand
 
 cardCommand
   .command('edit <id>')
-  .description('Edit a card: its title, story, priority, feature or size, or flag it as a critical bug; the story line in its spec.md follows')
+  .description('Edit a card: its title, story, priority, feature or size, add a line to its description, or flag it as a critical bug; the story line in its spec.md follows')
   .option('--title <title>', 'What the user can now do')
   .option('--story <story>', '"As a <persona>, I can <what>, so that <outcome>"')
   .option('--priority <p>', 'P1, P2, P3 or P4')
   .option('--feature <feature>', 'The capability this card is a slice of')
   .option('--size <size>', 'S, M or L')
+  .option('--description <text>', 'Add one line "<date> owner: <text>" to the description; what is there stays')
   .option('--bug', "Flag it as a critical bug, which every pick takes first; from an agent it is a report the owner confirms")
   .option('--no-bug', 'Clear the critical-bug flag (the owner only)')
   .option(...ROLE)
-  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; priority?: string; feature?: string; size?: string; bug?: boolean }) => {
+  .action(guard(async (id: string, opts: { as?: string; title?: string; story?: string; description?: string; priority?: string; feature?: string; size?: string; bug?: boolean }) => {
     const { as, ...edit } = opts;
     const card = await client().cards.edit(id, edit, { as });
     console.log(`${card.id} is edited`);
+  }));
+
+cardCommand
+  .command('release <id>')
+  .description("Free the holds on a story so another session can work it. The owner and the orchestrator release any hold; an agent run releases only its own. The story records who released whose")
+  .option(...ROLE)
+  .action(guard(async (id: string, opts: { as?: string }) => {
+    const { card, released } = await client().cards.release(id, { as: opts.as });
+    if (!released.length) console.log(`nothing holds ${card.id}`);
+    for (const r of released) console.log(`released ${r.label}'s hold on ${card.id}`);
   }));
 
 cardCommand
@@ -470,14 +497,34 @@ cardCommand
 
 // Short forms of the four commands a person types most.
 export const startCommand = storyOptions(new Command('start')
-  .description('Start a card: `codeloop start "<title>"` (same as card new, plus its spec folder)')
-  .argument('<title>')
+  .description('Start a card: `codeloop start "<title>"` makes one (same as card new, plus its spec folder); `codeloop start c-123` starts a queued or proposed story at its start stage and makes it your active story')
+  .argument('<title-or-id>')
   .option('--lane <lane>', 'Lane to start in', 'build')
   .option('--id <id>', 'Card id (default: next c-NNN)')
   .option('--stage <stage>', 'Start at this stage, for work already under way (the owner decides)')
   .option('--activate', 'Make the new card the active one (this session only inside an assistant), as `card activate` does')
   .option(...ROLE))
-  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => start(opts.lane, title, opts)));
+  .action(guard((title: string, opts: { lane: string; id?: string; as?: string; ticket?: string; stage?: string; activate?: boolean } & StoryFlags) => (CARD_REF.test(title.trim()) ? startExisting(title.trim(), opts) : start(opts.lane, title, opts))));
+
+/** `codeloop bug "<title>"`: files the bug and makes it this session's story, so the fix's commit can name it. */
+export const bugCommand = new Command('bug')
+  .description('File a bug in one step: a trivial build story every pick takes first, made your active story; prints the `Card: c-NNN` line for the fix\'s commit')
+  .argument('<title>')
+  .option('--lane <lane>', 'Lane to file it in', 'build')
+  .option('--force', 'File it although the title fails the story standard')
+  .option(...ROLE)
+  .action(guard(async (title: string, opts: { lane: string; force?: boolean; as?: string }) => {
+    const { card } = await client().cards.new({ lane: opts.lane, title, size: 'trivial', bug: true, force: opts.force }, { as: opts.as });
+    // Only the owner's flag puts a bug ahead of every pick; an agent run files a report that waits at the owner's gate, with nothing to activate.
+    if (card.bug_reported_by) {
+      console.log(`reported ${card.id} as a bug by ${card.bug_reported_by}; it waits for the owner to approve it`);
+    } else {
+      console.log(`filed ${card.id} in ${card.lane} at ${card.stage}, flagged as a bug`);
+      if (!activateStarted) throw new Error('bug: no activation handler attached');
+      await activateStarted(card.id);
+    }
+    console.log(`Card: ${card.id}`);
+  }));
 
 export const nextCommand = new Command('next')
   .description('Run the check for a card and move it on (same as card advance); with one active card the id is optional')

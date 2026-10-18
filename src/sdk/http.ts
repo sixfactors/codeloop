@@ -176,6 +176,8 @@ export function httpTransport(options: HttpOptions = {}): Transport {
     shapeProblem: (problem, opts) => post('/api/shape', { problem, ...role(opts) }),
     approveCard: (ref, opts = {}) => post<{ decision: Awaited<ReturnType<Transport['approveCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/approve`, { note: opts.note }).then(b => b.decision),
     parkCard: (ref, note) => post<{ parked: Awaited<ReturnType<Transport['parkCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/park`, { note }).then(b => b.parked),
+    startStory: (ref) => post<{ started: Awaited<ReturnType<Transport['startStory']>> }>(`/api/cards/${encodeURIComponent(ref)}/start`, {}).then(b => b.started),
+    releaseCard: (ref) => post<{ released: Awaited<ReturnType<Transport['releaseCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/release`, {}).then(b => b.released),
     reopenCard: (ref, opts) => post<{ card: Awaited<ReturnType<Transport['reopenCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/reopen`, { to: opts?.to, note: opts?.note }).then(b => b.card),
     moveCard: (ref, stage, note) => post<{ card: Awaited<ReturnType<Transport['moveCard']>> }>(`/api/cards/${encodeURIComponent(ref)}/move`, { stage, note }).then(b => b.card),
     editCard: (ref, edit) => json<{ card: Awaited<ReturnType<Transport['editCard']>> }>(`/api/cards/${encodeURIComponent(ref)}`, { method: 'PATCH', body: JSON.stringify(edit) }).then(b => b.card),

@@ -23,6 +23,7 @@ export type {
   CardListFilter,
   CardProposed,
   CardShow,
+  HoldRelease,
   CardsPayload,
   Config,
   DecisionReport,

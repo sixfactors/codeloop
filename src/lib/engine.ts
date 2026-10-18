@@ -786,19 +786,42 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
-    const entry = lane.stages.find(s => s.id === ready.start_stage) ?? firstStage(lane, ready);
-    const card: Card = {
-      ...ready,
-      stage: entry.id,
-      laneVersion: lane.version,
-      events: [...ready.events, event(now, 'engine', 'promote', entry.id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`), ...(ready.start_stage ? [] : skipEvents(lane, undefined, entry, ready, now))],
-      updatedAt: now.toISOString(),
-    };
-    parkIfOutward(card, lane, now);
+    const card = leaveQueue(lane, ready, now, 'engine', `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`);
     writeCards(projectDir, file, replace(file.cards, card));
     promoted.push(card);
   }
   return promoted;
+}
+
+/** A queued card at its entry stage: the one it was split at, else the first its size runs. Shared by the queue's promotion and a person's `start`. */
+function leaveQueue(lane: Lane, ready: Card, now: Date, actor: Role | 'engine', note: string): Card {
+  const entry = lane.stages.find(s => s.id === ready.start_stage) ?? firstStage(lane, ready);
+  const card: Card = {
+    ...ready,
+    stage: entry.id,
+    laneVersion: lane.version,
+    events: [...ready.events, event(now, actor, 'promote', entry.id, note), ...(ready.start_stage ? [] : skipEvents(lane, undefined, entry, ready, now))],
+    updatedAt: now.toISOString(),
+  };
+  parkIfOutward(card, lane, now);
+  return card;
+}
+
+/**
+ * `codeloop start <id>` on a queued story: it enters its lane now, as the queue would have done once
+ * `after` was done and the lane had room. The owner may start one ahead of its `after`; anyone else waits for it.
+ */
+export function startQueuedCard(projectDir: string, id: string, role: Role, opts: Clock = {}): Card {
+  const file = readCards(projectDir);
+  const ready = findCard(file.cards, id);
+  if (ready.stage !== QUEUED) throw new RefusalError(`card ${ready.id} is ${ready.stage}, not queued`);
+  const behind = ready.after && file.cards.find(p => p.id === ready.after);
+  if (behind && behind.stage !== DONE && role !== 'owner') throw new RefusalError(`${ready.id} is queued behind ${behind.id}, which is not done; the owner may start it ahead of that`);
+  const lane = loadLane(projectDir, ready.lane);
+  assertRoomInLane(file.cards, lane, 1, [ready.id], ready.size, projectDir);
+  const card = leaveQueue(lane, ready, opts.now ?? clock(), role, 'started by hand from the queue');
+  writeCards(projectDir, file, replace(file.cards, card));
+  return card;
 }
 
 // Activity lines that are someone working on the story: a session's edits, commands, prompts and

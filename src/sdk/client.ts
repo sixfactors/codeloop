@@ -38,6 +38,7 @@ import type {
   EvidenceDetail,
   Feature,
   FeatureInput,
+  HoldRelease,
   FeatureNode,
   Inbox,
   InboxPayload,
@@ -161,6 +162,10 @@ export interface Transport {
   shapeProblem(problem: string, opts?: RoleOption): Promise<CardCreated>;
   approveCard(ref: string, opts?: RoleOption & { note?: string }): Promise<DecisionReport>;
   rejectCard(ref: string, note: string, opts?: RoleOption): Promise<DecisionReport>;
+  /** A queued story enters its lane, a proposed one is promoted (the owner's, refused to an agent run), and an active one is returned unchanged. */
+  startStory(ref: string, opts?: RoleOption): Promise<{ card: Card; hint: string; from: 'queued' | 'proposed' | 'active' }>;
+  /** Frees the holds on a story; an agent run frees only its own. Each release is an event on the story. */
+  releaseCard(ref: string, opts?: RoleOption): Promise<HoldRelease>;
   closeCard(ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   parkCard(ref: string, note?: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
   placeCard(ref: string, stage: string, opts?: RoleOption): Promise<{ card: Card; hint: string }>;
@@ -308,6 +313,10 @@ export class CodeloopClient {
     reject: (ref: string, note: string, opts?: RoleOption) => this.transport.rejectCard(ref, note, opts),
     close: (ref: string, outcome: 'done' | 'dropped', note?: string, opts?: RoleOption) => this.transport.closeCard(ref, outcome, note, opts),
     park: (ref: string, note?: string, opts?: RoleOption) => this.transport.parkCard(ref, note, opts),
+    /** `codeloop start <id>`: a queued or proposed story starts at its start stage. */
+    start: (ref: string, opts?: RoleOption) => this.transport.startStory(ref, opts),
+    /** `codeloop card release <id>`: frees the story's holds; the owner and orchestrator any, an agent run its own. */
+    release: (ref: string, opts?: RoleOption) => this.transport.releaseCard(ref, opts),
     place: (ref: string, stage: string, opts?: RoleOption) => this.transport.placeCard(ref, stage, opts),
     /** A stuck story to the step its shipped work shows, stopping before any gate; refused when its explanation offers no move. */
     moveStuck: (ref: string, opts?: RoleOption) => this.transport.moveStuck(ref, opts),
