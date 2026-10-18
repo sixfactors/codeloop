@@ -12,6 +12,7 @@ done_when: `codeloop card show c-097`, `c-098` and `c-102` each show a review ve
 <!-- One to five lines, outcome checks a user would notice, numbered US1..US5. Six means split. -->
 acceptance:
 - US1 Given the fix round's leftovers, when the round is done, then c-097, c-098 and c-102 carry review verdicts, c-120, c-126, c-140 and c-152 are where the review pass puts them, the dead hub registry entries are gone, and the dotfolder move has run or the hand-back says why not.
+- US2 Given a story split into others, when the board shows it, then it reads "split into <ids>" instead of done, and it counts in no shipped number.
 
 <!-- One name per screen the mock draws; `codeloop check mock` wants a <section data-screen="name"> for each. A card with nothing to draw says `screens: none`. -->
 screens: none
@@ -37,3 +38,4 @@ mock: drop
 
 <!-- The ways this can break in production. One use case per item. -->
 - A story whose work shipped stays short of done on codeloop's own board (uc-370-01).
+- A split parent shows as done and counts as shipped while nothing shipped (uc-370-02).

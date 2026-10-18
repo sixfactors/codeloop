@@ -10,6 +10,8 @@ docs (evidence review verdicts, board housekeeping through codeloop commands).
 - The hub registry, through `codeloop projects prune --write`.
 - `specs/`, `evidence/`, `shape/` moved under `.codeloop/` by `codeloop store move --layout dotfolder`, only when nothing is untracked under specs/.
 
+- `src/lib/services.ts`, `src/lib/engine.ts`, `src/lib/inbox.ts`: a split parent ends as split, not done.
+
 ## Risks
 
 - The re-check runs after c-369 lands, or it reads the stale local main again.

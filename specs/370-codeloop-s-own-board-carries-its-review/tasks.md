@@ -12,6 +12,8 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 - [ ] T002 [US1] [docs] Run `codeloop orch run --review` for c-120, c-126, c-140 and c-152 after the trunk fix and record what it did on each
 - [ ] T003 [US1] [docs] `codeloop projects prune --write` on the hub registry
 - [ ] T004 [US1] [docs] `codeloop store move --layout dotfolder` in its own commit once nothing is untracked under specs/, or name why not in the hand-back
+- [ ] T005 [US2] [api] `card split` ends the parent as split, shown as "split into <ids>" and left out of shipped counts, in src/lib/services.ts, src/lib/engine.ts and src/lib/inbox.ts
+- [ ] T006 [US2] [test] A split parent reads split, not done, and is not counted as shipped, red on the old code
 
 ## Rubric
 
