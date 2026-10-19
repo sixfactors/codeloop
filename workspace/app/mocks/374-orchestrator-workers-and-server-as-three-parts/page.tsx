@@ -590,7 +590,7 @@ export default function MockC374ThreePartsPage() {
         badge={<Badge variant="outline" className="rounded-full">Mock</Badge>}
       >
         <div style={{ display: 'grid', gap: 40, minWidth: 0 }}>
-          <nav className="sticky top-0 z-10 flex flex-wrap gap-1.5 border-b bg-background py-2" aria-label="Screens in this mock">
+          <nav className="flex flex-wrap gap-1.5 border-b bg-background py-2" aria-label="Screens in this mock">
             {NAV.map((n) => <Button key={n.id} size="xs" variant="ghost" nativeButton={false} render={<a href={`#${n.id}`} />}>{n.label}</Button>)}
           </nav>
           <section id="today" data-screen="today" className="scroll-mt-16">

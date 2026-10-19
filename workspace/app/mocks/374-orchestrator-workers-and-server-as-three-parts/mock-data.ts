@@ -26,7 +26,7 @@ export const instances: Instance[] = [
   { id: 'ops-orch', template: 'orchestrator', kind: 'orchestrator', host: 'dean-mbp', story: 'c-374', storyTitle: 'Orchestrator, workers and server as three parts', stage: 'Mock', idleMinutes: 3, startedBy: 'Dean', state: 'working', handBack: 'No commits: it decides, it does not build', handBackTone: 'plain', lastAction: 'asked a worker for the Agents screens' },
   { id: 'proto-worker', template: 'codeloop-builder', kind: 'worker', host: 'dean-mbp', story: 'c-365', storyTitle: 'Set the project command time limit', stage: 'Build', idleMinutes: 4, startedBy: 'proto-orch', state: 'working', handBack: 'claims both commits', handBackTone: 'ok', lastAction: 'ran the lane test, green, committed' },
   { id: 'opsai-worker-ui', template: 'ops-ai-ui-builder', kind: 'worker', host: 'ops-ai tree on dean-mbp', story: 'o-88', storyTitle: 'Agent test panel at 400 wide', stage: 'Build', idleMinutes: 190, startedBy: 'ops-orch', state: 'stalled', handBack: 'Last commit a41f9c2 is not claimed by any hand-back', handBackTone: 'warn', lastAction: 'committed the panel, then stopped' },
-  { id: 'proto-worker-2', template: 'codeloop-builder', kind: 'worker', host: 'lucas-mbp', story: 'c-373', storyTitle: 'Monitor flags in v1', stage: 'Plan', idleMinutes: 22, startedBy: 'proto-orch', state: 'waiting', handBack: 'No commit yet', handBackTone: 'plain', lastAction: 'waiting on the plan approval' },
+  { id: 'proto-worker-2', template: 'codeloop-builder', kind: 'worker', host: 'lucas-mbp', story: 'c-373', storyTitle: 'Monitor flags in v2', stage: 'Plan', idleMinutes: 22, startedBy: 'proto-orch', state: 'waiting', handBack: 'No commit yet', handBackTone: 'plain', lastAction: 'waiting on the plan approval' },
 ];
 
 export type DecideItem =
@@ -37,7 +37,7 @@ export type DecideItem =
   | { id: string; kind: 'flag'; rule: string; title: string; why: string; command: string; machinery: string };
 
 export const decide: DecideItem[] = [
-  { id: 'd1', kind: 'approve', title: 'Approve the plan for monitor flags in v1', sub: '6 of 6 checks pass', waiting: 'waiting 3 h', command: 'codeloop approve c-373', machinery: 'c-373 · build lane · plan gate' },
+  { id: 'd1', kind: 'approve', title: 'Approve the plan for monitor flags in v2', sub: '6 of 6 checks pass', waiting: 'waiting 3 h', command: 'codeloop approve c-373', machinery: 'c-373 · build lane · plan gate' },
   { id: 'd2', kind: 'decided', title: 'Should the monitor block a commit that has no card?', answer: 'No. It raises a flag and moves nothing.', by: 'Dean', date: '10-16', source: 'chat', machinery: 'c-373 · question 2 · answered by decision d-0412' },
   { id: 'd3', kind: 'answer', title: 'Should a template edit apply to a story already in a stage?', recommended: 'No. Pin the version at each stage start, so an edit applies from the next stage.', from: 'ops-orch', command: 'codeloop answer c-374 1 --accept', machinery: 'c-374 · question 1' },
   { id: 'f1', kind: 'flag', rule: 'Code ahead of stage', title: 'Hosted board sync sits at Research with 2 code commits merged', why: 'The story page and the commits disagree. Nothing was moved.', command: 'codeloop where c-232', machinery: 'rule board-lag/code-ahead · c-232 · commits 7be1a40, 91c3d2e' },
