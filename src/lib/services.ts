@@ -416,7 +416,7 @@ export function splitCard(projectDir: string, ref: string, titles: string[], who
   // split never needs room the lane does not have. A lane already over its limit queues all of them.
   let firstStarts = resume !== undefined;
   if (firstStarts) {
-    try { assertRoomInLane(readCards(projectDir).cards, lane, 1, [from.id]); } catch { firstStarts = false; }
+    try { assertRoomInLane(readCards(projectDir).cards, lane, 1, [from.id], undefined, projectDir); } catch { firstStarts = false; }
   }
   const inherited = { initiative: from.initiative, epic: from.epic, feature: from.feature, metric: from.metric };
   if (inLane(from)) closeCardLib(projectDir, from.id, role, 'done', `split into ${clean.length} stories`, { structural: true });

@@ -267,6 +267,7 @@ Unreleased (0.5.0).
 | Key | Default | Meaning |
 |---|---|---|
 | `limits.max_memory_mb` | 2048 | New codeloop processes and agents wait while the codeloop processes already hold more than this; `codeloop ps --total` shows the sum. |
+| `checks.timeout_minutes` | 10 | How long a command codeloop runs for the project may take before it is killed: stage checks (including the doctor's rerun), hand-back proofs and gate reruns, `verify` use cases, health lint and type commands, lane-proposal evals. A value that is not a positive number means 10. Setup and `orch.after_merge` steps keep at least 15. A killed command reports `timed out after N min` and names this key. |
 | `activity` | on | `activity: off` stops recording the per-story activity stream. |
 | `monitor.stall_minutes` | 30 | A builder holding a card that writes nothing for this long is flagged stalled. `monitor: off` turns the monitor off. |
 | `doctor.scaffold_starts` | 0 | Stuck stories whose stage output was never written that one doctor tick may start the stage agent on, once each (event `doctor-start`). 0 starts none; `codeloop doctor --dry-run` lists them. |

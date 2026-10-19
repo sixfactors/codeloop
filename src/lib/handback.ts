@@ -12,9 +12,9 @@ import { selfcheckAt } from './selfcheck.js';
 import { currentSession } from './active-card.js';
 import { findCard, readCards, RefusalError, writeSummary } from './cards.js';
 import { recordEvent } from './engine.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 
 export const HANDBACKS_DIR = '.codeloop/state/handbacks';
-const PROOF_TIMEOUT_MS = 10 * 60 * 1000;
 const OUTPUT_TAIL = 16 * 1024;
 
 export interface HandbackInput {
@@ -55,8 +55,10 @@ export function recordHandback(projectDir: string, cardRef: string, input: Handb
   const card = findCard(readCards(projectDir).cards, cardRef);
 
   const cwd = input.worktree || projectDir;
-  const ran = spawnSync(cmd, { shell: '/bin/sh', cwd, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
-  const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL);
+  const proofMs = checkTimeoutMs(projectDir);
+  const ran = spawnSync(cmd, { shell: '/bin/sh', cwd, env: input.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: input.worktree, CODELOOP_STORY_REF: input.head } : process.env, encoding: 'utf8', timeout: proofMs, maxBuffer: 64 * 1024 * 1024 });
+  // A killed proof says so in its output, so the record does not read as an ordinary failure.
+  const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}${wasKilledForTime(ran) ? `\nproof ${timedOutNote(proofMs)}` : ''}`.slice(-OUTPUT_TAIL);
   // A killed or unspawnable proof has no status; 1 keeps "not 0" meaning "did not pass".
   const exit = ran.status ?? 1;
 

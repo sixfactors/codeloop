@@ -11,12 +11,12 @@ import { appendActivity } from './activity.js';
 import { currentSession } from './active-card.js';
 import { findCard, readCards, RefusalError } from './cards.js';
 import { currentStage, recordEvent, runCheck } from './engine.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadLane } from './lane.js';
 import { scrubOutput } from './scrub.js';
 
 export const GATES_DIR = '.codeloop/state/gates';
-const PROOF_TIMEOUT_MS = 10 * 60 * 1000;
 const OUTPUT_TAIL = 16 * 1024;
 
 export interface GateInput {
@@ -89,13 +89,16 @@ export function runGate(projectDir: string, cardRef: string, input: GateInput = 
 
   const ref = input.storyRef ?? hb.head;
   const env = hb.worktree ? { ...process.env, CODELOOP_PROJECT_DIR: projectDir, CODELOOP_WORK_DIR: hb.worktree, CODELOOP_STORY_REF: ref } : input.storyRef ? { ...process.env, CODELOOP_STORY_REF: ref } : process.env;
-  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env, encoding: 'utf8', timeout: PROOF_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+  const proofMs = checkTimeoutMs(projectDir);
+  const ran = spawnSync(hb.proof.cmd, { shell: true, cwd: workDir, env, encoding: 'utf8', timeout: proofMs, maxBuffer: 64 * 1024 * 1024 });
+  const killed = wasKilledForTime(ran);
   const proof = { cmd: hb.proof.cmd, exit: ran.status ?? 1, output: `${ran.stdout ?? ''}${ran.stderr ?? ''}`.slice(-OUTPUT_TAIL) };
   const why = (out: string) => {
     const tail = out.trim().split('\n').slice(-4).join(' | ').slice(-500);
     return tail ? `: ${tail}` : '';
   };
-  if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}${why(proof.output)}`);
+  if (killed) findings.push(`proof "${hb.proof.cmd}" ${timedOutNote(proofMs)}${why(proof.output)}`);
+  else if (proof.exit !== 0) findings.push(`proof "${hb.proof.cmd}" exited ${proof.exit}${why(proof.output)}`);
 
   const stage = currentStage(loadLane(projectDir, card.lane), card);
   // A selfcheck that passed at this exact head already ran the stage check, scope, rubric and budget

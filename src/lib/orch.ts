@@ -24,6 +24,7 @@ import { currentStage, advanceCard, headCommit, recordEvent, workFingerprint, ty
 import { listGates, runGate, type GateRecord } from './gate.js';
 import { listHandbacks, type HandbackRecord } from './handback.js';
 import { loadConfig } from './config.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { INTERVIEW, openQuestions } from './interview.js';
 import { carriedStages, loadLane, type Stage } from './lane.js';
 import { builderIdle, NUDGE_PREFIX } from './stall.js';
@@ -432,7 +433,8 @@ function asksQuestions(projectDir: string, card: Card, stageId: string): boolean
 }
 
 const TAIL_BYTES = 4096;
-const POST_MERGE_TIMEOUT_MS = 15 * 60_000;
+// Build and restart steps always had 15 minutes; `checks.timeout_minutes` can only lengthen that.
+const POST_MERGE_FLOOR_MINUTES = 15;
 
 /** `orch.after_merge` in config: the project's own build and restart commands, run on the main tree after every merge. */
 export function afterMergeCommands(projectDir: string): { build?: string; restart?: string } {
@@ -462,13 +464,14 @@ function postMerge(projectDir: string, cardId: string, mergedStage: string, sha:
   if (!plan.length) return { steps };
   // A build or restart never overlaps another run's: the repo lock (re-entrant for this turn's own holder).
   return withRunLockSync(projectDir, `post-merge ${cardId}`, () => {
+  const postMergeMs = checkTimeoutMs(projectDir, POST_MERGE_FLOOR_MINUTES);
   for (const step of plan) {
-    const run = spawnSync(step.cmd, { cwd: projectDir, shell: true, encoding: 'utf-8', timeout: POST_MERGE_TIMEOUT_MS, env: checkEnv() });
+    const run = spawnSync(step.cmd, { cwd: projectDir, shell: true, encoding: 'utf-8', timeout: postMergeMs, env: checkEnv() });
     const exit = run.error && !run.status ? null : run.status;
     const tail = Buffer.from(`${run.stdout ?? ''}${run.stderr ?? ''}`).subarray(-TAIL_BYTES).toString('utf-8');
     steps.push({ ...step, exit });
     appendActivity(projectDir, cardId, { kind: 'post-merge', step: step.name, cmd: step.cmd, exit, sha, text: tail });
-    if (exit !== 0) return { steps, failed: `after the merge, ${step.name} (\`${step.cmd}\`) exited ${exit ?? 'without finishing'}: ${tail.trim().split('\n').slice(-5).join(' | ').slice(-600)}` };
+    if (exit !== 0) return { steps, failed: `after the merge, ${step.name} (\`${step.cmd}\`) ${wasKilledForTime(run) ? timedOutNote(postMergeMs) : `exited ${exit ?? 'without finishing'}`}: ${tail.trim().split('\n').slice(-5).join(' | ').slice(-600)}` };
   }
   return { steps };
   });

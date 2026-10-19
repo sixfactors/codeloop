@@ -11,6 +11,7 @@ import { decisionFromResearch } from './wiki-rules.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { activeSessions, currentSession } from './active-card.js';
 import { builderIdle, stallMinutes } from './stall.js';
@@ -209,9 +210,7 @@ export function checkCrashed(status: number | null, output: string): boolean {
 }
 
 /** Runs the stage's done command without touching the card. null when the stage has no command. `crashed` carries the output tail when the command itself broke. */
-export const CHECK_TIMEOUT_MS = 600_000;
-
-export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string, timeoutMs: number = CHECK_TIMEOUT_MS): { passed: boolean; output: string; crashed?: string } | null {
+export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string, timeoutMs: number = checkTimeoutMs(projectDir)): { passed: boolean; output: string; crashed?: string } | null {
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
@@ -223,8 +222,8 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   const text = raw.split('\n').filter(l => l.trimEnd() !== LEGACY_NOTICE).join('\n');
   // The output becomes an event note in cards.json, which is tracked.
   const output = scrubOutput(tail(text));
-  // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
-  if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
+  // A timeout is a crash, not a verdict on the work: the limit is `checks.timeout_minutes`, one setting for every check.
+  if (wasKilledForTime(run)) return { passed: false, output, crashed: timedOutNote(timeoutMs) };
   const passed = run.status === 0;
   if (checkCrashed(run.status, raw)) return { passed, output, crashed: output };
   const fault = passed ? undefined : toolFault(card, raw, text, work && scrubOutput(work));
@@ -565,7 +564,7 @@ export function laneFullRefusal(lane: { id: string; wip?: number }, holding: { c
 /**
  * Refuses when `adding` more cards would put the lane over its wip. With `projectDir`, only stories
  * an agent is working on count (`slotHolders`). Without it every story in the lane and not at a gate
- * counts; only the split path still calls it that way.
+ * counts; every call site passes it, so the lane limit reads the same on every path.
  */
 export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string, projectDir?: string): void {
   if (lane.wip === undefined || size === 'trivial') return;
