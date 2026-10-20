@@ -1,0 +1,5 @@
+id: uc-368-01
+accept: US1
+failure_mode: "start leaves a queued story not active so its commits carry no card, or an agent run promotes a proposed story and skips the owner's review"
+layers:
+  cli: { run: "npx vitest run src/commands/__tests__/card-one-command.test.ts -t \"start <id>\"", expect: { exit: 0 } }

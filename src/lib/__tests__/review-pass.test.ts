@@ -5,6 +5,7 @@ import { dirname, join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { orchCommand } from '../../commands/orch.js';
 import { setActiveCard } from '../active-card.js';
+import { appendActivity } from '../activity.js';
 import { readCards, type Card } from '../cards.js';
 import { advanceCard, approveCard, createCard, placeCard } from '../engine.js';
 import { readQuestions } from '../interview.js';
@@ -175,6 +176,49 @@ describe('the review pass', () => {
     const report = reviewPass(dir, { all: true, dryRun: true });
 
     expect(reportLines(report)[1]).toBe('warning: trunk main is 1 commit behind HEAD; merged work may read as unmerged');
+  });
+
+  /** A story at review whose check passed and whose pr gate is approved: it closes once its work reads as merged. */
+  function readyToClose(id: string): void {
+    const i = LANE.lastIndexOf('done: { cmd: "false" }');
+    write('.codeloop/lanes/build.yaml', `${LANE.slice(0, i)}done: { cmd: "true" }${LANE.slice(i + 'done: { cmd: "false" }'.length)}`);
+    createCard(dir, { lane: 'build', title: `Accountants export invoices as CSV ${id}`, id });
+    placeCard(dir, id, 'review', 'owner');
+    expect(advanceCard(dir, id).outcome).toBe('parked');
+    approveCard(dir, id, 'reviewer');
+  }
+
+  it('uc-369-01: work merged on the remote trunk counts as merged while the local main is behind', () => {
+    readyToClose('c-5');
+    git(['checkout', '-q', '-b', 'feature']);
+    const sha = commit('c-5', ['src/e.ts']);
+    // The PR merged on the remote: only origin/main moved; the local main never did.
+    git(['update-ref', 'refs/remotes/origin/main', sha]);
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-5').stage).toBe('done');
+    expect(report.fixed.map(l => [l.id, l.verb])).toEqual([['c-5', 'close']]);
+    expect(reportLines(report)[1]).not.toMatch(/behind HEAD/);
+  });
+
+  it('uc-369-02: a commit with no trailer counts for the story whose activity recorded it, and a trailer naming another story wins', () => {
+    readyToClose('c-5');
+    readyToClose('c-6');
+    for (const f of ['src/e.ts']) write(f, 'export const e = 1;\n');
+    git(['add', 'src/e.ts']);
+    git(['commit', '-q', '-m', 'feat: export invoices']);
+    const bare = git(['rev-parse', 'HEAD']);
+    const other = commit('c-7', ['src/f.ts']);
+    // What the post-commit hook writes for the story active in the session that committed.
+    appendActivity(dir, 'c-5', { kind: 'commit', sha: bare.slice(0, 12), subject: 'feat: export invoices' });
+    appendActivity(dir, 'c-6', { kind: 'commit', sha: other.slice(0, 12), subject: 'feat: work for c-7' });
+
+    const report = reviewPass(dir, { all: true });
+
+    expect(find('c-5').stage).toBe('done');
+    expect(find('c-6').stage).toBe('review');
+    expect(report.fixed.map(l => [l.id, l.verb])).toEqual([['c-5', 'close']]);
   });
 
   it('a story held by a builder mid-turn is left alone and reported as could-not-tell', () => {

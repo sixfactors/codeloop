@@ -8,9 +8,9 @@ import { join } from 'path';
 import { activeSessions } from './active-card.js';
 import { ACTIVITY_DIR, type ActivityLine } from './activity.js';
 import { findCardOrNone, readCards } from './cards.js';
-import { loadConfig } from './config.js';
+import { stallMinutes } from './config.js';
 
-export const DEFAULT_STALL_MINUTES = 30;
+export { DEFAULT_STALL_MINUTES, stallMinutes } from './config.js';
 export const NUDGE_PREFIX = 'builder idle';
 const TAIL_BYTES = 16 * 1024;
 
@@ -31,12 +31,6 @@ export interface BuilderIdle {
   lastAt?: number;
   /** The doctor already asked for a hand-back since the last real activity. */
   nudged: boolean;
-}
-
-export function stallMinutes(projectDir: string): number {
-  const monitor = (loadConfig(projectDir) as { monitor?: unknown }).monitor;
-  const value = monitor && typeof monitor === 'object' ? (monitor as { stall_minutes?: unknown }).stall_minutes : undefined;
-  return typeof value === 'number' && value > 0 ? value : DEFAULT_STALL_MINUTES;
 }
 
 function tailLines(projectDir: string, card: string): ActivityLine[] {
@@ -81,7 +75,8 @@ export function stalledBuilders(projectDir: string, now = Date.now()): StalledBu
   const limit = stallMinutes(projectDir);
   const cards = readCards(projectDir).cards;
   const out: StalledBuilder[] = [];
-  for (const s of activeSessions(projectDir)) {
+  // Quiet holds are the ones this report exists for, so they are read here even though every other reader skips them.
+  for (const s of activeSessions(projectDir, { includeQuiet: true })) {
     if (!s.card) continue;
     const idle = builderIdle(projectDir, s.card, now, limit);
     if (!idle.stalled) continue;

@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from 'fs';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { cardKey, CARDS_PATH, ConflictError, findCardOrNone, readCards, RefusalError, writeCards, type Card } from '../cards.js';
+import { assertBoardNotMoved, cardKey, CARDS_PATH, ConflictError, findCardOrNone, readCards, RefusalError, writeCards, type Card } from '../cards.js';
 import { clock } from '../clock.js';
 import { CLOUD_COPY } from '../cloud.js';
 import { CONFIG_FILE } from '../config.js';
@@ -257,6 +257,7 @@ class LanesRepo implements Repo<Lane> {
   }
 
   async put(item: Lane, expectVersion?: string | number): Promise<Lane> {
+    assertBoardNotMoved(this.projectDir);
     const current = await this.get(item.id);
     if (expectVersion !== undefined && current?.version !== expectVersion) {
       throw new ConflictError(`lane ${item.id} changed since it was read (read version ${expectVersion}, now ${current?.version ?? 'none'}); re-read and retry`);
@@ -269,6 +270,7 @@ class LanesRepo implements Repo<Lane> {
   }
 
   async remove(id: string): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const file = lanePath(this.projectDir, id);
     if (!existsSync(file)) return;
     rmSync(file);
@@ -312,6 +314,7 @@ class PagesRepo implements Repo<WikiPage> {
   }
 
   async put(item: WikiPage, expectVersion?: string | number): Promise<WikiPage> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(item.id);
     const current = existsSync(file) ? sha1(readText(file)) : undefined;
     if (expectVersion !== undefined && current !== expectVersion) {
@@ -324,6 +327,7 @@ class PagesRepo implements Repo<WikiPage> {
   }
 
   async remove(id: string): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(id);
     if (!existsSync(file)) return;
     rmSync(file);
@@ -358,6 +362,7 @@ class BetsRepo implements Repo<Initiative> {
   }
 
   async put(item: Initiative, expectVersion?: string | number): Promise<Initiative> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(item.id);
     const current = existsSync(file) ? sha1(readText(file)) : undefined;
     if (expectVersion !== undefined && current !== expectVersion) {
@@ -371,6 +376,7 @@ class BetsRepo implements Repo<Initiative> {
   }
 
   async remove(id: string): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(id);
     if (!existsSync(file)) return;
     rmSync(file);
@@ -408,6 +414,7 @@ class PlanPageRepo<T extends Epic | Feature> implements Repo<T> {
   }
 
   async put(item: T, expectVersion?: string | number): Promise<T> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(item.id);
     const current = existsSync(file) ? sha1(readText(file)) : undefined;
     if (expectVersion !== undefined && current !== expectVersion) {
@@ -428,6 +435,7 @@ class PlanPageRepo<T extends Epic | Feature> implements Repo<T> {
   }
 
   async remove(id: string): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const file = this.fileFor(id);
     if (!existsSync(file)) return;
     rmSync(file);
@@ -462,6 +470,7 @@ class QuestionsRepo implements Repo<Question> {
   }
 
   async put(item: Question, expectVersion?: string | number): Promise<Question> {
+    assertBoardNotMoved(this.projectDir);
     const card = findCardOrNone(readCards(this.projectDir).cards, item.cardId);
     const file = card && this.file(card);
     if (!card || !file) throw new RefusalError(`${item.cardId} has no spec folder to hold questions; \`codeloop ask ${item.cardId} "<question>"\` makes one`);
@@ -478,6 +487,7 @@ class QuestionsRepo implements Repo<Question> {
   }
 
   async remove(id: string): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const [cardId, n] = id.split('#');
     const card = findCardOrNone(readCards(this.projectDir).cards, cardId);
     const file = card && this.file(card);
@@ -565,6 +575,7 @@ class ConfigValues implements KeyValue {
   }
 
   async set(key: string, value: unknown): Promise<void> {
+    assertBoardNotMoved(this.projectDir);
     const file = join(this.projectDir, CONFIG_FILE);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, stringifyYaml({ ...this.read(), [key]: value }));

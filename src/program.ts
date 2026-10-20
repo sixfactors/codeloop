@@ -18,7 +18,7 @@ import { removeCommand } from './commands/remove.js';
 import { publishCommand } from './commands/publish.js';
 import { loginCommand } from './commands/login.js';
 import { laneCommand } from './commands/lane.js';
-import { approveCommand, cardCommand, nextCommand, onStartActivate, rejectCommand, startCommand } from './commands/card.js';
+import { approveCommand, bugCommand, cardCommand, nextCommand, onStartActivate, rejectCommand, startCommand } from './commands/card.js';
 import { shapeCommand } from './commands/shape.js';
 import { inboxCommand } from './commands/inbox.js';
 import { featureCommand } from './commands/feature.js';
@@ -76,6 +76,7 @@ export function buildProgram(): Command {
   onStartActivate(activateCard);
   program.addCommand(cardCommand);
   program.addCommand(startCommand);
+  program.addCommand(bugCommand);
   program.addCommand(shapeCommand);
   program.addCommand(nextCommand);
   program.addCommand(approveCommand);

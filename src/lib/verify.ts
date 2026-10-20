@@ -9,6 +9,7 @@ import { budgetLine, checkBudget, type BudgetVerdict } from './diff-budget.js';
 import { checkHealth, healthLine, type HealthVerdict } from './health.js';
 import { cardKey, findCardOrNone, readCards, safeName } from './cards.js';
 import { loadConfig } from './config.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { annotateCard, RefusalError, resizeTrivial } from './engine.js';
 import { cardNumber } from './lane.js';
 import { checkLiveWalk, liveWalkRequired } from './live-walk.js';
@@ -69,11 +70,11 @@ function loadUseCases(projectDir: string, nnn: string): UseCase[] {
   });
 }
 
-function runCli(uc: UseCase, cwd: string, env: string | undefined, base: NodeJS.ProcessEnv = checkEnv()): LayerResult {
+function runCli(uc: UseCase, cwd: string, env: string | undefined, base: NodeJS.ProcessEnv, timeoutMs: number): LayerResult {
   const { run, expect } = uc.layers.cli!;
-  const proc = spawnSync(run, { cwd, shell: true, encoding: 'utf-8', timeout: 600_000, env: { ...base, ...(env ? { CODELOOP_ENV: env } : {}) } });
+  const proc = spawnSync(run, { cwd, shell: true, encoding: 'utf-8', timeout: timeoutMs, env: { ...base, ...(env ? { CODELOOP_ENV: env } : {}) } });
   const pass = proc.status === (expect?.exit ?? 0) && (!expect?.stdout || (proc.stdout ?? '').includes(expect.stdout));
-  return { layer: 'cli', pass, output: tail(`${proc.stdout ?? ''}${proc.stderr ?? ''}\nexit ${proc.status}`) };
+  return { layer: 'cli', pass, output: tail(`${proc.stdout ?? ''}${proc.stderr ?? ''}\n${wasKilledForTime(proc) ? `use case ${timedOutNote(timeoutMs)}` : `exit ${proc.status}`}`) };
 }
 
 async function runApi(uc: UseCase, baseUrl: string): Promise<LayerResult> {
@@ -127,7 +128,7 @@ function mutate(projectDir: string, cardId: string, cases: UseCase[]): MutateRes
   try {
     const setup = setupCommand(projectDir, tree);
     if (setup) {
-      const run = spawnSync(setup, { cwd: tree, shell: true, encoding: 'utf-8', timeout: 900_000 });
+      const run = spawnSync(setup, { cwd: tree, shell: true, encoding: 'utf-8', timeout: checkTimeoutMs(projectDir, 15) });
       if (run.status !== 0) {
         return { vacuous: [], cannotRun: true, message: `environment differs: \`${setup}\` failed at ${base.slice(0, 7)}, so the use cases were not judged there\n${tail(`${run.stdout ?? ''}${run.stderr ?? ''}`)}` };
       }
@@ -136,7 +137,7 @@ function mutate(projectDir: string, cardId: string, cases: UseCase[]): MutateRes
     // the one running this command.
     const bin = existsSync(join(tree, 'package.json')) ? JSON.parse(readFileSync(join(tree, 'package.json'), 'utf-8')).bin?.codeloop : undefined;
     const env = bin && existsSync(join(tree, bin)) ? checkEnv(join(tree, bin)) : checkEnv();
-    const vacuous = cases.filter(uc => uc.layers.cli && runCli(uc, tree, undefined, env).pass).map(uc => uc.id);
+    const vacuous = cases.filter(uc => uc.layers.cli && runCli(uc, tree, undefined, env, checkTimeoutMs(projectDir)).pass).map(uc => uc.id);
     return { vacuous, message: `re-ran ${cases.filter(uc => uc.layers.cli).length} cli use cases at ${base.slice(0, 7)}, before ${cardId}${setup ? ` (after \`${setup}\`)` : ''}` };
   } finally {
     spawnSync('git', ['worktree', 'remove', '--force', tree], { cwd: projectDir });
@@ -180,7 +181,7 @@ function exportHead(projectDir: string, nnn: string, specDir: string | undefined
   if (existsSync(join(projectDir, '.env')) && !existsSync(join(dir, '.env'))) cpSync(join(projectDir, '.env'), join(dir, '.env'));
   const setup = (loadConfig(projectDir).verify as { setup?: string } | undefined)?.setup;
   if (setup) {
-    const run = spawnSync(setup, { cwd: dir, shell: true, encoding: 'utf-8', timeout: 900_000 });
+    const run = spawnSync(setup, { cwd: dir, shell: true, encoding: 'utf-8', timeout: checkTimeoutMs(projectDir, 15) });
     if (run.status !== 0) {
       dispose();
       return { problem: `verify.setup \`${setup}\` failed in the export of ${sha.slice(0, 7)}:\n${tail(`${run.stdout ?? ''}${run.stderr ?? ''}`)}` };
@@ -213,7 +214,7 @@ export async function verify(projectDir: string, ref: string, opts: { mutate?: b
   try {
   for (const uc of cases) {
     const layers: LayerResult[] = [];
-    if (uc.layers.cli) layers.push(runCli(uc, runIn, opts.env));
+    if (uc.layers.cli) layers.push(runCli(uc, runIn, opts.env, checkEnv(), checkTimeoutMs(projectDir)));
     if (uc.layers.api) layers.push(await runApi(uc, baseUrl));
     // A use case with nothing runnable (ui only, or empty) must not count as a pass.
     const pass = layers.length > 0 && layers.every(l => l.pass);

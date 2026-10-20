@@ -9,7 +9,7 @@
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { activeSessions, ACTIVE_SESSIONS_DIR, setActiveCard } from './active-card.js';
+import { activeSessions, ACTIVE_SESSIONS_DIR, LEASE_PREFIX, setActiveCard } from './active-card.js';
 import { findCard, inLane, readCards, type Card } from './cards.js';
 import { loadConfig } from './config.js';
 import { laneFullRefusal, slotHolders } from './engine.js';
@@ -21,7 +21,7 @@ export type Isolation = 'tree' | 'worktree' | 'auto';
 export type Mode = 'tree' | 'worktree';
 
 /** The lease session a builder holds while its turn runs, in both modes: `orch-<card>`. */
-export const LEASE_PREFIX = 'orch-';
+export { LEASE_PREFIX };
 export const leaseSession = (cardId: string) => `${LEASE_PREFIX}${cardId}`;
 
 function orchConfig(projectDir: string): { isolation?: unknown; on_conflict?: unknown; max_builders?: unknown } {

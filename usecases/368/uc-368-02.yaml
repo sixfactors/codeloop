@@ -1,0 +1,5 @@
+id: uc-368-02
+accept: US2
+failure_mode: "bug files a story but does not bind the session, so the fix's commit has no Card line, or an agent run's report jumps the queue"
+layers:
+  cli: { run: "npx vitest run src/commands/__tests__/card-one-command.test.ts -t \"bug\"", expect: { exit: 0 } }

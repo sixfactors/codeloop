@@ -8,6 +8,7 @@ import { parse as parseYaml, stringify } from 'yaml';
 import { DONE, readCards, safeName, type CardEvent } from './cards.js';
 import { writeCloudLane } from './cloud.js';
 import { RefusalError, type Role } from './engine.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { clock } from './clock.js';
 import { withLock } from './lock.js';
 import { LANES_DIR, lanePath, lintLane, loadLane, loadLanes, loadSkillsIndex, parseLane, substitute } from './lane.js';
@@ -122,8 +123,12 @@ function why(lane: string, version: number, stage: string, gate: string | undefi
   return lines.join('\n');
 }
 
-function shell(cmd: string, cwd: string): boolean {
-  return spawnSync(cmd, { cwd, shell: true, encoding: 'utf-8', timeout: 600_000, env: checkEnv() }).status === 0;
+function shell(cmd: string, cwd: string, projectDir: string): boolean {
+  const ms = checkTimeoutMs(projectDir);
+  const run = spawnSync(cmd, { cwd, shell: true, encoding: 'utf-8', timeout: ms, env: checkEnv() });
+  // A killed fixture or replay would otherwise read as a check that rejects the work.
+  if (wasKilledForTime(run)) throw new RefusalError(`\`${cmd}\` ${timedOutNote(ms)}; the eval did not judge it`);
+  return run.status === 0;
 }
 
 export function evalProposal(projectDir: string, id: string, now: Date = clock()): EvalResult {
@@ -154,7 +159,7 @@ export function evalProposal(projectDir: string, id: string, now: Date = clock()
       }
       const tmp = mkdtempSync(join(tmpdir(), 'codeloop-eval-'));
       try {
-        const got = !shell(fixture.setup, tmp) ? 'setup-failed' : shell(substitute(stage.done!.cmd!, 'eval-001', { shell: true, projectDir: tmp }), tmp) ? 'pass' : 'fail';
+        const got = !shell(fixture.setup, tmp, projectDir) ? 'setup-failed' : shell(substitute(stage.done!.cmd!, 'eval-001', { shell: true, projectDir: tmp }), tmp, projectDir) ? 'pass' : 'fail';
         const ok = got === fixture.expect;
         runs.push({ stage: stage.id, fixture: fixture.name, expect: fixture.expect, got, ok });
         if (!ok) vacuous.push(`stage ${stage.id}: fixture ${fixture.name} expected ${fixture.expect}, got ${got}`);
@@ -193,7 +198,7 @@ export function evalProposal(projectDir: string, id: string, now: Date = clock()
   const recent = [...finished].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)).slice(-REPLAY_CARDS);
   for (const card of recent) {
     for (const stage of changed.filter(s => card.events.some(e => e.action === 'advance' && e.stage === s.id))) {
-      const passed = shell(substitute(stage.done!.cmd!, card, { shell: true, projectDir }), projectDir);
+      const passed = shell(substitute(stage.done!.cmd!, card, { shell: true, projectDir }), projectDir, projectDir);
       const ok = accepted.has(card.id);
       replayed.push({ card: card.id, stage: stage.id, passed, accepted: ok });
       if (!passed && !ok) {

@@ -76,6 +76,9 @@ Size picks the road. Every ceremony stage in the build lane carries `when: size 
 | `codeloop worktree prune` | Removes worktrees whose branch is merged and whose tree is clean. |
 | `codeloop store move --layout dotfolder [--dry-run]`, `--to user\|repo`, `store where` | Move story folders under `.codeloop/`, move the board to a per-user store, print where each path resolves. |
 | `codeloop hub --restart` | Stops the hub, waits for its port to close, starts a new one. |
+| `codeloop start <id>` | Starts a queued story at its start stage, or promotes a proposed one (the owner's decision, refused inside an agent run), and makes it the session's active story. `codeloop start "<title>"` still makes a new one. |
+| `codeloop bug "<title>"` | Files a trivial build story flagged as a bug, makes it the session's active story and prints the `Card: c-NNN` line for the fix's commit. Inside an agent run it files a report the owner confirms. |
+| `codeloop card release <id>` | Frees the holds on a story. The owner and the orchestrator release any hold; an agent run only its own. The story records who released whose hold. |
 | `codeloop hookd` | The resident hook daemon, started by the hook script; it takes `guard session` from about 3 s to 0.3 s and exits after 10 idle minutes. |
 
 Also unreleased: stage rubrics (`codeloop check rubric`), `codeloop answer --accept-all`, wiki write rules with near-duplicate merging, and the story journey on the board (activity stream, stepper, phase board with holder rows, one state per card: Working, Needs you, Failing, Stuck, Stale, Moving). Board and Home read git and activity once per request.
@@ -84,7 +87,7 @@ Also unreleased: stage rubrics (`codeloop check rubric`), `codeloop answer --acc
 
 ### Moving a story by hand
 
-`codeloop card reopen` brings a done or dropped card back to its lane's first stage (or to the backlog as a proposal), `card move` puts an active card at any other stage of its lane, and `card edit` changes its title, story, priority, feature or size. Moving back past a gate that was passed needs a note saying why, a reopen or move resets the target stage's retries and clears the gate, and all three are refused while a builder or a run holds the card. Each writes one event (`reopen`, `move`, `edit`) that the board, the activity stream and the story page show (`src/lib/story-control.ts`).
+`codeloop card reopen` brings a done or dropped card back to its lane's first stage (or to the backlog as a proposal), `card move` puts an active card at any other stage of its lane, and `card edit` changes its title, story, priority, feature or size, or adds a line (`--description`, written `<date> owner: <text>` after what is there; a description is never replaced). `card move` also clears a stuck gate, with a note, when merged code already sits under the story; with no such code it refuses. Moving back past a gate that was passed needs a note saying why, a reopen or move resets the target stage's retries and clears the gate, and all three are refused while a builder or a run holds the card. A hold whose session has had no prompt, tool call or file write for `monitor.stall_minutes` (30 by default) stops counting: the board stops showing it, other builders are no longer blocked by it, the story records `hold expired`, and the session takes the hold again on its next prompt. `card release` frees one at once. Each writes one event (`reopen`, `move`, `edit`) that the board, the activity stream and the story page show (`src/lib/story-control.ts`).
 
 ## Everything under .codeloop
 

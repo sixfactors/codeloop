@@ -19,3 +19,13 @@ changelog: https://github.com/github/spec-kit/releases
 - c-314 Several small stories build together in one turn: One implement run works one feature's task list; several small features mean several runs | https://github.com/github/spec-kit
 
 - c-323 Visitors can browse codeloop's own board and wiki read-only on a hosted demo: No hosted board: artifacts are files under the project's `.specify/` folder, visible to the public only when the repository itself is public | https://github.com/github/spec-kit
+
+- c-367 The board moves a story when its work ships, so shipped work never looks unfinished: `/speckit.implement` tells the agent to tick each finished task `[X]` in tasks.md; progress is what the agent ticked, and nothing ties a task to a commit or a merge | https://github.com/github/spec-kit/blob/main/templates/commands/implement.md
+
+- c-362 I approve and answer from chat, and the page loads fast and lists every artifact: /speckit.clarify asks up to five questions one at a time, each with "Recommended: Option X"; replying "yes" or "recommended" accepts that one, never all at once. Answers go into spec.md under Clarifications with no attribution. No catalog of documents beyond the specs/ folders | https://raw.githubusercontent.com/github/spec-kit/main/templates/commands/clarify.md
+
+- c-381 Install learns my existing service and asks six setup questions: `specify init` writes `.specify/` with memory, scripts and templates plus the agent's command folder, then the person writes the constitution by hand with `/speckit.constitution`; `specify check` validates the setup. Nothing is learned from the codebase, and the setup decisions (agent, script type) are the only questions | https://github.github.io/spec-kit/
+
+- c-332 v2 runs beside v1 under its own name, home and port: `specify init` writes `.specify/` into the repository; the tool runs per invocation (`uvx`), so there is no global install to freeze and no second channel | https://github.github.io/spec-kit/
+
+- c-329 A project on v1 keeps working untouched until v2 is proven: Runs per invocation from the repository's `.specify/` templates; a project is on whatever `specify init` wrote and upgrades by running it again, with no record of what changed | https://github.github.io/spec-kit/

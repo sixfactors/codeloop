@@ -1,13 +1,16 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from 'fs';
 import { hostname } from 'os';
 import { dirname, join } from 'path';
+import { stallMinutes } from './config.js';
 
 /** The person's own active card (a terminal with no host session): one per repo, as before. */
 export const ACTIVE_CARD_PATH = '.codeloop/state/active-card';
 /** One file per host session: `.codeloop/state/active/<session>.json`. */
 export const ACTIVE_SESSIONS_DIR = '.codeloop/state/active';
-/** A session that has not touched its file in this long is treated as gone. */
+/** A session that has not touched its file in this long is treated as gone: its own pointer to its card is dropped. */
 const STALE_MS = 24 * 60 * 60 * 1000;
+/** The session an orchestrator takes for a story's builder turn; its liveness is the run's, not a prompt's. */
+export const LEASE_PREFIX = 'orch-';
 
 export type SessionHost = 'claude' | 'cursor' | 'codex';
 
@@ -107,14 +110,54 @@ export function clearActiveCard(projectDir: string, session: string | undefined 
   if (existsSync(file)) unlinkSync(file);
 }
 
-/** Every live session and the card it works, newest first; stale files are skipped, not deleted. */
-export function activeSessions(projectDir: string): SessionCard[] {
+/** A hold is quiet once its session file has not been touched for `monitor.stall_minutes`. A lease is the run's, so it never is. */
+const isQuiet = (s: Pick<SessionCard, 'session'>, lastSeenMs: number, limitMs: number, now: number) => !s.session.startsWith(LEASE_PREFIX) && now - lastSeenMs > limitMs;
+
+/** A session that prompts, runs a tool or writes a file keeps its hold: the hooks call this, and a quiet hold is held again from then on. */
+export function touchSession(projectDir: string, session: string | undefined): void {
+  if (!session) return;
+  try {
+    const file = sessionFile(projectDir, session);
+    if (existsSync(file)) {
+      const now = new Date();
+      utimesSync(file, now, now);
+    }
+  } catch {
+    // A hook that cannot touch the file must still let the call it guards go ahead.
+  }
+}
+
+/**
+ * Every session holding a card, newest first. A hold whose session has had no prompt, tool call or
+ * file write for `monitor.stall_minutes` is left out (`includeQuiet` keeps it): a dead run would
+ * otherwise block other builders for the full 24 hours. Stale files are skipped, not deleted.
+ */
+export function activeSessions(projectDir: string, opts: { includeQuiet?: boolean; now?: number } = {}): SessionCard[] {
+  return heldSessions(projectDir, opts).filter(h => opts.includeQuiet || !h.quiet).map(h => h.session);
+}
+
+/** Each live session with when it was last seen and whether that is long enough ago to count as quiet. */
+export function heldSessions(projectDir: string, opts: { now?: number } = {}): { session: SessionCard; lastSeenMs: number; quiet: boolean }[] {
   const dir = join(projectDir, ACTIVE_SESSIONS_DIR);
   if (!existsSync(dir)) return [];
-  const now = Date.now();
+  const now = opts.now ?? Date.now();
+  const limitMs = stallMinutes(projectDir) * 60_000;
   return readdirSync(dir)
     .filter(f => f.endsWith('.json'))
-    .map(f => readSession(join(dir, f), now))
-    .filter((s): s is SessionCard => Boolean(s))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .flatMap(f => {
+      const file = join(dir, f);
+      const session = readSession(file, now);
+      if (!session) return [];
+      const lastSeenMs = statSync(file).mtimeMs;
+      return [{ session, lastSeenMs, quiet: isQuiet(session, lastSeenMs, limitMs, now) }];
+    })
+    .sort((a, b) => b.session.updatedAt.localeCompare(a.session.updatedAt));
+}
+
+/** Removes a session's hold. Returns false when it had none. */
+export function dropSession(projectDir: string, session: string): boolean {
+  const file = sessionFile(projectDir, session);
+  if (!existsSync(file)) return false;
+  unlinkSync(file);
+  return true;
 }

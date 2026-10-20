@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, s
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { loadConfig } from './config.js';
+import { checkTimeoutMs, wasKilledForTime } from './check-timeout.js';
 import { globMatches } from './glob.js';
 import { findCardOrNone, readCards } from './cards.js';
 import { pathInPlan, planFiles } from './plan-scope.js';
@@ -42,6 +43,8 @@ interface Settings {
   typesCmd?: string;
   weights: Weights;
   tolerance: number;
+  /** `checks.timeout_minutes` in ms: the limit on the lint and type commands. */
+  timeoutMs: number;
 }
 
 const strings = (v: unknown, fallback: string[]) => (Array.isArray(v) && v.every(x => typeof x === 'string') && v.length ? (v as string[]) : fallback);
@@ -49,7 +52,7 @@ const strings = (v: unknown, fallback: string[]) => (Array.isArray(v) && v.every
 export function healthSettings(projectDir: string): Settings {
   const raw = (loadConfig(projectDir) as HealthConfig).health;
   // YAML reads a bare `health: off` as false.
-  if (raw === false || raw === 'off') return { off: true, tests: [], source: [], weights: DEFAULT_WEIGHTS, tolerance: DEFAULT_TOLERANCE };
+  if (raw === false || raw === 'off') return { off: true, tests: [], source: [], weights: DEFAULT_WEIGHTS, tolerance: DEFAULT_TOLERANCE, timeoutMs: checkTimeoutMs(projectDir) };
   const h = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, any>;
   const w = (typeof h.weights === 'object' && h.weights !== null ? h.weights : {}) as Record<string, unknown>;
   const weights = { ...DEFAULT_WEIGHTS };
@@ -62,6 +65,7 @@ export function healthSettings(projectDir: string): Settings {
     typesCmd: typeof h.types_cmd === 'string' && h.types_cmd ? h.types_cmd : undefined,
     weights,
     tolerance: typeof h.tolerance === 'number' && h.tolerance >= 0 ? h.tolerance : DEFAULT_TOLERANCE,
+    timeoutMs: checkTimeoutMs(projectDir),
   };
 }
 
@@ -108,8 +112,10 @@ function countTodo(root: string, files: string[]): number {
   return n;
 }
 
-function run(cmd: string, cwd: string): string {
-  const p = spawnSync(cmd, { cwd, shell: true, encoding: 'utf-8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
+/** null when the command was killed at the time limit: a half-run lint or type check says nothing about the count. */
+function run(cmd: string, cwd: string, timeoutMs: number): string | null {
+  const p = spawnSync(cmd, { cwd, shell: true, encoding: 'utf-8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
+  if (wasKilledForTime(p)) return null;
   return `${p.stdout ?? ''}\n${p.stderr ?? ''}`;
 }
 
@@ -119,6 +125,8 @@ export function parseLintErrors(output: string): number {
   if (summary) return Number(summary[1]);
   return output.split('\n').filter(l => /\berror\b/i.test(l)).length;
 }
+
+const countOf = (output: string | null, parse: (o: string) => number): number | null => (output === null ? null : parse(output));
 
 export const parseTypeErrors = (output: string): number => output.split('\n').filter(l => /error TS\d+/.test(l)).length;
 
@@ -138,8 +146,8 @@ function measure(root: string, s: Settings, wikiRoot: string, files?: string[]):
   const typesCmd = s.typesCmd ?? (existsSync(join(root, 'tsconfig.json')) ? 'npx tsc --noEmit' : undefined);
   const part = {
     tests: countTests(root, testFiles),
-    lint: s.lintCmd ? parseLintErrors(run(s.lintCmd, root)) : null,
-    types: typesCmd ? parseTypeErrors(run(typesCmd, root)) : null,
+    lint: s.lintCmd ? countOf(run(s.lintCmd, root, s.timeoutMs), parseLintErrors) : null,
+    types: typesCmd ? countOf(run(typesCmd, root, s.timeoutMs), parseTypeErrors) : null,
     gotchas: listPages(wikiRoot).filter(p => p.kind === 'gotcha' && p.severity === 'critical' && inScope(p.scope, files)).length,
     todo: countTodo(root, source),
   };

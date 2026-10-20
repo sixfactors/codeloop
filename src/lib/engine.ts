@@ -11,6 +11,7 @@ import { decisionFromResearch } from './wiki-rules.js';
 import { capture } from './wiki.js';
 import { clock } from './clock.js';
 import { loadConfig } from './config.js';
+import { checkTimeoutMs, timedOutNote, wasKilledForTime } from './check-timeout.js';
 import { appendActivity, readActivity, type ActivityEntry } from './activity.js';
 import { activeSessions, currentSession } from './active-card.js';
 import { builderIdle, stallMinutes } from './stall.js';
@@ -209,9 +210,7 @@ export function checkCrashed(status: number | null, output: string): boolean {
 }
 
 /** Runs the stage's done command without touching the card. null when the stage has no command. `crashed` carries the output tail when the command itself broke. */
-export const CHECK_TIMEOUT_MS = 600_000;
-
-export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string, timeoutMs: number = CHECK_TIMEOUT_MS): { passed: boolean; output: string; crashed?: string } | null {
+export function runCheck(projectDir: string, card: Card, stage: Stage, work?: string, ref?: string, timeoutMs: number = checkTimeoutMs(projectDir)): { passed: boolean; output: string; crashed?: string } | null {
   if (!stage.done?.cmd) return null;
   // `work` is a story worktree whose branch holds work not yet merged: the command runs there and
   // reads the story's files from it, while the board stays under projectDir.
@@ -223,8 +222,8 @@ export function runCheck(projectDir: string, card: Card, stage: Stage, work?: st
   const text = raw.split('\n').filter(l => l.trimEnd() !== LEGACY_NOTICE).join('\n');
   // The output becomes an event note in cards.json, which is tracked.
   const output = scrubOutput(tail(text));
-  // No lane or stage setting bounds a check today, so every check gets the default; a timeout is a crash, not a verdict on the work.
-  if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return { passed: false, output, crashed: `timed out after ${+(timeoutMs / 60_000).toFixed(2)} min` };
+  // A timeout is a crash, not a verdict on the work: the limit is `checks.timeout_minutes`, one setting for every check.
+  if (wasKilledForTime(run)) return { passed: false, output, crashed: timedOutNote(timeoutMs) };
   const passed = run.status === 0;
   if (checkCrashed(run.status, raw)) return { passed, output, crashed: output };
   const fault = passed ? undefined : toolFault(card, raw, text, work && scrubOutput(work));
@@ -565,7 +564,7 @@ export function laneFullRefusal(lane: { id: string; wip?: number }, holding: { c
 /**
  * Refuses when `adding` more cards would put the lane over its wip. With `projectDir`, only stories
  * an agent is working on count (`slotHolders`). Without it every story in the lane and not at a gate
- * counts; only the split path still calls it that way.
+ * counts; every call site passes it, so the lane limit reads the same on every path.
  */
 export function assertRoomInLane(cards: Card[], lane: { id: string; wip?: number }, adding: number, freeing: string[] = [], size?: string, projectDir?: string): void {
   if (lane.wip === undefined || size === 'trivial') return;
@@ -786,19 +785,42 @@ export function promoteQueued(projectDir: string, opts: { lane?: string } & Cloc
     });
     if (!ready) break;
     const lane = loadLane(projectDir, ready.lane);
-    const entry = lane.stages.find(s => s.id === ready.start_stage) ?? firstStage(lane, ready);
-    const card: Card = {
-      ...ready,
-      stage: entry.id,
-      laneVersion: lane.version,
-      events: [...ready.events, event(now, 'engine', 'promote', entry.id, `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`), ...(ready.start_stage ? [] : skipEvents(lane, undefined, entry, ready, now))],
-      updatedAt: now.toISOString(),
-    };
-    parkIfOutward(card, lane, now);
+    const card = leaveQueue(lane, ready, now, 'engine', `queue: ${ready.after ? `after ${ready.after} reached done` : 'wip opened up'}`);
     writeCards(projectDir, file, replace(file.cards, card));
     promoted.push(card);
   }
   return promoted;
+}
+
+/** A queued card at its entry stage: the one it was split at, else the first its size runs. Shared by the queue's promotion and a person's `start`. */
+function leaveQueue(lane: Lane, ready: Card, now: Date, actor: Role | 'engine', note: string): Card {
+  const entry = lane.stages.find(s => s.id === ready.start_stage) ?? firstStage(lane, ready);
+  const card: Card = {
+    ...ready,
+    stage: entry.id,
+    laneVersion: lane.version,
+    events: [...ready.events, event(now, actor, 'promote', entry.id, note), ...(ready.start_stage ? [] : skipEvents(lane, undefined, entry, ready, now))],
+    updatedAt: now.toISOString(),
+  };
+  parkIfOutward(card, lane, now);
+  return card;
+}
+
+/**
+ * `codeloop start <id>` on a queued story: it enters its lane now, as the queue would have done once
+ * `after` was done and the lane had room. The owner may start one ahead of its `after`; anyone else waits for it.
+ */
+export function startQueuedCard(projectDir: string, id: string, role: Role, opts: Clock = {}): Card {
+  const file = readCards(projectDir);
+  const ready = findCard(file.cards, id);
+  if (ready.stage !== QUEUED) throw new RefusalError(`card ${ready.id} is ${ready.stage}, not queued`);
+  const behind = ready.after && file.cards.find(p => p.id === ready.after);
+  if (behind && behind.stage !== DONE && role !== 'owner') throw new RefusalError(`${ready.id} is queued behind ${behind.id}, which is not done; the owner may start it ahead of that`);
+  const lane = loadLane(projectDir, ready.lane);
+  assertRoomInLane(file.cards, lane, 1, [ready.id], ready.size, projectDir);
+  const card = leaveQueue(lane, ready, opts.now ?? clock(), role, 'started by hand from the queue');
+  writeCards(projectDir, file, replace(file.cards, card));
+  return card;
 }
 
 // Activity lines that are someone working on the story: a session's edits, commands, prompts and

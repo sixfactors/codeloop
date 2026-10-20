@@ -1,0 +1,5 @@
+id: uc-368-05
+accept: US5
+failure_mode: "a parked story still lists as a fresh proposal, or card move passes a stuck gate with no code behind it and becomes a gate bypass"
+layers:
+  cli: { run: "npx vitest run src/commands/__tests__/card-one-command.test.ts -t \"park and move\"", expect: { exit: 0 } }

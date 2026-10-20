@@ -6,6 +6,7 @@ import { loadLane, type Lane } from './lane.js';
 import { findRunningRun } from './runs.js';
 import { resolveSpecDir } from './spec.js';
 import { specPath } from './project-root.js';
+import { shippedCommits } from './stuck-explanation.js';
 import { clock } from './clock.js';
 import { knownPersonas, SIZES, titleProblems } from './story.js';
 
@@ -27,7 +28,7 @@ function assertNotHeld(projectDir: string, card: Card): void {
   // The session that holds the card is the one working it; only another session's hold refuses.
   const own = currentSession();
   const session = activeSessions(projectDir).find(s => s.card === card.id && s.session !== own);
-  if (session) throw new RefusalError(`${card.id} is held by ${session.label ?? session.session}; wait for it to finish or stop it first`);
+  if (session) throw new RefusalError(`${card.id} is held by ${session.label ?? session.session}; wait for it to finish, stop it first, or free it with \`codeloop card release ${card.id}\``);
   const run = findRunningRun(projectDir);
   if (run?.cardId === card.id) throw new RefusalError(`${card.id} has a run in progress (${run.runId}); wait for it to finish or stop it first`);
 }
@@ -95,15 +96,19 @@ export function moveCard(projectDir: string, id: string, stage: string, role: Ro
   const target = stageIndex(lane, stage);
   // Any move drops the gate a card waits at with no approval on record, so the wait is cleared only
   // by approve (or reject), which the engine records as the owner's decision.
+  // The one gate a move may clear is a stuck one, and only when merged code already sits under the
+  // story: the check failed but the work is there. Anything else still needs approve or reject.
   const waiting = gateRefusal(before);
-  if (waiting) throw new RefusalError(waiting);
+  const landed = waiting && before.gate === 'stuck' ? shippedCommits(projectDir, before) : [];
+  if (waiting && !landed.length) throw new RefusalError(before.gate === 'stuck' ? `${waiting}. \`card move\` passes a stuck gate only when merged code is under the story, and none is` : waiting);
+  if (waiting && !opts.note?.trim()) throw new RefusalError(`${before.id} is stuck at ${before.stage} but ${landed.length} merged ${landed.length === 1 ? 'commit' : 'commits'} of code sit under it: say in the note why moving it on is right`);
   if (target === from) throw new RefusalError(`${before.id} is already at ${stage}`);
   const passed = target < from ? lane.stages.slice(target, from).filter(s => s.gate).map(s => s.gate!.name) : [];
   if (passed.length && !opts.note?.trim()) throw new RefusalError(`moving ${before.id} back to ${stage} undoes the ${passed.join(' and ')} gate: say why in the note`);
   const now = opts.now ?? clock();
   const card: Card = {
     ...enter(before, stage),
-    events: [...before.events, event(now, role, 'move', stage, opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)],
+    events: [...before.events, event(now, role, 'move', stage, waiting ? `from ${before.stage}, past its stuck gate with ${landed.length} merged ${landed.length === 1 ? 'commit' : 'commits'} of code under it (${landed.slice(0, 3).map(c => c.sha.slice(0, 8)).join(', ')}): ${opts.note}` : opts.note ? `from ${before.stage}: ${opts.note}` : `from ${before.stage}`)],
     updatedAt: now.toISOString(),
   };
   writeCards(projectDir, file, file.cards.map(c => (c.id === before.id ? card : c)));
@@ -132,6 +137,8 @@ export interface CardEdit {
   priority?: string;
   feature?: string;
   size?: string;
+  /** Appended as `<date> owner: <text>` after what is there; a description is never replaced. */
+  description?: string;
   /** true flags a critical bug, false clears it. Only the owner's flag counts; an agent's true is recorded as a report. */
   bug?: boolean;
 }
@@ -183,8 +190,15 @@ export function editCard(projectDir: string, id: string, role: Role, edit: CardE
     changes.size = size as Size;
     names.push('size');
   }
+  if (edit.description !== undefined) {
+    const text = edit.description.replace(/\s*\n\s*/g, ' ').trim();
+    if (!text) throw new RefusalError('description is empty');
+    const day = (opts.now ?? clock()).toISOString().slice(0, 10);
+    changes.description = [before.description?.trimEnd(), `${day} ${role}: ${text}`].filter(Boolean).join('\n');
+    names.push('description');
+  }
   if (edit.bug !== undefined) names.push(reporter ? `reported as critical by ${reporter}` : edit.bug ? 'bug' : 'no bug');
-  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --priority, --feature, --size or --bug');
+  if (!names.length) throw new RefusalError('nothing to edit: pass --title, --story, --description, --priority, --feature, --size or --bug');
   const now = opts.now ?? clock();
   // The owner's decision either way settles any report; a report leaves the flag as it was.
   const { bug: _bug, bug_reported_by: _by, ...unflagged } = before;

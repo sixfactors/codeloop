@@ -27,6 +27,8 @@ export interface CommitGraph {
   byCard: Map<string, GraphCommit[]>;
   /** Local branch name -> index of its tip in `commits`. */
   tips: Map<string, number>;
+  /** Remote-tracking branch (`origin/main`) -> index of its tip in `commits`. */
+  remoteTips: Map<string, number>;
   /** Index of the commit HEAD points at. */
   head?: number;
   parents: number[][];
@@ -113,6 +115,7 @@ export function commitGraph(projectDir: string): CommitGraph | undefined {
   const index = new Map<string, number>();
   const parentShas: string[][] = [];
   const tips = new Map<string, number>();
+  const remoteTips = new Map<string, number>();
   let head: number | undefined;
   const byCard = new Map<string, GraphCommit[]>();
   for (const rec of run.stdout.split('\u0001')) {
@@ -128,11 +131,13 @@ export function commitGraph(projectDir: string): CommitGraph | undefined {
     for (const d of (decorations ?? '').split(', ')) {
       const m = /^(?:HEAD -> )?refs\/heads\/(.+)$/.exec(d.trim());
       if (m) tips.set(m[1], i);
+      const remote = /^refs\/remotes\/(.+)$/.exec(d.trim());
+      if (remote) remoteTips.set(remote[1], i);
       if (d.trim() === 'HEAD' || d.trim().startsWith('HEAD -> ')) head = i;
     }
   }
   const parents = parentShas.map(ps => ps.flatMap(p => (index.has(p) ? [index.get(p)!] : [])));
-  const graph: CommitGraph = { stamp, commits, byCard, tips, head, parents, index, reach: new Map() };
+  const graph: CommitGraph = { stamp, commits, byCard, tips, remoteTips, head, parents, index, reach: new Map() };
   cache.set(projectDir, graph);
   return graph;
 }

@@ -12,10 +12,11 @@ import { progressSince } from './progress.js';
 import { CHECK_CRASHED, findCard, inLane, NOTHING_CHANGED, readCards, safeName, stageEntryIndex, type Card } from './cards.js';
 import { lastDueSlot } from './cron.js';
 import { SPLIT_BEFORE_STAGE, storySizeProblem } from './story-size.js';
-import { advanceCard, awaitsApproval, CHECK_TIMEOUT_MS, createCard, headCommit, laneFullRefusal, loadEngineConfig, slotHolders, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
+import { advanceCard, awaitsApproval, createCard, headCommit, laneFullRefusal, loadEngineConfig, slotHolders, markStuck, parkStuck, promoteQueued, recordEvent, RefusalError, runCheck, waitingOnOwner, workFingerprint, type Outcome } from './engine.js';
 import { nextHint } from './flow.js';
 import { loadLane, loadLanes, shellQuote, type Lane, type Stage } from './lane.js';
 import { clock } from './clock.js';
+import { checkTimeoutMs } from './check-timeout.js';
 import { withLock } from './lock.js';
 import { overCeiling, type MemoryProbe } from './memory.js';
 import { reviewBrief } from './rubric.js';
@@ -516,7 +517,7 @@ export async function doctorTick(projectDir: string, now: Date = clock(), opts: 
     if (!dry) appendActivity(projectDir, a.id, { kind: 'doctor', text: a.note });
     opts.onAction?.(a);
   };
-  const checkMs = opts.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
+  const checkMs = opts.checkTimeoutMs ?? checkTimeoutMs(projectDir);
   // The review pass first, on the stories changed since the last one, so what follows sees the
   // board it repaired. It keeps its own budget: its fixes are not agent turns.
   const review = doctorReviewEnabled(projectDir) ? reviewPass(projectDir, { now, dryRun: dry, skip: opts.skip }) : { fixed: [], asked: [], unclear: [] };

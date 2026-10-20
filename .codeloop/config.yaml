@@ -25,3 +25,7 @@ mock:
   target: app
   app_dir: workspace/app
   components: components/shared
+
+# The review pass runs in each doctor tick: it places and closes stories from their merged work.
+doctor:
+  review: on

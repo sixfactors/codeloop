@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: workflow 1 -->
+<!-- codeloop artifact lineage: c-374 <- base -->
+<!-- codeloop-artifact
+id: c-374
+kind: workflow
+title: Orchestrator, workers and server as three parts, with templates and workflows set in the UI
+actors: [User, Lead agent, Codeloop server, Task agent, Reviewer]
+entities: [Work item, Decision, Knowledge page, Hand-back]
+flows: [install-and-learn, setup-questions, first-feature, task-agent, reviewer-and-approval, bug-short-route]
+-->
+<title>c-374 Orchestrator, workers and server as three parts, with templates and workflows set in the UI</title>
+<style>
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Codeloop v2: the user's first day</h1>
+    <p class="meta">c-374 · codeloop · v2 · workflow</p>
+    <p class="scope">A team lead installs Codeloop on an existing service, Codeloop learns the system and asks six questions, and the first feature and the first bug go from request to done through the lead agent, a task agent and a reviewer, with every approval recorded against a named person.</p>
+    <div class="legend">
+      <span class="chip">User</span>
+      <span class="chip">Lead agent</span>
+      <span class="chip">Codeloop server</span>
+      <span class="chip">Task agent</span>
+      <span class="chip">Reviewer</span>
+    </div>
+    <p class="status">Status: proposal, 20 October 2026, written from the approved v2 plan for the owner's review. The user is a team lead with an existing service his team has run for years: a large codebase in any language, a database, a test suite and a build pipeline. He uses Claude Code in this example. From day one Codeloop is where new work is tracked; the old tracker stays as it is.</p>
+  </header>
+
+  <section class="contract">
+    <h3>The eight steps and their screens</h3>
+    <table>
+      <tr><th>Step</th><th>What happens</th><th>Time</th><th>Screen</th><th>Flow below</th></tr>
+      <tr><td>1</td><td>Install: one command, a report of what was found, five configuration files added</td><td>2 minutes</td><td>Getting started</td><td>Install and learn</td></tr>
+      <tr><td>2</td><td>The AI knows its role: the AI tool opens as the lead agent without being told</td><td>immediate</td><td>Getting started</td><td>Install and learn</td></tr>
+      <tr><td>3</td><td>Codeloop learns the system and drafts the knowledge base; a ten-line summary</td><td>about 10 minutes, no input</td><td>Getting started</td><td>Install and learn</td></tr>
+      <tr><td>4</td><td>Six questions about what the code cannot tell it, each with a recommended answer</td><td>5 minutes</td><td>Setup questions</td><td>Setup questions</td></tr>
+      <tr><td>5</td><td>He checks what it learned and corrects one detail in the chat</td><td>3 minutes</td><td>Knowledge, Work process</td><td>Setup questions</td></tr>
+      <tr><td>6</td><td>First feature: plan, one approval, a task agent builds, a reviewer checks, the pipeline passes</td><td>30 minutes of AI work, 3 of his</td><td>Work item, Agents</td><td>First feature, Task agent, Reviewer and approval</td></tr>
+      <tr><td>7</td><td>A production bug takes the short route: reproduce, fix, a test that fails without the fix, one approval</td><td>5 minutes</td><td>Work item</td><td>Bug short route</td></tr>
+      <tr><td>8</td><td>The next morning: what waits for him, worked versus waiting, cost, warnings; new lessons in the knowledge base</td><td>a glance</td><td>Home</td><td>Reviewer and approval, step 8</td></tr>
+    </table>
+  </section>
+
+  <main>
+    <section class="screen-group" data-flow="install-and-learn">
+      <h3>Install and learn (steps 1 to 3)</h3>
+      <p class="scope">Trigger: one command in the repository. Outcome: a drafted knowledge base, a ten-line summary, and an AI tool that already knows it is the lead agent. Screen: Getting started.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant User as User
+  participant Server as Codeloop server
+  participant Lead as Lead agent
+  User->>Server: install command in the repository
+  Server->>Server: detect languages, frameworks, build and test tools, database, pipeline, main modules
+  Server-->>User: report of what was found, five configuration files added
+  User->>Lead: opens the AI tool
+  Lead->>Server: read role and brief for this repository
+  Server-->>Lead: role is lead agent, first job is learn, then ask
+  Lead-->>User: I am the lead agent for this repository, learning the codebase now
+  Lead->>Server: start learning
+  Server->>Server: run each build and test command, record result and time
+  Server->>Server: churn and reverts per module, conventions in use
+  Server-->>Lead: draft knowledge pages, marked draft
+  Lead-->>User: ten-line summary, progress shown on Getting started
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>User</td><td>Codeloop server</td><td>the repository</td><td>detected stack: languages, frameworks, build and test tools, database, pipeline, modules; five configuration files</td><td>A stack is not detected: the report says "generic" for that part and names what to confirm by hand. Nothing else in the repository changes.</td></tr>
+        <tr><td>2</td><td>Lead agent</td><td>Codeloop server</td><td>repository path</td><td>role: lead agent; first job: learn then ask</td><td>The AI tool is not one Codeloop supports: Getting started shows the three supported tools and the one-line setup for each.</td></tr>
+        <tr><td>3</td><td>Codeloop server</td><td>local shell</td><td>build and test commands found</td><td>knowledge pages: modules and their data, working commands with timings, risky areas, conventions</td><td>A command hangs or fails: it stops at its time limit, the page records "did not complete" with the output, and the summary lists it. Learning continues with the rest.</td></tr>
+      </table>
+    </section>
+
+    <section class="screen-group" data-flow="setup-questions">
+      <h3>Setup questions and the check (steps 4 and 5)</h3>
+      <p class="scope">Trigger: learning is done. Outcome: six answers that become the work process, the rules and six recorded decisions, then one correction kept as a decision so no agent asks again. Screens: Setup questions, then Knowledge and Work process.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant User as User
+  participant Lead as Lead agent
+  participant Server as Codeloop server
+  Lead->>Server: recommended answers from what was learned
+  Server-->>Lead: six questions, each with a recommended answer
+  Lead-->>User: sensitive areas, process preset, who reviews, what counts as done, what must never happen, keep the conventions as rules
+  User->>Lead: accept all, or change one
+  Lead->>Server: record answers
+  Server->>Server: write the work process, the rules, and one decision per answer with source and date
+  Server-->>User: Setup questions shows the preset with each step switchable
+  User->>Server: opens Knowledge and Work process
+  Server-->>User: learned pages marked draft, the decisions, the rules, the steps and approval points
+  User->>Lead: corrects one detail in the chat
+  Lead->>Server: update the page, record the correction as a decision
+  Server-->>User: page fixed in place, decision listed with source and date
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>Lead agent</td><td>Codeloop server</td><td>knowledge pages: churn, reverts, conventions, pipeline checks</td><td>six questions with recommended answers</td><td>Learning produced no basis for a recommendation: the question shows the preset default and says why there is no recommendation.</td></tr>
+        <tr><td>2</td><td>User</td><td>Setup questions screen</td><td>accept all, or an edited answer</td><td>work process, rules, six decisions with source and date</td><td>He closes the screen halfway: the answers given so far are saved, the remaining questions wait on Home, and nothing runs until they are answered.</td></tr>
+        <tr><td>3</td><td>User</td><td>Knowledge and Work process screens</td><td>a correction in the chat</td><td>the page fixed; a decision recording the correction</td><td>The correction contradicts an earlier decision: the new decision replaces the old one and the old one is kept as replaced, never deleted.</td></tr>
+      </table>
+    </section>
+
+    <section class="screen-group" data-flow="first-feature">
+      <h3>First feature through the lead agent (step 6, parts 1 to 4)</h3>
+      <p class="scope">Trigger: he asks for an export of a report as a spreadsheet file. Outcome: a medium work item in a sensitive area with a short plan, approved once by him. Screen: Work item.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant User as User
+  participant Lead as Lead agent
+  participant Server as Codeloop server
+  User->>Lead: export this report as a spreadsheet file
+  Lead->>Server: new work item: feature, medium, touches a sensitive area
+  Server-->>Lead: steps for a medium feature under the Standard preset, approval needed because the area is sensitive
+  Lead->>Server: search decisions and knowledge for the questions this raises
+  Server-->>Lead: two already decided, one open
+  Lead-->>User: one question it cannot answer itself
+  User->>Lead: the answer
+  Lead->>Server: record the answer as a decision
+  Lead->>Server: plan: what changes, how success is tested, which files are touched
+  Server-->>User: Work item shows the plan, the questions and answers, and the approval button
+  User->>Server: approve
+  Server->>Server: record approval with his name, role and time
+  Server-->>Lead: approved, next step is build
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>User</td><td>Lead agent</td><td>a request in the chat</td><td>work item: kind feature, size medium, area sensitive</td><td>The request is ambiguous between a bug and a feature: the lead agent asks one question before creating the item, and the item is created once.</td></tr>
+        <tr><td>2</td><td>Lead agent</td><td>Codeloop server</td><td>the questions the plan raises</td><td>matching decisions, and the open questions</td><td>A decision matches but is stale, its page flagged "needs check": the lead agent shows it to the user with the date instead of acting on it silently.</td></tr>
+        <tr><td>3</td><td>Lead agent</td><td>Codeloop server</td><td>the plan</td><td>Work item page with the plan and the approval button</td><td>The plan touches files outside the item's area: the server flags it on the Work item page and the approval button says so.</td></tr>
+        <tr><td>4</td><td>User</td><td>Codeloop server</td><td>approve</td><td>approval event: name, role, time</td><td>An agent calls approve instead: refused, and the refusal is recorded against the agent. He rejects with a note: the item returns to planning with the note on the page.</td></tr>
+      </table>
+    </section>
+
+    <section class="screen-group" data-flow="task-agent">
+      <h3>Task agent builds (step 6, part 5)</h3>
+      <p class="scope">Trigger: the plan is approved. Outcome: code and tests written and run, a hand-back with the result and the cost, commits linked to the work item. Screens: Agents, Work item.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant Lead as Lead agent
+  participant Server as Codeloop server
+  participant Task as Task agent
+  Lead->>Server: brief for the build step of this item
+  Server-->>Lead: plan, decisions in scope, rules, knowledge pages for the files touched, the test command, the budget
+  Lead->>Task: start with the brief
+  Task->>Server: register: instance, template, item, started at
+  Server-->>Lead: Agents shows the task agent working on the item since now
+  Task->>Task: write code and tests, run the test command
+  Task->>Server: hand-back: commit range, proof command, exit code, output, cost
+  Server->>Server: check the proof, link the commits to the item, record the cost
+  Server-->>Lead: hand-back accepted, item moves to review
+  Lead-->>Lead: start the reviewer next
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>Lead agent</td><td>Codeloop server</td><td>item id, step build</td><td>brief: plan, decisions in scope, rules, matching knowledge pages, test command, budget</td><td>The brief would exceed the budget for the step: the server trims to pinned pages and decisions and says what it left out.</td></tr>
+        <tr><td>2</td><td>Task agent</td><td>repository and local shell</td><td>the brief</td><td>commits tagged with the item; test output</td><td>Tests fail: the hand-back records exit code and output, the item stays in build, and Work item shows the failing output. The task agent does not hand back "done".</td></tr>
+        <tr><td>3</td><td>Task agent</td><td>Codeloop server</td><td>hand-back: commit range, proof command, exit code, cost</td><td>item at review; cost on the item; commits linked</td><td>The agent goes quiet past its time limit: Agents shows it idle, Home raises a warning, and the lead agent restarts the step with a fresh agent and the same brief.</td></tr>
+      </table>
+    </section>
+
+    <section class="screen-group" data-flow="reviewer-and-approval">
+      <h3>Reviewer, done and the next morning (step 6, parts 6 to 8, and step 8)</h3>
+      <p class="scope">Trigger: a hand-back is accepted. Outcome: the reviewer's findings recorded, the item done when the pipeline passes, a one-paragraph report, and the next morning's Home page. Screens: Work item, Home.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant Lead as Lead agent
+  participant Server as Codeloop server
+  participant Reviewer as Reviewer
+  participant User as User
+  Lead->>Reviewer: start with the review brief
+  Reviewer->>Server: read the plan, the rules, the hand-back and the diff
+  Reviewer->>Server: findings with file and line, verdict approve or send back
+  Server->>Server: record the review, a send-back returns the item to build with the findings
+  Server-->>Lead: verdict
+  Server->>Server: read the pipeline result for the commits
+  Server-->>Lead: pipeline passed, item is done
+  Lead-->>User: one paragraph: what now works, the proof, the cost, what is next
+  Server->>Server: date the lessons and link them to the item in the knowledge base
+  User->>Server: next morning, opens Home
+  Server-->>User: what waits for him, worked versus waiting, cost per item, warnings
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>Reviewer</td><td>Codeloop server</td><td>plan, rules, hand-back, diff</td><td>review: findings with file and line, verdict</td><td>The reviewer sends it back: the item returns to build with the findings, the lead agent starts a fresh task agent with them, and the Work item page lists the findings.</td></tr>
+        <tr><td>2</td><td>Codeloop server</td><td>build pipeline</td><td>the commits of the item</td><td>done, or still at checking</td><td>The pipeline fails: the item stays at checking with the failing check named, and the lead agent reports it rather than "done".</td></tr>
+        <tr><td>3</td><td>Lead agent</td><td>User</td><td>the record of the item</td><td>one paragraph: what works, proof, cost, next</td><td>The paragraph cannot name proof: the item is not done, and the report says what is missing.</td></tr>
+        <tr><td>4</td><td>User</td><td>Home screen</td><td>the board and the record</td><td>waiting on him; working versus waiting; cost; warnings</td><td>Warnings: code changed with no work item, work further along than the board says, an agent gone quiet, a scheduler stopped. Each names the item and a suggested command.</td></tr>
+      </table>
+    </section>
+
+    <section class="screen-group" data-flow="bug-short-route">
+      <h3>A production bug takes the short route (step 7)</h3>
+      <p class="scope">Trigger: he pastes an error. Outcome: reproduced, fixed, a test that fails without the fix, one approval, done. Screen: Work item.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant User as User
+  participant Lead as Lead agent
+  participant Server as Codeloop server
+  participant Task as Task agent
+  participant Reviewer as Reviewer
+  User->>Lead: pastes a production error
+  Lead->>Server: new work item: bug
+  Server-->>Lead: short route: reproduce, fix, test that fails without the fix, one approval
+  Lead->>Task: brief: the error, the module's knowledge page, the rules, the test command
+  Task->>Task: reproduce, fix, add the failing test, run the tests
+  Task->>Server: hand-back: commit range, test exit code with and without the fix, cost
+  Server->>Reviewer: review brief
+  Reviewer->>Server: verdict approve
+  Server-->>User: Work item: the fix, the proof, the cost, the approval button
+  User->>Server: approve
+  Server->>Server: record approval with his name and time, item done when the pipeline passes
+      </pre>
+      <table>
+        <tr><th>Step</th><th>Actor</th><th>System</th><th>Data in</th><th>Data out</th><th>Failure path</th></tr>
+        <tr><td>1</td><td>User</td><td>Lead agent</td><td>an error pasted in the chat</td><td>work item: kind bug, short route</td><td>The error points at a sensitive area: the short route still runs, and the one approval is his, as the setup answer said.</td></tr>
+        <tr><td>2</td><td>Task agent</td><td>repository and local shell</td><td>the brief</td><td>fix, a test that fails without it, test output both ways</td><td>It cannot reproduce: the hand-back says so with what it tried, the item waits on him with that note, and nothing is changed in the code.</td></tr>
+        <tr><td>3</td><td>Reviewer</td><td>Codeloop server</td><td>hand-back and diff</td><td>verdict</td><td>Sent back: the findings go to a fresh task agent; the item does not reach him until the reviewer approves.</td></tr>
+        <tr><td>4</td><td>User</td><td>Codeloop server</td><td>approve</td><td>approval event; done when the pipeline passes</td><td>The pipeline fails after approval: the item returns to build with the failing check, and his approval stays recorded as given on the earlier commits.</td></tr>
+      </table>
+    </section>
+  </main>
+
+  <section class="contract">
+    <h3>Who does what, across the day</h3>
+    <p>One row per step of the first day, one column per actor. A dash means the actor takes no part in that step.</p>
+    <table>
+      <tr><th>Step</th><th>User</th><th>Lead agent</th><th>Codeloop server</th><th>Task agent</th><th>Reviewer</th></tr>
+      <tr><td>1 Install</td><td>runs one command</td><td>-</td><td>detects the stack, writes five files, reports</td><td>-</td><td>-</td></tr>
+      <tr><td>2 Role</td><td>opens the AI tool</td><td>announces it is the lead agent</td><td>serves the role and the first job</td><td>-</td><td>-</td></tr>
+      <tr><td>3 Learn</td><td>waits, reads the summary</td><td>asks for the learning run, gives the summary</td><td>runs the commands, drafts the knowledge base</td><td>-</td><td>-</td></tr>
+      <tr><td>4 Questions</td><td>accepts or edits six answers</td><td>asks with recommendations</td><td>writes process, rules, six decisions</td><td>-</td><td>-</td></tr>
+      <tr><td>5 Check</td><td>reads Knowledge and Work process, corrects one detail</td><td>applies the correction</td><td>fixes the page, records the decision</td><td>-</td><td>-</td></tr>
+      <tr><td>6 Feature</td><td>answers one question, approves the plan, reads one paragraph</td><td>sizes, searches decisions, plans, starts agents, reports</td><td>enforces the approval, checks proof, links commits, records cost, reads the pipeline</td><td>writes code and tests, hands back with proof</td><td>records findings and a verdict</td></tr>
+      <tr><td>7 Bug</td><td>pastes the error, approves once</td><td>opens the short route, starts agents</td><td>records hand-back, review and approval</td><td>reproduces, fixes, adds the failing test</td><td>approves or sends back</td></tr>
+      <tr><td>8 Morning</td><td>reads Home</td><td>-</td><td>computes waiting, working, cost and warnings; dates the lessons</td><td>-</td><td>-</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Entity state</h3>
+    <p>The work item. Its stage is computed from its documents, the approvals on them, its hand-backs and its commits; nobody types it. A bug enters at Building directly.</p>
+    <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Requested
+  Requested --> Planned: lead agent writes the plan
+  Requested --> Building: bug, short route
+  Planned --> Requested: rejected with a note
+  Planned --> Approved: a named person approves
+  Approved --> Building: task agent briefed
+  Building --> Review: hand-back with proof accepted
+  Building --> Building: hand-back with failing proof
+  Review --> Building: findings sent back
+  Review --> Checking: reviewer approves
+  Checking --> Building: pipeline fails
+  Checking --> Done: pipeline passes
+  Done --> [*]
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Actors and entities</h3>
+    <table>
+      <tr><th>Actor</th><th>Role in this workflow</th></tr>
+      <tr><td>User</td><td>The team lead. Installs, answers six questions, corrects one detail, approves plans and sensitive changes, reads Home. The only one who can approve.</td></tr>
+      <tr><td>Lead agent</td><td>The AI session he talks to. Learns, asks, sizes requests, searches decisions before asking, plans, starts task agents and the reviewer, reports in one paragraph. Writes no code.</td></tr>
+      <tr><td>Codeloop server</td><td>Holds the board, the knowledge base, the decisions, the rules and the record. Serves briefs, checks proof, enforces who may approve, computes stage and warnings.</td></tr>
+      <tr><td>Task agent</td><td>A short-lived session per piece of work. Writes code and tests, runs them, hands back with commit range, proof and cost.</td></tr>
+      <tr><td>Reviewer</td><td>A separate session that reads the change against the plan and the rules and records findings and a verdict. Never the session that wrote the code.</td></tr>
+    </table>
+    <table>
+      <tr><th>Entity</th><th>Lifecycle owner</th></tr>
+      <tr><td>Work item</td><td>Codeloop server; stage computed from its documents, approvals, hand-backs and commits.</td></tr>
+      <tr><td>Decision</td><td>Codeloop server; created on every answer and approval by a person, replaced by a newer decision, never deleted.</td></tr>
+      <tr><td>Knowledge page</td><td>Codeloop server; drafted by learning, confirmed or corrected by the user, flagged when the code it describes changes.</td></tr>
+      <tr><td>Hand-back</td><td>Task agent writes it; Codeloop server checks it and moves the item.</td></tr>
+    </table>
+  </section>
+</div>
+<script>
+  try {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
+  } catch (e) {}
+</script>
+</body>
+</html>

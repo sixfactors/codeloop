@@ -11,7 +11,7 @@ const planLib = () => import('../lib/plan-scope.js');
 const servicesLib = () => import('../lib/services.js');
 const interviewLib = () => import('../lib/interview.js');
 import chalk from 'chalk';
-import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveCard, setActiveCard } from '../lib/active-card.js';
+import { activeSessions, clearActiveCard, currentSession, detectHost, getActiveCard, heldSessions, setActiveCard } from '../lib/active-card.js';
 import { appendActivity } from '../lib/activity.js';
 import { guard } from './guard.js';
 import type { Card } from '../lib/cards.js';
@@ -20,6 +20,21 @@ import { offLine, readOff } from '../lib/off.js';
 
 /** True while `codeloop off` is in force here; checked first by every hook so a paused repo costs one file read and nothing else. */
 const paused = (projectDir: string): boolean => readOff(projectDir) !== undefined;
+
+/**
+ * A board that moved to v2 (c-330): the v1 hooks allow every edit and command and say so once, on
+ * stderr, before any board read. A lease or plan read from the stale board would otherwise block a
+ * session started before the switch. Printed here rather than by the program shell so the hook
+ * daemon, which runs these functions without it, says it too.
+ */
+const MOVED_FILE = '.codeloop/moved.json';
+async function movedThrough(projectDir: string): Promise<boolean> {
+  if (!existsSync(join(projectDir, MOVED_FILE))) return false;
+  const notice = (await cardsLib()).movedNotice(projectDir);
+  if (!notice) return false;
+  console.error(notice);
+  return true;
+}
 
 const PRESENCE_DIR = '.codeloop/state/presence';
 const safeFile = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -160,7 +175,7 @@ const CLI = String.raw`(?:\bcodeloop|\bnode\s+['"]?(?:\S*\/)?dist\/index\.js|\bn
 // `orch run --review` without --dry-run closes and places stories on the owner's behalf. `card move`
 // is judged by gateCrossingMove: only a move across a gate asks.
 const OWNER_ACTION = new RegExp(
-  `${CLI}(approve|reject|answer|cards?\\s+(?:done|drop|approve|reject|place|park|reopen|edit)\\b|start\\b[^;&|\\n]*\\s--stage\\b|lanes?\\s+(?:promote|rollback)\\b|orch\\b(?![^;&|\\n]*--dry-run)[^;&|\\n]*--review)\\b|--as[ =](owner|reviewer)\\b`,
+  `${CLI}(approve|reject|answer|cards?\\s+(?:done|drop|approve|reject|place|park|reopen|edit|release)\\b|start\\b[^;&|\\n]*\\s--stage\\b|lanes?\\s+(?:promote|rollback)\\b|orch\\b(?![^;&|\\n]*--dry-run)[^;&|\\n]*--review)\\b|--as[ =](owner|reviewer)\\b`,
   'g',
 );
 
@@ -376,6 +391,7 @@ monitorCommand
 export async function guardEdit(pathArg?: string): Promise<void> {
   const projectDir = projectRoot();
   if (paused(projectDir)) return;
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const toolInput = input.tool_input as { file_path?: string; path?: string } | undefined;
   const path = pathArg ?? toolInput?.file_path ?? toolInput?.path;
@@ -426,6 +442,12 @@ export async function guardEdit(pathArg?: string): Promise<void> {
   edited();
 }
 
+/** Writes "hold expired" for quiet holds; the board libraries load only when a hold actually is quiet, since this runs on every prompt. */
+async function noteExpiredHolds(projectDir: string, session: string | undefined): Promise<void> {
+  if (!heldSessions(projectDir).some(h => h.quiet && h.session.session !== session)) return;
+  (await servicesLib()).recordExpiredHolds(projectDir, { except: session });
+}
+
 /** Behind `guard session` and the hook daemon. */
 export async function guardSession(): Promise<void> {
   const projectDir = projectRoot();
@@ -435,6 +457,8 @@ export async function guardSession(): Promise<void> {
     console.log(offLine(off));
     return;
   }
+  // The monitor, the schedule and the active story all belong to the board that moved: nothing to install or read here.
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
   const { DONE, DROPPED, findCard, findCardOrNone, readCards } = await cardsLib();
@@ -446,6 +470,8 @@ export async function guardSession(): Promise<void> {
   // The monitor first: what waits on a person, what is failing and its fix, what is stale.
   const { withCommitIndex } = await import('../lib/diff-budget.js');
   const { withCardsReadCache } = await cardsLib();
+  // A hold quiet past the stall window is written onto its story here, once, before the report reads it.
+  await noteExpiredHolds(projectDir, session);
   const report = withCardsReadCache(() => withCommitIndex(projectDir, () => [...monitorLines(monitorReport(projectDir)), ...stalledLines(stalledBuilders(projectDir))]));
   for (const line of report) console.log(line);
   // And make sure something keeps acting on it between sessions.
@@ -537,11 +563,30 @@ async function gateCrossingMove(command: string): Promise<string | undefined> {
   return undefined;
 }
 
+/** `codeloop start c-123` on a proposed story is the owner's promote, so it asks as `approve` does; on a queued one it does not. */
+const START_BY_ID = new RegExp(`${CLI}start\\s+["']?([A-Za-z]{1,10}-\\d{1,6})["']?(?=[\\s;&|]|$)[^;&|\\n]*`, 'g');
+async function promotingStart(command: string): Promise<string | undefined> {
+  const starts = [...command.matchAll(START_BY_ID)];
+  if (starts.length === 0) return undefined;
+  try {
+    const { findCard, readCards, PROPOSED } = await cardsLib();
+    const projectDir = projectRoot();
+    for (const m of starts) if (findCard(readCards(projectDir).cards, m[1]).stage === PROPOSED) return m[0].trim();
+  } catch {
+    return starts[0][0].trim();
+  }
+  return undefined;
+}
+
 export async function guardBash(opts: { format: string }): Promise<void> {
   const input = await readStdinJson();
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
-  const moved = await gateCrossingMove(command);
+  if (await movedThrough(projectRoot())) {
+    if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
+    return;
+  }
+  const moved = (await gateCrossingMove(command)) ?? (await promotingStart(command));
   const hit = moved ? [moved] : ownerAction(command) ?? (await directBugFlag(command));
   if (!hit) {
     // An owner action is not logged here: it runs only if the person allows it, and the engine
@@ -585,8 +630,12 @@ export async function guardPrompt(): Promise<void> {
   if (paused(projectDir)) return;
   // Not a codeloop project: nothing to say, and nothing worth loading the board libraries for.
   if (!existsSync(join(projectDir, '.codeloop'))) return;
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
+  // This prompt is the session's proof of life: it takes its own hold again (appendActivity below touches it),
+  // and the holds of sessions that have gone quiet are recorded on their stories.
+  await noteExpiredHolds(projectDir, session);
   const activeId = getActiveCard(projectDir, session);
   if (!activeId) {
     // A repo with open stories and none active: the board's priority order decides what a session

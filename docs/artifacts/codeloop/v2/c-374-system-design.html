@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- codeloop-artifact-template: system-design 1 -->
+<!-- codeloop artifact lineage: c-374 <- base -->
+<!-- codeloop-artifact
+id: c-374
+kind: system-design
+title: Orchestrator, workers and server as three parts, with templates and workflows set in the UI
+scope: [Team lead, Lead agent, Task agent, AI reviewer, AI tool, Model provider, Git repository, Build pipeline, Test suite]
+components: [Codeloop server, Web page, Command line, MCP tools, Lead agent, Task agents, Board, Knowledge base, Decisions, Rules, Record]
+environments: [Local machine]
+-->
+<title>c-374 Orchestrator, workers and server as three parts, with templates and workflows set in the UI</title>
+<style>
+/* codeloop-artifact-base-css: 1
+   Shared across templates/artifacts/{mock,system-design,workflow}/template.html. Inlined into a
+   <style> block at generation time by src/lib/artifact.ts, every generated artifact stays a
+   single, self-contained HTML file; nothing links out to this file at view time.
+   Token set extends the palette already used in templates/mock/template.html. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1a1d21;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --ok: #1f7a4d;
+  --warn: #a15c00;
+  --danger: #b3261e;
+  --line: 0.0625rem;
+
+  /* Spacing scale: 4/8/12/16/24/32, expressed in rem (1rem = 16). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii: cards, pills, sheets. */
+  --radius-card: 1rem;
+  --radius-pill: 999rem;
+  --radius-sheet: 1.5rem;
+
+  /* Type scale. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --surface: #1a1f26;
+    --surface-2: #20262e;
+    --text: #e8ebef;
+    --muted: #9aa5b4;
+    --border: #2c343f;
+    --accent: #7ea2f5;
+    --accent-text: #0d1117;
+    --ok: #5fcf96;
+    --warn: #f0b860;
+    --danger: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --surface: #1a1f26;
+  --surface-2: #20262e;
+  --text: #e8ebef;
+  --muted: #9aa5b4;
+  --border: #2c343f;
+  --accent: #7ea2f5;
+  --accent-text: #0d1117;
+  --ok: #5fcf96;
+  --warn: #f0b860;
+  --danger: #f28b82;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2, h3, h4 { font-weight: 600; margin: 0; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+
+/* Page shell: 16px-equivalent gutters, no fixed pixel widths, grid clamps instead of break points. */
+.shell { display: grid; gap: var(--space-6); max-width: 76rem; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.page-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: var(--line) solid var(--border); }
+.page-head .scope { color: var(--muted); max-width: 60rem; }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+
+/* Legend: the groupings a mock/spec spans. */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.legend .chip { background: var(--surface-2); }
+
+/* Changestrip: what changed vs the prior version, one line per change. */
+.changestrip { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.changestrip h2 { font-size: var(--text-lg); }
+.changestrip ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Chip / badge: small labelled tokens. Chip = neutral grouping tag; badge = status. */
+.chip, .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-3); height: 1.5rem; border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.danger { color: var(--danger); border-color: var(--danger); }
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+
+/* App chrome: the window a frame sits inside, so a frame reads as the product, not a wireframe. */
+.chrome { display: grid; grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr); border: var(--line) solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.chrome .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: var(--line) solid var(--border); background: var(--surface-2); }
+.chrome .dots { display: flex; gap: var(--space-1); }
+.chrome .dots span { width: 0.6rem; height: 0.6rem; border-radius: var(--radius-pill); background: var(--border); display: block; }
+.chrome .crumb { color: var(--muted); font-size: var(--text-sm); }
+.chrome .side { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-right: var(--line) solid var(--border); background: var(--surface-2); min-width: 0; }
+.chrome .side .item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-card); color: var(--muted); font-size: var(--text-sm); }
+.chrome .side .item.active { background: var(--surface); color: var(--text); font-weight: 600; }
+.chrome .main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; min-height: 14rem; }
+.chrome .main .header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); justify-content: space-between; }
+.chrome .main .actions { display: flex; gap: var(--space-2); }
+
+/* Frame: a labelled screen/diagram surface. Always followed by a sibling .caption, never carries one inside. */
+.frame { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.frame > .chrome { width: 100%; }
+.frame .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); border-radius: var(--radius-card); height: 1rem; }
+.frame .skeleton.block { height: 4rem; }
+
+/* Caption: outside the frame. Label, rationale, API/data line. */
+.caption { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); border-left: var(--line) solid var(--border); }
+.caption h4 { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-2); }
+.caption p { color: var(--muted); font-size: var(--text-sm); }
+.caption .api { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-xs); color: var(--muted); }
+
+/* State tabs: the state a frame is showing, named as a row above each frame group. */
+.state-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.state-tabs .tab { padding: var(--space-1) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--muted); }
+.state-tabs .tab.current { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* Card / form row / button / callout. */
+.card { padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); display: flex; flex-direction: column; gap: var(--space-3); }
+.form-row { display: flex; flex-direction: column; gap: var(--space-1); }
+.form-row label { font-size: var(--text-sm); color: var(--muted); }
+.form-row input, .form-row select, .form-row textarea { font: inherit; padding: var(--space-2); color: var(--text); background: var(--bg); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+.button { font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); color: var(--accent-text); background: var(--accent); border: 0; border-radius: var(--radius-card); cursor: pointer; }
+.button.quiet { color: var(--text); background: transparent; border: var(--line) solid var(--border); }
+.button.danger { background: var(--danger); color: var(--accent-text); }
+.callout { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-card); border: var(--line) solid var(--border); background: var(--surface-2); font-size: var(--text-sm); }
+.callout.warn { border-color: var(--warn); color: var(--warn); }
+.callout.danger { border-color: var(--danger); color: var(--danger); }
+.callout.info { border-color: var(--accent); color: var(--accent); }
+
+/* Table. */
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: var(--line) solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.03em; }
+td.gap { color: var(--muted); font-style: italic; }
+
+/* Contract + section scaffolding. Counter resets once on .shell, not per section, so the numbered
+   headings (1. Component map, 2. State matrix, …) run in document order down the page. */
+.shell { counter-reset: contract; }
+section.contract { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); }
+section.contract h3 { counter-increment: contract; }
+section.contract h3::before { content: counter(contract) '. '; color: var(--muted); }
+.component-map, .state-matrix { overflow-x: auto; }
+
+/* Mermaid diagrams render client-side from the jsdelivr CDN via a `pre` tagged with the mermaid
+   class (see the generated page's body). No extra CSS needed here, mermaid themes itself from
+   the surrounding colour-scheme call in the page's own script tag. */
+pre.mermaid { background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-card); padding: var(--space-4); overflow-x: auto; }
+
+/* Grid of frames: clamps, never a fixed pixel width. */
+.frame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-5); align-items: start; }
+.screen-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.screen-group > .scope { color: var(--muted); font-size: var(--text-sm); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Codeloop v2: the server, the lead agent and the task agents</h1>
+    <p class="meta">c-374 · codeloop · v2 · system design</p>
+    <p class="scope">Codeloop is a work context engine for AI coding agents: it keeps what a team is building, what it has decided, what agents may do and what has been proven, next to the code, and hands each agent the part it needs for the step it is on.</p>
+    <p class="status">Status: proposal, 20 October 2026, written from the approved v2 plan for the owner's review. No product code changes with this document.</p>
+  </header>
+
+  <section class="contract">
+    <h3>What Codeloop is</h3>
+    <p class="lead">Code context engines such as Augment, Sourcegraph and Serena help an agent understand the code: where things are and how they connect. That is necessary, and it is not enough for a team to trust an agent with real work. An agent also needs to know what is being built and why, what the team has already decided, what it is allowed to do and must never do, who has to approve what, and what has already been proven to work.</p>
+    <p>Today this lives in people's heads, chat threads, tickets and stale documents. Agents never see it, so they guess, repeat questions, skip approvals and redo work. Codeloop keeps all of it in one place, next to the code. It hands each agent exactly the part it needs for the step it is on, and it updates itself as work happens. It reads the code too, and its job is the context around the work. That makes it a context engine plus a lightweight work system: it holds the context, and it records what happened.</p>
+    <p>Teams trying AI coding tools on existing systems report five problems: the tools do not understand the existing system; there is too much process for small changes and too little for big ones; agents skip approvals; what the AI learned is lost or goes stale; there is no audit trail. v2 answers all five on the user's first day.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Context</h3>
+    <p>Who uses this system and how, and every outside system it talks to. The team lead is the person. Everything else is software on the same machine, except the model provider behind the AI tool and the team's own build pipeline.</p>
+    <table>
+      <tr><th>Actor / external system</th><th>Relationship</th></tr>
+      <tr><td>Team lead</td><td>Runs one install command, answers six setup questions, reads the web page, approves plans and sensitive changes. The only one who can approve; the approval records his name and the time.</td></tr>
+      <tr><td>Lead agent</td><td>The AI session the team lead talks to, for example Claude Code. Learns the codebase, asks the questions the code cannot answer, turns requests into work items, plans them, starts task agents, reports back. It does not write code.</td></tr>
+      <tr><td>Task agent</td><td>A short-lived AI session the lead agent starts for one piece of work. Receives a brief with only what that task needs, writes code and tests, runs them, reports back with the result and the cost.</td></tr>
+      <tr><td>AI reviewer</td><td>A task agent in the reviewer role. Reads the change against the rules and the plan, records findings, approves or sends it back. Never the same session that wrote the code.</td></tr>
+      <tr><td>AI tool</td><td>Claude Code, Cursor or Codex. Hosts every agent session and reads Codeloop through its tools (MCP) and the files Codeloop adds to the repository.</td></tr>
+      <tr><td>Model provider</td><td>The service the AI tool calls for its model. Prompts and code the agents read go there under the AI tool's own terms. Codeloop itself sends nothing anywhere.</td></tr>
+      <tr><td>Git repository</td><td>Holds the code and Codeloop's own files: the knowledge base, decisions, rules and the board. Commits carry the work item they belong to.</td></tr>
+      <tr><td>Build pipeline</td><td>The team's existing automated checks. "Done" means these pass; Codeloop reads the result and does not replace them.</td></tr>
+      <tr><td>Test suite</td><td>The team's existing tests. Codeloop runs them during learning to find the commands that work, and task agents run them as proof.</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>The three parts and the loop</h3>
+    <p>Codeloop has three parts, all running on the user's own machine.</p>
+    <table>
+      <tr><th>Part</th><th>What it does</th></tr>
+      <tr><td>Codeloop server</td><td>Holds the board (every work item and where it stands), the knowledge base (what it has learned about the system), the team's decisions and rules, and the record of every action. Shows them on a web page and serves them to agents.</td></tr>
+      <tr><td>Lead agent</td><td>The AI session the user talks to. It turns requests into work items, plans them, starts other agents, and reports back. It does not write code itself.</td></tr>
+      <tr><td>Task agents</td><td>Short-lived AI sessions the lead agent starts, one per piece of work: one writes code, another reviews it. Each gets a brief with only what that task needs.</td></tr>
+    </table>
+    <p>Every piece of work follows the same loop.</p>
+    <pre class="muted">request --&gt; work item --&gt; for each step the team chose:
+                           1. Codeloop gives the agent the context for this step
+                              (the plan, past decisions, rules, relevant knowledge)
+                           2. the agent does the step and reports back with proof
+                           3. Codeloop checks the proof and records the result
+                           4. if the step needs approval, it waits for a named person
+                        --&gt; done --&gt; lessons go back into the knowledge base</pre>
+    <table>
+      <tr><th>Property</th><th>What it means</th></tr>
+      <tr><td>Controlled</td><td>Agents cannot approve their own work. Codeloop enforces the approvals, so the control does not depend on the agent's good behaviour.</td></tr>
+      <tr><td>Traceable</td><td>Every action records who did it, in what role, why, and what it cost.</td></tr>
+      <tr><td>Current</td><td>A work item's status comes from the real code changes and test results. Knowledge pages are flagged when the code they describe changes.</td></tr>
+      <tr><td>Portable</td><td>Everything is plain files in the repository plus a local server. It works with Claude Code, Cursor and Codex, and nothing goes to a Codeloop cloud.</td></tr>
+      <tr><td>Any language</td><td>Codeloop uses the build and test commands it finds in the repository. Stack packs add conventions and checks per stack: Java, Python, TypeScript, Go and .NET first.</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Software layers</h3>
+    <p>Every box names its technology. The server is one Node.js process with an HTTP API and MCP tools; the web page and the command line are its clients; the agents are sessions of the user's AI tool.</p>
+    <pre class="mermaid">
+flowchart TD
+  WEB["Web page, Next.js 15"] --> API["Codeloop server, Node.js with a Hono HTTP API and MCP tools"]
+  CLI["Command line, Node.js"] --> API
+  LEAD["Lead agent, a Claude Code or Cursor or Codex session"] --> API
+  TASK["Task agents, short-lived Claude Code or Cursor or Codex sessions"] --> API
+  LEAD --> TASK
+  API --> BOARD["Board and record, JSON and YAML files under .codeloop"]
+  API --> WIKI["Knowledge base, decisions and rules, markdown files in the repository"]
+  API --> SHELL["Build and test commands, the repository's own shell scripts"]
+  TASK --> REPO["Code, git repository in any language"]
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Deployment topology</h3>
+    <p>One environment. Everything Codeloop runs is on the user's machine. The two things outside it belong to the team already: the model provider behind the AI tool, and the build pipeline.</p>
+    <table>
+      <tr><th>Environment</th><th>Where each piece runs</th><th>Notes</th></tr>
+      <tr><td>Local machine</td><td>Codeloop server on one localhost port, serving the web page and the MCP tools; lead agent and task agents as sessions of the installed AI tool; board, knowledge base, decisions, rules and record as files in the repository.</td><td>Install adds five small configuration files to the repository. The server and the web page need no account. The team version with a shared board follows later, on the existing storage plan.</td></tr>
+    </table>
+    <pre class="mermaid">
+flowchart LR
+  subgraph local["Local machine"]
+    hub["Codeloop server, one localhost port"]
+    web["Web page, served by the server"]
+    lead["Lead agent session"]
+    task["Task agent sessions"]
+    repo["Git repository with the knowledge base files"]
+  end
+  subgraph outside["Outside the machine, owned by the team already"]
+    model["Model provider of the AI tool"]
+    ci["Build pipeline"]
+  end
+  web --> hub
+  lead --> hub
+  task --> hub
+  hub --> repo
+  lead --> model
+  task --> model
+  task --> repo
+  repo --> ci
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Network view</h3>
+    <p>Everything is on localhost. The approval boundary is the role check inside the server: only a named person can approve, and an agent calling approve is refused and recorded. The only outbound traffic is the AI tool's own calls to its model provider.</p>
+    <pre class="mermaid">
+flowchart LR
+  browser["Browser, team lead"] -->|http on the local port, board sign-in| hub["Codeloop server, localhost port"]
+  lead["Lead agent"] -->|MCP over http, lead role| hub
+  task["Task agent"] -->|MCP over http, task role| hub
+  cli["Command line"] -->|http on the same port| hub
+  hub -->|role check: approve needs a named person| record["Board and record, files under .codeloop"]
+  hub -->|read and write| wiki["Knowledge base files in the repository"]
+  hub -->|runs the build and test commands| shell["Local shell"]
+  lead -.->|the AI tool's own model calls| model["Model provider, outside"]
+  task -.->|the AI tool's own model calls| model
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>Data stores</h3>
+    <p>What Codeloop keeps, all as files in the repository. A work item's stage is computed from its documents, the approvals on them, its hand-backs and its commits, by one function that the board, the command line and the warnings all use.</p>
+    <table>
+      <tr><th>Data</th><th>What it holds</th></tr>
+      <tr><td>Board</td><td>Every work item: its kind (feature, task or bug), size, plan, questions and answers, approvals, hand-backs, commits, cost, and the stage computed from all of these.</td></tr>
+      <tr><td>Knowledge base</td><td>What Codeloop learned about the system: each module and the data it owns, the build and test commands that really work and how long they take, where change is risky, the conventions in use. Each page carries the commit it was checked against and is flagged when the code it describes changes.</td></tr>
+      <tr><td>Decisions</td><td>Every answer the team lead gave, with the question, the source, the date and the scope. Searched before any agent asks him again. A newer decision replaces an older one; none is deleted.</td></tr>
+      <tr><td>Rules</td><td>What must never happen, and the conventions kept as rules the AI must follow. Each rule carries a date and the reason.</td></tr>
+      <tr><td>Record</td><td>Every action: who did it, in what role, why, and the cost. Approvals name the person and the time.</td></tr>
+    </table>
+    <pre class="mermaid">
+erDiagram
+  WORK_ITEM }o--|| WORKFLOW : follows
+  WORKFLOW ||--|{ STAGE : orders
+  STAGE }o--|| AGENT_TEMPLATE : "done by"
+  AGENT_TEMPLATE ||--o{ AGENT_INSTANCE : "runs as"
+  AGENT_INSTANCE }o--o| AGENT_INSTANCE : "started by"
+  WORK_ITEM ||--o{ DOCUMENT : has
+  WORK_ITEM ||--o{ QUESTION : asks
+  WORK_ITEM ||--o{ HANDBACK : proof
+  WORK_ITEM ||--o{ COMMIT : claims
+  HANDBACK ||--o{ COMMIT : covers
+  QUESTION }o--o| DECISION : "answered by"
+  DECISION }o--o| DECISION : replaces
+  PERSON ||--o{ DECISION : makes
+  DOCUMENT }o--o| DECISION : "approved by"
+  RULE ||--o{ FLAG : raises
+  FLAG }o--o| WORK_ITEM : about
+  FLAG }o--o| KNOWLEDGE_PAGE : about
+  WORK_ITEM ||--o{ EVENT : records
+    </pre>
+  </section>
+
+  <section class="contract">
+    <h3>The screens</h3>
+    <p>Each step of the first day has a screen in the Codeloop web page. They are built as real pages in Codeloop's own app, from its existing components, with real data. The existing Home, Inbox, Wiki, Settings and Setup pages are extended; none is replaced.</p>
+    <table>
+      <tr><th>Step</th><th>Screen</th><th>What the user sees and does</th></tr>
+      <tr><td>1 to 3</td><td>Getting started</td><td>What Codeloop found (languages, tools, modules), the learning progress, then the ten-line summary</td></tr>
+      <tr><td>4</td><td>Setup questions</td><td>Six questions with recommended answers, "accept all", and the preset with each step switchable</td></tr>
+      <tr><td>5</td><td>Knowledge</td><td>The learned pages marked draft or confirmed, the decisions, the rules, and corrections in place</td></tr>
+      <tr><td>5</td><td>Work process</td><td>His steps and approval points laid out; switch a step on or off, change who approves</td></tr>
+      <tr><td>6</td><td>Work item</td><td>The plan, the questions asked and answered, the approval button, the agents' reports with proof and cost, the review findings</td></tr>
+      <tr><td>6</td><td>Agents</td><td>The lead agent and task agents: which are working, on what, and since when; the agent roles and what each may do</td></tr>
+      <tr><td>8</td><td>Home</td><td>What waits for him, worked versus waiting, cost, and the warnings</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>What Codeloop decides for you, and what you can change</h3>
+    <p>Defaults, so a team starts without designing a process: three presets for how much process a change gets (Light, Standard, Controlled); one lead agent per repository; task agents split by area so two never edit the same files; a separate reviewer; "done" means the existing automated checks pass; learning the system comes before the first work item.</p>
+    <p>Everything can be changed: steps, approval points, agent roles, rules, checks, and add-on packs that bundle them. The setup questions and the web page change the same settings, so there is one source of truth.</p>
+    <table>
+      <tr><th>Preset</th><th>Steps</th></tr>
+      <tr><td>Light</td><td>Build, review, done.</td></tr>
+      <tr><td>Standard, recommended</td><td>Clarifying questions and a written plan for medium or larger work, then build, review, done. Screen designs only when a change has a screen.</td></tr>
+      <tr><td>Controlled</td><td>Adds research, recorded test evidence and an approval before release to production.</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Tech choices</h3>
+    <table>
+      <tr><th>Choice</th><th>Alternative considered</th><th>Why</th><th>Cost</th></tr>
+      <tr><td>Plain files in the repository plus a local server</td><td>A hosted service holding the board and knowledge</td><td>Nothing leaves the machine, the files diff and review like code, and a trial needs no account or admin. The team version with a shared board follows on the existing storage plan.</td><td>One more process on the laptop. No hosting or licence cost.</td></tr>
+      <tr><td>Agents reach Codeloop through MCP tools</td><td>Agents run the command line and parse its text</td><td>MCP is the standard Claude Code, Cursor and Codex all speak, so one server serves every tool, and each call carries a role the server can check.</td><td>The tool list is maintained alongside the command line; both call the same API.</td></tr>
+      <tr><td>The lead agent plans and starts task agents; it writes no code</td><td>One agent does everything in one long session</td><td>A separate reviewer and short-lived task agents keep context small, keep two agents off the same files, and make "an agent cannot approve its own work" enforceable.</td><td>More sessions, so cost is shown per work item and the number of running agents is capped.</td></tr>
+      <tr><td>Learning the system by running its build and test commands</td><td>Asking the user to describe the system</td><td>The commands either work or they do not, and the time each takes is recorded, so the knowledge base starts from facts the code cannot argue with.</td><td>About ten minutes of machine time on install, longer on a very large repository.</td></tr>
+      <tr><td>Stage computed from documents, approvals, hand-backs and commits</td><td>An agent or a person moves the item by hand</td><td>Hand-moved status drifts from the code within days; computed status cannot, and a hand move is recorded as a decision the function reads.</td><td>One function every surface must call; a second guess anywhere is a bug.</td></tr>
+      <tr><td>Stack detection and packs for Java, Python, TypeScript, Go and .NET</td><td>Node.js projects only</td><td>The trial services are Python and Java; a tool that only works on its own stack cannot be tried on an existing system.</td><td>Five detection paths to keep current; packs are versioned so a team can pin one.</td></tr>
+    </table>
+  </section>
+
+  <section class="contract">
+    <h3>Delivery</h3>
+    <p>Before any code, this plan is published inside Codeloop as the system design and the first-day workflow, and the owner reviews it there. The existing open fixes finish first, in about a week. The current version is then frozen for our own production project so it is never disrupted, and v2 is built beside it, with at most two AI builders at a time.</p>
+    <table>
+      <tr><th>Phase</th><th>What it delivers</th><th>Days</th><th>Needed for the first trial</th></tr>
+      <tr><td>0</td><td>Our production project stays on the frozen current version; v2 runs separately</td><td>4</td><td>yes</td></tr>
+      <tr><td>1</td><td>Install, learn the system (any language), setup questions</td><td>6</td><td>yes</td></tr>
+      <tr><td>2</td><td>Requests sorted into features, tasks and bugs, each with the right amount of process</td><td>4</td><td>yes</td></tr>
+      <tr><td>3</td><td>Lead agent and task agents, roles, cost per item, reviewer</td><td>5</td><td>yes</td></tr>
+      <tr><td>4</td><td>Knowledge base that stays current</td><td>4</td><td>partly</td></tr>
+      <tr><td>5</td><td>Honest home page and warnings</td><td>3</td><td>partly</td></tr>
+      <tr><td>6</td><td>The screens above as working pages, plus tools for other AI apps. Getting started, Setup questions, Work item and Home are built inside phases 1 to 3, so the first trial has them</td><td>6</td><td>yes, the four first-day screens</td></tr>
+      <tr><td>7</td><td>Publish the package and the public guide</td><td>3</td><td>yes</td></tr>
+    </table>
+    <table>
+      <tr><th>Milestone</th><th>When</th></tr>
+      <tr><td>First trial on a real service</td><td>About three weeks after approval</td></tr>
+      <tr><td>Full v2</td><td>About two weeks after that</td></tr>
+      <tr><td>Team version, with a shared board for several people</td><td>Follows, on the existing storage plan; already proposed, no changes needed now</td></tr>
+    </table>
+    <p>Proof: the eight first-day steps run on two real services in different languages, for example Netflix Dispatch (Python) and a large open-source Spring Boot service (Java), recording setup time, questions accepted as recommended, time to first approval, time to done, how often a person stepped in, and AI cost; then the owner runs it himself. A head-to-head builds the same feature on three copies of one service with Spec Kit, BMAD and Codeloop. After every v2 install, our production project is checked to be untouched.</p>
+  </section>
+
+  <section class="contract">
+    <h3>Risks</h3>
+    <ul>
+      <li>"Nothing is sent to a vendor's cloud" holds for Codeloop, and the AI tool still sends prompts and the code it reads to its model provider under its own terms. The public page says this plainly; it is confirmed before the page ships.</li>
+      <li>Learning a very large repository takes longer than ten minutes, or a build command hangs. Mitigation: each command runs with a time limit, the summary says which commands were skipped, and the user can confirm the commands by hand.</li>
+      <li>The recommended answers to the six questions are wrong for a team. Mitigation: every answer is editable on the Setup questions and Work process screens, and each change is a recorded decision.</li>
+      <li>AI cost is high or unpredictable, as users report of other tools. Mitigation: a cap on how many agents run, a budget per item, and cost shown on every item and on Home.</li>
+      <li>Building v2 disrupts our own production project. Mitigation: the current version is frozen for that project first (phase 0), and every v2 install is checked against it.</li>
+      <li>Stack detection misses a language or build tool in the trial repository. Mitigation: the five stacks named first are the ones the trial services use; an undetected stack falls back to the generic path and says so on Getting started.</li>
+      <li>A screen is built that cannot be assembled from the app's existing components. Mitigation: screens are built in the app from the approved three-parts frames, and each is checked at 1280 px and 400 px beside its frame.</li>
+      <li>The head-to-head needs more AI calls than the usual limit of ten per experiment. Mitigation: the owner approves the budget before it runs.</li>
+    </ul>
+  </section>
+</div>
+<script>
+  try {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
+  } catch (e) {}
+</script>
+</body>
+</html>

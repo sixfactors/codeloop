@@ -1,0 +1,8 @@
+# c-381 mock rubric
+
+The mock is the app page workspace/app/mocks/381-install-learns-my-existing-service-and-a/page.tsx, two `data-screen` sections, checked at 1280 px and 400 px (screens/*.png beside this file; no horizontal overflow, no console errors at either width).
+
+## Rubric
+
+- M2 pass: Getting started draws two frames in its section (page.tsx, `<GettingStarted learning />` then `<GettingStarted />`): the loading state while commands run (3 of 5 done, one Running, two Waiting, an empty state in place of the summary) and the normal state after learning; the error states are rows of the same table (npm run lint "Fails today", ./mvnw verify "Did not complete" at its limit, deploy.sh "Skipped"). Setup questions draws the needs-you state (six open, Accept all) and, through Accept and Accept all six, the decided state with the header changing to "All six answered"; it has no empty or error state, there is always a recommended answer. The generic-stack fallback of US5 is terminal output and is not drawn
+- M4 pass: US1 → "What Codeloop found" (languages, frameworks, build and test, database, pipeline, main modules, each with where it was read) and "Five files added, nothing else changed"; US2 → the lead-agent row under the stat row, both frames; US3 → the Learning table with exit and time per command, "Pages drafted" and "The summary, ten lines"; US4 → Setup questions: six questions with Recommended and Based on, Accept all six, the Light/Standard/Controlled toggle with each step a checkbox; US5 → the "Did not complete" and "Skipped" rows of the Learning table and line 5 of the summary; its generic-stack clause is terminal output. All in workspace/app/mocks/381-install-learns-my-existing-service-and-a/page.tsx

@@ -1,5 +1,6 @@
 import { spawnSync } from 'child_process';
-import { commitGraph, reachableFrom } from './commit-graph.js';
+import { readAllActivity } from './activity.js';
+import { commitGraph, reachableFrom, type CommitGraph } from './commit-graph.js';
 import { loadConfig } from './config.js';
 import type { Size } from './cards.js';
 
@@ -99,20 +100,67 @@ export const storyCommitTimes = (projectDir: string, cardId: string): number[] =
 
 const configuredTrunk = (projectDir: string) => (loadConfig(projectDir).git as { trunk?: string } | undefined)?.trunk ?? 'main';
 
+/** The trunk's remote-tracking branch: its configured upstream, else `origin/<trunk>`. */
+function remoteTrunk(projectDir: string, trunk: string): string {
+  const get = (key: string) => spawnSync('git', ['config', '--get', key], { cwd: projectDir, encoding: 'utf-8' }).stdout?.trim() ?? '';
+  const remote = get(`branch.${trunk}.remote`);
+  const merge = get(`branch.${trunk}.merge`).replace(/^refs\/heads\//, '');
+  return remote && remote !== '.' && merge ? `${remote}/${merge}` : `origin/${trunk}`;
+}
+
 /**
- * The configured trunk against the checkout: `missing` when no local branch has its name, and
- * `behind` the commits HEAD has that the trunk does not. Undefined outside a git repo.
+ * What the trunk reaches: the local branch and its remote-tracking branch together. A PR merged on
+ * the remote moves only the remote-tracking branch, and a checkout that never switches to the
+ * trunk keeps a local one far behind it; reading the local branch alone counts that work unmerged.
+ * Undefined when neither exists.
+ */
+function trunkReach(projectDir: string, graph: CommitGraph, trunk: string): Uint8Array | undefined {
+  const key = `trunk:${trunk}`;
+  const hit = graph.reach.get(key);
+  if (hit) return hit;
+  const remote = remoteTrunk(projectDir, trunk);
+  const tips = [graph.tips.get(trunk), graph.remoteTips.get(remote)].filter((t): t is number => t !== undefined);
+  if (!tips.length) return undefined;
+  const reach = new Uint8Array(graph.commits.length);
+  tips.forEach((tip, n) => reachableFrom(graph, `${key}:${n}`, tip).forEach((v, i) => { if (v) reach[i] = 1; }));
+  graph.reach.set(key, reach);
+  return reach;
+}
+
+/**
+ * The configured trunk against the checkout: `missing` when neither a local branch nor its
+ * remote-tracking branch has its name, and `behind` the commits HEAD has that the trunk does not.
+ * Undefined outside a git repo.
  */
 export function trunkState(projectDir: string): { trunk: string; missing: boolean; behind: number } | undefined {
   const graph = commitGraph(projectDir);
   if (!graph) return undefined;
   const trunk = configuredTrunk(projectDir);
-  if (!graph.tips.has(trunk)) return { trunk, missing: true, behind: 0 };
-  const onTrunk = reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk));
+  const onTrunk = trunkReach(projectDir, graph, trunk);
+  if (!onTrunk) return { trunk, missing: true, behind: 0 };
   const onHead = reachableFrom(graph, 'head', graph.head);
   let behind = 0;
   for (let i = 0; i < onHead.length; i++) if (onHead[i] === 1 && onTrunk[i] !== 1) behind++;
   return { trunk, missing: false, behind };
+}
+
+/**
+ * The commits the post-commit hook recorded on the story's activity that carry no `Card:` or
+ * `Feature:` trailer. A commit made outside the loop has no trailer; the story active in the session
+ * that made it is the only link to it. A trailer, when present, names the story instead.
+ */
+function activityCommits(projectDir: string, graph: CommitGraph, cardId: string): CommitGraph['commits'] {
+  const shas = readAllActivity(projectDir, cardId).flatMap(e => {
+    const sha = (e as { sha?: unknown }).sha;
+    return e.kind === 'commit' && typeof sha === 'string' && sha.length >= 7 ? [sha] : [];
+  });
+  if (!shas.length) return [];
+  const out: CommitGraph['commits'] = [];
+  for (const short of new Set(shas)) {
+    const c = graph.commits.find(x => x.sha.startsWith(short));
+    if (c && !c.cards.length) out.push(c);
+  }
+  return out;
 }
 
 export function storyCommits(projectDir: string, cardId: string): StoryCommit[] {
@@ -120,9 +168,12 @@ export function storyCommits(projectDir: string, cardId: string): StoryCommit[] 
   if (!graph) return [];
   const trunk = configuredTrunk(projectDir);
   // A trunk with no branch merges nothing: reading HEAD in its place would count whatever is checked out as merged.
-  const onTrunk = graph.tips.has(trunk) ? reachableFrom(graph, `trunk:${trunk}`, graph.tips.get(trunk)) : new Uint8Array(graph.index.size);
+  const onTrunk = trunkReach(projectDir, graph, trunk) ?? new Uint8Array(graph.index.size);
   const branches = [...graph.tips].filter(([name]) => name !== trunk).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-  return (graph.byCard.get(cardId) ?? []).map(c => {
+  const byTrailer = graph.byCard.get(cardId) ?? [];
+  const byActivity = activityCommits(projectDir, graph, cardId);
+  const linked = byActivity.length ? [...byTrailer, ...byActivity].sort((a, b) => b.at - a.at) : byTrailer;
+  return linked.map(c => {
     const i = graph.index.get(c.sha)!;
     return { sha: c.sha, subject: c.subject, at: c.at, merged: onTrunk[i] === 1, branches: branches.filter(([name, tip]) => reachableFrom(graph, `branch:${name}`, tip)[i] === 1).map(([name]) => name) };
   });

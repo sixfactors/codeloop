@@ -1,5 +1,5 @@
 {
-  "version": 1758,
+  "version": 1965,
   "cards": [
     {
       "id": "CL-001",
@@ -17210,7 +17210,7 @@
       "size": "M",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "staging",
+      "stage": "done",
       "retries": {
         "verify": 2,
         "review": 1
@@ -17500,10 +17500,18 @@
           "action": "advance",
           "stage": "review",
           "note": "to staging"
+        },
+        {
+          "at": "2026-10-17T23:38:27.091Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "staging",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-16T16:43:55.813Z",
-      "updatedAt": "2026-10-17T04:47:43.134Z",
+      "updatedAt": "2026-10-17T23:38:27.091Z",
       "spec": "specs/301-i-keep-working-when-no-story-is-active-i",
       "failures": {
         "verify": "ef4a6a6d765c4dead9bed57d22008896560dff09",
@@ -17516,7 +17524,7 @@
       "size": "M",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "review",
+      "stage": "done",
       "retries": {
         "build": 1,
         "verify": 1,
@@ -17833,10 +17841,18 @@
           "action": "advance",
           "stage": "verify",
           "note": "to review"
+        },
+        {
+          "at": "2026-10-17T23:38:27.255Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "review",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-16T16:43:55.956Z",
-      "updatedAt": "2026-10-17T04:48:51.803Z",
+      "updatedAt": "2026-10-17T23:38:27.255Z",
       "spec": "specs/302-a-trivial-story-that-grows-still-parks-a",
       "failures": {
         "build": "200ecc84de8f96d2e07992e27b4af05b19a6a762",
@@ -17967,7 +17983,7 @@
       "size": "M",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "retries": {},
       "evidence": [
         "specs/307-the-orchestrator-reviews-every-story-and/research.md",
@@ -18118,10 +18134,18 @@
           "action": "advance",
           "stage": "data-model",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-17T23:38:27.420Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-16T22:21:26.529Z",
-      "updatedAt": "2026-10-17T17:27:07.195Z",
+      "updatedAt": "2026-10-17T23:38:27.420Z",
       "spec": "specs/307-the-orchestrator-reviews-every-story-and",
       "feature": "loop-self-repair"
     },
@@ -18138,7 +18162,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "c-136's page showed 'research.md cites 0 sources' and offered Approve: unstick, which reruns the same check on the same empty file. Also: the inbox keeps c-302's old failure after later passes; c-098's reason reads 'Node.js v26.4.0' (crash stderr).",
       "source": ".codeloop/wiki/gotchas/stuck-without-any-work.md",
       "dedupe": "build:.codeloop/wiki/gotchas/stuck-without-any-work.md:A stuck story says why in plain words and which action will move it",
@@ -18277,10 +18301,18 @@
           "action": "advance",
           "stage": "data-model",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-17T23:38:27.582Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T03:53:44.991Z",
-      "updatedAt": "2026-10-17T17:29:42.095Z",
+      "updatedAt": "2026-10-17T23:38:27.582Z",
       "spec": "specs/308-a-stuck-story-says-why-in-plain-words-an"
     },
     {
@@ -18296,7 +18328,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "c-136 reached the cap with zero agent turns: a check before the spec folder existed, one on the template, one in a lane-upgrade sweep. The fingerprint guard in engine.ts:716 only skips unattended reruns.",
       "source": ".codeloop/wiki/gotchas/stuck-without-any-work.md",
       "dedupe": "build:.codeloop/wiki/gotchas/stuck-without-any-work.md:A check with no work behind it never counts as a failure",
@@ -18365,10 +18397,18 @@
           "action": "spec",
           "stage": "build",
           "note": "specs/309-a-check-with-no-work-behind-it-never-cou"
+        },
+        {
+          "at": "2026-10-17T23:38:27.746Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T03:53:45.147Z",
-      "updatedAt": "2026-10-17T04:47:26.304Z",
+      "updatedAt": "2026-10-17T23:38:27.746Z",
       "spec": "specs/309-a-check-with-no-work-behind-it-never-cou"
     },
     {
@@ -18384,7 +18424,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Every card reads 'working 0m': phaseTime (activity.ts:146) drops single events. c-299 wrote specs/299-i-edit-move-and-reopen-a-story/ while the card reads specs/299-...-from-its/ (slug truncated differently).",
       "retries": {},
       "evidence": [],
@@ -18450,10 +18490,18 @@
           "action": "spec",
           "stage": "build",
           "note": "specs/310-every-story-shows-its-real-working-time"
+        },
+        {
+          "at": "2026-10-17T23:38:27.906Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T03:53:45.308Z",
-      "updatedAt": "2026-10-17T04:47:26.476Z",
+      "updatedAt": "2026-10-17T23:38:27.906Z",
       "spec": "specs/310-every-story-shows-its-real-working-time"
     },
     {
@@ -18469,7 +18517,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Owner 2026-10-17: the story page is overwhelming; finding what to do in the noise is hard. The agent that last worked the story writes or improves the summary at the end of its turn. Rethink the page so detail (rubric, events, raw check output) folds away under the summary.",
       "retries": {},
       "evidence": [
@@ -18613,10 +18661,18 @@
           "action": "advance",
           "stage": "data-model",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-17T23:38:28.067Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:48:02.880Z",
-      "updatedAt": "2026-10-17T17:29:41.392Z",
+      "updatedAt": "2026-10-17T23:38:28.067Z",
       "spec": "specs/311-every-story-opens-with-what-is-needed-wh"
     },
     {
@@ -18632,7 +18688,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Owner 10-17: the board keeps signing me off. Causes shown with a cookie-jar run: (1) hubUrl() prints 127.0.0.1 (hub-state.ts:43) while the owner uses localhost, cookies do not cross; (2) the shell shows Read only while the session loads and after one failed check (use-api.ts:193-209, retry false); (3) any other hub on localhost overwrites codeloop_hub_session since cookies ignore the port (hub.ts:61). Idle close, restarts and SameSite ruled out.",
       "retries": {},
       "evidence": [],
@@ -18706,10 +18762,18 @@
           "action": "edit",
           "stage": "build",
           "note": "size"
+        },
+        {
+          "at": "2026-10-17T23:38:28.229Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:53:29.502Z",
-      "updatedAt": "2026-10-17T04:53:29.824Z",
+      "updatedAt": "2026-10-17T23:38:28.229Z",
       "spec": "specs/312-the-board-keeps-me-signed-in-whichever-l"
     },
     {
@@ -18725,7 +18789,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Analysis 10-17: thin stages take about 2 minutes each yet start a separate agent (34 runs); an S story needs 5 agent turns (build, verify, review, staging, live). Proposals 2 and 5: a carry/group key on lane stages (lane.ts, orch.ts orchTurnSteps/orchBrief), and when: size >= M on review.",
       "retries": {},
       "evidence": [
@@ -18869,10 +18933,18 @@
           "action": "advance",
           "stage": "data-model",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-17T23:38:28.392Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:56:24.772Z",
-      "updatedAt": "2026-10-17T17:58:17.598Z",
+      "updatedAt": "2026-10-17T23:38:28.392Z",
       "spec": "specs/313-a-small-story-runs-its-early-stages-in-o"
     },
     {
@@ -18888,7 +18960,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Owner asked to merge small cards into one build cycle. Analysis 10-17: a batch of 17 UI cards each started its own agents for the same stages. Needs per-card leases and a split-out path when one fails (orch.ts placeAndBrief/settle, engine.ts holdsSlot, orch-isolation.ts placeTurn).",
       "retries": {},
       "evidence": [
@@ -19032,10 +19104,18 @@
           "action": "advance",
           "stage": "data-model",
           "note": "to build"
+        },
+        {
+          "at": "2026-10-17T23:38:28.557Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:56:24.958Z",
-      "updatedAt": "2026-10-17T17:58:18.406Z",
+      "updatedAt": "2026-10-17T23:38:28.557Z",
       "spec": "specs/314-several-small-stories-build-together-in"
     },
     {
@@ -19051,7 +19131,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Analysis 10-17: doctorTick gives 3 starts per stuck stage and each unstick buys 3 more (c-143: 13 hand-backs at one commit); c-301/c-302 ran verify 9-12 times failing on the legacy-layout notice. Port orch.ts breaker() to run.ts agentStep; classify legacy-layout and card-not-found-in-worktree as check-error. Also: runs labelled timed out after 10 minutes lasted 16-46; does runAgent kill the process tree?",
       "retries": {},
       "evidence": [],
@@ -19117,10 +19197,18 @@
           "action": "spec",
           "stage": "build",
           "note": "specs/315-an-agent-restarts-only-when-something-ch"
+        },
+        {
+          "at": "2026-10-17T23:38:28.743Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:56:31.609Z",
-      "updatedAt": "2026-10-17T05:45:58.165Z",
+      "updatedAt": "2026-10-17T23:38:28.743Z",
       "spec": "specs/315-an-agent-restarts-only-when-something-ch"
     },
     {
@@ -19136,10 +19224,8 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "proposed",
+      "stage": "research",
       "description": "Coverage 10-17: lines 72%, branches 62%. Untested failure modes: over-wip refusal (engine.ts assertRoomInLane); orch-retry once lease frees (run.ts:467); dead pid run stays running forever (runs.ts findRunningRun, services.ts:665); stale cards.json.lock (lock.ts, 0% branches in-process); waitingOrchCards skip of gated/done/corrupt (orch.ts); two card new at once get distinct ids (cards.ts nextCardId). One test each.",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -19149,10 +19235,26 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:18.177Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:18.196Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/316-rules-that-move-hold-or-lock-work-each-h"
         }
       ],
       "createdAt": "2026-10-17T04:57:19.921Z",
-      "updatedAt": "2026-10-17T04:57:19.921Z"
+      "updatedAt": "2026-10-17T23:38:18.196Z",
+      "spec": "specs/316-rules-that-move-hold-or-lock-work-each-h"
     },
     {
       "id": "c-317",
@@ -19167,7 +19269,7 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "build",
+      "stage": "done",
       "description": "Coverage 10-17: hub-auth.ts 44%/24% (no wrong-password 401, default still accepted after a password is set?); hookd.ts 13% + guard-hooks.ts 9%: a throwing guard answers FALLBACK, CLI exit 1, Claude Code allows the edit (fail-open, from reading code, unproven); sdk/http.ts stale expectVersion 409; hub-state.ts dead hub.json; health.ts:133 counts repo-wide gotchas. One test each.",
       "retries": {},
       "evidence": [],
@@ -19233,10 +19335,18 @@
           "action": "spec",
           "stage": "build",
           "note": "specs/317-sign-in-edit-guards-and-remote-writes-ea"
+        },
+        {
+          "at": "2026-10-17T23:38:28.919Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "build",
+          "note": "shipped in PR #2 (merged 7edbd84, 10-18): tasks all ticked, commits on main, full suite 129/129, e2e 1/1, 62/62, 273/273, seven review passes"
         }
       ],
       "createdAt": "2026-10-17T04:57:20.075Z",
-      "updatedAt": "2026-10-17T05:45:58.331Z",
+      "updatedAt": "2026-10-17T23:38:28.919Z",
       "spec": "specs/317-sign-in-edit-guards-and-remote-writes-ea"
     },
     {
@@ -19252,10 +19362,8 @@
       "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "proposed",
+      "stage": "research",
       "description": "Coverage 10-17: workspace has no unit or component tests and no npm script runs journey-check.mjs (manual). Unchecked routes: inbox, roadmap, initiatives list and detail, epics, features, wiki index and page, artifacts, setup, mocks gallery. workspace/lib/board-columns.ts untested.",
-      "gate": "proposal",
-      "awaiting": "owner",
       "retries": {},
       "evidence": [],
       "events": [
@@ -19265,10 +19373,26 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:18.360Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:18.379Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/318-every-workspace-screen-is-checked-on-eac"
         }
       ],
       "createdAt": "2026-10-17T04:57:20.252Z",
-      "updatedAt": "2026-10-17T04:57:20.252Z"
+      "updatedAt": "2026-10-17T23:38:18.379Z",
+      "spec": "specs/318-every-workspace-screen-is-checked-on-eac"
     },
     {
       "id": "c-319",
@@ -19361,7 +19485,7 @@
     },
     {
       "id": "c-321",
-      "title": "Each story's state and history live in its own folder in git, beside its plan",
+      "title": "The server owns the board and the CLI becomes a client of it",
       "story": {
         "as": "founder",
         "can": "find every story's state, history, plan and evidence together in its own folder in the project's .codeloop, kept in git, in one layout codeloop decides for every project",
@@ -19414,10 +19538,18 @@
           "action": "edit",
           "stage": "research",
           "note": "story"
+        },
+        {
+          "at": "2026-10-17T22:51:24.875Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "research",
+          "note": "title"
         }
       ],
       "createdAt": "2026-10-17T18:13:53.914Z",
-      "updatedAt": "2026-10-17T18:59:27.989Z",
+      "updatedAt": "2026-10-17T22:51:24.875Z",
       "spec": "specs/321-each-story-s-state-and-history-live-in-i"
     },
     {
@@ -19464,10 +19596,12 @@
       "feature": "public-demo",
       "lane": "build",
       "laneVersion": 4,
-      "stage": "research",
+      "stage": "interview",
       "description": "Owner 10-17: research stage only. Questions to research: who can see what (public read-only vs signed-in roles), how the owner administers roles and permissions, what must never be public (private specs, evidence with machine paths, owner notes), how the public copy stays in sync with the real board, and how it rides on the hosted Protobox board (storage step 3). Output is research.md plus open questions; no build.",
       "retries": {},
-      "evidence": [],
+      "evidence": [
+        "specs/323-visitors-can-browse-codeloop-s-own-board/research.md"
+      ],
       "events": [
         {
           "at": "2026-10-17T18:22:41.588Z",
@@ -19498,10 +19632,50 @@
           "action": "edit",
           "stage": "research",
           "note": "feature"
+        },
+        {
+          "at": "2026-10-17T20:03:25.076Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-17T20:03:25.076Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-17T20:03:25.076Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-17T20:03:25.076Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-17T20:03:25.076Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/a-static-public-snapshot-built-by-codelo.md"
         }
       ],
       "createdAt": "2026-10-17T18:22:41.588Z",
-      "updatedAt": "2026-10-17T18:29:33.271Z",
+      "updatedAt": "2026-10-17T20:03:25.076Z",
       "spec": "specs/323-visitors-can-browse-codeloop-s-own-board"
     },
     {
@@ -19568,7 +19742,7 @@
     },
     {
       "id": "c-326",
-      "title": "Agents are named templates handed to every tool, and every agent reads the project constitution first",
+      "title": "Each stage names an agent and a skill, and teams define both",
       "story": {
         "as": "team",
         "can": "pick from a default cast of named agents (role, skills, steps, tool and MCP access), fork or rename them, and have Codeloop hand them to every agent tool through the MCP, each reading the project constitution first",
@@ -19576,7 +19750,7 @@
       },
       "persona": "team",
       "size": "M",
-      "feature": "hosted-board",
+      "feature": "loop-self-repair",
       "lane": "build",
       "laneVersion": 4,
       "stage": "proposed",
@@ -19592,10 +19766,3407 @@
           "human": true,
           "action": "propose",
           "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:39:46.525Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "proposed",
+          "note": "title, feature"
         }
       ],
       "createdAt": "2026-10-17T19:42:21.474Z",
-      "updatedAt": "2026-10-17T19:42:21.474Z"
+      "updatedAt": "2026-10-17T23:39:46.525Z"
+    },
+    {
+      "id": "c-327",
+      "title": "I approve a gate and accept the agent's recommended answers in one action",
+      "story": {
+        "as": "founder",
+        "can": "approve a gate with conditions, accepting the agent's recommended answers to its open questions in the same action",
+        "so": "clearing my reviews takes one step, not one per question"
+      },
+      "persona": "founder",
+      "size": "S",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "dropped",
+      "description": "Owner approved 10-17 for v2, from the ops-ai orchestrator. Also: delegated approvals by a named orchestrator are recorded as on the owner's behalf, revocable.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T20:03:43.137Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:29.256Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "proposed",
+          "note": "folded into c-362 (v1 fix round)"
+        }
+      ],
+      "createdAt": "2026-10-17T20:03:43.137Z",
+      "updatedAt": "2026-10-17T23:38:29.256Z"
+    },
+    {
+      "id": "c-328",
+      "title": "Review findings live on the story, reach its agent, and close by commit",
+      "story": {
+        "as": "team",
+        "can": "see a story's review findings (severity, file and line, owner, status) on the story itself, routed to its agent and closed by the commit that fixes them",
+        "so": "no finding is lost in a side file or routed by hand"
+      },
+      "persona": "team",
+      "size": "M",
+      "feature": "reviews-and-proof",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Owner approved 10-17 for v2, from the ops-ai orchestrator: review tick files live in another repo, findings are re-routed by hand, ask caps at 5. Replaces both.",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T20:03:54.303Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-17T20:03:54.303Z",
+      "updatedAt": "2026-10-17T20:03:54.303Z"
+    },
+    {
+      "id": "c-329",
+      "title": "A project on v1 keeps working untouched until v2 is proven",
+      "story": {
+        "as": "founder",
+        "can": "keep the production project on the exact v1 it runs today while v2 is built beside it, used on codeloop's own board, and switched over only when it meets a written bar, with a rehearsed way back",
+        "so": "building v2 never stops or changes the project my agents run every day"
+      },
+      "persona": "founder",
+      "size": "L",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "interview",
+      "description": "Codeloop v2 plan story P0. Parent of the isolation and cutover stories (E0 and E4).",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#P0",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#P0:A project on v1 keeps working untouched until v2 is proven",
+      "retries": {},
+      "evidence": [
+        "specs/329-a-project-on-v1-keeps-working-untouched/research.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-17T22:45:47.925Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#P0"
+        },
+        {
+          "at": "2026-10-20T05:11:17.010Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.030Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/329-a-project-on-v1-keeps-working-untouched"
+        },
+        {
+          "at": "2026-10-20T05:47:22.364Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-20T05:47:22.364Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-20T05:47:22.364Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-20T05:47:22.364Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-20T05:47:22.364Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/freeze-v1-as-a-packed-release-the-produc.md"
+        },
+        {
+          "at": "2026-10-20T12:14:31.484Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: As soon as v2 is stable (Dean in chat 2026-10-20: 'asap v2 is stable'): codeloop's own board runs on v2 with no rollback and green checks, and a dry run of ops-ai's migration passes with an import report listing zero lost cards, events, pages or documents. No fixed day or night count."
+        },
+        {
+          "at": "2026-10-20T12:14:31.627Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: Only the owner runs the switch, from a terminal, never from an agent run. The owner or the orchestrator may roll back at any time with one script (E4). A rollback rehearsal on a copy of ops-ai's board, with its output kept, is required within 3 days before the switch; the switch script refuses without one on record."
+        },
+        {
+          "at": "2026-10-20T12:14:31.768Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: An epic record. Keep c-329 as the parent of c-330 to c-333 and the E4 stories, let it hold the written bar and the cutover decision, and close it when the switch story is done; do not split it or try to pass it through the spec gate as a story. Mark that in its description so the size-L rule does not keep flagging it."
+        },
+        {
+          "at": "2026-10-20T12:14:31.914Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: Yes, only for a defect that blocks ops-ai's daily work: a `v1.0.x` tag on a branch cut from `v1.0.0`, packed with `scripts/release-pack.sh v1.0.x`, installed with `scripts/release-install.sh`, proven with `scripts/check-frozen.sh v1.0.x`; no feature work lands on it. Everything else waits for v2."
+        }
+      ],
+      "createdAt": "2026-10-17T22:45:47.925Z",
+      "updatedAt": "2026-10-20T12:14:31.914Z",
+      "spec": "specs/329-a-project-on-v1-keeps-working-untouched"
+    },
+    {
+      "id": "c-330",
+      "title": "A board moved to v2 refuses writes from v1",
+      "story": {
+        "as": "founder",
+        "can": "have v1 refuse every board write in a project whose .codeloop/moved.json says the record moved to v2, naming the command to use instead, while reads and hooks keep working",
+        "so": "nobody updates a stale copy of the board after a switch"
+      },
+      "persona": "founder",
+      "size": "S",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "verify",
+      "description": "Codeloop v2 plan story S0.1. 0.5 builder days. Needs: nothing; lands on main before the freeze so it is inside the frozen build.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.1:A board moved to v2 refuses writes from v1",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:45:55.176Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.1"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "build",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "research",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "interview",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "mock",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "spec",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "data-model",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.194Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "build",
+          "note": "specs/330-a-board-moved-to-v2-refuses-writes-from"
+        },
+        {
+          "at": "2026-10-20T05:53:55.635Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "build",
+          "note": "to verify"
+        }
+      ],
+      "createdAt": "2026-10-17T22:45:55.176Z",
+      "updatedAt": "2026-10-20T05:53:55.635Z",
+      "spec": "specs/330-a-board-moved-to-v2-refuses-writes-from"
+    },
+    {
+      "id": "c-331",
+      "title": "The production project runs a frozen v1 that new builds cannot change",
+      "story": {
+        "as": "founder",
+        "can": "install codeloop 1.0.0 globally from a tarball packed from a clean export of the tag v1.0.0 on main, replacing the npm link into the checkout, with the hub and hook helper restarted from it",
+        "so": "a build in the checkout never changes what the production project's hooks, cron run and MCP execute"
+      },
+      "persona": "founder",
+      "size": "S",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "verify",
+      "description": "Codeloop v2 plan story S0.2. 1 builder day. Needs: S0.1 merged; the in-flight branch merged to main.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.2",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.2:The production project runs a frozen v1 that new builds cannot change",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:04.373Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.2"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "build",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "research",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "interview",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "mock",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "spec",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.343Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "data-model",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.362Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "build",
+          "note": "specs/331-the-production-project-runs-a-frozen-v1"
+        },
+        {
+          "at": "2026-10-20T05:58:28.355Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "build",
+          "note": "to verify"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:04.373Z",
+      "updatedAt": "2026-10-20T05:58:28.355Z",
+      "spec": "specs/331-the-production-project-runs-a-frozen-v1"
+    },
+    {
+      "id": "c-332",
+      "title": "v2 runs beside v1 under its own name, home and port",
+      "story": {
+        "as": "builder",
+        "can": "run the checkout's build as codeloop-next, with its state under its own home, its own hub port, hook socket, schedule tag and MCP name, refusing any v1 board unless asked to read a copy",
+        "so": "developing v2 can never write to the record, hub or schedule that v1 uses"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "interview",
+      "description": "Codeloop v2 plan story S0.3. 2 builder days. Needs: S0.2; this is the first v2 code in the checkout.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.3",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.3:v2 runs beside v1 under its own name, home and port",
+      "retries": {},
+      "evidence": [
+        "specs/332-v2-runs-beside-v1-under-its-own-name-hom/research.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:04.525Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.3"
+        },
+        {
+          "at": "2026-10-20T05:11:17.509Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.529Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/332-v2-runs-beside-v1-under-its-own-name-hom"
+        },
+        {
+          "at": "2026-10-20T05:47:21.547Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-20T05:47:21.547Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-20T05:47:21.547Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-20T05:47:21.547Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-20T05:47:21.547Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/give-the-build-a-channel.md"
+        },
+        {
+          "at": "2026-10-20T12:14:17.369Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: `2.0.0-next.0`, bumped to `-next.1`, `-next.2` at each milestone, with `src/lib/version.ts` widened in this story to parse a prerelease suffix, so `codeloop-next --version` and `node dist/index.js --version` both say next and a lane check that prints the version can tell the two apart. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:14:17.380Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: Exit 2 naming `codeloop-next import`, for reads and writes alike; the one exception is `import --shadow`, which reads a copy into the v2 home and writes nothing in the project. A plain read is refused too, because a read that worked would invite the next command to be a write. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:14:17.387Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: `codeloop-next`, so a v2 development project never calls v1 through PATH; the release pack writes `dist/channel.json` as stable, and the same templates then render `codeloop`. The shim sets `CODELOOP_BIN` so `codeloop-hook`'s fallback goes to v2 as well. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:14:17.394Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: The plan's 4060 for a stable v2 and 4070 for next, both away from 4040 and 4050; a v2 hub records `major: 2` and `channel` in its hub.json under `~/.codeloop-next/v2/state/` and refuses to adopt or stop a hub record without `major: 2`, so a v1 record on any port is never touched. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:14:17.401Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q5: `scripts/next-install.sh` writes it beside the global `codeloop` in the active node's bin folder; it sets `CODELOOP_HOME=~/.codeloop-next`, `CODELOOP_BIN=codeloop-next` and `CODELOOP_CHANNEL=next`, prepends its own folder to PATH, refuses to start when `CODELOOP_HOME` equals the v1 home, and runs the checkout's `dist/index.js`. Removing it is one `rm`; nothing under `~/.codeloop` is written by installing or removing it. (accepted the recommendation)"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:04.525Z",
+      "updatedAt": "2026-10-20T12:14:17.401Z",
+      "spec": "specs/332-v2-runs-beside-v1-under-its-own-name-hom"
+    },
+    {
+      "id": "c-333",
+      "title": "One check proves a v2 session left v1 untouched",
+      "story": {
+        "as": "founder",
+        "can": "run one command before and after any v2 test, rehearsal or dogfood session that compares everything v1 and the production project depend on, allowing only the appends v1 itself makes",
+        "so": "I can trust that v2 work has not changed what the production project runs"
+      },
+      "persona": "founder",
+      "size": "S",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "verify",
+      "description": "Codeloop v2 plan story S0.4. 1 builder day. Needs: S0.2.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.4",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.4:One check proves a v2 session left v1 untouched",
+      "retries": {
+        "build": 1
+      },
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:04.670Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S0.4"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "build",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "research",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "interview",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "mock",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "spec",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.677Z",
+          "actor": "engine",
+          "human": false,
+          "action": "skip",
+          "stage": "data-model",
+          "note": "size S: the stage runs only when size >= M"
+        },
+        {
+          "at": "2026-10-20T05:11:17.694Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "build",
+          "note": "specs/333-one-check-proves-a-v2-session-left-v1-un"
+        },
+        {
+          "at": "2026-10-20T06:03:01.385Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "build",
+          "note": "stderr | src/lib/__tests__/edit-guard-fails-closed.test.ts > an edit guard that throws > blocks the edit with exit 2 on both the daemon and the CLI path\ncodeloop: the edit guard failed (card.spec.replace is not a function), so the edit is refused until it can check\n\nstderr | src/lib/__tests__/edit-guard-fails-closed.test.ts > a shell guard > that throws blocks the command with exit 2 on both the daemon and the CLI path\ncodeloop: the shell guard failed (EISDIR: illegal operation on a directory, read), so the command is refused until it can check\n\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/lib/__tests__/host-enforcement.test.ts > hooks under a bare PATH (GUI hosts and GUI git clients) > the installed pre-commit and the Claude edit hook still run codeloop with no codeloop or node on PATH\nError: ENOTEMPTY, Directory not empty: <temp dir>/codeloop-enforce-JeWDl3 '<temp dir>/codeloop-enforce-JeWDl3'\n ❯ src/lib/__tests__/host-enforcement.test.ts:50:3\n     48| \n     49| afterEach(() => {\n     50|   rmSync(dir, { recursive: true, force: true });\n       |   ^\n     51| });\n     52| \n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯",
+          "head": "7170fe2242269b4650a861c3ce95bb1b17644bb7",
+          "fingerprint": "3bd06e391066d300652a0d2d33a9784194d1639d",
+          "counted": true
+        },
+        {
+          "at": "2026-10-20T06:08:10.324Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "build",
+          "note": "to verify"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:04.670Z",
+      "updatedAt": "2026-10-20T06:08:10.324Z",
+      "spec": "specs/333-one-check-proves-a-v2-session-left-v1-un",
+      "failures": {
+        "build": "3bd06e391066d300652a0d2d33a9784194d1639d"
+      }
+    },
+    {
+      "id": "c-334",
+      "title": "Lanes, initiatives, epics and features are read through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have every lane, initiative, epic and feature read go through the Store interface (src/lib/store) instead of reading files directly",
+        "so": "a second driver can serve them without touching the engine"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.1. 2 builder days. Needs: S0.3.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.1:Lanes, initiatives, epics and features are read through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:04.812Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.1"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:04.812Z",
+      "updatedAt": "2026-10-17T22:46:04.812Z"
+    },
+    {
+      "id": "c-335",
+      "title": "Wiki pages and questions are read and written through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have wiki capture, inject, lint and learn, and ask and answer, read and write only through store.pages and store.questions",
+        "so": "pages and questions can move into the hub's store with nothing else changing"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.2. 2 builder days. Needs: S1.1.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.2",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.2:Wiki pages and questions are read and written through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:04.957Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.2"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:04.957Z",
+      "updatedAt": "2026-10-17T22:46:04.957Z"
+    },
+    {
+      "id": "c-336",
+      "title": "The engine moves cards only through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have create, propose, advance, approve, reject, park and resume read and write cards only through store.cards inside store.tx",
+        "so": "the engine works the same on any driver"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.3. 2 builder days. Needs: S1.2.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.3",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.3:The engine moves cards only through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.102Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.3"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.102Z",
+      "updatedAt": "2026-10-17T22:46:05.102Z"
+    },
+    {
+      "id": "c-337",
+      "title": "Orchestrated runs and worktrees move cards through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have orch, run --agent, the doctor tick and worktrees read and write cards only through the store, keeping the agent-start rules in one compare-and-swap write",
+        "so": "agent runs see the same record as every other client"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.4. 2 builder days. Needs: S1.3.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.4",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.4:Orchestrated runs and worktrees move cards through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.246Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.4"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.246Z",
+      "updatedAt": "2026-10-17T22:46:05.246Z"
+    },
+    {
+      "id": "c-338",
+      "title": "Every other part of codeloop reads the board through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have services, guard hooks, mocks, artifacts, specs, checks, verify, the index, the watcher and the one-call readers go through the store, with a lint that keeps it so",
+        "so": "no file outside the store knows where the board lives"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.5. 2 builder days. Needs: S1.4.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.5",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.5:Every other part of codeloop reads the board through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.398Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.5"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.398Z",
+      "updatedAt": "2026-10-17T22:46:05.398Z"
+    },
+    {
+      "id": "c-339",
+      "title": "The board's record lives in one SQLite file the hub owns",
+      "story": {
+        "as": "builder",
+        "can": "keep each project's board in <codeloop home>/v2/projects/<project id>/codeloop.db through a SQLite driver on node:sqlite that passes the same repo contract as the file and memory drivers",
+        "so": "the record no longer lives in a shared file every process rewrites"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.6. 2 builder days. Needs: S0.3; runs in parallel with S1.1 to S1.5, it needs only the Store interface.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.6",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.6:The board's record lives in one SQLite file the hub owns",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.547Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.6"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.547Z",
+      "updatedAt": "2026-10-17T22:46:05.547Z"
+    },
+    {
+      "id": "c-340",
+      "title": "Every story keeps its key and gets a permanent internal id",
+      "story": {
+        "as": "builder",
+        "can": "have each story carry a random internal id used by every reference, plus a short key the hub assigns from the project's prefix and counter, with the store found through a random id in .codeloop/project.json",
+        "so": "keys never clash and the store location settings go away"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.7. 2 builder days. Needs: S1.6.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.7",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.7:Every story keeps its key and gets a permanent internal id",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.697Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.7"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.697Z",
+      "updatedAt": "2026-10-17T22:46:05.697Z"
+    },
+    {
+      "id": "c-341",
+      "title": "Import today's board and wiki into v2 with nothing lost",
+      "story": {
+        "as": "dev",
+        "can": "run codeloop import in a v1 project and get every story, event, question and wiki page into the v2 store with its old key, with a report that compares counts, keys and hashes and fails on any difference",
+        "so": "moving to v2 cannot silently lose part of the board"
+      },
+      "persona": "dev",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.8. 2 builder days. Needs: S1.7.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.8",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.8:Import today's board and wiki into v2 with nothing lost",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.846Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.8"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.846Z",
+      "updatedAt": "2026-10-17T22:46:05.846Z"
+    },
+    {
+      "id": "c-342",
+      "title": "Export the v2 board back to v1 with nothing lost",
+      "story": {
+        "as": "dev",
+        "can": "run codeloop export and get v1's cards.json, wiki pages and interview files back, plus a markdown folder per story, with v2-only records kept beside them in v2-only.json",
+        "so": "going back to v1, or committing the board to git, is always possible"
+      },
+      "persona": "dev",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.9. 2 builder days. Needs: S1.8.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.9",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.9:Export the v2 board back to v1 with nothing lost",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:05.991Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.9"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:05.991Z",
+      "updatedAt": "2026-10-17T22:46:05.991Z"
+    },
+    {
+      "id": "c-343",
+      "title": "Only the hub writes the board, started on demand by any command",
+      "story": {
+        "as": "builder",
+        "can": "have the hub as the one writer of the store: the first command that finds none starts it, a stale pid or a taken port is replaced, a crash on boot prints the log's last lines, and nothing writes around it",
+        "so": "two processes can never write the record at once"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.10. 2 builder days. Needs: S1.6.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.10",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.10:Only the hub writes the board, started on demand by any command",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.148Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.10"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.148Z",
+      "updatedAt": "2026-10-17T22:46:06.148Z"
+    },
+    {
+      "id": "c-344",
+      "title": "Commands that change a story go through the hub",
+      "story": {
+        "as": "builder",
+        "can": "have card, start, next, approve, reject, ask, answer, run, orch and doctor send their writes to the hub's API through the SDK's http transport, refusing with \"server not available\" when the hub cannot start",
+        "so": "the command line holds no write path of its own"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.11. 2 builder days. Needs: S1.5, S1.10.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.11",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.11:Commands that change a story go through the hub",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.297Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.11"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.297Z",
+      "updatedAt": "2026-10-17T22:46:06.297Z"
+    },
+    {
+      "id": "c-345",
+      "title": "Every remaining command reads and writes through the hub",
+      "story": {
+        "as": "builder",
+        "can": "have wiki, lane, feature, epic, initiative, inbox, stats, spec, task, check, verify, mock, artifact, render and pack call the hub's API, with export and doctor the only commands that read the store without it",
+        "so": "the hub is the one door and every check sees the same record"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S1.12. 2 builder days. Needs: S1.11.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.12",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.12:Every remaining command reads and writes through the hub",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.452Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S1.12"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.452Z",
+      "updatedAt": "2026-10-17T22:46:06.452Z"
+    },
+    {
+      "id": "c-346",
+      "title": "Agents reach the board through the hub's MCP link",
+      "story": {
+        "as": "builder",
+        "can": "connect Claude Code, Cursor or Codex to the hub's MCP URL over HTTP with the hub token, stateless as MCP 2026-07-28 asks, with codeloop mcp kept as a stdio bridge to the same server",
+        "so": "no agent needs to launch the command line to reach the board"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.1. 2 builder days. Needs: S1.10.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.1:Agents reach the board through the hub's MCP link",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.598Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.1"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.598Z",
+      "updatedAt": "2026-10-17T22:46:06.598Z"
+    },
+    {
+      "id": "c-347",
+      "title": "Agents show, note, tick tasks and hand back stories through MCP",
+      "story": {
+        "as": "builder",
+        "can": "use the stories tool's get, brief, list, next_up, note, task_done and handback actions, each with its own input schema, an output schema and structured results, with next_up ordered by the critical mark, then priority, then value",
+        "so": "agents stop parsing command-line text"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.2. 2 builder days. Needs: S2.1.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.2",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.2:Agents show, note, tick tasks and hand back stories through MCP",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.747Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.2"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.747Z",
+      "updatedAt": "2026-10-17T22:46:06.747Z"
+    },
+    {
+      "id": "c-348",
+      "title": "Owner-only actions refuse an agent and name who can act",
+      "story": {
+        "as": "builder",
+        "can": "be refused, as an agent, on approve, answer, promote and delete, with a result naming the role that can act and what to do instead, checked per action on the server",
+        "so": "no tool argument lets an agent decide for the owner"
+      },
+      "persona": "builder",
+      "size": "S",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.3. 1 builder day. Needs: S2.1.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.3",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.3:Owner-only actions refuse an agent and name who can act",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:06.895Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.3"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:06.895Z",
+      "updatedAt": "2026-10-17T22:46:06.895Z"
+    },
+    {
+      "id": "c-349",
+      "title": "Agents search stories, wiki pages and decisions in one call",
+      "story": {
+        "as": "builder",
+        "can": "call search with a query and optional kinds, and get ranked hits as resource links with a title and a one-line excerpt across stories, wiki pages, decisions and questions, and spec files while they are still files",
+        "so": "an agent finds what was decided before it starts"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.4. 2 builder days. Needs: S2.1.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.4",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.4:Agents search stories, wiki pages and decisions in one call",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.039Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.4"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.039Z",
+      "updatedAt": "2026-10-17T22:46:07.039Z"
+    },
+    {
+      "id": "c-350",
+      "title": "Agents browse stories and pages as MCP resources",
+      "story": {
+        "as": "builder",
+        "can": "list resource templates such as codeloop://story/{key} and codeloop://wiki/{path}, complete keys and paths, read them, and subscribe to a story to hear when it changes",
+        "so": "a client with a resource picker browses the board with no tool call, and a board hears changes as they land"
+      },
+      "persona": "builder",
+      "size": "S",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.5. 1 builder day. Needs: S2.4.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.5",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.5:Agents browse stories and pages as MCP resources",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.185Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.5"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.185Z",
+      "updatedAt": "2026-10-17T22:46:07.185Z"
+    },
+    {
+      "id": "c-351",
+      "title": "Hooks answer from the hub with no separate helper",
+      "story": {
+        "as": "builder",
+        "can": "have the guard hooks call the hub, the hook helper folded into it, the hook commands keeping their v1 shapes, and edits refused when the hub cannot answer",
+        "so": "one process holds the lease and the board, and hook settings written for v1 keep working"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S2.6. 2 builder days. Needs: S1.10.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.6",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.6:Hooks answer from the hub with no separate helper",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.332Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S2.6"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.332Z",
+      "updatedAt": "2026-10-17T22:46:07.332Z"
+    },
+    {
+      "id": "c-352",
+      "title": "The board shows which agent works each story, where, and how recently",
+      "story": {
+        "as": "founder",
+        "can": "see on the board and through the agents tool each agent's kind, person, machine, story, branch, state and last activity, kept current by the agents and their hooks, and marked stalled when they stop reporting",
+        "so": "I know who is doing what without asking"
+      },
+      "persona": "founder",
+      "size": "M",
+      "epic": "c-325",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S3.1. 2 builder days. Needs: S2.5, S2.6.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S3.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S3.1:The board shows which agent works each story, where, and how recently",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.489Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S3.1"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.489Z",
+      "updatedAt": "2026-10-17T22:46:07.489Z"
+    },
+    {
+      "id": "c-353",
+      "title": "v1 and v2 give the same answers on the same board",
+      "story": {
+        "as": "founder",
+        "can": "run one parity script that copies a board, asks v1 and v2 the same read questions, replays the same writes on both, and diffs the results, and run it nightly on read-only copies of codeloop's and the production project's boards",
+        "so": "I know v2 behaves like v1 before anything real moves"
+      },
+      "persona": "founder",
+      "size": "M",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S4.1. 2 builder days. Needs: S1.9, S1.12.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.1:v1 and v2 give the same answers on the same board",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.643Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.1"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.643Z",
+      "updatedAt": "2026-10-17T22:46:07.643Z"
+    },
+    {
+      "id": "c-354",
+      "title": "Switch a project from v2 back to v1 without losing work",
+      "story": {
+        "as": "founder",
+        "can": "run one rollback script that exports the v2 record to v1 files, checks the counts, restores them into the project through its cards.json link with every story document back in its spec folder, then reinstalls the frozen v1 and restores the hook, MCP and schedule settings and the v1 hub registration",
+        "so": "trying v2 on a real project is safe"
+      },
+      "persona": "founder",
+      "size": "M",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S4.2. 2 builder days. Needs: S1.9.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.2",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.2:Switch a project from v2 back to v1 without losing work",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.787Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.2"
+        },
+        {
+          "at": "2026-10-17T22:57:31.359Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "proposed",
+          "note": "story"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.787Z",
+      "updatedAt": "2026-10-17T22:57:31.359Z"
+    },
+    {
+      "id": "c-355",
+      "title": "Codeloop's own board runs on v2",
+      "story": {
+        "as": "founder",
+        "can": "switch the codeloop repository to codeloop-next in one coordinated step: every worker parked, the board imported with its report passing, codeloop-next's hooks and MCP added to the untracked local settings (the repository has no codeloop hooks or MCP config today), the project removed from the v1 hub, and a daily export committed",
+        "so": "v2 is used every day on a real board before the production project depends on it"
+      },
+      "persona": "founder",
+      "size": "S",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S4.3. 1 builder day. Needs: S4.1, S4.2.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.3",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.3:Codeloop's own board runs on v2",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:07.944Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.3"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:07.944Z",
+      "updatedAt": "2026-10-17T22:46:07.944Z"
+    },
+    {
+      "id": "c-356",
+      "title": "The production project moves to v2 once the bar is met",
+      "story": {
+        "as": "founder",
+        "can": "switch the production project to the packed v2.0.0 release in one switch that moves its board, wiki and story documents together, only when codeloop runs well on v2 with a successful migration and a dry run of the production project's migration on a copy passes, with the owner approving the gate, a snapshot first, and a five-day watch with continuous export and the rollback ready",
+        "so": "the project my agents run every day changes once, to something proven"
+      },
+      "persona": "founder",
+      "size": "S",
+      "epic": "c-329",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S4.4. 1 builder day. Needs: every v2.0 story, S4.3's soak, five green nightly parity runs on the production project's copy.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.4",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.4:The production project moves to v2 once the bar is met",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:46:08.101Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S4.4"
+        },
+        {
+          "at": "2026-10-17T22:57:18.673Z",
+          "actor": "owner",
+          "human": true,
+          "action": "edit",
+          "stage": "proposed",
+          "note": "story"
+        }
+      ],
+      "createdAt": "2026-10-17T22:46:08.101Z",
+      "updatedAt": "2026-10-17T22:57:18.673Z"
+    },
+    {
+      "id": "c-357",
+      "title": "Story documents are read and written through the storage layer",
+      "story": {
+        "as": "builder",
+        "can": "have research, spec, plan, tasks and evidence read and written through a store.documents repo, on the file driver first, so spec, task, check, verify and the brief stop opening spec folders directly",
+        "so": "documents can move into the hub's store with nothing else changing"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S5.1. 2 builder days. Needs: S1.5.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.1",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.1:Story documents are read and written through the storage layer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:57:08.695Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.1"
+        }
+      ],
+      "createdAt": "2026-10-17T22:57:08.695Z",
+      "updatedAt": "2026-10-17T22:57:08.695Z"
+    },
+    {
+      "id": "c-358",
+      "title": "Agents write a story's research, spec, plan and tasks through MCP",
+      "story": {
+        "as": "builder",
+        "can": "use the documents tool's list, read, write and delete actions for research, spec, plan, tasks, evidence or a named extra, with the stage checks reading the stored text",
+        "so": "an agent never needs the spec folder on disk, and a watched folder never becomes a second writer"
+      },
+      "persona": "builder",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S5.2. 2 builder days. Needs: S5.1, S2.2.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.2",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.2:Agents write a story's research, spec, plan and tasks through MCP",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:57:08.880Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.2"
+        }
+      ],
+      "createdAt": "2026-10-17T22:57:08.880Z",
+      "updatedAt": "2026-10-17T22:57:08.880Z"
+    },
+    {
+      "id": "c-359",
+      "title": "The edit lease comes from the plan stored on the story",
+      "story": {
+        "as": "builder",
+        "can": "have the edit hook read the files a story may change from the plan stored on the story, not from the plan file on disk",
+        "so": "the lease follows the record, and editing the file on disk cannot widen it"
+      },
+      "persona": "builder",
+      "size": "S",
+      "epic": "c-321",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S5.3. 1 builder day. Needs: S5.2, S2.6.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.3",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.3:The edit lease comes from the plan stored on the story",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:57:09.058Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.3"
+        }
+      ],
+      "createdAt": "2026-10-17T22:57:09.058Z",
+      "updatedAt": "2026-10-17T22:57:09.058Z"
+    },
+    {
+      "id": "c-360",
+      "title": "Import and export carry every story document with nothing lost",
+      "story": {
+        "as": "dev",
+        "can": "have import move every spec folder and evidence file into the store, on a new board or on a board already on v2, and export write them back to spec folders, with the report counting and hashing each document",
+        "so": "moving documents into the server cannot lose a research note, a plan or a proof"
+      },
+      "persona": "dev",
+      "size": "M",
+      "epic": "c-321",
+      "feature": "install-and-import",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Codeloop v2 plan story S5.4. 2 builder days. Needs: S5.1, S1.9.",
+      "source": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.4",
+      "dedupe": "build:docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.4:Import and export carry every story document with nothing lost",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T22:57:09.240Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "docs/artifacts/codeloop/cloud/c-321-implementation-plan.html#S5.4"
+        }
+      ],
+      "createdAt": "2026-10-17T22:57:09.240Z",
+      "updatedAt": "2026-10-17T22:57:09.240Z"
+    },
+    {
+      "id": "c-361",
+      "title": "When an orchestrator needs my decision, Codeloop hands it the question to ask me",
+      "story": {
+        "as": "founder",
+        "can": "answer an owner decision in chat when the orchestrator asks it, with Codeloop recording the approval as given on my behalf",
+        "so": "I never have to type commands to approve work"
+      },
+      "persona": "founder",
+      "size": "S",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "dropped",
+      "description": "Owner 10-18 after a regression made owner actions refuse from Claude Code sessions: teach Codeloop to interview the owner through the orchestrator. An owner action attempted by an orchestrator returns a plain-words question with a recommended answer; the answer relayed from chat is recorded as approved by the orchestrator on the owner's behalf. Pairs with approve-with-conditions and recorded delegation.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T23:16:31.383Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:29.094Z",
+          "actor": "owner",
+          "human": true,
+          "action": "drop",
+          "stage": "proposed",
+          "note": "folded into c-362 (v1 fix round)"
+        }
+      ],
+      "createdAt": "2026-10-17T23:16:31.383Z",
+      "updatedAt": "2026-10-17T23:38:29.094Z"
+    },
+    {
+      "id": "c-362",
+      "title": "I approve and answer from chat, and the page loads fast and lists every artifact",
+      "story": {
+        "as": "founder",
+        "can": "answer the orchestrator's questions in chat, approve with conditions in one step, and open any story or artifact without waiting",
+        "so": "clearing my work takes seconds"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "data-model",
+      "description": "v1 fix round 10-18 (owner: fix all known v1 bugs before v2). Folds c-361 (interview via the orchestrator) and c-327 (approve with conditions) into v1. Story page shows a blank state for about 2s though its data returns in 0.03s. Artifacts page lists only mocks, not system designs or plans.",
+      "retries": {
+        "research": 1
+      },
+      "evidence": [
+        "specs/362-i-approve-and-answer-from-chat-and-the-p/research.md",
+        "specs/362-i-approve-and-answer-from-chat-and-the-p/interview.md",
+        "specs/362-i-approve-and-answer-from-chat-and-the-p/tasks.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:16.023Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.285Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:17.302Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/362-i-approve-and-answer-from-chat-and-the-p"
+        },
+        {
+          "at": "2026-10-17T23:44:51.885Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "c-362 compared options in specs/362-i-approve-and-answer-from-chat-and-the-p/research.md but no decision page carries the card, and the research cannot make one: decision needs scope files",
+          "head": "e21c0ace8ba3ee36eedd9179b49e45e0939322bc",
+          "fingerprint": "f84b3be237486f405e5e11ce176b1a3caf7e1b78",
+          "counted": true
+        },
+        {
+          "at": "2026-10-17T23:45:26.876Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-17T23:45:26.876Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-17T23:45:26.876Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-17T23:45:26.876Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-17T23:45:26.876Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/relayed-chat-decisions-one-step-approval.md"
+        },
+        {
+          "at": "2026-10-18T01:55:12.666Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: Simpler: record a relayed decision as the owner's approval. No relayer name and no quoted words required. (owner, 10-18)"
+        },
+        {
+          "at": "2026-10-18T01:55:12.850Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: Not needed: with the simpler record, one owner yes in chat is enough; the orchestrator still applies it only to the stories the owner named. (owner, 10-18)"
+        },
+        {
+          "at": "2026-10-18T01:55:13.059Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: Findings too: approve with conditions may accept recommended answers and waive open findings in one action, and the waived findings are listed on the story. (owner, 10-18)"
+        },
+        {
+          "at": "2026-10-18T01:55:13.238Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: Fast and usable: the page frame shows at once and the story text within 1 s, cold or warm, checked by a test. (owner prefers fast, usable info, 10-18)"
+        },
+        {
+          "at": "2026-10-18T01:55:13.406Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q5: Every page under docs/artifacts at any depth plus every story's mock, each with its kind and story; private plans folders stay out. Show the most useful first. (owner: fast, usable info, 10-18)"
+        },
+        {
+          "at": "2026-10-18T02:01:54.429Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-18T02:04:27.437Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-18T02:05:19.226Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-18T05:29:38.028Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "gate": "spec",
+          "fingerprint": "c3576a7e2fd6817d87ee2499a32eb407527d99cd"
+        },
+        {
+          "at": "2026-10-18T05:29:38.042Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:16.023Z",
+      "updatedAt": "2026-10-18T05:29:38.042Z",
+      "spec": "specs/362-i-approve-and-answer-from-chat-and-the-p",
+      "failures": {
+        "research": "f84b3be237486f405e5e11ce176b1a3caf7e1b78"
+      }
+    },
+    {
+      "id": "c-363",
+      "title": "Codeloop creates only the files a story's stages need, and checks refuse untouched templates",
+      "story": {
+        "as": "founder",
+        "can": "find only real work in a story's folder",
+        "so": "empty templates never pass as done"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "description": "v1 fix round 10-18 (owner: fix all known v1 bugs before v2). Scaffold only stages the size runs (S: spec and tasks); spec check fails a pure-template file; the mock check also requires the workspace build to pass; review Scope rows cannot self-approve (scope-creep.ts:48); gateApproval reads the latest approve after the latest park or reopen (flow.ts:150); health counts tests and todo over the story's own files; budget and health measuring point is a project preference.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:16.197Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.460Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:17.478Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/363-codeloop-creates-only-the-files-a-story"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:16.197Z",
+      "updatedAt": "2026-10-17T23:38:17.478Z",
+      "spec": "specs/363-codeloop-creates-only-the-files-a-story"
+    },
+    {
+      "id": "c-364",
+      "title": "Codeloop's guards and helper run the same way on every machine",
+      "story": {
+        "as": "founder",
+        "can": "rely on the guards and the fast helper in every tool and on every machine",
+        "so": "edits are always checked and never slow"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "description": "v1 fix round 10-18 (owner: fix all known v1 bugs before v2). codeloop-hook is not on PATH so the hook daemon is unused; the global link skips the bin wrapper so no memory ceiling applies; codeloop's own repo has no hooks installed; target projects get this machine's absolute paths in tracked settings; cursor-format guard prints no permission JSON on a throw; hookd socket path can exceed 104 bytes; the guard reads the wrong git index from a worktree.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:16.370Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.641Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:17.658Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/364-codeloop-s-guards-and-helper-run-the-sam"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:16.370Z",
+      "updatedAt": "2026-10-17T23:38:17.658Z",
+      "spec": "specs/364-codeloop-s-guards-and-helper-run-the-sam"
+    },
+    {
+      "id": "c-365",
+      "title": "The lane limit, small-story carry and batches behave the same on every path",
+      "story": {
+        "as": "founder",
+        "can": "get the same slot, carry and batch behaviour whether a story runs from the orchestrator, the scheduler or the doctor",
+        "so": "nothing depends on which command happened to run"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "data-model",
+      "description": "v1 fix round 10-18 (owner: fix all known v1 bugs before v2). Inbox holding and splitCard still count eligible stories, not active ones; carry runs only through orch run and batch only through orch batch, not the scheduler or doctor; a commit in the same second as stage entry can count as work; promoteQueued reads every feature page on each loop pass; strict priority has no aging (document it).",
+      "retries": {
+        "research": 1,
+        "interview": 2
+      },
+      "evidence": [
+        "specs/365-the-lane-limit-small-story-carry-and-bat/research.md",
+        "specs/365-the-lane-limit-small-story-carry-and-bat/interview.md",
+        "specs/365-the-lane-limit-small-story-carry-and-bat/tasks.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:16.544Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.821Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:17.838Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/365-the-lane-limit-small-story-carry-and-bat"
+        },
+        {
+          "at": "2026-10-19T16:52:57.832Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "c-365 compared options in specs/365-the-lane-limit-small-story-carry-and-bat/research.md but no decision page carries the card, and the research cannot make one: decision needs scope files",
+          "head": "dd4a0a4934d982aa4c6280ea3861e08995c89bc7",
+          "fingerprint": "d8e540edf0619f23ceb68673b66b9daf71165bc8",
+          "counted": true
+        },
+        {
+          "at": "2026-10-19T16:53:02.895Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-19T16:53:02.895Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/one-project-setting-checks-timeout-minut.md"
+        },
+        {
+          "at": "2026-10-19T16:53:09.531Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "c-365 Q1 has no answer: `codeloop answer c-365 1 --accept` or give one\nc-365 Q2 has no answer: `codeloop answer c-365 2 --accept` or give one\nc-365 Q3 has no answer: `codeloop answer c-365 3 --accept` or give one",
+          "head": "dd4a0a4934d982aa4c6280ea3861e08995c89bc7",
+          "fingerprint": "a95ef013dcf5ccfb7031212789cb7feaaa3d9c9a",
+          "counted": true
+        },
+        {
+          "at": "2026-10-19T17:14:07.893Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: Every command that runs a project's own check, proof, use case, lint or post-merge step. Setup and post-merge steps keep their longer floors of 15 minutes. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-19T17:14:07.906Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: Minutes, default 10, and any value that is not a positive number falls back to 10. A killed check says \"timed out after N min (checks.timeout_minutes)\" and is a crash, not a failed verdict. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-19T17:14:07.913Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: No. Only stories an agent is working on count, as on every other path, so a split passes the project directory. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-19T17:14:49.133Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "I2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/365-the-lane-limit-small-story-carry-and-bat/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/365-the-lane-limit-small-story-carry-and-bat/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/365-the-lane-limit-small-story-carry-and-bat/interview.md",
+          "head": "2a2cf566b1284957cae00534ee0600f9f04997fb",
+          "fingerprint": "6a64f88718f642e6e7839598f4351147727eff9d",
+          "counted": true
+        },
+        {
+          "at": "2026-10-19T17:14:56.815Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-19T17:14:59.296Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-19T17:15:02.048Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-19T17:15:24.417Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "gate": "spec",
+          "fingerprint": "9abcf7a231f29141c2bec8c3654d52347eb9ac9e"
+        },
+        {
+          "at": "2026-10-19T17:15:24.436Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:16.544Z",
+      "updatedAt": "2026-10-19T17:15:24.436Z",
+      "spec": "specs/365-the-lane-limit-small-story-carry-and-bat",
+      "failures": {
+        "research": "d8e540edf0619f23ceb68673b66b9daf71165bc8",
+        "interview": "6a64f88718f642e6e7839598f4351147727eff9d"
+      }
+    },
+    {
+      "id": "c-366",
+      "title": "Codeloop keeps its own files in its own home, and test runs never touch mine",
+      "story": {
+        "as": "founder",
+        "can": "trust that tests and demos never write to my real codeloop home or skills",
+        "so": "my setup is never polluted by a test run"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "description": "v1 fix round 10-18 (owner: fix all known v1 bugs before v2). login and publish write the token under HOME, not the codeloop home; adopt scans ~/.claude during tests; projectId comes from the registry or folder name, so registry churn moves a board (pin store.id); wiki empty-scope pages are dropped by scope.some (wiki.ts:429, 510); e2e-cloud writes into a real Protobox workspace and never removes what it wrote.",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:16.721Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.998Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:18.015Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/366-codeloop-keeps-its-own-files-in-its-own"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:16.721Z",
+      "updatedAt": "2026-10-17T23:38:18.015Z",
+      "spec": "specs/366-codeloop-keeps-its-own-files-in-its-own"
+    },
+    {
+      "id": "c-367",
+      "title": "The board moves a story when its work ships, so shipped work never looks unfinished",
+      "story": {
+        "as": "founder",
+        "can": "trust every story's step on the board",
+        "so": "the board never lies about what is done"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "done",
+      "description": "v1 fix round 10-18. Turn the review pass on for codeloop's own board (doctor.review); close the 12 shipped stories (c-301 c-302 c-307..c-315 c-317) with their merge as proof; give c-097 c-098 c-102 their review verdicts; re-check c-120 c-126 c-140 c-152; move codeloop's repo to the dotfolder layout so the legacy warning stops; prune the 6 dead registry entries. Root cause to fix too: work done outside the loop never advances the card.",
+      "retries": {
+        "interview": 1
+      },
+      "evidence": [
+        "specs/367-the-board-moves-a-story-when-its-work-sh/research.md",
+        "specs/367-the-board-moves-a-story-when-its-work-sh/interview.md",
+        "specs/367-the-board-moves-a-story-when-its-work-sh/tasks.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-17T23:19:24.387Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-17T23:38:17.109Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-17T23:38:17.128Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/367-the-board-moves-a-story-when-its-work-sh"
+        },
+        {
+          "at": "2026-10-17T23:41:09.034Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-17T23:41:09.034Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-17T23:41:09.034Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-17T23:41:09.034Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-17T23:41:09.034Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/read-the-trunk-from-the-remote-tracking.md"
+        },
+        {
+          "at": "2026-10-17T23:41:42.024Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "c-367 Q1 has no answer: `codeloop answer c-367 1 --accept` or give one\nc-367 Q2 has no answer: `codeloop answer c-367 2 --accept` or give one\nc-367 Q3 has no answer: `codeloop answer c-367 3 --accept` or give one\nc-367 Q4 has no answer: `codeloop answer c-367 4 --accept` or give one\nc-367 Q5 has no answer: `codeloop answer c-367 5 --accept` or give one",
+          "head": "e21c0ace8ba3ee36eedd9179b49e45e0939322bc",
+          "fingerprint": "063cf6c6df6ceb9861f94350fadf06625c892ec9",
+          "counted": true
+        },
+        {
+          "at": "2026-10-17T23:44:57.125Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: Both: a commit is merged when either the local trunk or its remote-tracking branch (the trunk's upstream, else origin) reaches it (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-17T23:44:57.134Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: The trailer wins; the activity record links only commits with no trailer (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-17T23:44:57.144Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: Run it last, in its own commit, only once `git status` shows nothing untracked under specs/; otherwise leave it and say so in the hand-back (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-17T23:44:57.151Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: Run `codeloop orch run --review --dry-run` after the trunk fix and apply what it says for each (close, place or ask); a story it cannot tell about stays where it is, with the reason on the story. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-17T23:44:57.160Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q5: A test through the real review pass: a repo whose local main is behind, with a merged commit on origin/main for a story at build, gets the story placed or closed; on the old code it stays put. Then on codeloop's own board `codeloop orch run --review --dry-run` no longer prints the \"behind HEAD\" warning. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-17T23:46:07.176Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-17T23:46:17.195Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-17T23:46:21.937Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-18T05:26:29.977Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "gate": "spec",
+          "fingerprint": "30c0e8abce72f70f702507eb8a3b1a89ebf963c4"
+        },
+        {
+          "at": "2026-10-18T05:26:29.996Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
+        },
+        {
+          "at": "2026-10-18T05:29:56.244Z",
+          "actor": "owner",
+          "human": true,
+          "action": "close",
+          "stage": "data-model",
+          "note": "split into 2 stories"
+        },
+        {
+          "at": "2026-10-18T05:29:56.293Z",
+          "actor": "owner",
+          "human": true,
+          "action": "split",
+          "stage": "done",
+          "note": "into c-369, c-370"
+        }
+      ],
+      "createdAt": "2026-10-17T23:19:24.387Z",
+      "updatedAt": "2026-10-18T05:29:56.293Z",
+      "spec": "specs/367-the-board-moves-a-story-when-its-work-sh",
+      "failures": {
+        "interview": "063cf6c6df6ceb9861f94350fadf06625c892ec9"
+      }
+    },
+    {
+      "id": "c-368",
+      "title": "I start, file, read and annotate a story in one command each",
+      "story": {
+        "as": "founder",
+        "can": "start the next story, file a bug, read a story's fields and add an owner decision to it in one command each",
+        "so": "every bug-fix commit names a card and the board matches the work"
+      },
+      "persona": "founder",
+      "size": "M",
+      "feature": "loop-self-repair",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "review",
+      "description": "Split from c-362 to keep it within eight tasks; c-362's research.md covers it, so it can start at spec. From the production project's orchestrator board-sync report, 10-18. (a) codeloop start <id> starts a queued or proposed story at its start stage and makes it active in one step; today approve refuses a queued story and says to use card move. (b) codeloop bug \"<title>\" files a trivial build story flagged as a bug and prints its id for the commit's Card trailer. (c) card show names each blank field (story, description) and the command that fills it; split and queued stories are made with neither (37 of 202 cards on the production board have no story, 60 no description). (d) card edit --description appends a dated owner decision to the description instead of replacing it.",
+      "source": "specs/362-i-approve-and-answer-from-chat-and-the-p/spec.md",
+      "dedupe": "build:specs/362-i-approve-and-answer-from-chat-and-the-p/spec.md:I start, file, read and annotate a story in one command each",
+      "retries": {
+        "research": 1,
+        "interview": 1,
+        "build": 1
+      },
+      "evidence": [
+        "specs/368-i-start-file-read-and-annotate-a-story-i/research.md",
+        "specs/368-i-start-file-read-and-annotate-a-story-i/interview.md",
+        "specs/368-i-start-file-read-and-annotate-a-story-i/tasks.md",
+        "specs/368-i-start-file-read-and-annotate-a-story-i/data-model.md",
+        "evidence/368/verify.md",
+        "evidence/368/verify.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-18T02:05:10.473Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "specs/362-i-approve-and-answer-from-chat-and-the-p/spec.md"
+        },
+        {
+          "at": "2026-10-18T05:29:38.777Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-18T05:29:38.796Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/368-i-start-file-read-and-annotate-a-story-i"
+        },
+        {
+          "at": "2026-10-18T05:37:44.542Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "research",
+          "note": "R3 `pain:` names a persona and a source, or `assumption:` and what would confirm it: `pain:` names no source, and is not marked `assumption:`",
+          "head": "353f328356b7e6799eb644f9dff3e5231a633385",
+          "fingerprint": "2e9d4b0e703f75d808fc43b915842e07060f8bc3",
+          "counted": true
+        },
+        {
+          "at": "2026-10-18T05:37:52.842Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-18T05:37:52.842Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/one-command-each-for-start-bug-release-a.md"
+        },
+        {
+          "at": "2026-10-18T22:07:19.585Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: Both. On a queued story it starts it at its start stage and makes it the session's active story. On a proposed story it is your promote, so it is refused inside an agent run, as approve is. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-18T22:07:19.594Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: You and the orchestrator, from any session that is not an agent run. An agent run may release only its own hold. Each release is an event on the story naming who released whose hold. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-18T22:07:19.602Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: `monitor.stall_minutes`, 30 by default, with no prompt, tool call or file write from that session. The hold then stops showing on the board and stops blocking other builders, and the story records \"hold expired\". A session that comes back takes the hold again on its next prompt. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-18T22:07:19.609Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: A trivial story in the build lane, flagged as a bug so every pick takes it first, made the session's active story, and it prints the id and the `Card: c-NNN` line to put in the commit. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-18T22:07:19.615Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q5: It appends one line, \"<date> owner: <text>\", and never replaces what is there. `card show` prints \"story: not written\" or \"description: none\" with the command that fills it. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-18T22:07:19.782Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "I2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md",
+          "head": "02813b59cdced632ca294bf5aa0b8cce60500b48",
+          "fingerprint": "f4b669fb5f8c0d0a0daa8a93064a2bed79e590e1",
+          "counted": true
+        },
+        {
+          "at": "2026-10-18T22:07:31.831Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "interview",
+          "note": "I2 Each question is tagged scope, acceptance, risk or boundary; at most one other: missing: no `- I2 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md\nI4 Every R7 open question is asked here or marked settled with a reason: missing: no `- I4 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md\nI6 Once answered, each answer is folded into spec.md and the field named: missing: no `- I6 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/interview.md",
+          "head": "02813b59cdced632ca294bf5aa0b8cce60500b48",
+          "fingerprint": "f4b669fb5f8c0d0a0daa8a93064a2bed79e590e1",
+          "counted": false
+        },
+        {
+          "at": "2026-10-18T22:07:55.643Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-18T22:07:58.100Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-18T22:08:15.919Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-18T22:22:25.664Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "gate spec",
+          "gate": "spec",
+          "fingerprint": "160a46f190f28878da48bac699d7eba0965b2ed8"
+        },
+        {
+          "at": "2026-10-18T22:22:25.681Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
+        },
+        {
+          "at": "2026-10-18T22:22:38.513Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "data-model",
+          "note": "to build"
+        },
+        {
+          "at": "2026-10-18T22:41:57.518Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "build",
+          "note": ", marks it pending, and pushes it first on the next command\nwarning: cloud store unreachable at http://127.0.0.1:1/mcp: fetch failed; the board was saved locally only and will be pushed by the next command that reaches the cloud.\n\nstderr | src/lib/__tests__/cloud-sync.test.ts > offline > refuses the pending board write when the cloud board moved meanwhile, and leaves the file alone\nwarning: cloud store unreachable at http://127.0.0.1:1/mcp: fetch failed; the board was saved locally only and will be pushed by the next command that reaches the cloud.\n\nstderr | src/lib/__tests__/cloud-sync.test.ts > offline > disconnect pushes pending writes, pulls everything, and removes the connection and the sync record\nwarning: cloud store unreachable at http://127.0.0.1:1/mcp: fetch failed; the wiki page was saved locally only and will be pushed by the next command that reaches the cloud.\n\nstderr | src/lib/__tests__/edit-guard-fails-closed.test.ts > an edit guard that throws > blocks the edit with exit 2 on both the daemon and the CLI path\ncodeloop: the edit guard failed (card.spec.replace is not a function), so the edit is refused until it can check\n\nstderr | src/lib/__tests__/edit-guard-fails-closed.test.ts > a shell guard > that throws blocks the command with exit 2 on both the daemon and the CLI path\ncodeloop: the shell guard failed (EISDIR: illegal operation on a directory, read), so the command is refused until it can check\n\nB2 Each task's test was seen red once, the output quoted: missing: no `- B2 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/rubric-build.md\nB5 Gotchas matching the changed files were read and acked: missing: no `- B5 pass: <evidence>` line under ## Rubric in specs/368-i-start-file-read-and-annotate-a-story-i/rubric-build.md",
+          "head": "73ff4a2215270ae258047c9888ce8f61aec22162",
+          "fingerprint": "6be2cd728193af7a3318c6032f357c1464fab25e",
+          "counted": true
+        },
+        {
+          "at": "2026-10-18T22:47:10.837Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "build",
+          "note": "to verify"
+        },
+        {
+          "at": "2026-10-18T22:59:30.522Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at 0a787a7"
+        },
+        {
+          "at": "2026-10-18T23:00:22.397Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at 303640c"
+        },
+        {
+          "at": "2026-10-18T22:59:47.187Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "verify",
+          "note": "gate local (after the check passed)"
+        },
+        {
+          "at": "2026-10-19T16:50:47.638Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "verify",
+          "note": "gate local",
+          "gate": "local",
+          "fingerprint": "9407e3fc15b4c5e09ae84d3ee30cf769e18e0cd2"
+        },
+        {
+          "at": "2026-10-19T16:51:38.396Z",
+          "actor": "agent",
+          "human": false,
+          "action": "verify",
+          "stage": "verify",
+          "note": "result: pass at dd4a0a4"
+        },
+        {
+          "at": "2026-10-19T16:50:47.662Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "verify",
+          "note": "to review"
+        }
+      ],
+      "createdAt": "2026-10-18T02:05:10.473Z",
+      "updatedAt": "2026-10-19T16:50:47.662Z",
+      "spec": "specs/368-i-start-file-read-and-annotate-a-story-i",
+      "failures": {
+        "research": "2e9d4b0e703f75d808fc43b915842e07060f8bc3",
+        "interview": "f4b669fb5f8c0d0a0daa8a93064a2bed79e590e1",
+        "build": "6be2cd728193af7a3318c6032f357c1464fab25e"
+      }
+    },
+    {
+      "id": "c-369",
+      "title": "A story moves when its work merges on GitHub, even with no card id in it",
+      "feature": "loop-self-repair",
+      "split_from": "c-367",
+      "start_stage": "data-model",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "verify",
+      "retries": {},
+      "evidence": [
+        "specs/369-a-story-moves-when-its-work-merges-on-gi/data-model.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-18T05:29:56.253Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-18T05:29:56.264Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/369-a-story-moves-when-its-work-merges-on-gi"
+        },
+        {
+          "at": "2026-10-18T05:30:55.122Z",
+          "actor": "owner",
+          "human": true,
+          "action": "place",
+          "stage": "data-model",
+          "note": "started at data-model: work already under way"
+        },
+        {
+          "at": "2026-10-18T05:31:09.259Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "data-model",
+          "note": "to build"
+        },
+        {
+          "at": "2026-10-18T05:36:37.385Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "build",
+          "note": "to verify"
+        },
+        {
+          "at": "2026-10-18T05:42:59.275Z",
+          "actor": "engine",
+          "human": false,
+          "action": "handback",
+          "stage": "verify",
+          "note": "perf/card-full-request-time@02813b5 proof exit 0"
+        }
+      ],
+      "createdAt": "2026-10-18T05:29:56.253Z",
+      "updatedAt": "2026-10-18T05:42:59.289Z",
+      "spec": "specs/369-a-story-moves-when-its-work-merges-on-gi",
+      "summary": {
+        "needed": {
+          "text": "Verify: evidence/369/verify.md with one use case per acceptance line",
+          "by": "agent",
+          "kind": "agent",
+          "step": "verify",
+          "at": "2026-10-18T05:42:59.289Z"
+        },
+        "done": {
+          "text": "Merged work is read from the local or remote trunk, trailer-less commits link from the activity record, doctor.review is on; build check (full suite) passed",
+          "by": "agent",
+          "kind": "agent",
+          "step": "verify",
+          "at": "2026-10-18T05:42:59.289Z"
+        }
+      }
+    },
+    {
+      "id": "c-370",
+      "title": "Codeloop's own board carries its review verdicts, re-checks and dotfolder layout",
+      "feature": "loop-self-repair",
+      "split_from": "c-367",
+      "start_stage": "data-model",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "queued",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-18T05:29:56.276Z",
+          "actor": "owner",
+          "human": true,
+          "action": "queue",
+          "stage": "queued"
+        },
+        {
+          "at": "2026-10-18T05:29:56.287Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "queued",
+          "note": "specs/370-codeloop-s-own-board-carries-its-review"
+        }
+      ],
+      "createdAt": "2026-10-18T05:29:56.276Z",
+      "updatedAt": "2026-10-18T05:29:56.287Z",
+      "spec": "specs/370-codeloop-s-own-board-carries-its-review"
+    },
+    {
+      "id": "c-371",
+      "title": "Scheduler carry-over, batching, same-second commit counting, page reads and priority aging",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-19T17:15:25.104Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-19T17:15:25.104Z",
+      "updatedAt": "2026-10-19T17:15:25.104Z"
+    },
+    {
+      "id": "c-372",
+      "title": "An urgent known fix goes from report to shipped in one short route",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-19T17:20:58.939Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-19T17:20:58.939Z",
+      "updatedAt": "2026-10-19T17:20:58.939Z"
+    },
+    {
+      "id": "c-373",
+      "title": "Work shows its card and stage, and the board flags work that has neither",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-19T17:21:12.774Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        }
+      ],
+      "createdAt": "2026-10-19T17:21:12.774Z",
+      "updatedAt": "2026-10-19T17:21:12.774Z"
+    },
+    {
+      "id": "c-374",
+      "title": "Orchestrator, workers and server as three parts, with templates and workflows set in the UI",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "research",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-19T17:21:12.929Z",
+          "actor": "owner",
+          "human": true,
+          "action": "propose",
+          "stage": "proposed"
+        },
+        {
+          "at": "2026-10-19T17:40:58.903Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research"
+        },
+        {
+          "at": "2026-10-19T17:40:58.926Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/374-orchestrator-workers-and-server-as-three"
+        }
+      ],
+      "createdAt": "2026-10-19T17:21:12.929Z",
+      "updatedAt": "2026-10-19T17:40:58.926Z",
+      "spec": "specs/374-orchestrator-workers-and-server-as-three"
+    },
+    {
+      "id": "c-375",
+      "title": "The mock stage takes an approved design as a card's screens",
+      "story": {
+        "as": "builder",
+        "can": "point a card's screens at an approved design file instead of drawing a mock",
+        "so": "a card with an owner-approved design passes the mock stage without a throwaway template mock"
+      },
+      "persona": "builder",
+      "size": "S",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "ops-ai c-292 has an owner-approved case page design under its spec's design/ folder. The mock check only skips on 'screens: none', so it failed twice and the orchestrator had to hand-move the card. Unknown spec keys like 'mock: drop' are silently ignored; the check should warn on them.",
+      "source": "proto-orch board sync 2026-10-19",
+      "dedupe": "build:proto-orch board sync 2026-10-19:The mock stage takes an approved design as a card's screens",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-19T22:28:15.028Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "proto-orch board sync 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-19T22:28:15.028Z",
+      "updatedAt": "2026-10-19T22:28:15.028Z"
+    },
+    {
+      "id": "c-376",
+      "title": "The hourly update says when it last ran, and the board warns when it stops",
+      "story": {
+        "as": "founder",
+        "can": "see on Home when the update that runs checks and moves stories last ran, with a warning when it is overdue",
+        "so": "a stopped update cannot pass for a quiet board"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "ops-ai's crontab entry is installed but has not run since 10-14 (no run.log, last-run.json 10-14). Since then nothing raised gates: 41 stories sit at review, 48 at research, two fully answered interviews never advanced, and Home says 'Nothing needs you'. Doctor and Home should read last-run age and flag it.",
+      "source": "ops-ai board RCA 2026-10-19",
+      "dedupe": "build:ops-ai board RCA 2026-10-19:The hourly update says when it last ran, and the board warns when it stops",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:18:04.402Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai board RCA 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-20T04:18:04.402Z",
+      "updatedAt": "2026-10-20T04:18:04.402Z"
+    },
+    {
+      "id": "c-377",
+      "title": "Home separates stories being worked from stories waiting, and parking keeps a story's stage",
+      "story": {
+        "as": "founder",
+        "can": "read In progress as what agents are working on now, with waiting and parked stories counted apart",
+        "so": "Home's numbers match what is really happening"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "ops-ai Home said 115 in progress with 1 agent working; untouched research stories counted as in progress. Parking a built story moved it to proposed, hiding its code (two stories with build hand-backs at proof exit 0 now read proposed). Agents now kept an orchestrator session 'stalled' for 29 hours on a story closed the day before.",
+      "source": "ops-ai board RCA 2026-10-19",
+      "dedupe": "build:ops-ai board RCA 2026-10-19:Home separates stories being worked from stories waiting, and parking keeps a story's stage",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:18:04.727Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai board RCA 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-20T04:18:04.727Z",
+      "updatedAt": "2026-10-20T04:18:04.727Z"
+    },
+    {
+      "id": "c-378",
+      "title": "Agents never act as the owner by default, and orchestrator moves record their role and reason",
+      "story": {
+        "as": "founder",
+        "can": "tell an agent's moves, closes and edits apart from mine on every story",
+        "so": "the board's record of my decisions is mine alone"
+      },
+      "persona": "founder",
+      "size": "M",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "--as defaults to owner outside an agent run, so orchestrator sessions act as the owner without choosing to: on ops-ai 149 of 188 done stories were hand-closed as owner (one right after its proof failed), and 142 stories were bulk-edited as owner on 10-19. A refused agent move had no legitimate path, so the orchestrator reran it as owner. v1 fix ahead of the v2 decision record.",
+      "source": "ops-ai board RCA 2026-10-19",
+      "dedupe": "build:ops-ai board RCA 2026-10-19:Agents never act as the owner by default, and orchestrator moves record their role and reason",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:18:13.048Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai board RCA 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-20T04:18:13.048Z",
+      "updatedAt": "2026-10-20T04:18:13.048Z"
+    },
+    {
+      "id": "c-379",
+      "title": "The hub shows which build it runs and warns when a newer one exists",
+      "story": {
+        "as": "founder",
+        "can": "see the hub's version and build time, and a notice when it is older than the code on disk",
+        "so": "fixes I approved are not silently missing from the board I look at"
+      },
+      "persona": "founder",
+      "size": "S",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "The hub on :4050 ran the npm package installed 10-17 while two days of fixes (parked shown as parked, move past a stuck gate, merged work read from the trunk) sat in the repo build. Nothing on the page said so.",
+      "source": "ops-ai board RCA 2026-10-19",
+      "dedupe": "build:ops-ai board RCA 2026-10-19:The hub shows which build it runs and warns when a newer one exists",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:18:13.205Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai board RCA 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-20T04:18:13.205Z",
+      "updatedAt": "2026-10-20T04:18:13.205Z"
+    },
+    {
+      "id": "c-380",
+      "title": "Short wiki links open the page, and pages naming an initiative still list",
+      "story": {
+        "as": "founder",
+        "can": "open a wiki page from a short path like architecture/v2-context-layer and find every page in its folder list",
+        "so": "links shared in chat and docs work, and new pages are found"
+      },
+      "persona": "founder",
+      "size": "S",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "/p/codeloop/wiki/architecture/v2-context-layer errors with 'not under .codeloop/wiki/ or specs/'; only /wiki/.codeloop/wiki/architecture/v2-context-layer.md/ works. The same page is missing from How it works (6 of 7 listed), likely because its frontmatter names an initiative.",
+      "source": "ops-ai board RCA 2026-10-19",
+      "dedupe": "build:ops-ai board RCA 2026-10-19:Short wiki links open the page, and pages naming an initiative still list",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:18:13.386Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "ops-ai board RCA 2026-10-19"
+        }
+      ],
+      "createdAt": "2026-10-20T04:18:13.386Z",
+      "updatedAt": "2026-10-20T04:18:13.386Z"
+    },
+    {
+      "id": "c-381",
+      "title": "Install learns my existing service and asks six setup questions",
+      "story": {
+        "as": "founder",
+        "can": "install with one command, let Codeloop learn my codebase in any language, and answer six questions with recommended answers",
+        "so": "agents know my system and my process before the first piece of work"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "codeloop-cloud",
+      "epic": "c-374",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "data-model",
+      "description": "Phase 1. Five-file install; a map step joining wiki init, wiki build, the architecture skill and repo facts, plus commands actually run, git hot spots and inferred conventions; a setup skill with presets Light, Standard, Controlled and step toggles; the lead agent and task agent roles told apart by the session hook; Getting started and Setup questions screens.",
+      "source": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)",
+      "dedupe": "build:v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md):Install learns my existing service and asks six setup questions",
+      "retries": {
+        "mock": 0
+      },
+      "evidence": [
+        "specs/381-install-learns-my-existing-service-and-a/research.md",
+        "specs/381-install-learns-my-existing-service-and-a/interview.md",
+        "specs/381-install-learns-my-existing-service-and-a/tasks.md"
+      ],
+      "events": [
+        {
+          "at": "2026-10-20T04:52:11.967Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)"
+        },
+        {
+          "at": "2026-10-20T05:11:17.837Z",
+          "actor": "owner",
+          "human": true,
+          "action": "promote",
+          "stage": "research",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20, 'make repo public and get started impl for v2 - keep v1 safe till then'"
+        },
+        {
+          "at": "2026-10-20T05:11:17.854Z",
+          "actor": "owner",
+          "human": true,
+          "action": "spec",
+          "stage": "research",
+          "note": "specs/381-install-learns-my-existing-service-and-a"
+        },
+        {
+          "at": "2026-10-20T05:20:48.115Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "research",
+          "note": "to interview"
+        },
+        {
+          "at": "2026-10-20T05:20:48.115Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/bmad.md"
+        },
+        {
+          "at": "2026-10-20T05:20:48.115Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/kiro.md"
+        },
+        {
+          "at": "2026-10-20T05:20:48.115Z",
+          "actor": "engine",
+          "human": false,
+          "action": "findings",
+          "stage": "research",
+          "note": ".codeloop/wiki/competitors/spec-kit.md"
+        },
+        {
+          "at": "2026-10-20T05:20:48.115Z",
+          "actor": "engine",
+          "human": false,
+          "action": "decision",
+          "stage": "research",
+          "note": ".codeloop/wiki/decisions/install-writes-five-files-and-a-map-step.md"
+        },
+        {
+          "at": "2026-10-20T12:10:38.658Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q1: Install writes .codeloop/config.yaml, .codeloop/process.yaml, .codeloop/rules.md, the lead-agent block in CLAUDE.md or AGENTS.md, and .mcp.json. Skills, lanes, commands and role files stay in the package and reach the agent through codeloop brief and the MCP server. The git hooks land in .git/hooks, outside the repo diff, and nothing else is written. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:10:38.666Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q2: The session hook prints the lead-agent protocol by default. A task agent is started by the lead agent through codeloop orch run, which sets a marker the hook reads (an environment variable on the agent process), and the hook then prints the task-agent protocol instead. A session started by hand is always the lead agent. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:10:38.672Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q3: Yes, with no input, as the plan says nothing leaves the machine and no input is needed. Each command runs under a five-minute limit with a ten-minute total, only from the test, lint, build and typecheck scripts it recognises, never a command matching deploy, publish, release, migrate or db. A command that hangs stops at its limit and the summary lists it as \"did not complete\" with the output. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:10:38.678Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q4: The map step ranks top-level modules by files changed in the last twelve months and lists any module with a reverted change; the three highest plus every reverted one are suggested. Accepting adds an owner approval of the plan before build for any work item whose files fall in a sensitive area, the same gate the Controlled preset adds for every item. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:10:38.684Z",
+          "actor": "owner",
+          "human": true,
+          "action": "answer",
+          "stage": "interview",
+          "note": "Q5: Three are enforced where a hook can see them: pushing to the main branch (pre-push), editing a database migration that already ran (pre-commit on the migrations folder), and a secret in a diff (pre-commit pattern check). Touching production and adding a dependency without asking are rules in rules.md the reviewer checks, because no local hook can tell a production target or a deliberate dependency from a test one. (accepted the recommendation)"
+        },
+        {
+          "at": "2026-10-20T12:10:38.829Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "interview",
+          "note": "to mock"
+        },
+        {
+          "at": "2026-10-20T12:10:39.477Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "mock",
+          "note": "M2 One frame per screen per state: empty, loading, normal, error, needs-you where it applies: missing: no `- M2 pass: <evidence>` line under ## Rubric in specs/381-install-learns-my-existing-service-and-a/rubric-mock.md\nM4 Every acceptance line can be pointed at in a frame: missing: no `- M4 pass: <evidence>` line under ## Rubric in specs/381-install-learns-my-existing-service-and-a/rubric-mock.md",
+          "head": "7170fe2242269b4650a861c3ce95bb1b17644bb7",
+          "fingerprint": "8be0f2d508a676f9f54818b8ac8598290a8e130e",
+          "counted": false
+        },
+        {
+          "at": "2026-10-20T12:10:40.318Z",
+          "actor": "engine",
+          "human": false,
+          "action": "fail",
+          "stage": "mock",
+          "note": "M2 One frame per screen per state: empty, loading, normal, error, needs-you where it applies: missing: no `- M2 pass: <evidence>` line under ## Rubric in specs/381-install-learns-my-existing-service-and-a/rubric-mock.md\nM4 Every acceptance line can be pointed at in a frame: missing: no `- M4 pass: <evidence>` line under ## Rubric in specs/381-install-learns-my-existing-service-and-a/rubric-mock.md",
+          "head": "7170fe2242269b4650a861c3ce95bb1b17644bb7",
+          "fingerprint": "8be0f2d508a676f9f54818b8ac8598290a8e130e",
+          "counted": false
+        },
+        {
+          "at": "2026-10-20T12:12:55.717Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "mock",
+          "note": "to spec"
+        },
+        {
+          "at": "2026-10-20T12:13:39.141Z",
+          "actor": "engine",
+          "human": false,
+          "action": "park",
+          "stage": "spec",
+          "note": "gate spec (after the check passed)"
+        },
+        {
+          "at": "2026-10-20T12:14:16.709Z",
+          "actor": "owner",
+          "human": true,
+          "action": "approve",
+          "stage": "spec",
+          "note": "relayed by codelooper: Dean in chat 2026-10-20 approved the spec ahead ('Accept and approve the spec too')",
+          "gate": "spec",
+          "fingerprint": "4ac6624b3766c797f2627f534d4412b7f014b311"
+        },
+        {
+          "at": "2026-10-20T12:14:16.724Z",
+          "actor": "engine",
+          "human": false,
+          "action": "advance",
+          "stage": "spec",
+          "note": "to data-model"
+        }
+      ],
+      "createdAt": "2026-10-20T04:52:11.967Z",
+      "updatedAt": "2026-10-20T12:14:16.724Z",
+      "spec": "specs/381-install-learns-my-existing-service-and-a",
+      "failures": {
+        "mock": "8be0f2d508a676f9f54818b8ac8598290a8e130e"
+      }
+    },
+    {
+      "id": "c-382",
+      "title": "Requests become features, tasks or bugs with the right amount of process",
+      "story": {
+        "as": "founder",
+        "can": "ask for anything in plain words and get a work item of the right type and size, with only the steps it needs",
+        "so": "small fixes stay fast and big features get structure"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "codeloop-cloud",
+      "epic": "c-374",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Phase 2. One intake for feature, task and bug; type on the card; lane when: by type and size; questions searched against decisions and the wiki first; bug short route; mocks only for screens.",
+      "source": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)",
+      "dedupe": "build:v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md):Requests become features, tasks or bugs with the right amount of process",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:52:12.131Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)"
+        }
+      ],
+      "createdAt": "2026-10-20T04:52:12.131Z",
+      "updatedAt": "2026-10-20T04:52:12.131Z"
+    },
+    {
+      "id": "c-383",
+      "title": "A lead agent runs task agents with roles, cost per item and a separate reviewer",
+      "story": {
+        "as": "founder",
+        "can": "let the lead agent start task agents from templates, see each one's cost, and get every change reviewed by a separate agent",
+        "so": "work runs without me while every move stays attributable"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "codeloop-cloud",
+      "epic": "c-374",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Phase 3. Task agent brief template; an orchestrator role whose moves record a reason and never act as the owner; a fan-out cap; token cost per item from the hand-back; a reviewer template; Work item and Agents screens.",
+      "source": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)",
+      "dedupe": "build:v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md):A lead agent runs task agents with roles, cost per item and a separate reviewer",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:52:12.297Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)"
+        }
+      ],
+      "createdAt": "2026-10-20T04:52:12.297Z",
+      "updatedAt": "2026-10-20T04:52:12.297Z"
+    },
+    {
+      "id": "c-384",
+      "title": "The knowledge base stays current and serves each agent what it needs",
+      "story": {
+        "as": "founder",
+        "can": "trust that pages, rules and decisions are dated, flagged when their code changes, and served per step",
+        "so": "agents stop repeating questions and following stale notes"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "codeloop-cloud",
+      "epic": "c-374",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Phase 4. Answers and corrections write decision pages; rules carry date, why and check; pages go stale when their scope files change after verified_at; inject counts served and cited; Knowledge screen.",
+      "source": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)",
+      "dedupe": "build:v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md):The knowledge base stays current and serves each agent what it needs",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:52:12.496Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)"
+        }
+      ],
+      "createdAt": "2026-10-20T04:52:12.496Z",
+      "updatedAt": "2026-10-20T04:52:12.496Z"
+    },
+    {
+      "id": "c-385",
+      "title": "Publish Codeloop 2.0 with a public guide for starting on an existing service",
+      "story": {
+        "as": "founder",
+        "can": "install the published 2.0 package and follow a public guide with real screenshots",
+        "so": "a new team can try Codeloop on their own service without help"
+      },
+      "persona": "founder",
+      "size": "M",
+      "initiative": "codeloop-cloud",
+      "epic": "c-374",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "Phase 7. Fix the npm version (0.4.3 served, trunk 0.5.0), the trial guide pinned to 0.3.0, and the exclusive init --ci; publish 2.0.0; site pages What Codeloop is, Start on your existing service, head-to-head results, generated from the wiki.",
+      "source": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)",
+      "dedupe": "build:v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md):Publish Codeloop 2.0 with a public guide for starting on an existing service",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T04:52:12.662Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "v2 plan approved 2026-10-20 (~/.claude/plans/lovely-wiggling-nova.md)"
+        }
+      ],
+      "createdAt": "2026-10-20T04:52:12.662Z",
+      "updatedAt": "2026-10-20T04:52:12.662Z"
+    },
+    {
+      "id": "c-386",
+      "title": "The doctor never asks a finished story's builder for a hand-back",
+      "story": {
+        "as": "founder",
+        "can": "trust that doctor nudges only reach builders on open stories",
+        "so": "finished work does not generate false alarms"
+      },
+      "persona": "founder",
+      "size": "S",
+      "lane": "build",
+      "laneVersion": 4,
+      "stage": "proposed",
+      "description": "ops-ai 2026-10-20: doctor printed 'builder idle 44 min on done; asked for a hand-back' for a story closed at 05:3x. Idle detection should skip done and dropped stories and release their builder slot.",
+      "source": "proto-orch board sync 2026-10-20",
+      "dedupe": "build:proto-orch board sync 2026-10-20:The doctor never asks a finished story's builder for a hand-back",
+      "gate": "proposal",
+      "awaiting": "owner",
+      "retries": {},
+      "evidence": [],
+      "events": [
+        {
+          "at": "2026-10-20T12:11:01.846Z",
+          "actor": "agent",
+          "human": false,
+          "action": "propose",
+          "stage": "proposed",
+          "note": "proto-orch board sync 2026-10-20"
+        }
+      ],
+      "createdAt": "2026-10-20T12:11:01.846Z",
+      "updatedAt": "2026-10-20T12:11:01.846Z"
     }
   ]
 }

@@ -7,6 +7,7 @@
  */
 import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { touchSession } from './active-card.js';
 import { loadConfig } from './config.js';
 
 export const ACTIVITY_DIR = '.codeloop/state/activity';
@@ -25,6 +26,9 @@ export interface ActivityLine {
 
 /** A line as read back: `cursor` is the byte offset just past it, the `after` for the next read. */
 export type ActivityEntry = ActivityLine & { cursor: string };
+
+/** The hook lines that mean a session is alive: a prompt, a tool call, a file write. */
+const TOUCHING = new Set(['prompt', 'cmd', 'edit']);
 
 const CMD_CHARS = 80;
 const TEXT_CHARS = 500;
@@ -53,6 +57,9 @@ const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0
  * must still let the edit or command it guards go ahead.
  */
 export function appendActivity(projectDir: string, card: string | undefined, line: Omit<ActivityLine, 'at'> & { at?: string }): void {
+  // Before the activity switch: a hold's liveness is its session's prompts, tool calls and file
+  // writes, which must keep counting when `activity: off` writes no lines.
+  if (TOUCHING.has(String(line.kind))) touchSession(projectDir, typeof line.session === 'string' ? line.session : undefined);
   if (!card || !activityEnabled(projectDir)) return;
   try {
     const out: ActivityLine = { at: line.at ?? new Date().toISOString(), ...line } as ActivityLine;

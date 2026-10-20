@@ -1,0 +1,5 @@
+id: uc-368-04
+accept: US4
+failure_mode: "a dead run's hold blocks builders for a day, a thinking session loses its hold, or a release by an agent run frees another session's story"
+layers:
+  cli: { run: "npx vitest run src/commands/__tests__/card-one-command.test.ts -t \"holds: release and expiry\"", expect: { exit: 0 } }

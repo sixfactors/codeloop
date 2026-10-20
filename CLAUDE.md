@@ -34,6 +34,17 @@ npm test              # Run tests (vitest)
 npm run test:coverage # Coverage report
 ```
 
+## Board commands use the frozen `codeloop`, never `node dist/index.js`
+
+The global `codeloop` is codeloop 1.0.0, installed from a tarball packed from the tag `v1.0.0`
+(`scripts/release-pack.sh`, then `scripts/release-install.sh`; `scripts/check-frozen.sh` proves
+it). The production project (ops-ai) and this repo's own board run on it. `dist/` is the build
+under development: it may be broken mid-edit, and after c-332 it is v2, which refuses a v1 board.
+So every board command in this checkout (`codeloop card …`, `codeloop next …`, `codeloop task …`,
+`codeloop check …`, `codeloop ask …`) is `codeloop` from PATH. `node dist/index.js` is for driving
+the build on a fixture (the e2e scripts do that in a temp project). Before and after a v2 session,
+`bash scripts/v1-untouched.sh snapshot|compare` proves v1 and ops-ai were left alone.
+
 ---
 
 ## Project Structure
