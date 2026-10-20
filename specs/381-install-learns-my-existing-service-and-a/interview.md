@@ -12,23 +12,23 @@ Five questions for the owner, filed through `codeloop ask c-381 --file` on 2026-
 
 ## Q1 Scope: which five files does install write, and where do the skills, lanes and role files that init copies today live instead?
 recommended: Install writes .codeloop/config.yaml, .codeloop/process.yaml, .codeloop/rules.md, the lead-agent block in CLAUDE.md or AGENTS.md, and .mcp.json. Skills, lanes, commands and role files stay in the package and reach the agent through codeloop brief and the MCP server. The git hooks land in .git/hooks, outside the repo diff, and nothing else is written.
-answer: 
+answer: Install writes .codeloop/config.yaml, .codeloop/process.yaml, .codeloop/rules.md, the lead-agent block in CLAUDE.md or AGENTS.md, and .mcp.json. Skills, lanes, commands and role files stay in the package and reach the agent through codeloop brief and the MCP server. The git hooks land in .git/hooks, outside the repo diff, and nothing else is written.
 
 ## Q2 Boundary: how does a session know it is the lead agent or a task agent, so the right protocol is printed without being told?
 recommended: The session hook prints the lead-agent protocol by default. A task agent is started by the lead agent through codeloop orch run, which sets a marker the hook reads (an environment variable on the agent process), and the hook then prints the task-agent protocol instead. A session started by hand is always the lead agent.
-answer: 
+answer: The session hook prints the lead-agent protocol by default. A task agent is started by the lead agent through codeloop orch run, which sets a marker the hook reads (an environment variable on the agent process), and the hook then prints the task-agent protocol instead. A session started by hand is always the lead agent.
 
 ## Q3 Risk: does the map step run the build and test commands it finds without asking, and under what limits?
 recommended: Yes, with no input, as the plan says nothing leaves the machine and no input is needed. Each command runs under a five-minute limit with a ten-minute total, only from the test, lint, build and typecheck scripts it recognises, never a command matching deploy, publish, release, migrate or db. A command that hangs stops at its limit and the summary lists it as "did not complete" with the output.
-answer: 
+answer: Yes, with no input, as the plan says nothing leaves the machine and no input is needed. Each command runs under a five-minute limit with a ten-minute total, only from the test, lint, build and typecheck scripts it recognises, never a command matching deploy, publish, release, migrate or db. A command that hangs stops at its limit and the summary lists it as "did not complete" with the output.
 
 ## Q4 Acceptance: how are sensitive areas suggested from churn and reverts, and what does "needs his approval" add to a work item that touches one?
 recommended: The map step ranks top-level modules by files changed in the last twelve months and lists any module with a reverted change; the three highest plus every reverted one are suggested. Accepting adds an owner approval of the plan before build for any work item whose files fall in a sensitive area, the same gate the Controlled preset adds for every item.
-answer: 
+answer: The map step ranks top-level modules by files changed in the last twelve months and lists any module with a reverted change; the three highest plus every reverted one are suggested. Accepting adds an owner approval of the plan before build for any work item whose files fall in a sensitive area, the same gate the Controlled preset adds for every item.
 
 ## Q5 Boundary: which of the five never-rules are enforced by a hook and which are advisory text the reviewer checks?
 recommended: Three are enforced where a hook can see them: pushing to the main branch (pre-push), editing a database migration that already ran (pre-commit on the migrations folder), and a secret in a diff (pre-commit pattern check). Touching production and adding a dependency without asking are rules in rules.md the reviewer checks, because no local hook can tell a production target or a deliberate dependency from a test one.
-answer: 
+answer: Three are enforced where a hook can see them: pushing to the main branch (pre-push), editing a database migration that already ran (pre-commit on the migrations folder), and a secret in a diff (pre-commit pattern check). Touching production and adding a dependency without asking are rules in rules.md the reviewer checks, because no local hook can tell a production target or a deliberate dependency from a test one.
 
 ## Research's open questions
 

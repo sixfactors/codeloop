@@ -24,6 +24,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { PageLayout } from '@/components/shared/page-layout';
 import { AttributeCard, RecordStatRow, SectionHeading } from '@/components/shared/record-layout';
 import { ProgressBar } from '@/components/shared/progress-bar';
+import { EmptyState } from '@/components/shared/empty-state';
 import { cn } from '@/lib/utils';
 import {
   commands, conventions, filesAdded, found, hotSpots, modulePages, neverRules, presets, questions, summary,
@@ -164,15 +165,20 @@ const RESULT: Record<CommandRun['result'], { label: string; tone: RowTone; icon:
 
 const seconds = (s?: number) => (s === undefined ? '' : s >= 60 ? `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s` : `${s} s`);
 
-function GettingStarted() {
+// `learning`: the state while the commands still run, before any page or the summary exists.
+function GettingStarted({ learning = false }: { learning?: boolean }) {
+  const DONE = 3; // commands finished so far in the learning state
+  const rows = learning ? commands.slice(0, DONE + 3) : commands;
   const ran = commands.filter((c) => c.result !== 'skipped');
   const finished = ran.filter((c) => c.result !== 'stopped');
   return (
-    <AppFrame place="settings" view="Getting started" icon={Rocket} title="Getting started" description="Installed and learned. Nothing left this machine. Read the summary, then answer the six questions." actions={<Button size="sm"><ListChecks />Answer the six questions</Button>}>
-      <RecordStatRow stats={[{ label: 'Languages found', value: 2 }, { label: 'Files added to the repo', value: filesAdded.length }, { label: 'Commands that completed', value: `${finished.length} of ${ran.length}` }, { label: 'Pages drafted', value: modulePages.length + 2 }]} />
+    <AppFrame place="settings" view="Getting started" icon={Rocket} title="Getting started"
+      description={learning ? 'Installed. Learning the codebase now: about ten minutes, no input needed, nothing leaves this machine.' : 'Installed and learned. Nothing left this machine. Read the summary, then answer the six questions.'}
+      actions={learning ? <Badge variant="outline" className={cn(PILL, TONE.wait)}><Hourglass className="size-3" aria-hidden />Learning, 4 min so far</Badge> : <Button size="sm"><ListChecks />Answer the six questions</Button>}>
+      <RecordStatRow stats={[{ label: 'Languages found', value: 2 }, { label: 'Files added to the repo', value: filesAdded.length }, { label: 'Commands that completed', value: learning ? `${DONE} of ${ran.length}` : `${finished.length} of ${ran.length}` }, { label: 'Pages drafted', value: learning ? 0 : modulePages.length + 2 }]} />
 
       <div className="rounded-xl bg-card px-3 ring-1 ring-foreground/10">
-        <WideRow icon={Bot} tone="ok" title="Your AI tool now opens as the lead agent for this repository" sub="Its first message: “I am the lead agent for this repository. I have learned the codebase; six questions are waiting for you on Setup questions.” A session it starts for a task gets the task-agent instructions instead.">
+        <WideRow icon={Bot} tone="ok" title="Your AI tool now opens as the lead agent for this repository" sub={learning ? 'Its first message: “I am the lead agent for this repository. I am learning the codebase first; I will ask you six questions when that is done.” A session it starts for a task gets the task-agent instructions instead.' : 'Its first message: “I am the lead agent for this repository. I have learned the codebase; six questions are waiting for you on Setup questions.” A session it starts for a task gets the task-agent instructions instead.'}>
           <div className="flex flex-wrap gap-1.5"><Badge variant="outline" className={cn(PILL, TONE.agent)}>Claude Code</Badge><Badge variant="outline" className={cn(PILL, TONE.plain)}>Cursor</Badge><Badge variant="outline" className={cn(PILL, TONE.plain)}>Codex</Badge></div>
         </WideRow>
       </div>
@@ -196,21 +202,23 @@ function GettingStarted() {
         </AttributeCard>
       </div>
 
-      <AttributeCard title={<>Learning <Count n={commands.length} /></>} icon={Terminal} action={<span className="flex items-center gap-2 text-xs text-muted-foreground"><ProgressBar done={commands.length} total={commands.length} /> done in 9 min 14 s</span>}>
-        <p className="mb-3 text-sm text-muted-foreground">Every build and test command found was run once, under a five-minute limit each, so the checks Codeloop proposes are the ones that work here. A command that looks like a deploy is never run.</p>
+      <AttributeCard title={<>Learning <Count n={commands.length} /></>} icon={Terminal} action={<span className="flex items-center gap-2 text-xs text-muted-foreground"><ProgressBar done={learning ? DONE : commands.length} total={commands.length} /> {learning ? '4 min 03 s so far' : 'done in 9 min 14 s'}</span>}>
+        <p className="mb-3 text-sm text-muted-foreground">Every build and test command found {learning ? 'is run' : 'was run'} once, under a five-minute limit each, so the checks Codeloop proposes are the ones that work here. A command that looks like a deploy is never run.</p>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow><TableHead>Command</TableHead><TableHead>Where</TableHead><TableHead>Result</TableHead><TableHead className="text-right">Time</TableHead><TableHead>Note</TableHead></TableRow></TableHeader>
             <TableBody>
-              {commands.map((c) => {
+              {rows.map((c, i) => {
+                const running = learning && i === DONE;
+                const pending = learning && i > DONE;
                 const r = RESULT[c.result];
                 return (
-                  <TableRow key={c.command} className={cn(c.result === 'stopped' && 'bg-warning/10 hover:bg-warning/15')}>
+                  <TableRow key={c.command} className={cn(!learning && c.result === 'stopped' && 'bg-warning/10 hover:bg-warning/15', pending && 'opacity-60')}>
                     <TableCell className="font-mono text-xs">{c.command}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{c.where}</TableCell>
-                    <TableCell><Badge variant="outline" className={cn(PILL, TONE[r.tone])}><r.icon className="size-3" aria-hidden />{r.label}</Badge></TableCell>
-                    <TableCell className="whitespace-nowrap text-right text-xs tabular-nums">{seconds(c.seconds)}</TableCell>
-                    <TableCell className="whitespace-normal text-xs text-muted-foreground">{c.note}</TableCell>
+                    <TableCell>{running ? <Badge variant="outline" className={cn(PILL, TONE.agent)}><Hourglass className="size-3" aria-hidden />Running</Badge> : pending ? <Badge variant="outline" className={cn(PILL, TONE.plain)}>Waiting</Badge> : <Badge variant="outline" className={cn(PILL, TONE[r.tone])}><r.icon className="size-3" aria-hidden />{r.label}</Badge>}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right text-xs tabular-nums">{running ? '1 min 40 s so far' : pending ? '' : seconds(c.seconds)}</TableCell>
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">{running ? 'Stops at 5 minutes if it has not finished' : pending ? '' : c.note}</TableCell>
                   </TableRow>
                 );
               })}
@@ -219,6 +227,11 @@ function GettingStarted() {
         </div>
       </AttributeCard>
 
+      {learning ? (
+        <div className="rounded-xl bg-card ring-1 ring-foreground/10">
+          <EmptyState compact icon={Sparkles} title="The summary arrives when learning finishes" description="Pages for each module, the risky areas and the conventions are drafted as the commands finish. Nothing to read yet; nothing to answer yet." />
+        </div>
+      ) : (
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <AttributeCard title={<>Pages drafted <Count n={modulePages.length + 2} /></>} icon={BookOpen} action={<Button size="xs" variant="outline">Open Knowledge</Button>}>
           <Rows>
@@ -236,6 +249,7 @@ function GettingStarted() {
           </ol>
         </AttributeCard>
       </div>
+      )}
     </AppFrame>
   );
 }
@@ -379,8 +393,11 @@ export default function MockC381SetupPage() {
             {NAV.map((n) => <Button key={n.id} size="xs" variant="ghost" nativeButton={false} render={<a href={`#${n.id}`} />}>{n.label}</Button>)}
           </nav>
           <section id="getting-started" data-screen="Getting started" className="scroll-mt-16">
-            <Screen title="Getting started" icon={Rocket} note="After one install command and about ten minutes of learning. What was found with where it was read, the five files and nothing else, every command run with its result and time (one failed, one stopped at its limit, one deploy skipped), the drafted pages, and the ten-line summary. The lead-agent row says what the AI tool will say when opened.">
-              <GettingStarted />
+            <Screen title="Getting started" icon={Rocket} note="Two states. First, while learning runs: what install found, the five files, the commands finished so far with one running, and no summary yet. Then, learned: every command with its result and time (one failed, one stopped at its limit, one deploy skipped), the drafted pages, and the ten-line summary. The lead-agent row says what the AI tool will say when opened.">
+              <div style={{ display: 'grid', gap: 24, minWidth: 0 }}>
+                <GettingStarted learning />
+                <GettingStarted />
+              </div>
             </Screen>
           </section>
           <section id="setup-questions" data-screen="Setup questions" className="scroll-mt-16">
