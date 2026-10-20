@@ -460,6 +460,20 @@ export async function guardSession(): Promise<void> {
   // The monitor, the schedule and the active story all belong to the board that moved: nothing to install or read here.
   if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
+  // Which protocol this session follows (c-381). A process the lead agent started carries
+  // CODELOOP_ROLE=agent and is a task agent; anything a person opens is the lead agent, told its
+  // first job until the repository is learned and the setup questions are answered.
+  const { firstDayStatus, isTaskAgentProcess } = await import('../lib/first-day.js');
+  const { leadProtocolText, taskProtocolText } = await import('../lib/render.js');
+  if (isTaskAgentProcess()) {
+    console.log(taskProtocolText().trim());
+  } else {
+    const day = firstDayStatus(projectDir);
+    console.log('codeloop: you are the lead agent for this repository. You plan and start task agents; you do not write code yourself.');
+    if (!day.mapped) console.log('First job: run `codeloop map` to learn the codebase (about ten minutes, no input, nothing leaves this machine), then `codeloop setup` to ask the person six questions.');
+    else if (!day.setup) console.log('Next job: `codeloop setup` prints six questions with a recommended answer each; show them to the person one at a time, never answer them yourself.');
+    if (!day.mapped || !day.setup) console.log(`The full protocol is in CLAUDE.md or AGENTS.md: ${leadProtocolText().split('\n')[0].replace(/^#\s*/, '')}`);
+  }
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
   const { DONE, DROPPED, findCard, findCardOrNone, readCards } = await cardsLib();
   const { monitorLines, monitorReport, stalledBuilders, stalledLines } = await servicesLib();
