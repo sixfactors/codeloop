@@ -12,6 +12,8 @@ api (three shell scripts under scripts/), docs (CLAUDE.md, package.json version)
 - package.json
 - package-lock.json
 - CLAUDE.md
+- CHANGELOG.md
+- templates/commands/
 - specs/331-the-production-project-runs-a-frozen-v1/
 
 ## Risks
