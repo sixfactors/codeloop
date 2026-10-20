@@ -21,6 +21,21 @@ import { offLine, readOff } from '../lib/off.js';
 /** True while `codeloop off` is in force here; checked first by every hook so a paused repo costs one file read and nothing else. */
 const paused = (projectDir: string): boolean => readOff(projectDir) !== undefined;
 
+/**
+ * A board that moved to v2 (c-330): the v1 hooks allow every edit and command and say so once, on
+ * stderr, before any board read. A lease or plan read from the stale board would otherwise block a
+ * session started before the switch. Printed here rather than by the program shell so the hook
+ * daemon, which runs these functions without it, says it too.
+ */
+const MOVED_FILE = '.codeloop/moved.json';
+async function movedThrough(projectDir: string): Promise<boolean> {
+  if (!existsSync(join(projectDir, MOVED_FILE))) return false;
+  const notice = (await cardsLib()).movedNotice(projectDir);
+  if (!notice) return false;
+  console.error(notice);
+  return true;
+}
+
 const PRESENCE_DIR = '.codeloop/state/presence';
 const safeFile = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '_');
 
@@ -376,6 +391,7 @@ monitorCommand
 export async function guardEdit(pathArg?: string): Promise<void> {
   const projectDir = projectRoot();
   if (paused(projectDir)) return;
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const toolInput = input.tool_input as { file_path?: string; path?: string } | undefined;
   const path = pathArg ?? toolInput?.file_path ?? toolInput?.path;
@@ -441,6 +457,8 @@ export async function guardSession(): Promise<void> {
     console.log(offLine(off));
     return;
   }
+  // The monitor, the schedule and the active story all belong to the board that moved: nothing to install or read here.
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
   const { DONE, DROPPED, findCard, findCardOrNone, readCards } = await cardsLib();
@@ -564,6 +582,10 @@ export async function guardBash(opts: { format: string }): Promise<void> {
   const input = await readStdinJson();
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
   const command = String(toolInput.command ?? input.command ?? '');
+  if (await movedThrough(projectRoot())) {
+    if (opts.format === 'cursor') console.log(JSON.stringify({ permission: 'allow' }));
+    return;
+  }
   const moved = (await gateCrossingMove(command)) ?? (await promotingStart(command));
   const hit = moved ? [moved] : ownerAction(command) ?? (await directBugFlag(command));
   if (!hit) {
@@ -608,6 +630,7 @@ export async function guardPrompt(): Promise<void> {
   if (paused(projectDir)) return;
   // Not a codeloop project: nothing to say, and nothing worth loading the board libraries for.
   if (!existsSync(join(projectDir, '.codeloop'))) return;
+  if (await movedThrough(projectDir)) return;
   const input = await readStdinJson();
   const session = currentSession(typeof input.session_id === 'string' ? input.session_id : undefined);
   // This prompt is the session's proof of life: it takes its own hold again (appendActivity below touches it),

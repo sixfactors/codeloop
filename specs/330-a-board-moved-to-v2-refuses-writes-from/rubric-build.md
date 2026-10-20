@@ -1,0 +1,6 @@
+# c-330 build rubric
+
+## Rubric
+
+- B2 pass: src/lib/__tests__/moved-board.test.ts run before the guard existed (`npx vitest run src/lib/__tests__/moved-board.test.ts`): `Tests 10 failed | 4 passed (14)`; the four that passed were the three controls and the untitled `wiki capture --quiet`, which no-ops already. Red lines: `× writeCards refuses with exit 2, naming the command from the marker, and cards.json is unchanged`, `× a marker with no command still refuses, naming codeloop-next`, `× a wiki capture with a title refuses and the wiki folder is unchanged`, `× a question write (ask) refuses and no interview file appears`, `× a store write that is not the board (epic new) refuses and writes no page`, `× a read prints the board as before, with the moved line once on stderr`, `× guard edit on a leased file exits 0 and prints the moved line`, `× guard bash lets an owner action through instead of asking, and prints the moved line`, `× guard prompt and guard session exit 0 with the moved line and read no board`, `× through the hook daemon, guard edit on a leased file exits 0 with the moved line`. After the guard: `Tests 14 passed (14)`.
+- B5 pass: `codeloop check gotchas --files src/lib/cards.ts src/lib/wiki.ts src/lib/interview.ts src/lib/store/file.ts src/program-base.ts src/commands/guard-hooks.ts` exited 0: no critical wiki page applies to these files.

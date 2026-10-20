@@ -10,7 +10,7 @@ import { withLock } from './lock.js';
 import { parseFrontmatter } from './skills.js';
 import { slugify } from './spec.js';
 import { NEAR_PAGE, enforceRule, samePage, titleSimilarity } from './wiki-rules.js';
-import { readCards } from './cards.js';
+import { assertBoardNotMoved, readCards } from './cards.js';
 
 import { WIKI_DIR } from './wiki-dir.js';
 export { WIKI_DIR };
@@ -383,6 +383,7 @@ export function capture(
   input: { title: string; scope: string[]; body: string; kind?: Kind; card?: string },
   now: Date = clock(),
 ): Page {
+  assertBoardNotMoved(projectDir);
   const kind = input.kind ?? 'gotcha';
   if (!KINDS[kind]) throw new RefusalError(`unknown kind "${kind}" (gotcha, decision or concept)`);
   if (!slugify(input.title)) throw new RefusalError(`wiki title "${input.title}" has no letters or digits to name its file with`);
@@ -439,6 +440,7 @@ function withNote(body: string, today: string, card: string | undefined, text: s
 
 /** Folds page `b` into page `a`: frequencies add, cards and scope join, b's body is kept under a heading, b is removed. */
 export function mergePages(projectDir: string, a: string, b: string, now: Date = clock()): Page {
+  assertBoardNotMoved(projectDir);
   return withLock(join(projectDir, WIKI_DIR, 'INDEX.md'), () => {
     const pages = listPages(projectDir);
     const find = (ref: string) => pages.find(p => p.path === ref || p.path.endsWith(`/${ref}`) || p.path.endsWith(`/${ref}.md`));
@@ -469,6 +471,7 @@ export function inject(projectDir: string, files: string[]): Page[] {
 
 /** Applies the frequency thresholds: critical at `critical_frequency`, copied into rules.md once at `promote_frequency`. */
 export function learn(projectDir: string): { critical: string[]; promoted: string[] } {
+  assertBoardNotMoved(projectDir);
   const { critical, promote } = thresholds(projectDir);
   const result = { critical: [] as string[], promoted: [] as string[] };
   for (const page of listPages(projectDir)) {

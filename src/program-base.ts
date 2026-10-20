@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { RefusalError } from './lib/cards.js';
+import { movedNotice, RefusalError } from './lib/cards.js';
 import { assertStoreReady } from './lib/store-home.js';
 import { legacyNotice } from './lib/paths.js';
 import { projectRoot } from './lib/project-root.js';
@@ -50,6 +50,10 @@ export function baseProgram(): Command {
     if (!['store', 'guard', 'hookd'].includes(top.name()) && existsSync(join(root, '.codeloop'))) {
       const notice = legacyNotice(root);
       if (notice) console.error(notice);
+      // A board that moved to v2 (c-330): reads here show the v1 copy and say so, once per command;
+      // the guard verbs print it themselves, so the hook daemon path says it too.
+      const moved = movedNotice(root);
+      if (moved) console.error(moved);
     }
   });
   return program;

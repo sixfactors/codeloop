@@ -1,7 +1,7 @@
 import { onBoardTree } from './project-root.js';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { findCard, readCards, RefusalError, type Card } from './cards.js';
+import { assertBoardNotMoved, findCard, readCards, RefusalError, type Card } from './cards.js';
 import { recordEvent, type Role } from './engine.js';
 import { withLock } from './lock.js';
 import { newSpec, resolveSpecDir } from './spec.js';
@@ -159,6 +159,8 @@ export const openQuestions = (projectDir: string, card: Card) => readQuestions(p
  * folder yet, so one is made the way `start` makes it. Refused past MAX_QUESTIONS interview questions.
  */
 export function addQuestions(projectDir: string, ref: string, items: { question: string; recommended?: string; options?: string[]; kind?: QuestionKind }[], role: Role = 'agent'): { path: string; added: Question[] } {
+  // Questions are board state: a moved board takes none, like every other write (c-330).
+  assertBoardNotMoved(projectDir);
   const card = findCard(readCards(projectDir).cards, ref);
   if (items.length === 0) throw new RefusalError('no questions to add');
   if (items.some(i => !i.question.trim())) throw new RefusalError('a question cannot be empty');
@@ -200,6 +202,7 @@ function refuseAgentAnswer(role: Role, ref: string): void {
  * decision a person made, so the card event is marked human whatever role the caller claimed.
  */
 export function writeAnswer(projectDir: string, ref: string, n: number, answer: { text?: string; accept?: boolean; option?: string }, role: Role = 'owner'): Question {
+  assertBoardNotMoved(projectDir);
   refuseAgentAnswer(role, ref);
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);
@@ -234,6 +237,7 @@ export function writeAnswer(projectDir: string, ref: string, n: number, answer: 
  * already answered is left alone.
  */
 export function acceptAllAnswers(projectDir: string, ref: string, role: Role = 'owner'): { answered: Question[]; skipped: Question[] } {
+  assertBoardNotMoved(projectDir);
   refuseAgentAnswer(role, ref);
   const card = findCard(readCards(projectDir).cards, ref);
   const path = interviewPath(projectDir, card);

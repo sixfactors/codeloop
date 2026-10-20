@@ -226,6 +226,50 @@ export interface CardFile {
 }
 
 export const CARDS_PATH = '.codeloop/cards.json';
+
+/**
+ * Written by the v2 import when a project's record moves to v2. While it exists, this (v1) build
+ * refuses every board, wiki and question write here, naming the command to use instead, so nobody
+ * updates a stale copy of the board after the switch. Reads and hooks keep working.
+ */
+export const MOVED_PATH = '.codeloop/moved.json';
+const DEFAULT_MOVED_COMMAND = 'codeloop-next';
+
+export interface MovedMarker {
+  /** The command that owns the record now. */
+  command: string;
+  [field: string]: unknown;
+}
+
+/** The marker, or undefined when the board has not moved. A marker that does not parse still counts: a write must not land on a board that may have moved. */
+export function readMoved(projectDir: string): MovedMarker | undefined {
+  const file = join(projectDir, MOVED_PATH);
+  if (!existsSync(file)) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(file, 'utf-8'));
+  } catch {
+    parsed = {};
+  }
+  const marker = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  const command = typeof marker.command === 'string' && marker.command.trim() ? marker.command.trim() : DEFAULT_MOVED_COMMAND;
+  return { ...marker, command };
+}
+
+export const movedMessage = (marker: MovedMarker): string => `this board moved to codeloop v2; use ${marker.command}`;
+
+/** The one line a read or a hook prints (on stderr) when the board has moved; undefined otherwise. */
+export function movedNotice(projectDir: string): string | undefined {
+  const marker = readMoved(projectDir);
+  return marker ? `codeloop: ${movedMessage(marker)}` : undefined;
+}
+
+/** Every v1 write path calls this first: refused (exit 2) while the marker says the record moved. */
+export function assertBoardNotMoved(projectDir: string): void {
+  const marker = readMoved(projectDir);
+  if (marker) throw new RefusalError(movedMessage(marker));
+}
+
 export const DONE = 'done';
 /** A card someone proposed and the owner has not promoted. It waits at gate `proposal` and holds no place in its lane. */
 export const PROPOSED = 'proposed';
@@ -330,6 +374,8 @@ export function readCards(projectDir: string): CardFile {
  * version on disk has moved, so two agents working from the same read cannot both land.
  */
 export function writeCards(projectDir: string, read: CardFile, cards: Card[]): CardFile {
+  // Before the lock: a moved board is never written, whatever version the caller read.
+  assertBoardNotMoved(projectDir);
   // In store.home user mode cards.json is a link into the per-project store: write through it.
   const file = followLink(join(projectDir, CARDS_PATH));
   // The lock covers the re-read, the version check and the rename as one step. A connected cloud
