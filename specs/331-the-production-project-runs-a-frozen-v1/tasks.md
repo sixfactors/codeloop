@@ -9,13 +9,13 @@ Layer is one of api, sdk, ui, test, docs. [P] marks a task that can run in paral
 `codeloop spec check` fails on a task with no layer tag and on an acceptance line with no task.
 -->
 
-- [ ] T001 [US1] [docs] Set package.json to 1.0.0 and tag v1.0.0 at the freeze commit (the checked-out branch's HEAD after c-330 landed)
-- [ ] T002 [US1] [api] scripts/release-pack.sh: git archive the tag into a scratch folder, set gitHead, npm ci, npm run build:all, npm pack into ~/.codeloop/releases, write the sha256 and a manifest
-- [ ] T003 [US2] [api] scripts/release-install.sh: stop the hub and hook daemon, refuse a tarball outside ~/.codeloop/releases or without its sha256, npm i -g the tarball
-- [ ] T004 [US4] [api] release-install.sh restarts the hub from the installed build on its old port and lists processes with codeloop ps
-- [ ] T005 [US3] [test] scripts/check-frozen.sh: the readlink and real-directory checks, the version and gitHead against the tag, the cron line's binary resolving to the installed package, no process from the checkout
-- [ ] T006 [US4] [test] In ops-ai: guard session exits 0 and card list --json counts the same cards as before the freeze (357)
-- [ ] T007 [US4] [docs] Workers' instructions: board commands in the checkout use codeloop from now on, never node dist/index.js, in CLAUDE.md
+- [x] T001 [US1] [docs] Set package.json to 1.0.0 and tag v1.0.0 at the freeze commit (the checked-out branch's HEAD after c-330 landed)
+- [x] T002 [US1] [api] scripts/release-pack.sh: git archive the tag into a scratch folder, set gitHead, npm ci, npm run build:all, npm pack into ~/.codeloop/releases, write the sha256 and a manifest
+- [x] T003 [US2] [api] scripts/release-install.sh: stop the hub and hook daemon, refuse a tarball outside ~/.codeloop/releases or without its sha256, npm i -g the tarball
+- [x] T004 [US4] [api] release-install.sh restarts the hub from the installed build on its old port and lists processes with codeloop ps
+- [x] T005 [US3] [test] scripts/check-frozen.sh: the readlink and real-directory checks, the version and gitHead against the tag, the cron line's binary resolving to the installed package, no process from the checkout
+- [x] T006 [US4] [test] In ops-ai: guard session exits 0 and card list --json counts the same cards as before the freeze (357 before; 358 after, the one more a v1 append by another agent at 05:24Z, before the install)
+- [x] T007 [US4] [docs] Workers' instructions: board commands in the checkout use codeloop from now on, never node dist/index.js, in CLAUDE.md
 
 ## Rubric
 

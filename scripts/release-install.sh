@@ -116,7 +116,7 @@ fi
 
 echo "release-install: codeloop processes now"
 "$AFTER_BIN" ps 2>/dev/null || ps -eo pid,command | grep -E '[c]odeloop|[h]ookd-main' || true
-MCP="$(ps -eo pid,ppid,command | grep -E '[d]ist/index\.js mcp$' || true)"
+MCP="$(ps -eo pid,ppid,command | grep -E '@protoboxai/codeloop/.*[d]ist/index\.js mcp$' || true)"
 [ -n "$MCP" ] && echo "release-install: these MCP processes belong to running assistant sessions and were left alone; each takes the installed build when its session next starts:" && echo "$MCP"
 
 {

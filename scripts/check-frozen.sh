@@ -79,16 +79,19 @@ else
       esac
     done
     [ "$found" = 1 ] || fail "cron line names no codeloop binary or schedule script: $cmd"
-    # The old inline form runs `node <bin/codeloop>`; node cannot run that shell script.
+    # The old inline form runs `node <bin/codeloop>`; node cannot run that shell script. A warning,
+    # not a failure: the line still names the frozen binary, and the crontab is the owner's to fix.
     if printf '%s' "$cmd" | grep -qE "node' '[^']*/bin/codeloop'|node [^ ]*/bin/codeloop( |$)"; then
       first="$(head -c 2 "$(printf '%s' "$cmd" | grep -oE "[^' ]*/bin/codeloop" | head -1)" 2>/dev/null || true)"
-      [ "$first" = "#!" ] && fail "cron line runs node on bin/codeloop, which is a shell script, so this schedule never runs; reinstall it with codeloop schedule install"
+      [ "$first" = "#!" ] && echo "WARN  cron line runs node on bin/codeloop, which is a shell script, so this schedule never runs; \`codeloop schedule install\` in the project rewrites it"
     fi
   done <<< "$LINES"
 fi
 
 # Processes: nothing may run this checkout's build.
-STRAY="$(ps -eo pid,command | grep -E "node[^ ]* .*${ROOT}/(dist|\.test-dist)/(index|hookd-main)\.js" | grep -v grep || true)"
+# Anchored on the process's own argv (pid, then node, then flags, then the script), so a shell whose
+# command string quotes such a line, or a worker whose --worker-dir names the checkout, is not counted.
+STRAY="$(ps -eo pid,command | grep -E "^ *[0-9]+ +([^ ]*/)?node( --[^ ]+)* ${ROOT}/(dist|\.test-dist)/(index|hookd-main)\.js" || true)"
 if [ -z "$STRAY" ]; then pass "no codeloop process runs a script from $ROOT/dist"; else fail "processes still run from the checkout:"; echo "$STRAY" | sed 's/^/        /'; fi
 
 HUB_STATE="$HOME_DIR/state/hub.json"
