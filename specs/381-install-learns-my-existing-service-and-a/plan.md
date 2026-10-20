@@ -8,13 +8,18 @@ api (init, scaffold, detect, render, the map and setup skills, the presets), ui 
 
 ## Files
 
-- `src/commands/init.ts`, `src/lib/scaffold.ts`: the five-file install and the detection report.
-- `src/lib/detect.ts`, `starters/java.yaml`, `starters/dotnet.yaml`: Java, .NET, Go, TypeScript and Python with their build and test commands, database and pipeline.
-- `src/lib/wiki-outline.ts`: commands run with limits, hot spots, conventions.
-- `src/lib/render.ts`, `templates/protocol-lead.md`, `templates/protocol-task.md`: the two protocols.
-- `templates/skills/map/`, `templates/skills/setup/`, `templates/presets/`: the two new skills and the three presets.
-- `workspace/app/setup/page.tsx`: the two screens, from the approved mock in `workspace/app/mocks/381-install-learns-my-existing-service-and-a/`.
-- `src/commands/guard-hooks.ts`: the session hook reads `CODELOOP_ROLE` and prints the task protocol for an agent process, the lead protocol otherwise.
+- `src/lib/detect.ts`, `starters/java.yaml`, `starters/dotnet.yaml`: Java, .NET, Go, TypeScript and Python with their build and test commands, database, pipeline and main modules; `src/lib/wiki-outline.ts` re-exports the top-folder scan it now takes from detect.
+- `src/commands/init.ts`, `src/lib/scaffold.ts`, `templates/codeloop/process.yaml`, `templates/codeloop/never-rules.md`: the five-file install and the detection report; `--full` keeps the old scaffold. `src/lib/host-hooks.ts`: the host hooks file written outside the repository diff.
+- `src/lib/lane.ts`: lanes and the skills index fall back to the package's templates when the project has `process.yaml` and no copies of its own.
+- `src/lib/render.ts`, `templates/protocol-lead.md`, `templates/protocol-task.md`: the two protocols, with the lead block the only host file install writes.
+- `src/commands/guard-hooks.ts`: the session hook reads `CODELOOP_ROLE` and prints the task protocol for an agent process, the lead protocol otherwise; before the map and the setup it names the next command.
+- `src/lib/map.ts`, `src/commands/map.ts`, `templates/skills/map/SKILL.md`: commands run with limits, hot spots, conventions, `.codeloop/state/map.json`, the ten-line summary.
+- `src/lib/setup.ts`, `src/commands/setup.ts`, `templates/skills/setup/SKILL.md`, `templates/presets/{light,standard,controlled}.yaml`: the six questions, their recommendations from the map, and the answers written to `process.yaml`, `rules.md` and one decision page each.
+- `src/lazy.ts`: the `map` and `setup` commands registered.
+- `src/lib/services.ts`, `src/lib/server.ts`, `src/sdk/client.ts`, `src/sdk/http.ts`, `src/sdk/local.ts`, `src/sdk/types.ts`: setup status with the map and the questions, and the answer routes the page writes through.
+- `workspace/lib/api.ts`, `workspace/lib/types.ts`, `workspace/hooks/use-api.ts`, `workspace/app/setup/page.tsx`: the two screens, from the approved mock in `workspace/app/mocks/381-install-learns-my-existing-service-and-a/`.
+- Tests: `src/lib/__tests__/detect-stacks.test.ts`, `src/lib/__tests__/init-five-files.test.ts`, `src/lib/__tests__/map.test.ts`, `src/lib/__tests__/setup.test.ts`, `src/lib/__tests__/session-role.test.ts`; the three existing tests that spawn the full `init` (`gates-runs-setup`, `hub-cli`, `store-home`) pass `--full`.
+- `specs/381-install-learns-my-existing-service-and-a/rubric-build.md`: the red test outputs and the gotchas read.
 
 ## Order
 
