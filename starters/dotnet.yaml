@@ -1,0 +1,68 @@
+# Codeloop Configuration
+# .NET starter (a solution or project file at the root)
+
+project:
+  name: "my-project"
+
+scopes:
+  backend:
+    paths: ["src/**", "**/*.cs"]
+    gotcha_sections: ["Backend", "Database", "API"]
+    pattern_sections: ["Backend", "API"]
+  tests:
+    paths: ["tests/**", "test/**", "**/*.Tests/**"]
+    gotcha_sections: ["Testing"]
+    pattern_sections: ["Testing"]
+  config:
+    paths: [".github/**", "Dockerfile*", "docker-compose*", "*.sln", "**/*.csproj", "**/appsettings*.json"]
+    gotcha_sections: ["CI", "Config"]
+    pattern_sections: ["CI"]
+
+# Detected by `codeloop init` from the solution; `dotnet` has to be on PATH.
+quality_checks:
+  backend:
+    - name: "Build"
+      command: "dotnet build 2>&1 | tail -20"
+
+diff_scan:
+  - pattern: "Console\\.Write"
+    files: "*.cs"
+    exclude: "**/*.Tests/**"
+    severity: WARNING
+    message: "Console.Write in production code — use the logger"
+
+test:
+  command: "dotnet test"
+  coverage_threshold: 80
+  integrity_checks: true
+
+commit:
+  types: [feat, fix, refactor, docs, test, chore, perf]
+  format: "type(scope): message"
+
+watch:
+  enabled: true
+  idle_timeout: 300
+  ignore:
+    - bin
+    - obj
+    - .git
+    - "*.log"
+
+# Unattended runs — used by `codeloop run --agent` and `codeloop schedule install`.
+# The command gets the stage brief; {brief} becomes the shell-quoted path to it.
+# agents:
+#   default: claude
+#   claude:
+#     cmd: "claude -p --permission-mode acceptEdits < {brief}"
+#     timeout_minutes: 20
+#     max_runs_per_day: 10
+# run:
+#   agent: true
+
+codeloop:
+  critical_frequency: 3
+  promote_frequency: 10
+  max_knowledge_lines: 200
+
+layers: {}

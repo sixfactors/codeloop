@@ -1,0 +1,73 @@
+# Codeloop Configuration
+# Java starter (Maven or Gradle)
+
+project:
+  name: "my-project"
+
+scopes:
+  backend:
+    paths: ["src/main/**"]
+    gotcha_sections: ["Backend", "Database", "API"]
+    pattern_sections: ["Backend", "API"]
+  tests:
+    paths: ["src/test/**"]
+    gotcha_sections: ["Testing"]
+    pattern_sections: ["Testing"]
+  config:
+    paths: [".github/**", "Dockerfile*", "docker-compose*", "pom.xml", "build.gradle*", "src/main/resources/**"]
+    gotcha_sections: ["CI", "Config"]
+    pattern_sections: ["CI"]
+
+# Detected by `codeloop init` from pom.xml or build.gradle; edit if the wrapper is not committed.
+quality_checks:
+  backend:
+    - name: "Build"
+      command: "./mvnw -q compile 2>&1 | tail -20"
+
+diff_scan:
+  - pattern: "System\\.out\\.print"
+    files: "*.java"
+    exclude: "src/test/**"
+    severity: WARNING
+    message: "System.out in production code — use the logger"
+  - pattern: "printStackTrace\\(\\)"
+    files: "*.java"
+    severity: WARNING
+    message: "printStackTrace swallows the error — log or rethrow it"
+
+test:
+  command: "./mvnw -q test"
+  coverage_threshold: 80
+  integrity_checks: true
+
+commit:
+  types: [feat, fix, refactor, docs, test, chore, perf]
+  format: "type(scope): message"
+
+watch:
+  enabled: true
+  idle_timeout: 300
+  ignore:
+    - target
+    - build
+    - .gradle
+    - .git
+    - "*.log"
+
+# Unattended runs — used by `codeloop run --agent` and `codeloop schedule install`.
+# The command gets the stage brief; {brief} becomes the shell-quoted path to it.
+# agents:
+#   default: claude
+#   claude:
+#     cmd: "claude -p --permission-mode acceptEdits < {brief}"
+#     timeout_minutes: 20
+#     max_runs_per_day: 10
+# run:
+#   agent: true
+
+codeloop:
+  critical_frequency: 3
+  promote_frequency: 10
+  max_knowledge_lines: 200
+
+layers: {}

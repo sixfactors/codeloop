@@ -9,10 +9,10 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
 import { parse as parseYaml } from 'yaml';
-import { detectProject } from './detect.js';
+import { detectProject, scanTopFolders, SKIP_DIRS } from './detect.js';
 import { WIKI_DIR } from './wiki.js';
 
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage', '.codeloop', 'out', '.turbo', 'vendor', '__pycache__', '.venv', 'venv', '.pytest_cache']);
+export { scanTopFolders };
 
 /** Every file under `root` whose name matches `pattern`, skipping dependency/build/dot directories. */
 function listFiles(root: string, pattern: RegExp): string[] {
@@ -533,56 +533,6 @@ export function scanRepo(repoDir: string): RepoFacts {
     codeowners: scanCodeowners(repoDir),
     analyticsDeps: scanAnalyticsDeps(repoDir),
   };
-}
-
-const SOURCE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rb|java|kt|rs|c|cc|cpp|h|hpp|cs|php|swift)$/;
-
-function hasSourceFile(dir: string): boolean {
-  const stack = [dir];
-  while (stack.length) {
-    const cur = stack.pop()!;
-    let entries;
-    try {
-      entries = readdirSync(cur, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const e of entries) {
-      if (e.isDirectory()) {
-        if (SKIP_DIRS.has(e.name) || e.name.startsWith('.')) continue;
-        stack.push(join(cur, e.name));
-      } else if (SOURCE_FILE.test(e.name)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * The folders the architecture skill must account for: top-level, non-dot, non-dependency
- * directories that hold at least one source file, plus `src/`'s own first-level subfolders when
- * `src/` exists (a monorepo's layers usually live one level deeper than the repo root).
- */
-export function scanTopFolders(repoDir: string): string[] {
-  let entries;
-  try {
-    entries = readdirSync(repoDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const top = entries
-    .filter(e => e.isDirectory() && !e.name.startsWith('.') && !SKIP_DIRS.has(e.name))
-    .map(e => e.name)
-    .filter(name => hasSourceFile(join(repoDir, name)))
-    .sort();
-  const srcDir = join(repoDir, 'src');
-  if (!existsSync(srcDir)) return top;
-  const subs = readdirSync(srcDir, { withFileTypes: true })
-    .filter(e => e.isDirectory() && !e.name.startsWith('.') && !SKIP_DIRS.has(e.name))
-    .map(e => `src/${e.name}`)
-    .sort();
-  return [...new Set([...top, ...subs])].sort();
 }
 
 export const REPO_FACTS_PATH = '.codeloop/state/repo-facts.json';
