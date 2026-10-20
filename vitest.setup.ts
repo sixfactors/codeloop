@@ -1,6 +1,31 @@
-import { mkdtempSync } from 'fs';
-import { tmpdir } from 'os';
+import { mkdtempSync, statSync } from 'fs';
+import { homedir, tmpdir } from 'os';
 import { join } from 'path';
+import { afterAll } from 'vitest';
+
+// The real v1 home must not change while a test file runs (c-333): a test that leaks past
+// CODELOOP_HOME (a hard-coded ~/.codeloop, a spawned CLI with a scrubbed env) would register a
+// fixture project or rewrite the hub record of the production install. mtime and size of the v1
+// files are taken before the file's tests and compared after; a change fails the file by name.
+// The production board itself is not watched here: other sessions append to it while a suite runs.
+const REAL_HOME = join(homedir(), '.codeloop');
+const V1_FILES = ['projects.json', 'state/hub.json', 'state/hub-secrets.json'];
+const v1Stamp = (): string =>
+  V1_FILES.map(f => {
+    try {
+      const s = statSync(join(REAL_HOME, f));
+      return `${f} ${s.mtimeMs} ${s.size}`;
+    } catch {
+      return `${f} absent`;
+    }
+  }).join('\n');
+const v1Before = v1Stamp();
+afterAll(() => {
+  const after = v1Stamp();
+  if (after !== v1Before) {
+    throw new Error(`a test in this file changed the real codeloop home (${REAL_HOME}); v1 files before and after:\n${v1Before}\n---\n${after}`);
+  }
+});
 
 // Runs once per test file. A fresh CODELOOP_HOME keeps the hub registry and user store of one file
 // away from the next and from ~/.codeloop; the sandbox flag makes projectRoot() refuse any root
