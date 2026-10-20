@@ -25,3 +25,7 @@ changelog: https://github.com/github/spec-kit/releases
 - c-362 I approve and answer from chat, and the page loads fast and lists every artifact: /speckit.clarify asks up to five questions one at a time, each with "Recommended: Option X"; replying "yes" or "recommended" accepts that one, never all at once. Answers go into spec.md under Clarifications with no attribution. No catalog of documents beyond the specs/ folders | https://raw.githubusercontent.com/github/spec-kit/main/templates/commands/clarify.md
 
 - c-381 Install learns my existing service and asks six setup questions: `specify init` writes `.specify/` with memory, scripts and templates plus the agent's command folder, then the person writes the constitution by hand with `/speckit.constitution`; `specify check` validates the setup. Nothing is learned from the codebase, and the setup decisions (agent, script type) are the only questions | https://github.github.io/spec-kit/
+
+- c-332 v2 runs beside v1 under its own name, home and port: `specify init` writes `.specify/` into the repository; the tool runs per invocation (`uvx`), so there is no global install to freeze and no second channel | https://github.github.io/spec-kit/
+
+- c-329 A project on v1 keeps working untouched until v2 is proven: Runs per invocation from the repository's `.specify/` templates; a project is on whatever `specify init` wrote and upgrades by running it again, with no record of what changed | https://github.github.io/spec-kit/

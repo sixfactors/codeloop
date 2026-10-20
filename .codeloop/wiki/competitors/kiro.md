@@ -17,3 +17,7 @@ changelog: https://kiro.dev/changelog/
 - c-362 I approve and answer from chat, and the page loads fast and lists every artifact: The person confirms each spec phase (requirements, design, tasks) in chat before the next. Analyze Requirements offers a suggested fix per question to select one at a time; there is no documented accept-all and no named approver. Specs are listed in a Specs pane and by #spec in chat | https://kiro.dev/docs/specs/
 
 - c-381 Install learns my existing service and asks six setup questions: One click, "Generate Steering Docs", writes `product.md`, `tech.md` and `structure.md` under `.kiro/steering/`, loaded on every interaction; the person then clicks "Spec" and approves requirements, design and tasks in turn. No questions are asked at setup, nothing is run to check that the commands work, and the files carry no verified-at mark | https://kiro.dev/docs/getting-started/first-project/
+
+- c-332 v2 runs beside v1 under its own name, home and port: One IDE, one version, updated by the vendor; a user cannot keep an old version for one project and run a new one beside it | https://kiro.dev/docs/getting-started/first-project/
+
+- c-329 A project on v1 keeps working untouched until v2 is proven: The vendor updates the IDE; a team cannot hold one project on the old version while trying the new one | https://kiro.dev/docs/getting-started/first-project/
