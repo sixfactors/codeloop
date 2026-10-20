@@ -2,15 +2,15 @@
   "id": "uc-368-03",
   "accept": "US3",
   "failure_mode": "card edit --description overwrites an earlier owner decision, or a blank story or description prints nothing so empty looks hidden",
-  "sha": "303640ce9f9c4bebdc299b3d3b19ac0fb4f7e7e2",
+  "sha": "dd4a0a4934d982aa4c6280ea3861e08995c89bc7",
   "env": "local",
-  "workspace": "export of 303640c",
+  "workspace": "export of dd4a0a4",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-AbE3Jr/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 19 skipped) 722ms\n\n Test Files  1 passed (1)\n      Tests  4 passed | 19 skipped (23)\n   Start at  19:00:00\n   Duration  4.56s (transform 400ms, setup 7ms, import 503ms, tests 722ms, environment 0ms)\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-I1ek5z/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 19 skipped) 820ms\n     ✓ appends a dated owner line and keeps what was there, on both spellings of the command  358ms\n\n Test Files  1 passed (1)\n      Tests  4 passed | 19 skipped (23)\n   Start at  12:51:04\n   Duration  5.65s (transform 396ms, setup 9ms, import 503ms, tests 820ms, environment 0ms)\n\n\nexit 0"
     }
   ]
 }

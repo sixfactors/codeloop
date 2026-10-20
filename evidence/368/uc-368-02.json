@@ -2,15 +2,15 @@
   "id": "uc-368-02",
   "accept": "US2",
   "failure_mode": "bug files a story but does not bind the session, so the fix's commit has no Card line, or an agent run's report jumps the queue",
-  "sha": "303640ce9f9c4bebdc299b3d3b19ac0fb4f7e7e2",
+  "sha": "dd4a0a4934d982aa4c6280ea3861e08995c89bc7",
   "env": "local",
-  "workspace": "export of 303640c",
+  "workspace": "export of dd4a0a4",
   "pass": true,
   "layers": [
     {
       "layer": "cli",
       "pass": true,
-      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-AbE3Jr/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 21 skipped) 296ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 21 skipped (23)\n   Start at  18:59:55\n   Duration  4.45s (transform 421ms, setup 7ms, import 527ms, tests 296ms, environment 0ms)\n\n\nexit 0"
+      "output": "\n RUN  v4.0.18 <temp dir>/codeloop-verify-I1ek5z/head\n\n ✓ src/commands/__tests__/card-one-command.test.ts (23 tests | 21 skipped) 310ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 21 skipped (23)\n   Start at  12:50:59\n   Duration  5.11s (transform 438ms, setup 12ms, import 561ms, tests 310ms, environment 0ms)\n\n\nexit 0"
     }
   ]
 }
