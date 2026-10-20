@@ -38,4 +38,4 @@ Research listed five open questions under `## Open questions for the interview` 
 
 - I2 pass: Q1 scope, Q2 boundary, Q3 risk, Q4 acceptance, Q5 boundary; the table at the top of specs/381-install-learns-my-existing-service-and-a/interview.md names each tag and the research.md line it builds on
 - I4 pass: the five R7 questions in specs/381-install-learns-my-existing-service-and-a/research.md `## Open questions for the interview` are Q1 to Q5 here, in order, none marked settled; `grep -c '^## Q' specs/381-install-learns-my-existing-service-and-a/interview.md` prints 5
-- I6 pass: provisional, no answer has landed; the top comment of specs/381-install-learns-my-existing-service-and-a/spec.md names the field each answer fills (Q1 US1, Q2 US2, Q3 US3 and US5, Q4 US4, Q5 `## Not building`); rewritten with path:line when the owner answers
+- I6 pass: all five accepted by the owner on 2026-10-20; Q1 → spec.md US1 (five files, nothing else) and tasks.md T002; Q2 → US2 and T003, T008; Q3 → US3, US5 and T004, T007; Q4 → US4 and T005; Q5 → `## Not building` and T005; in specs/381-install-learns-my-existing-service-and-a/

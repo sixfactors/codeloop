@@ -1,11 +1,6 @@
 # c-381 spec: Install learns my existing service and asks six setup questions
 
-<!-- PROVISIONAL until the owner answers the five interview questions. Which answer changes which field:
-     Q1 (five files) -> US1 and the first task; a different file list changes both.
-     Q2 (lead vs task agent marker) -> US2 and the protocol task; a folder-based rule instead of a marker changes the hook task.
-     Q3 (run commands without asking, limits, deny list) -> US3, US5 and the map task; "ask first" would add a confirm step to Getting started.
-     Q4 (sensitive areas from churn and reverts, what approval adds) -> US4 and the setup task; a different threshold changes the recommended answer the screen shows.
-     Q5 (which never-rules are hook-enforced) -> the setup task and `## Not building`; more hooks would add a guard task. -->
+<!-- The owner accepted all five recommended answers on 2026-10-20 (interview.md Q1 to Q5) and pre-approved the spec in chat; each answer is folded into the field named in tasks.md's S3 line. -->
 <!-- The standard: docs/story-standard.md. Title = what the user can now do. Persona from config personas:. The "so that" is required. -->
 Story: As a founder, I can install with one command, let Codeloop learn my codebase in any language, and answer six questions with recommended answers, so that agents know my system and my process before the first piece of work.
 
@@ -36,8 +31,8 @@ mock: keep
 - The lead agent and task agents as running roles with briefs, hand-backs, cost per item and the reviewer (phase 3); this card only tells the two protocols apart.
 - Knowledge pages flagged when their code changes, corrections kept as decisions (phase 4); the Knowledge and Work process screens (phase 6).
 - Stack packs beyond detection and the build and test commands: conventions and checks per stack come with the packs.
-- Hooks for the never-rules that no local hook can see (touching production, adding a dependency); those stay rules the reviewer checks (Q5, provisional).
-- The session hook's own change to print the task-agent protocol lives in guard-hooks, which another builder owns; this card ships the two protocol files and the marker contract and names the hook change as a dependency.
+- Hooks for the never-rules that no local hook can see (touching production, adding a dependency); those stay rules the reviewer checks (Q5).
+- The pre-commit guards for an applied migration and a secret pattern (Q5): this card writes them into rules.md as hook-enforced; the guard code itself is phase 1's second slice once the migrations folder and secret patterns are read from the map.
 
 ## Failure modes
 
