@@ -1,16 +1,19 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createInterface } from 'readline';
-import { existsSync, readdirSync } from 'fs';
-import { join, relative } from 'path';
-import { detectProject, detectStack, type StackId } from '../lib/detect.js';
-import { installHostHooks } from '../lib/host-hooks.js';
-import { render } from '../lib/render.js';
-import { applyAgentsConfig, applyDetection, applyMcpConfig, installCi, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { dirname, join, relative } from 'path';
+import { fileURLToPath } from 'url';
+import { detectProject, detectStack, type ProjectDetection, type StackId } from '../lib/detect.js';
+import { excludeFromGit, installHostHooks } from '../lib/host-hooks.js';
+import { render, renderProtocol } from '../lib/render.js';
+import { applyAgentsConfig, applyDetection, applyMcpConfig, installCi, installFiveFiles, installHooks, scaffold, type ToolId } from '../lib/scaffold.js';
 import { detectTools } from '../lib/detect.js';
 import { loadLanes, loadSkillsIndex, SKILLS_INDEX } from '../lib/lane.js';
 import { defaultSkillDirs, ensureSkillsIndex, scanSkills } from '../lib/skills.js';
 import { registerProject } from '../lib/hub-registry.js';
+
+const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -59,14 +62,41 @@ async function selectTools(projectDir: string): Promise<ToolId[]> {
     .map(i => allTools[i - 1].id);
 }
 
+const list = (items: string[], empty: string) => (items.length ? items.join(', ') : chalk.dim(empty));
+
+/** What the repository's own files said, as the first thing a person reads after install. */
+function reportDetection(d: ProjectDetection): void {
+  const row = (label: string, value: string) => console.log(`  ${label.padEnd(16)} ${value}`);
+  console.log(chalk.bold('Codeloop read this repository:'));
+  row('Languages:', list(d.languages.map(l => `${l.name} (${l.where})`), 'none found'));
+  row('Frameworks:', list(d.frameworks, 'none recognised'));
+  row('Build and test:', list(d.commands.map(c => `${c.command}${c.cwd ? ` (${c.cwd})` : ''}`), 'no build or test command found'));
+  row('Database:', list(d.database.map(x => `${x.tech} (${x.source})`), 'none found'));
+  row('Pipeline:', list(d.pipeline.map(p => `${p.file}${p.jobs.length ? ` (jobs: ${p.jobs.join(', ')})` : ''}`), 'none found'));
+  row('Modules:', list(d.modules, 'no source folders found'));
+  if (d.undetected) console.log(chalk.yellow(`  ${d.undetected}`));
+  console.log();
+}
+
+// The machine-local files later commands write under .codeloop, kept out of `git status` the way
+// the full scaffold's .codeloop/.gitignore keeps them; a five-file install writes no gitignore.
+function localBoardFiles(): string[] {
+  return readFileSync(join(PACKAGE_ROOT, 'templates/codeloop/gitignore'), 'utf-8')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#'))
+    .map(l => `.codeloop/${l}`);
+}
+
 export const initCommand = new Command('init')
-  .description('Initialize codeloop in the current project')
-  .option('-s, --starter <name>', 'Use a specific starter (generic, node-typescript, python, go)')
+  .description('Set Codeloop up in this repository: read the stack, write five files, say what it found')
+  .option('-s, --starter <name>', 'Use a specific starter (generic, node-typescript, python, go, java, dotnet)')
   .option('-t, --tools <tools>', 'Comma-separated tools: claude,cursor,codex (skip prompt)')
+  .option('--full', 'The full scaffold: lanes, skills, commands and role files copied into the repository instead of read from the package')
   .option('--hooks', 'Only install the hooks: the commit-msg trailer, the Claude Code and Cursor hooks, and the pre-commit and pre-push guards')
   .option('--ci <provider>', 'Only write CI workflows (github)')
   .option('-y, --yes', 'Write into an existing .claude/commands/ without asking')
-  .action(async (options: { starter?: string; tools?: string; hooks?: boolean; ci?: string; yes?: boolean }) => {
+  .action(async (options: { starter?: string; tools?: string; full?: boolean; hooks?: boolean; ci?: string; yes?: boolean }) => {
     const projectDir = process.cwd();
 
     if (options.ci) {
@@ -93,10 +123,10 @@ export const initCommand = new Command('init')
       return;
     }
 
-    // Detect or use specified starter
+    // The repository's own files say what it is; --starter only picks the config.
+    const detection = detectProject(projectDir);
     let stackId: StackId;
     let stackDesc: string;
-
     if (options.starter) {
       stackId = options.starter as StackId;
       stackDesc = options.starter;
@@ -104,12 +134,8 @@ export const initCommand = new Command('init')
       const detected = detectStack(projectDir);
       stackId = detected.stack;
       stackDesc = detected.description;
-      if (detected.matchedFile) {
-        console.log(chalk.dim(`  Detected ${stackDesc} (found ${detected.matchedFile})`));
-      } else {
-        console.log(chalk.dim(`  No specific stack detected, using generic config`));
-      }
     }
+    const starterFile = `${stackId}.yaml`;
 
     // Select tools, interactive prompt or flag
     let tools: ToolId[];
@@ -124,13 +150,39 @@ export const initCommand = new Command('init')
       process.exit(1);
     }
 
-    const starterFile = `${stackId}.yaml`;
+    if (!options.full) {
+      reportDetection(detection);
+      const result = installFiveFiles(projectDir, starterFile, detection);
+      const protocol = renderProtocol(projectDir, tools);
+      const mcp = applyMcpConfig(projectDir, tools);
+      const added = [...result.created, ...protocol.written, ...mcp];
+      console.log(chalk.bold(`${added.length} files added to the repository, nothing else changed:`));
+      for (const f of added) console.log(chalk.green(`  + ${f}`));
+      for (const f of result.skipped) console.log(chalk.yellow(`  ~ ${f} already exists, kept`));
+      for (const f of protocol.unchanged) console.log(chalk.yellow(`  ~ ${f} already carries the block`));
+      // Hooks and board state live outside the repository diff: .git/hooks, .git/info/exclude.
+      const outside: string[] = [];
+      const hook = installHooks(projectDir);
+      if (hook.installed) outside.push(relative(projectDir, hook.path) || hook.path);
+      for (const h of installHostHooks(projectDir, { local: true, hosts: tools.filter((t): t is 'claude' | 'cursor' => t === 'claude' || t === 'cursor') })) if (h.installed) outside.push(h.path ? relative(projectDir, h.path) : h.name);
+      excludeFromGit(projectDir, localBoardFiles());
+      if (outside.length) console.log(chalk.dim(`  Outside the repository (.git/hooks, .git/info/exclude): ${outside.join(', ')}`));
+      registerProject(projectDir);
+      console.log();
+      console.log(`  Stack config: ${chalk.cyan(stackDesc)}. Lanes and skills are read from the Codeloop package; ${chalk.cyan('codeloop lane list')} shows them.`);
+      console.log();
+      console.log('  Next: open your AI tool in this folder. It is the lead agent for this repository: it runs');
+      console.log(`  ${chalk.cyan('codeloop map')} to learn the system, then ${chalk.cyan('codeloop setup')} to ask you six questions.`);
+      console.log(`  Or run those two yourself, then ${chalk.cyan('codeloop serve')} opens the board.`);
+      console.log();
+      return;
+    }
 
-    // package.json says which checks and test command the lanes should run; --starter still picks the config.
-    const detection = detectProject(projectDir);
     if (detection.frameworks.length || Object.keys(detection.scripts).length) {
       console.log(chalk.dim(`  Detected ${[...detection.frameworks, ...Object.keys(detection.scripts).map(k => `scripts.${k}`)].join(', ')} in package.json (${detection.packageManager})`));
     }
+    if (detection.stack.matchedFile) console.log(chalk.dim(`  Detected ${stackDesc} (found ${detection.stack.matchedFile})`));
+    else console.log(chalk.dim(`  No specific stack detected, using generic config`));
 
     // Somebody's own commands live there already; writing next to them is asked for, or taken from --yes.
     const commandsDir = join(projectDir, '.claude/commands');

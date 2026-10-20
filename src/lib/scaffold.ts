@@ -155,6 +155,50 @@ export function scaffold(projectDir: string, starterFile: string, tools: ToolId[
   return result;
 }
 
+const FIVE = { config: '.codeloop/config.yaml', process: '.codeloop/process.yaml', rules: '.codeloop/rules.md' } as const;
+
+/**
+ * The install a person runs on an existing service (c-381): `.codeloop/config.yaml` from the
+ * stack's starter with the detected checks and test command, `.codeloop/process.yaml` from the
+ * Standard preset, `.codeloop/rules.md` with the five never-rules, and nothing else in `.codeloop`.
+ * The host file block and `.mcp.json` are written by init beside these. Lanes, skills, commands and
+ * role files stay in the package (lane.ts reads them from there while `process.yaml` exists and the
+ * project has no copies). An existing file is kept and listed as skipped.
+ */
+export function installFiveFiles(projectDir: string, starterFile: string, detection: ProjectDetection): ScaffoldResult {
+  const result: ScaffoldResult = { created: [], skipped: [] };
+  const write = (rel: string, text: string) => {
+    const dest = join(projectDir, rel);
+    if (existsSync(dest)) {
+      result.skipped.push(rel);
+      return;
+    }
+    ensureDirSync(dirname(dest));
+    writeFileSync(dest, text);
+    result.created.push(rel);
+  };
+  const starterPath = join(PACKAGE_ROOT, 'starters', existsSync(join(PACKAGE_ROOT, 'starters', starterFile)) ? starterFile : 'generic.yaml');
+  const name = basename(resolve(projectDir)).replace(/"/g, '');
+  write(FIVE.config, readFileSync(starterPath, 'utf-8').replace(/^(\s*name:\s*)"my-project"/m, `$1"${name}"`));
+  applyDetection(projectDir, detection, result.created);
+  // The Standard preset, as `codeloop setup` will edit it: the preset id, every step with its switch,
+  // and the fields the six questions fill.
+  const preset = readFileSync(join(PACKAGE_ROOT, 'templates/presets/standard.yaml'), 'utf-8').replace(/^#.*\n/gm, '');
+  write(FIVE.process, [
+    '# The work process: which steps a work item goes through and who approves what.',
+    '# Written by `codeloop init` from the Standard preset; `codeloop setup` rewrites it from your',
+    '# answers, and the Work process page edits the same file. Switch a step off with `on: false`.',
+    `preset: standard`,
+    'sensitive_areas: []',
+    'reviewer: ai',
+    'owner_reviews: [sensitive areas, anything that leaves the machine]',
+    `done: ${JSON.stringify(detection.commands.filter(c => c.name === 'test' || c.name === 'build' || c.name === 'lint').map(c => c.command))}`,
+    preset.replace(/^id: standard\n/m, '').replace(/^name: .*\n/m, '').replace(/^summary: .*\n/m, ''),
+  ].join('\n'));
+  write(FIVE.rules, readFileSync(join(PACKAGE_ROOT, 'templates/codeloop/never-rules.md'), 'utf-8'));
+  return result;
+}
+
 /** Copies the GitHub workflows from templates/ci. An existing workflow file is never overwritten. */
 export function installCi(projectDir: string): ScaffoldResult {
   const result: ScaffoldResult = { created: [], skipped: [] };

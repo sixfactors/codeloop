@@ -144,22 +144,48 @@ export function hasGitGuardHooks(projectDir: string): boolean {
   });
 }
 
-export function installHostHooks(projectDir: string, opts: { hostsOf?: string; gitHooks?: boolean } = {}): HookInstall[] {
+/**
+ * Keeps `paths` out of `git status` without touching the repository's own .gitignore: they go into
+ * `.git/info/exclude`, which git reads like a gitignore and never commits. A five-file install
+ * writes its hook files and board state this way, so the repository diff shows only the five.
+ */
+export function excludeFromGit(projectDir: string, paths: string[]): { path?: string; added: string[] } {
+  const run = spawnSync('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: projectDir, encoding: 'utf-8' });
+  if (run.status !== 0) return { added: [] };
+  const file = resolve(projectDir, run.stdout.trim());
+  const current = existsSync(file) ? readFileSync(file, 'utf-8') : '';
+  const have = new Set(current.split('\n').map(l => l.trim()));
+  const added = paths.filter(p => !have.has(p));
+  if (added.length) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${current.replace(/\n*$/, current ? '\n' : '')}# codeloop: machine-local files, never committed\n${added.join('\n')}\n`);
+  }
+  return { path: file, added };
+}
+
+/**
+ * `local`: the Claude hooks go into `.claude/settings.local.json`, which Claude Code reads like
+ * settings.json, and both host files are excluded from git, so an install adds nothing to the
+ * repository beyond the files it means to (c-381).
+ */
+export function installHostHooks(projectDir: string, opts: { hostsOf?: string; gitHooks?: boolean; local?: boolean; hosts?: ('claude' | 'cursor')[] } = {}): HookInstall[] {
   // Only the hosts init set up get hook files; a repo with neither folder gets Claude's, the default host.
   // `hostsOf` names the tree whose folders say which hosts are set up: a story worktree is a fresh
   // checkout, so the main tree decides.
   const decides = opts.hostsOf ?? projectDir;
-  const hasCursor = existsSync(join(decides, '.cursor'));
-  const hasClaude = existsSync(join(decides, '.claude')) || !hasCursor;
+  const hasCursor = opts.hosts ? opts.hosts.includes('cursor') : existsSync(join(decides, '.cursor'));
+  const hasClaude = opts.hosts ? opts.hosts.includes('claude') : existsSync(join(decides, '.claude')) || !hasCursor;
   const out: HookInstall[] = [];
+  const claudeFile = opts.local ? '.claude/settings.local.json' : '.claude/settings.json';
   if (hasClaude) {
-    const claude = mergeHooksFile(projectDir, '.claude/settings.json', 'claude-hooks.json');
-    out.push({ name: '.claude/settings.json', installed: true, reason: claude.changed ? undefined : 'unchanged' });
+    const claude = mergeHooksFile(projectDir, claudeFile, 'claude-hooks.json');
+    out.push({ name: claudeFile, installed: true, reason: claude.changed ? undefined : 'unchanged' });
   }
   if (hasCursor) {
     const cursor = mergeHooksFile(projectDir, '.cursor/hooks.json', 'cursor-hooks.json');
     out.push({ name: '.cursor/hooks.json', installed: true, reason: cursor.changed ? undefined : 'unchanged' });
   }
+  if (opts.local) excludeFromGit(projectDir, [...(hasClaude ? [claudeFile] : []), ...(hasCursor ? ['.cursor/hooks.json'] : [])]);
   if (opts.gitHooks === false) return out;
   return [
     ...out,

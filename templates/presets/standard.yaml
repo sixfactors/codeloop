@@ -1,0 +1,31 @@
+# The Standard preset: clarifying questions and a written plan for medium or larger work, then
+# build, review, done. Screen designs only when a change has a screen. The recommended default.
+id: standard
+name: Standard
+summary: Questions and a written plan for medium or larger work, then build, review, done. Screen designs only when a change has a screen.
+steps:
+  - id: questions
+    name: Clarifying questions
+    when: "size >= M"
+    on: true
+  - id: plan
+    name: Written plan, approved by you
+    when: "size >= M"
+    on: true
+    gate: owner
+  - id: design
+    name: Screen design
+    when: "size >= M"
+    on: true
+    only_when: the change has a screen
+  - id: build
+    name: Build
+    on: true
+    fixed: true
+  - id: review
+    name: Review by a separate AI reviewer
+    on: true
+  - id: done
+    name: Done when the pipeline passes
+    on: true
+    fixed: true

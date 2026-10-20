@@ -45,7 +45,7 @@ beforeEach(() => {
   process.env.CODELOOP_HOME = home;
   execSync(`mkdir -p ${dir}`);
   execSync('git init -q -b main', { cwd: dir });
-  cl(dir, 'init', '--tools', 'claude', '--starter', 'generic');
+  cl(dir, 'init', '--full', '--tools', 'claude', '--starter', 'generic');
   execSync(`${GIT} add -A && ${GIT} commit -qm init && git worktree add -q -b story ${wt}`, { cwd: dir });
 });
 afterEach(() => {

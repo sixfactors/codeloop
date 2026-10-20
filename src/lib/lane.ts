@@ -71,24 +71,50 @@ export function parseLane(text: string): Lane {
 }
 
 export function loadLane(projectDir: string, id: string): Lane {
-  const file = lanePath(projectDir, id);
+  let file = lanePath(projectDir, id);
+  // A project with no lane files of its own reads the package's (see loadLanes).
+  if (!existsSync(file) && fromPackage(projectDir)) file = join(LANE_TEMPLATES_DIR, `${safeName(id, 'lane id')}.yaml`);
   if (!existsSync(file)) throw new RefusalError(`lane "${id}" not found at ${LANES_DIR}/${id}.yaml`);
   return parseLane(readFileSync(file, 'utf-8'));
 }
 
+/**
+ * A five-file install (`codeloop init`, v2) writes `.codeloop/process.yaml` and no lanes or skills
+ * of its own: those come from the package until the project forks one. A v1 project, or a folder
+ * with no board, has no process file and behaves as before.
+ */
+export const PROCESS_FILE = '.codeloop/process.yaml';
+export const fromPackage = (projectDir: string): boolean => existsSync(join(projectDir, PROCESS_FILE));
+
 export function loadLanes(projectDir: string): Lane[] {
   const dir = join(projectDir, LANES_DIR);
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
+  const source = existsSync(dir) ? dir : fromPackage(projectDir) ? LANE_TEMPLATES_DIR : null;
+  if (!source) return [];
+  return readdirSync(source)
     .filter(f => f.endsWith('.yaml'))
     .sort()
-    .map(f => parseLane(readFileSync(join(dir, f), 'utf-8')));
+    .map(f => parseLane(readFileSync(join(source, f), 'utf-8')));
+}
+
+const SKILL_TEMPLATES_DIR = join(PACKAGE_ROOT, 'templates/skills');
+
+/** The package's own skills as index entries, absolute sources, for a project that copied none. */
+export function packageSkills(): SkillEntry[] {
+  if (!existsSync(SKILL_TEMPLATES_DIR)) return [];
+  return readdirSync(SKILL_TEMPLATES_DIR)
+    .filter(name => existsSync(join(SKILL_TEMPLATES_DIR, name, 'SKILL.md')))
+    .sort()
+    .map(name => {
+      const text = readFileSync(join(SKILL_TEMPLATES_DIR, name, 'SKILL.md'), 'utf-8');
+      const description = /^description:\s*(.+)$/m.exec(text.split('\n---')[0] ?? '')?.[1]?.trim() ?? '';
+      return { name, source: join(SKILL_TEMPLATES_DIR, name, 'SKILL.md'), kind: 'skill' as const, description };
+    });
 }
 
 /** null when no index has been written yet, so lint can skip the skill check. */
 export function loadSkillsIndex(projectDir: string): SkillEntry[] | null {
   const file = join(projectDir, SKILLS_INDEX);
-  if (!existsSync(file)) return null;
+  if (!existsSync(file)) return fromPackage(projectDir) ? packageSkills() : null;
   return (parseYaml(readFileSync(file, 'utf-8')) ?? []) as SkillEntry[];
 }
 

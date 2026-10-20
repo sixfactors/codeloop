@@ -73,12 +73,47 @@ function files(lanes: Lane[], skills: SkillEntry[], host: Host): Record<string, 
 }
 
 /**
- * `templates/protocol.md` as is: the same text for every host's marked block and in every worktree.
- * Anything per tree or per session (the active card) is printed by the session-start hook instead,
- * since these files are tracked and a per-tree line kept every worktree dirty.
+ * `templates/protocol-lead.md` as is: the same text for every host's marked block and in every
+ * worktree. Anything per tree or per session (the active card) is printed by the session-start
+ * hook instead, since these files are tracked and a per-tree line kept every worktree dirty.
+ * The host file always carries the lead-agent protocol: a person's session is the lead agent. A
+ * task agent is a process the lead agent started with `CODELOOP_ROLE=agent`, and the session hook
+ * prints `templates/protocol-task.md` to it instead (guard session).
  */
 function protocolText(_projectDir: string): string {
-  return readFileSync(join(PACKAGE_ROOT, 'templates/protocol.md'), 'utf-8');
+  return leadProtocolText();
+}
+
+export const leadProtocolText = (): string => readFileSync(join(PACKAGE_ROOT, 'templates/protocol-lead.md'), 'utf-8');
+export const taskProtocolText = (): string => readFileSync(join(PACKAGE_ROOT, 'templates/protocol-task.md'), 'utf-8');
+
+/** The host file that carries the protocol block for each host, relative to the project root. */
+export const protocolFile = (host: Host): string => (host === 'claude' ? 'CLAUDE.md' : host === 'codex' ? 'AGENTS.md' : '.cursor/rules/codeloop.mdc');
+
+/**
+ * Writes only the lead-agent protocol into each host's file: the marked block in CLAUDE.md or
+ * AGENTS.md, the standing rule for Cursor. Nothing else render() writes (role files per stage, the
+ * orchestrator command, the lane tables) is written: a five-file install leaves those in the
+ * package. Text outside the markers is kept.
+ */
+export function renderProtocol(projectDir: string, hosts: Host[]): { written: string[]; unchanged: string[] } {
+  const protocol = leadProtocolText();
+  const block = markedBlock(protocol);
+  const result = { written: [] as string[], unchanged: [] as string[] };
+  for (const host of hosts) {
+    const path = protocolFile(host);
+    const file = join(projectDir, path);
+    const current = existsSync(file) ? readFileSync(file, 'utf-8') : undefined;
+    const text = host === 'cursor' ? `---\ndescription: The standing codeloop protocol, read this before any work.\nalwaysApply: true\n---\n\n${protocol}\n` : applyMarkedBlock(current ?? '', block);
+    if (current === text) {
+      result.unchanged.push(path);
+      continue;
+    }
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, text);
+    result.written.push(path);
+  }
+  return result;
 }
 
 function markedBlock(body: string): string {

@@ -1,0 +1,43 @@
+# The Controlled preset: Standard, plus research, recorded test evidence and the owner's approval
+# before anything reaches production.
+id: controlled
+name: Controlled
+summary: Standard, plus research, recorded test evidence and your approval before anything reaches production.
+steps:
+  - id: research
+    name: Research what exists
+    when: "size >= M"
+    on: true
+  - id: questions
+    name: Clarifying questions
+    when: "size >= M"
+    on: true
+  - id: plan
+    name: Written plan, approved by you
+    when: "size >= M"
+    on: true
+    gate: owner
+  - id: design
+    name: Screen design
+    when: "size >= M"
+    on: true
+    only_when: the change has a screen
+  - id: build
+    name: Build
+    on: true
+    fixed: true
+  - id: evidence
+    name: Recorded test evidence
+    on: true
+    gate: owner
+  - id: review
+    name: Review by a separate AI reviewer
+    on: true
+  - id: release
+    name: Your approval before production
+    on: true
+    gate: owner
+  - id: done
+    name: Done when the pipeline passes
+    on: true
+    fixed: true

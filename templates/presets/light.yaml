@@ -1,0 +1,16 @@
+# The Light preset: build, review, done. For a team that wants the least process.
+id: light
+name: Light
+summary: Build, review, done. For a team that wants the least process.
+steps:
+  - id: build
+    name: Build
+    on: true
+    fixed: true
+  - id: review
+    name: Review by a separate AI reviewer
+    on: true
+  - id: done
+    name: Done when the pipeline passes
+    on: true
+    fixed: true

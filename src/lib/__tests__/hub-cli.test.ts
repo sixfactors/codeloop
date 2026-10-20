@@ -17,7 +17,7 @@ const run = (args: string[], cwd: string) => runCli([...args], { cwd, encoding: 
 
 function project(name: string): string {
   const dir = mkdtempSync(join(tmpdir(), `codeloop-hub-cli-${name}-`));
-  const out = run(['init', '--tools', 'claude', '--starter', 'generic', '--yes'], dir);
+  const out = run(['init', '--full', '--tools', 'claude', '--starter', 'generic', '--yes'], dir);
   if (out.status !== 0) throw new Error(`init failed for ${name}: ${out.stdout}\n${out.stderr}`);
   return dir;
 }

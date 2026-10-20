@@ -427,11 +427,12 @@ export function detectProject(projectDir: string): ProjectDetection {
     out.commands.push(...pkg.commands);
   }
 
-  // The root package.json keeps its place in `quality_checks:` and the lane's test command.
-  for (const c of out.commands.filter(c => !c.cwd)) {
-    if (c.name === 'lint') out.qualityChecks.push({ name: 'Lint', command: c.command });
-    if (c.name === 'typecheck') out.qualityChecks.push({ name: 'Typecheck', command: c.command });
-    if (c.name === 'build') out.qualityChecks.push({ name: 'Build', command: c.command });
+  // The root's lint, typecheck and build, in that order, are the config's `quality_checks:`; the
+  // root's test command is the lane's.
+  const root = out.commands.filter(c => !c.cwd);
+  for (const [name, label] of [['lint', 'Lint'], ['typecheck', 'Typecheck'], ['build', 'Build']] as const) {
+    const c = root.find(x => x.name === name);
+    if (c) out.qualityChecks.push({ name: label, command: c.command });
   }
   out.testCommand = out.commands.find(c => c.name === 'test' && !c.cwd)?.command ?? out.commands.find(c => c.name === 'test')?.command;
   out.database = detectDatabase(projectDir, manifests);
